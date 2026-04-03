@@ -155,6 +155,9 @@ function OrderForm({ brand, saleType, onReset }: { brand: Brand; saleType: SaleT
   if (brand === "magical" && saleType === "mayor") {
     return <MagicalMayorForm onReset={onReset} />;
   }
+  if (brand === "sweatspot" && saleType === "mayor") {
+    return <SweatspotMayorForm onReset={onReset} />;
+  }
   return <GenericForm brand={brand} saleType={saleType} onReset={onReset} />;
 }
 
