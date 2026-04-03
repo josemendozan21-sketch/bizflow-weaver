@@ -152,27 +152,129 @@ function SaleTypeCard({ title, description, onClick }: { title: string; descript
 /* ---- Order Form ---- */
 
 function OrderForm({ brand, saleType, onReset }: { brand: Brand; saleType: SaleType; onReset: () => void }) {
-  const brandLabel = brand === "sweatspot" ? "Sweatspot" : "Magical Warmers";
-  const isMayor = saleType === "mayor";
+  if (brand === "magical" && saleType === "mayor") {
+    return <MagicalMayorForm onReset={onReset} />;
+  }
+  return <GenericForm brand={brand} saleType={saleType} onReset={onReset} />;
+}
+
+/* ---- Magical Warmers – Al por mayor ---- */
+
+function MagicalMayorForm({ onReset }: { onReset: () => void }) {
+  const [dobleTinta, setDobleTinta] = useState(false);
+  const [escarcha, setEscarcha] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: save order
   };
 
   return (
     <Card className="max-w-2xl">
       <CardHeader>
-        <CardTitle className="text-lg">
-          Nuevo pedido — {brandLabel}
-        </CardTitle>
-        <CardDescription>
-          {isMayor ? "Venta al por mayor" : "Venta al por menor"}
-        </CardDescription>
+        <CardTitle className="text-lg">Nuevo pedido — Magical Warmers</CardTitle>
+        <CardDescription>Venta al por mayor</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Información del cliente */}
+          <fieldset className="space-y-4">
+            <legend className="text-sm font-semibold text-foreground mb-2">Información del cliente</legend>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Nombre del cliente" name="mw_nombre" required />
+              <Field label="Número de contacto" name="mw_contacto" type="tel" required />
+            </div>
+            <Field label="Dirección del cliente" name="mw_direccion" required />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Ciudad" name="mw_ciudad" required />
+              <Field label="Correo electrónico" name="mw_email" type="email" />
+            </div>
+          </fieldset>
+
+          {/* Información del pedido */}
+          <fieldset className="space-y-4">
+            <legend className="text-sm font-semibold text-foreground mb-2">Información del pedido</legend>
+            <Field label="Referencia o molde" name="mw_referencia" required />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Color de gel" name="mw_colorGel" required />
+              <Field label="Color de tinta" name="mw_colorTinta" required />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Field label="Unidades" name="mw_unidades" type="number" required />
+              <Field label="Valor unitario" name="mw_valorUnitario" type="number" required />
+              <Field label="Valor total del pedido" name="mw_valorTotal" type="number" required />
+            </div>
+            <Field label="Abono del total del pedido" name="mw_abono" type="number" />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Fecha estimada de entrega" name="mw_fechaEstimada" type="date" />
+              <Field label="Fecha requerida de entrega" name="mw_fechaRequerida" type="date" />
+            </div>
+          </fieldset>
+
+          {/* Opciones adicionales */}
+          <fieldset className="space-y-4">
+            <legend className="text-sm font-semibold text-foreground mb-2">Opciones adicionales</legend>
+            <div className="grid gap-6 sm:grid-cols-2">
+              <div className="flex items-center justify-between rounded-md border border-input p-3">
+                <Label htmlFor="mw_dobleTinta" className="cursor-pointer">Doble tinta</Label>
+                <Switch id="mw_dobleTinta" checked={dobleTinta} onCheckedChange={setDobleTinta} />
+              </div>
+              <div className="flex items-center justify-between rounded-md border border-input p-3">
+                <Label htmlFor="mw_escarcha" className="cursor-pointer">Escarcha</Label>
+                <Switch id="mw_escarcha" checked={escarcha} onCheckedChange={setEscarcha} />
+              </div>
+            </div>
+          </fieldset>
+
+          {/* Archivos adjuntos */}
+          <fieldset className="space-y-4">
+            <legend className="text-sm font-semibold text-foreground mb-2">Archivos adjuntos</legend>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FileField label="Adjuntar logo" name="mw_logo" />
+              <FileField label="Adjuntar RUT de la empresa" name="mw_rut" />
+            </div>
+          </fieldset>
+
+          {/* Personalización */}
+          <fieldset className="space-y-4">
+            <legend className="text-sm font-semibold text-foreground mb-2">Personalización</legend>
+            <div className="space-y-1.5">
+              <Label htmlFor="mw_personalizacion">Modificaciones o adiciones al logo</Label>
+              <Textarea id="mw_personalizacion" placeholder="Describa qué desea adicionar o modificar en el logo..." />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="mw_observaciones">Observaciones generales del pedido</Label>
+              <Textarea id="mw_observaciones" placeholder="Notas u observaciones adicionales..." />
+            </div>
+          </fieldset>
+
+          <div className="flex gap-3 pt-2">
+            <Button type="submit">Crear pedido</Button>
+            <Button type="button" variant="outline" onClick={onReset}>Cancelar</Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ---- Generic form (other combos) ---- */
+
+function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: SaleType; onReset: () => void }) {
+  const brandLabel = brand === "sweatspot" ? "Sweatspot" : "Magical Warmers";
+  const isMayor = saleType === "mayor";
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+  };
+
+  return (
+    <Card className="max-w-2xl">
+      <CardHeader>
+        <CardTitle className="text-lg">Nuevo pedido — {brandLabel}</CardTitle>
+        <CardDescription>{isMayor ? "Venta al por mayor" : "Venta al por menor"}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Client info */}
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Datos del cliente</legend>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -186,47 +288,28 @@ function OrderForm({ brand, saleType, onReset }: { brand: Brand; saleType: SaleT
             <Field label="Dirección de envío" name="direccion" required />
           </fieldset>
 
-          {/* Product info */}
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Detalles del producto</legend>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Referencia / Producto" name="referencia" required />
               <Field label="Cantidad" name="cantidad" type="number" required />
             </div>
-
             {isMayor && (
-              <>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Color de gel" name="colorGel" required />
-                  <Field label="Color de tinta" name="colorTinta" required />
-                </div>
-              </>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Color de gel" name="colorGel" required />
+                <Field label="Color de tinta" name="colorTinta" required />
+              </div>
             )}
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="flex items-center gap-2">
-                <input type="checkbox" id="escarcha" className="accent-primary h-4 w-4" />
-                <Label htmlFor="escarcha">Escarcha</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" id="dobleMarcacion" className="accent-primary h-4 w-4" />
-                <Label htmlFor="dobleMarcacion">Doble marcación</Label>
-              </div>
-            </div>
           </fieldset>
 
-          {/* Pricing */}
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Valores</legend>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Precio de venta total" name="precioTotal" type="number" required />
-              {isMayor && (
-                <Field label="Abono inicial (50%)" name="abono" type="number" />
-              )}
+              {isMayor && <Field label="Abono inicial (50%)" name="abono" type="number" />}
             </div>
           </fieldset>
 
-          {/* Notes */}
           <div className="space-y-1.5">
             <Label htmlFor="notas">Notas adicionales</Label>
             <Textarea id="notas" placeholder="Observaciones del pedido..." />
@@ -234,9 +317,7 @@ function OrderForm({ brand, saleType, onReset }: { brand: Brand; saleType: SaleT
 
           <div className="flex gap-3 pt-2">
             <Button type="submit">Crear pedido</Button>
-            <Button type="button" variant="outline" onClick={onReset}>
-              Cancelar
-            </Button>
+            <Button type="button" variant="outline" onClick={onReset}>Cancelar</Button>
           </div>
         </form>
       </CardContent>
@@ -244,21 +325,24 @@ function OrderForm({ brand, saleType, onReset }: { brand: Brand; saleType: SaleT
   );
 }
 
-function Field({
-  label,
-  name,
-  type = "text",
-  required,
-}: {
-  label: string;
-  name: string;
-  type?: string;
-  required?: boolean;
-}) {
+/* ---- Shared helpers ---- */
+
+function Field({ label, name, type = "text", required }: { label: string; name: string; type?: string; required?: boolean }) {
   return (
     <div className="space-y-1.5">
       <Label htmlFor={name}>{label}</Label>
       <Input id={name} name={name} type={type} required={required} />
+    </div>
+  );
+}
+
+function FileField({ label, name }: { label: string; name: string }) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={name}>{label}</Label>
+      <div className="relative">
+        <Input id={name} name={name} type="file" className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary" />
+      </div>
     </div>
   );
 }
