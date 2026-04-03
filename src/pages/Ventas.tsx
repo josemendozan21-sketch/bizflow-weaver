@@ -260,6 +260,100 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   );
 }
 
+/* ---- Sweatspot – Al por mayor ---- */
+
+function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+  };
+
+  const tamanos = ["150 ml", "250 ml", "250 ml juguetón", "500 ml"];
+
+  return (
+    <Card className="max-w-2xl">
+      <CardHeader>
+        <CardTitle className="text-lg">Nuevo pedido — Sweatspot</CardTitle>
+        <CardDescription>Venta al por mayor</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Información del cliente */}
+          <fieldset className="space-y-4">
+            <legend className="text-sm font-semibold text-foreground mb-2">Información del cliente</legend>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Nombre del cliente" name="ss_nombre" required />
+              <Field label="Número de contacto" name="ss_contacto" type="tel" required />
+            </div>
+            <Field label="Dirección del cliente" name="ss_direccion" required />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Ciudad" name="ss_ciudad" required />
+              <Field label="Correo electrónico" name="ss_email" type="email" />
+            </div>
+          </fieldset>
+
+          {/* Información del pedido */}
+          <fieldset className="space-y-4">
+            <legend className="text-sm font-semibold text-foreground mb-2">Información del pedido</legend>
+            <Field label="Referencia o molde" name="ss_referencia" required />
+            <div className="space-y-1.5">
+              <Label>Tamaño</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {tamanos.map((t) => (
+                  <label key={t} className="flex items-center gap-2 rounded-md border border-input p-3 cursor-pointer hover:bg-accent transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                    <input type="radio" name="ss_tamano" value={t} required className="accent-primary h-4 w-4" />
+                    <span className="text-sm text-foreground">{t}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Color de silicona" name="ss_colorSilicona" required />
+              <Field label="Color de tinta" name="ss_colorTinta" required />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Field label="Unidades" name="ss_unidades" type="number" required />
+              <Field label="Valor unitario" name="ss_valorUnitario" type="number" required />
+              <Field label="Valor total del pedido" name="ss_valorTotal" type="number" required />
+            </div>
+            <Field label="Abono del total del pedido" name="ss_abono" type="number" />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Fecha estimada de entrega" name="ss_fechaEstimada" type="date" />
+              <Field label="Fecha requerida de entrega" name="ss_fechaRequerida" type="date" />
+            </div>
+          </fieldset>
+
+          {/* Archivos adjuntos */}
+          <fieldset className="space-y-4">
+            <legend className="text-sm font-semibold text-foreground mb-2">Archivos adjuntos</legend>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FileField label="Adjuntar logo" name="ss_logo" />
+              <FileField label="Adjuntar RUT de la empresa" name="ss_rut" />
+            </div>
+          </fieldset>
+
+          {/* Personalización */}
+          <fieldset className="space-y-4">
+            <legend className="text-sm font-semibold text-foreground mb-2">Personalización</legend>
+            <div className="space-y-1.5">
+              <Label htmlFor="ss_personalizacion">Modificaciones o adiciones al logo</Label>
+              <Textarea id="ss_personalizacion" placeholder="Describa qué desea adicionar o modificar en el logo..." />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ss_observaciones">Observaciones generales del pedido</Label>
+              <Textarea id="ss_observaciones" placeholder="Notas u observaciones adicionales..." />
+            </div>
+          </fieldset>
+
+          <div className="flex gap-3 pt-2">
+            <Button type="submit">Crear pedido</Button>
+            <Button type="button" variant="outline" onClick={onReset}>Cancelar</Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
 /* ---- Generic form (other combos) ---- */
 
 function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: SaleType; onReset: () => void }) {
