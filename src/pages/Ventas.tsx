@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Zap, Flame } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { ArrowLeft, Zap, Flame, Upload } from "lucide-react";
 
 type Brand = "sweatspot" | "magical";
 type SaleType = "mayor" | "menor";
