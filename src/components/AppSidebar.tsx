@@ -1,4 +1,4 @@
-import { Home, ShoppingCart, Factory, Truck, Calculator } from "lucide-react";
+import { Home, ShoppingCart, Factory, Truck, Calculator, Package, Palette } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -17,6 +17,8 @@ import {
 const items = [
   { title: "Inicio", url: "/", icon: Home },
   { title: "Ventas", url: "/ventas", icon: ShoppingCart },
+  { title: "Inventarios", url: "/inventarios", icon: Package },
+  { title: "Diseño de logos", url: "/diseno-logos", icon: Palette },
   { title: "Producción", url: "/produccion", icon: Factory },
   { title: "Logística", url: "/logistica", icon: Truck },
   { title: "Contabilidad", url: "/contabilidad", icon: Calculator },
