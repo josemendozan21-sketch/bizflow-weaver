@@ -1,5 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StampingSection } from "@/components/production/StampingSection";
 
 const Produccion = () => {
   return (
@@ -33,7 +34,7 @@ const Produccion = () => {
               <CardTitle>Producción de estampación o serigrafía</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">No hay órdenes de estampación activas.</p>
+              <StampingSection />
             </CardContent>
           </Card>
         </TabsContent>
