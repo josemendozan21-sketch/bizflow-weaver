@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import Index from "./pages/Index";
 import Ventas from "./pages/Ventas";
+import Inventarios from "./pages/Inventarios";
+import DisenoLogos from "./pages/DisenoLogos";
 import Produccion from "./pages/Produccion";
 import Logistica from "./pages/Logistica";
 import Contabilidad from "./pages/Contabilidad";
