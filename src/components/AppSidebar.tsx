@@ -17,6 +17,8 @@ import {
 const items = [
   { title: "Inicio", url: "/", icon: Home },
   { title: "Ventas", url: "/ventas", icon: ShoppingCart },
+  { title: "Inventarios", url: "/inventarios", icon: Package },
+  { title: "Diseño de logos", url: "/diseno-logos", icon: Palette },
   { title: "Producción", url: "/produccion", icon: Factory },
   { title: "Logística", url: "/logistica", icon: Truck },
   { title: "Contabilidad", url: "/contabilidad", icon: Calculator },
