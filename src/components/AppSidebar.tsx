@@ -1,4 +1,4 @@
-import { Home, ShoppingCart, Factory, Truck, Calculator } from "lucide-react";
+import { Home, ShoppingCart, Factory, Truck, Calculator, Package, Palette } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
