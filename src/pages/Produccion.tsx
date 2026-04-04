@@ -34,7 +34,7 @@ const Produccion = () => {
               <CardTitle>Producción de estampación o serigrafía</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">No hay órdenes de estampación activas.</p>
+              <StampingSection />
             </CardContent>
           </Card>
         </TabsContent>
