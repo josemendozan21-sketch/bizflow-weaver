@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StampingSection } from "@/components/production/StampingSection";
+import { FillingSection } from "@/components/production/FillingSection";
 
 const Produccion = () => {
   return (
@@ -45,7 +46,7 @@ const Produccion = () => {
               <CardTitle>Producción de llenado o dosificación</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">No hay órdenes de llenado activas.</p>
+              <FillingSection />
             </CardContent>
           </Card>
         </TabsContent>

@@ -1,8 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Zap, Flame, FileImage, Droplets, Paintbrush, Sparkles, Layers, Ruler, CircleDot } from "lucide-react";
+import { Zap, Flame, FileImage, Droplets, Paintbrush, Sparkles, Layers, Ruler, CircleDot, ArrowRight, PackageCheck } from "lucide-react";
 import type { StampingTask, StampingStatus } from "@/types/production";
+import { useProductionStore } from "@/stores/productionStore";
+import { toast } from "sonner";
 
 const statusConfig: Record<StampingStatus, { label: string; variant: "default" | "secondary" | "outline" }> = {
   pendiente: { label: "Pendiente", variant: "secondary" },
@@ -11,29 +14,37 @@ const statusConfig: Record<StampingStatus, { label: string; variant: "default" |
 };
 
 export function StampingTaskCard({ task }: { task: StampingTask }) {
+  const updateStampingStatus = useProductionStore((s) => s.updateStampingStatus);
   const status = statusConfig[task.status];
   const isMagical = task.brand === "magical";
+
+  const handleAdvance = () => {
+    if (task.status === "pendiente") {
+      updateStampingStatus(task.id, "en_proceso");
+      toast.info("Tarea movida a 'En proceso'.");
+    } else if (task.status === "en_proceso") {
+      updateStampingStatus(task.id, "completado");
+      if (isMagical) {
+        toast.success("Estampación completada. Se creó tarea de llenado automáticamente.");
+      } else {
+        toast.success("Estampación completada. Listo para sellado final.");
+      }
+    }
+  };
 
   return (
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
-            {isMagical ? (
-              <Flame className="h-5 w-5 text-primary shrink-0" />
-            ) : (
-              <Zap className="h-5 w-5 text-primary shrink-0" />
-            )}
-            <CardTitle className="text-base">
-              {isMagical ? "Magical Warmers" : "Sweatspot"}
-            </CardTitle>
+            {isMagical ? <Flame className="h-5 w-5 text-primary shrink-0" /> : <Zap className="h-5 w-5 text-primary shrink-0" />}
+            <CardTitle className="text-base">{isMagical ? "Magical Warmers" : "Sweatspot"}</CardTitle>
           </div>
           <Badge variant={status.variant}>{status.label}</Badge>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* General info */}
         <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
           <InfoRow label="Cliente" value={task.clientName} />
           <InfoRow label="Cantidad" value={String(task.quantity)} />
@@ -41,7 +52,6 @@ export function StampingTaskCard({ task }: { task: StampingTask }) {
 
         <Separator />
 
-        {/* Brand-specific fields */}
         {isMagical ? (
           <MagicalDetails task={task as Extract<StampingTask, { brand: "magical" }>} />
         ) : (
@@ -57,6 +67,30 @@ export function StampingTaskCard({ task }: { task: StampingTask }) {
             </div>
           </>
         )}
+
+        {/* Status badges for completed sweatspot */}
+        {task.status === "completado" && !isMagical && (task as any).readyForSealing && (
+          <>
+            <Separator />
+            <div className="flex items-center gap-2">
+              <PackageCheck className="h-4 w-4 text-green-600" />
+              <span className="text-sm font-medium text-green-700">Listo para sellado final</span>
+            </div>
+          </>
+        )}
+
+        {/* Action buttons */}
+        {task.status !== "completado" && (
+          <>
+            <Separator />
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleAdvance}>
+                <ArrowRight className="h-4 w-4 mr-1" />
+                {task.status === "pendiente" ? "Iniciar estampación" : "Marcar como estampado"}
+              </Button>
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );
@@ -65,9 +99,7 @@ export function StampingTaskCard({ task }: { task: StampingTask }) {
 function MagicalDetails({ task }: { task: Extract<StampingTask, { brand: "magical" }> }) {
   return (
     <div className="space-y-3">
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Detalles de estampación
-      </p>
+      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Detalles de estampación</p>
       <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
         <IconRow icon={<Paintbrush className="h-4 w-4" />} label="Color de tinta" value={task.inkColor} />
         <IconRow icon={<Droplets className="h-4 w-4" />} label="Color de gel" value={task.gelColor} />
@@ -87,9 +119,7 @@ function MagicalDetails({ task }: { task: Extract<StampingTask, { brand: "magica
 function SweatspotDetails({ task }: { task: Extract<StampingTask, { brand: "sweatspot" }> }) {
   return (
     <div className="space-y-3">
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Detalles de estampación
-      </p>
+      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Detalles de estampación</p>
       <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
         <IconRow icon={<Ruler className="h-4 w-4" />} label="Tamaño" value={task.thermoSize} />
         <IconRow icon={<CircleDot className="h-4 w-4" />} label="Color de silicona" value={task.siliconeColor} />
