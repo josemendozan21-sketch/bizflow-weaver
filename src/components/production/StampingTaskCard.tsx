@@ -73,8 +73,8 @@ export function StampingTaskCard({ task }: { task: StampingTask }) {
           <>
             <Separator />
             <div className="flex items-center gap-2">
-              <PackageCheck className="h-4 w-4 text-green-600" />
-              <span className="text-sm font-medium text-green-700">Listo para sellado final</span>
+              <PackageCheck className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium text-primary">Listo para sellado final</span>
             </div>
           </>
         )}
