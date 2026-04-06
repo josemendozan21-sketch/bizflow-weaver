@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import MaterialConfigSection from "@/components/inventory/MaterialConfigSection";
+import ProductionRequirementsView from "@/components/inventory/ProductionRequirementsView";
 
 const Inventarios = () => {
   return (
@@ -9,16 +9,8 @@ const Inventarios = () => {
         <p className="text-muted-foreground">Gestión y control de inventarios</p>
       </div>
 
+      <ProductionRequirementsView />
       <MaterialConfigSection />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Inventario general</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">No hay productos registrados en el inventario.</p>
-        </CardContent>
-      </Card>
     </div>
   );
 };
