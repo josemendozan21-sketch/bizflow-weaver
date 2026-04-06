@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import MaterialConfigSection from "@/components/inventory/MaterialConfigSection";
 
 const Inventarios = () => {
   return (
@@ -7,6 +8,9 @@ const Inventarios = () => {
         <h1 className="text-2xl font-bold text-foreground">Inventarios</h1>
         <p className="text-muted-foreground">Gestión y control de inventarios</p>
       </div>
+
+      <MaterialConfigSection />
+
       <Card>
         <CardHeader>
           <CardTitle>Inventario general</CardTitle>
