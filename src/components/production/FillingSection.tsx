@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FillingTaskCard } from "./FillingTaskCard";
+import { GelRequirementsPanel } from "./GelRequirementsPanel";
 import { useProductionStore } from "@/stores/productionStore";
 import { useState } from "react";
 import type { FillingTask } from "@/types/production";
@@ -38,6 +39,8 @@ export function FillingSection() {
           <SelectItem value="completado">Completado</SelectItem>
         </SelectContent>
       </Select>
+
+      <GelRequirementsPanel />
 
       {filtered.length === 0 ? (
         <p className="text-muted-foreground py-8 text-center">
