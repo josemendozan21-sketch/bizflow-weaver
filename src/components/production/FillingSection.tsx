@@ -40,6 +40,8 @@ export function FillingSection() {
         </SelectContent>
       </Select>
 
+      <GelRequirementsPanel />
+
       {filtered.length === 0 ? (
         <p className="text-muted-foreground py-8 text-center">
           No hay tareas de llenado activas. Las tareas se crean automáticamente cuando una estampación de Magical Warmers se marca como completada.
