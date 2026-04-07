@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import type { StampingTask, StampingStatus, FillingTask } from "@/types/production";
+import type { StampingTask, StampingStatus, FillingTask, MagicalStampingTask, SweatspotStampingTask } from "@/types/production";
+import { useLogisticsStore } from "@/stores/logisticsStore";
 
 const INITIAL_STAMPING: StampingTask[] = [
   {
@@ -58,6 +59,7 @@ const INITIAL_STAMPING: StampingTask[] = [
 interface ProductionStore {
   stampingTasks: StampingTask[];
   fillingTasks: FillingTask[];
+  addStampingTask: (task: Omit<MagicalStampingTask, "id" | "status" | "createdAt" | "readyForSealing"> | Omit<SweatspotStampingTask, "id" | "status" | "createdAt" | "readyForSealing">) => void;
   updateStampingStatus: (taskId: string, newStatus: StampingStatus) => void;
   updateFillingStatus: (taskId: string, newStatus: FillingTask["status"]) => void;
 }
@@ -65,6 +67,16 @@ interface ProductionStore {
 export const useProductionStore = create<ProductionStore>((set, get) => ({
   stampingTasks: INITIAL_STAMPING,
   fillingTasks: [],
+
+  addStampingTask: (taskData) => {
+    const newTask = {
+      ...taskData,
+      id: `st-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      status: "pendiente" as const,
+      createdAt: new Date().toISOString().slice(0, 10),
+    } as StampingTask;
+    set({ stampingTasks: [...get().stampingTasks, newTask] });
+  },
 
   updateStampingStatus: (taskId, newStatus) => {
     const tasks = get().stampingTasks;
@@ -77,9 +89,22 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
         : t
     ) as StampingTask[];
 
+    // Sweatspot completado → send to logistics
+    if (newStatus === "completado" && task.brand === "sweatspot") {
+      const swTask = task as SweatspotStampingTask;
+      useLogisticsStore.getState().addWholesaleReady({
+        clientName: swTask.clientName,
+        brand: "sweatspot",
+        product: `Termo ${swTask.thermoSize}`,
+        quantity: swTask.quantity,
+        saleType: "mayor",
+        sourceTaskId: taskId,
+      });
+    }
+
     // If Magical Warmers is marked as completado, create a filling task
     if (newStatus === "completado" && task.brand === "magical") {
-      const magicalTask = task as Extract<StampingTask, { brand: "magical" }>;
+      const magicalTask = task as MagicalStampingTask;
       const alreadyExists = get().fillingTasks.some((f) => f.sourceStampingId === taskId);
       if (!alreadyExists) {
         const fillingTask: FillingTask = {
@@ -104,10 +129,23 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
   },
 
   updateFillingStatus: (taskId, newStatus) => {
+    const task = get().fillingTasks.find((t) => t.id === taskId);
     set({
       fillingTasks: get().fillingTasks.map((t) =>
         t.id === taskId ? { ...t, status: newStatus } : t
       ),
     });
+
+    // Magical filling completado → send to logistics
+    if (newStatus === "completado" && task) {
+      useLogisticsStore.getState().addWholesaleReady({
+        clientName: task.clientName,
+        brand: "magical",
+        product: task.product,
+        quantity: task.quantity,
+        saleType: "mayor",
+        sourceTaskId: task.sourceStampingId,
+      });
+    }
   },
 }));

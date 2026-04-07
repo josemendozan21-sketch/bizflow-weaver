@@ -5,7 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Zap, Flame, Upload } from "lucide-react";
+import { ArrowLeft, Zap, Flame } from "lucide-react";
+import { useLogisticsStore } from "@/stores/logisticsStore";
+import { useProductionStore } from "@/stores/productionStore";
+import { useInventoryStore } from "@/stores/inventoryStore";
+import { toast } from "sonner";
 
 type Brand = "sweatspot" | "magical";
 type SaleType = "mayor" | "menor";
@@ -63,39 +67,20 @@ const Ventas = () => {
         </Button>
       )}
 
-      {/* Step 1: Brand */}
       {step === 1 && (
         <div className="grid gap-4 sm:grid-cols-2 max-w-lg">
-          <BrandCard
-            icon={<Zap className="h-8 w-8" />}
-            name="Sweatspot"
-            onClick={() => handleBrandSelect("sweatspot")}
-          />
-          <BrandCard
-            icon={<Flame className="h-8 w-8" />}
-            name="Magical Warmers"
-            onClick={() => handleBrandSelect("magical")}
-          />
+          <BrandCard icon={<Zap className="h-8 w-8" />} name="Sweatspot" onClick={() => handleBrandSelect("sweatspot")} />
+          <BrandCard icon={<Flame className="h-8 w-8" />} name="Magical Warmers" onClick={() => handleBrandSelect("magical")} />
         </div>
       )}
 
-      {/* Step 2: Sale Type */}
       {step === 2 && (
         <div className="grid gap-4 sm:grid-cols-2 max-w-lg">
-          <SaleTypeCard
-            title="Al por mayor"
-            description="Pedidos en volumen con abono inicial"
-            onClick={() => handleSaleTypeSelect("mayor")}
-          />
-          <SaleTypeCard
-            title="Al por menor"
-            description="Venta unitaria al consumidor final"
-            onClick={() => handleSaleTypeSelect("menor")}
-          />
+          <SaleTypeCard title="Al por mayor" description="Pedidos en volumen con abono inicial" onClick={() => handleSaleTypeSelect("mayor")} />
+          <SaleTypeCard title="Al por menor" description="Venta unitaria al consumidor final" onClick={() => handleSaleTypeSelect("menor")} />
         </div>
       )}
 
-      {/* Step 3: Form */}
       {step === 3 && brand && saleType && (
         <OrderForm brand={brand} saleType={saleType} onReset={handleReset} />
       )}
@@ -109,11 +94,7 @@ function StepIndicator({ n, current, label }: { n: number; current: number; labe
   const active = current >= n;
   return (
     <div className="flex items-center gap-1.5">
-      <span
-        className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
-          active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-        }`}
-      >
+      <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
         {n}
       </span>
       <span className={active ? "text-foreground font-medium" : "text-muted-foreground"}>{label}</span>
@@ -123,10 +104,7 @@ function StepIndicator({ n, current, label }: { n: number; current: number; labe
 
 function BrandCard({ icon, name, onClick }: { icon: React.ReactNode; name: string; onClick: () => void }) {
   return (
-    <Card
-      className="cursor-pointer transition-all hover:border-primary hover:shadow-md"
-      onClick={onClick}
-    >
+    <Card className="cursor-pointer transition-all hover:border-primary hover:shadow-md" onClick={onClick}>
       <CardContent className="flex flex-col items-center gap-3 p-8">
         <div className="text-primary">{icon}</div>
         <span className="text-lg font-semibold text-foreground">{name}</span>
@@ -137,10 +115,7 @@ function BrandCard({ icon, name, onClick }: { icon: React.ReactNode; name: strin
 
 function SaleTypeCard({ title, description, onClick }: { title: string; description: string; onClick: () => void }) {
   return (
-    <Card
-      className="cursor-pointer transition-all hover:border-primary hover:shadow-md"
-      onClick={onClick}
-    >
+    <Card className="cursor-pointer transition-all hover:border-primary hover:shadow-md" onClick={onClick}>
       <CardContent className="flex flex-col items-center gap-2 p-8 text-center">
         <span className="text-lg font-semibold text-foreground">{title}</span>
         <span className="text-sm text-muted-foreground">{description}</span>
@@ -169,6 +144,30 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const fd = new FormData(form);
+    const clientName = fd.get("mw_nombre") as string;
+    const quantity = parseInt(fd.get("mw_unidades") as string, 10);
+    const inkColor = fd.get("mw_colorTinta") as string;
+    const gelColor = fd.get("mw_colorGel") as string;
+    const referencia = fd.get("mw_referencia") as string;
+
+    // Wholesale: goes to production, NOT logistics
+    useProductionStore.getState().addStampingTask({
+      brand: "magical",
+      clientName,
+      quantity,
+      inkColor,
+      gelColor: gelColor || "",
+      glitter: escarcha,
+      doubleInk: dobleTinta,
+      observations: (fd.get("mw_observaciones") as string) || undefined,
+    });
+
+    toast.success("Pedido al por mayor creado", {
+      description: `${clientName} — ${quantity} uds. Enviado a Producción.`,
+    });
+    onReset();
   };
 
   return (
@@ -179,7 +178,6 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Información del cliente */}
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Información del cliente</legend>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -193,7 +191,6 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             </div>
           </fieldset>
 
-          {/* Información del pedido */}
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Información del pedido</legend>
             <Field label="Referencia o molde" name="mw_referencia" required />
@@ -213,7 +210,6 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             </div>
           </fieldset>
 
-          {/* Opciones adicionales */}
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Opciones adicionales</legend>
             <div className="grid gap-6 sm:grid-cols-2">
@@ -228,7 +224,6 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             </div>
           </fieldset>
 
-          {/* Archivos adjuntos */}
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Archivos adjuntos</legend>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -237,7 +232,6 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             </div>
           </fieldset>
 
-          {/* Personalización */}
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Personalización</legend>
             <div className="space-y-1.5">
@@ -246,7 +240,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="mw_observaciones">Observaciones generales del pedido</Label>
-              <Textarea id="mw_observaciones" placeholder="Notas u observaciones adicionales..." />
+              <Textarea id="mw_observaciones" name="mw_observaciones" placeholder="Notas u observaciones adicionales..." />
             </div>
           </fieldset>
 
@@ -263,11 +257,34 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 /* ---- Sweatspot – Al por mayor ---- */
 
 function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
+  const tamanos = ["150 ml", "250 ml", "250 ml juguetón", "500 ml"] as const;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-  };
+    const form = e.target as HTMLFormElement;
+    const fd = new FormData(form);
+    const clientName = fd.get("ss_nombre") as string;
+    const quantity = parseInt(fd.get("ss_unidades") as string, 10);
+    const inkColor = fd.get("ss_colorTinta") as string;
+    const thermoSize = fd.get("ss_tamano") as "150 ml" | "250 ml" | "250 ml juguetón" | "500 ml";
+    const siliconeColor = fd.get("ss_colorSilicona") as string;
 
-  const tamanos = ["150 ml", "250 ml", "250 ml juguetón", "500 ml"];
+    // Wholesale: goes to production, NOT logistics
+    useProductionStore.getState().addStampingTask({
+      brand: "sweatspot",
+      clientName,
+      quantity,
+      inkColor,
+      thermoSize,
+      siliconeColor,
+      observations: (fd.get("ss_observaciones") as string) || undefined,
+    });
+
+    toast.success("Pedido al por mayor creado", {
+      description: `${clientName} — ${quantity} uds. Enviado a Producción.`,
+    });
+    onReset();
+  };
 
   return (
     <Card className="max-w-2xl">
@@ -277,7 +294,6 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Información del cliente */}
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Información del cliente</legend>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -291,7 +307,6 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
             </div>
           </fieldset>
 
-          {/* Información del pedido */}
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Información del pedido</legend>
             <Field label="Referencia o molde" name="ss_referencia" required />
@@ -322,7 +337,6 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
             </div>
           </fieldset>
 
-          {/* Archivos adjuntos */}
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Archivos adjuntos</legend>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -331,7 +345,6 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
             </div>
           </fieldset>
 
-          {/* Personalización */}
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Personalización</legend>
             <div className="space-y-1.5">
@@ -340,7 +353,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="ss_observaciones">Observaciones generales del pedido</Label>
-              <Textarea id="ss_observaciones" placeholder="Notas u observaciones adicionales..." />
+              <Textarea id="ss_observaciones" name="ss_observaciones" placeholder="Notas u observaciones adicionales..." />
             </div>
           </fieldset>
 
@@ -354,7 +367,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   );
 }
 
-/* ---- Generic form (other combos) ---- */
+/* ---- Generic form (retail / al por menor) ---- */
 
 function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: SaleType; onReset: () => void }) {
   const brandLabel = brand === "sweatspot" ? "Sweatspot" : "Magical Warmers";
@@ -362,6 +375,30 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const fd = new FormData(form);
+    const clientName = fd.get("nombre") as string;
+    const quantity = parseInt(fd.get("cantidad") as string, 10);
+    const referencia = fd.get("referencia") as string;
+
+    if (saleType === "menor") {
+      // Retail: send immediately to logistics + discount inventory
+      useLogisticsStore.getState().addOrder({
+        clientName,
+        brand,
+        product: referencia,
+        quantity,
+        saleType: "menor",
+        readyDate: new Date().toISOString().slice(0, 10),
+        status: "listo",
+      });
+
+      toast.success("Pedido al por menor creado", {
+        description: `${clientName} — ${quantity} uds. Enviado a Logística directamente.`,
+      });
+    }
+
+    onReset();
   };
 
   return (

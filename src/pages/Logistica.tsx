@@ -1,73 +1,22 @@
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useProductionStore } from "@/stores/productionStore";
-import { Package, Truck, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
-import type { StampingTask, FillingTask } from "@/types/production";
-
-interface DispatchOrder {
-  id: string;
-  clientName: string;
-  brand: "magical" | "sweatspot";
-  quantity: number;
-  product: string;
-  readyDate: string;
-}
+import { useLogisticsStore } from "@/stores/logisticsStore";
+import { Package, Truck, CheckCircle2, Clock } from "lucide-react";
 
 const Logistica = () => {
-  const { stampingTasks, fillingTasks } = useProductionStore();
-  const [dispatched, setDispatched] = useState<
-    Array<DispatchOrder & { dispatchedAt: string }>
-  >([]);
+  const { orders, dispatchOrder } = useLogisticsStore();
 
-  // Sweatspot orders ready: stamping completed + readyForSealing
-  const sweatspotReady: DispatchOrder[] = stampingTasks
-    .filter(
-      (t) =>
-        t.brand === "sweatspot" &&
-        t.status === "completado" &&
-        (t as any).readyForSealing &&
-        !dispatched.some((d) => d.id === `sw-${t.id}`)
-    )
-    .map((t) => ({
-      id: `sw-${t.id}`,
-      clientName: t.clientName,
-      brand: "sweatspot" as const,
-      quantity: t.quantity,
-      product: `Termo ${(t as any).thermoSize}`,
-      readyDate: t.createdAt,
-    }));
-
-  // Magical orders ready: filling completed
-  const magicalReady: DispatchOrder[] = fillingTasks
-    .filter(
-      (t) =>
-        t.status === "completado" &&
-        !dispatched.some((d) => d.id === `mg-${t.id}`)
-    )
-    .map((t) => ({
-      id: `mg-${t.id}`,
-      clientName: t.clientName,
-      brand: "magical" as const,
-      quantity: t.quantity,
-      product: t.product,
-      readyDate: t.createdAt,
-    }));
-
-  const readyOrders = [...sweatspotReady, ...magicalReady];
-
-  const handleDispatch = (order: DispatchOrder) => {
-    setDispatched((prev) => [
-      ...prev,
-      { ...order, dispatchedAt: new Date().toISOString().slice(0, 10) },
-    ]);
-  };
+  const readyOrders = orders.filter((o) => o.status === "listo");
+  const dispatchedOrders = orders.filter((o) => o.status === "despachado");
 
   const brandLabel = (brand: string) =>
     brand === "magical" ? "Magical Warmers" : "Sweatspot";
+
+  const saleLabel = (type: string) =>
+    type === "mayor" ? "Por mayor" : "Por menor";
 
   return (
     <div className="space-y-6">
@@ -98,7 +47,7 @@ const Logistica = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Despachados</p>
-              <p className="text-2xl font-bold text-foreground">{dispatched.length}</p>
+              <p className="text-2xl font-bold text-foreground">{dispatchedOrders.length}</p>
             </div>
           </CardContent>
         </Card>
@@ -131,9 +80,9 @@ const Logistica = () => {
           <TabsTrigger value="dispatched" className="gap-1.5">
             <CheckCircle2 className="h-4 w-4" />
             Despachados
-            {dispatched.length > 0 && (
+            {dispatchedOrders.length > 0 && (
               <Badge variant="secondary" className="ml-1 text-xs">
-                {dispatched.length}
+                {dispatchedOrders.length}
               </Badge>
             )}
           </TabsTrigger>
@@ -150,7 +99,7 @@ const Logistica = () => {
                   <Package className="h-12 w-12 mb-3 opacity-40" />
                   <p className="font-medium">No hay pedidos listos para despacho</p>
                   <p className="text-sm">
-                    Los pedidos aparecerán aquí cuando la producción se complete.
+                    Los pedidos aparecerán aquí cuando la producción se complete o se creen ventas al por menor.
                   </p>
                 </div>
               ) : (
@@ -159,6 +108,7 @@ const Logistica = () => {
                     <TableRow>
                       <TableHead>Cliente</TableHead>
                       <TableHead>Marca</TableHead>
+                      <TableHead>Tipo</TableHead>
                       <TableHead>Producto</TableHead>
                       <TableHead className="text-right">Unidades</TableHead>
                       <TableHead>Fecha listo</TableHead>
@@ -168,17 +118,14 @@ const Logistica = () => {
                   <TableBody>
                     {readyOrders.map((order) => (
                       <TableRow key={order.id}>
-                        <TableCell className="font-medium">
-                          {order.clientName}
-                        </TableCell>
+                        <TableCell className="font-medium">{order.clientName}</TableCell>
                         <TableCell>
-                          <Badge
-                            variant={
-                              order.brand === "magical" ? "default" : "secondary"
-                            }
-                          >
+                          <Badge variant={order.brand === "magical" ? "default" : "secondary"}>
                             {brandLabel(order.brand)}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{saleLabel(order.saleType)}</Badge>
                         </TableCell>
                         <TableCell>{order.product}</TableCell>
                         <TableCell className="text-right font-medium">
@@ -186,10 +133,7 @@ const Logistica = () => {
                         </TableCell>
                         <TableCell>{order.readyDate}</TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            onClick={() => handleDispatch(order)}
-                          >
+                          <Button size="sm" onClick={() => dispatchOrder(order.id)}>
                             <Truck className="h-4 w-4 mr-1" />
                             Despachar
                           </Button>
@@ -209,7 +153,7 @@ const Logistica = () => {
               <CardTitle className="text-lg">Pedidos despachados</CardTitle>
             </CardHeader>
             <CardContent>
-              {dispatched.length === 0 ? (
+              {dispatchedOrders.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                   <CheckCircle2 className="h-12 w-12 mb-3 opacity-40" />
                   <p className="font-medium">No hay pedidos despachados aún</p>
@@ -223,25 +167,23 @@ const Logistica = () => {
                     <TableRow>
                       <TableHead>Cliente</TableHead>
                       <TableHead>Marca</TableHead>
+                      <TableHead>Tipo</TableHead>
                       <TableHead>Producto</TableHead>
                       <TableHead className="text-right">Unidades</TableHead>
                       <TableHead>Fecha despacho</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {dispatched.map((order) => (
+                    {dispatchedOrders.map((order) => (
                       <TableRow key={order.id}>
-                        <TableCell className="font-medium">
-                          {order.clientName}
-                        </TableCell>
+                        <TableCell className="font-medium">{order.clientName}</TableCell>
                         <TableCell>
-                          <Badge
-                            variant={
-                              order.brand === "magical" ? "default" : "secondary"
-                            }
-                          >
+                          <Badge variant={order.brand === "magical" ? "default" : "secondary"}>
                             {brandLabel(order.brand)}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{saleLabel(order.saleType)}</Badge>
                         </TableCell>
                         <TableCell>{order.product}</TableCell>
                         <TableCell className="text-right font-medium">
