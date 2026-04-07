@@ -58,6 +58,7 @@ const INITIAL_STAMPING: StampingTask[] = [
 interface ProductionStore {
   stampingTasks: StampingTask[];
   fillingTasks: FillingTask[];
+  addStampingTask: (task: Omit<MagicalStampingTask, "id" | "status" | "createdAt" | "readyForSealing"> | Omit<SweatspotStampingTask, "id" | "status" | "createdAt" | "readyForSealing">) => void;
   updateStampingStatus: (taskId: string, newStatus: StampingStatus) => void;
   updateFillingStatus: (taskId: string, newStatus: FillingTask["status"]) => void;
 }
