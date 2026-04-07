@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import type { StampingTask, StampingStatus, FillingTask } from "@/types/production";
+import type { StampingTask, StampingStatus, FillingTask, MagicalStampingTask, SweatspotStampingTask } from "@/types/production";
+import { useLogisticsStore } from "@/stores/logisticsStore";
 
 const INITIAL_STAMPING: StampingTask[] = [
   {
