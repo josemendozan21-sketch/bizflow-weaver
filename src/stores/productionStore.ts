@@ -68,6 +68,16 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
   stampingTasks: INITIAL_STAMPING,
   fillingTasks: [],
 
+  addStampingTask: (taskData) => {
+    const newTask = {
+      ...taskData,
+      id: `st-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      status: "pendiente" as const,
+      createdAt: new Date().toISOString().slice(0, 10),
+    } as StampingTask;
+    set({ stampingTasks: [...get().stampingTasks, newTask] });
+  },
+
   updateStampingStatus: (taskId, newStatus) => {
     const tasks = get().stampingTasks;
     const task = tasks.find((t) => t.id === taskId);
