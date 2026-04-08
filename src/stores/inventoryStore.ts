@@ -92,10 +92,6 @@ const INITIAL_STOCK_ITEMS: StockItem[] = [
   { id: "si-5d", category: "materia_prima", name: "Colorante - Morado", available: 300, unit: "gramos", minStock: 200 },
   { id: "si-6a", category: "materia_prima", name: "Rollos de frío", available: 15, unit: "unidades", minStock: 5 },
   { id: "si-6b", category: "materia_prima", name: "Rollos de calor", available: 12, unit: "unidades", minStock: 5 },
-  // Cuerpos o referencias
-  { id: "si-7", category: "cuerpos_referencias", name: "Envase Muela", available: 200, unit: "unidades", minStock: 50 },
-  { id: "si-8", category: "cuerpos_referencias", name: "Envase Cuello", available: 150, unit: "unidades", minStock: 50 },
-  { id: "si-9", category: "cuerpos_referencias", name: "Envase Rodilla", available: 80, unit: "unidades", minStock: 50 },
   // Productos terminados
   { id: "si-10", category: "producto_terminado", name: "Muela (terminado)", available: 120, unit: "unidades", minStock: 30 },
   { id: "si-11", category: "producto_terminado", name: "Cuello (terminado)", available: 45, unit: "unidades", minStock: 30 },
