@@ -136,10 +136,11 @@ const Logistica = () => {
                         <TableCell>{order.readyDate}</TableCell>
                         <TableCell className="text-right space-x-2">
                           <ShippingLabelDialog clientName={order.clientName} />
-                          <Button size="sm" onClick={() => dispatchOrder(order.id)}>
-                            <Truck className="h-4 w-4 mr-1" />
-                            Despachar
-                          </Button>
+                          <DispatchConfirmDialog
+                            orderId={order.id}
+                            clientName={order.clientName}
+                            onConfirm={dispatchOrder}
+                          />
                         </TableCell>
                       </TableRow>
                     ))}
@@ -167,14 +168,16 @@ const Logistica = () => {
               ) : (
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Marca</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Producto</TableHead>
-                      <TableHead className="text-right">Unidades</TableHead>
-                      <TableHead>Fecha despacho</TableHead>
-                    </TableRow>
+                     <TableRow>
+                       <TableHead>Cliente</TableHead>
+                       <TableHead>Marca</TableHead>
+                       <TableHead>Tipo</TableHead>
+                       <TableHead>Producto</TableHead>
+                       <TableHead className="text-right">Unidades</TableHead>
+                       <TableHead>Transportadora</TableHead>
+                       <TableHead>Guía</TableHead>
+                       <TableHead>Fecha despacho</TableHead>
+                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {dispatchedOrders.map((order) => (
@@ -189,10 +192,12 @@ const Logistica = () => {
                           <Badge variant="outline">{saleLabel(order.saleType)}</Badge>
                         </TableCell>
                         <TableCell>{order.product}</TableCell>
-                        <TableCell className="text-right font-medium">
-                          {order.quantity.toLocaleString()}
-                        </TableCell>
-                        <TableCell>{order.dispatchedAt}</TableCell>
+                         <TableCell className="text-right font-medium">
+                           {order.quantity.toLocaleString()}
+                         </TableCell>
+                         <TableCell>{order.transportadora || "—"}</TableCell>
+                         <TableCell className="font-mono text-sm">{order.numeroGuia || "—"}</TableCell>
+                         <TableCell>{order.dispatchedAt}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
