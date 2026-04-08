@@ -9,6 +9,7 @@ import { ArrowLeft, Zap, Flame } from "lucide-react";
 import { useLogisticsStore } from "@/stores/logisticsStore";
 import { useProductionStore } from "@/stores/productionStore";
 import { useInventoryStore } from "@/stores/inventoryStore";
+import { useAccountingStore } from "@/stores/accountingStore";
 import { toast } from "sonner";
 
 type Brand = "sweatspot" | "magical";
