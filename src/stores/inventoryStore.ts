@@ -5,6 +5,8 @@ export interface MaterialConfig {
   productName: string;
   productType: string;
   gramsPerUnit: number;
+  finishedUnits: number;
+  bodyUnits: number;
 }
 
 export interface GelStock {
