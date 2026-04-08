@@ -33,6 +33,17 @@ export interface InventoryTotal {
   unit: string;
 }
 
+export type StockStatus = "ok" | "bajo" | "critico";
+
+export interface StockItem {
+  id: string;
+  category: "materia_prima" | "cuerpos_referencias" | "producto_terminado";
+  name: string;
+  available: number;
+  unit: string;
+  minStock: number;
+}
+
 const INITIAL_CONFIGS: MaterialConfig[] = [
   { id: "1", productName: "Muela", productType: "Gel terapéutico", gramsPerUnit: 60 },
   { id: "2", productName: "Cuello", productType: "Gel terapéutico", gramsPerUnit: 120 },
@@ -43,11 +54,29 @@ const INITIAL_GEL_STOCK: GelStock[] = [
   { id: "gs-1", name: "Gel terapéutico", availableGrams: 15000 },
 ];
 
+const INITIAL_STOCK_ITEMS: StockItem[] = [
+  // Materia prima
+  { id: "si-1", category: "materia_prima", name: "Gel", available: 15000, unit: "gramos", minStock: 5000 },
+  { id: "si-2", category: "materia_prima", name: "Mezclas para gel", available: 8000, unit: "gramos", minStock: 3000 },
+  { id: "si-3", category: "materia_prima", name: "Rollos plásticos", available: 25, unit: "unidades", minStock: 10 },
+  { id: "si-4", category: "materia_prima", name: "Tintas", available: 12, unit: "unidades", minStock: 5 },
+  { id: "si-5", category: "materia_prima", name: "Silicona", available: 3000, unit: "gramos", minStock: 1000 },
+  // Cuerpos o referencias
+  { id: "si-6", category: "cuerpos_referencias", name: "Envase Muela", available: 200, unit: "unidades", minStock: 50 },
+  { id: "si-7", category: "cuerpos_referencias", name: "Envase Cuello", available: 150, unit: "unidades", minStock: 50 },
+  { id: "si-8", category: "cuerpos_referencias", name: "Envase Rodilla", available: 80, unit: "unidades", minStock: 50 },
+  // Productos terminados
+  { id: "si-9", category: "producto_terminado", name: "Muela (terminado)", available: 120, unit: "unidades", minStock: 30 },
+  { id: "si-10", category: "producto_terminado", name: "Cuello (terminado)", available: 45, unit: "unidades", minStock: 30 },
+  { id: "si-11", category: "producto_terminado", name: "Rodilla (terminado)", available: 15, unit: "unidades", minStock: 30 },
+];
+
 interface InventoryStore {
   materialConfigs: MaterialConfig[];
   gelStock: GelStock[];
   dailyEntries: DailyProductionEntry[];
   inventoryTotals: InventoryTotal[];
+  stockItems: StockItem[];
   addMaterialConfig: (config: Omit<MaterialConfig, "id">) => void;
   updateMaterialConfig: (id: string, config: Partial<Omit<MaterialConfig, "id">>) => void;
   deleteMaterialConfig: (id: string) => void;
@@ -55,6 +84,10 @@ interface InventoryStore {
   getTotalGelAvailable: () => number;
   addDailyEntry: (entry: Omit<DailyProductionEntry, "id">) => void;
   deleteDailyEntry: (id: string) => void;
+  updateStockItem: (id: string, updates: Partial<Omit<StockItem, "id" | "category">>) => void;
+  addStockItem: (item: Omit<StockItem, "id">) => void;
+  deleteStockItem: (id: string) => void;
+  getStockStatus: (item: StockItem) => StockStatus;
 }
 
 function recalcTotals(entries: DailyProductionEntry[]): InventoryTotal[] {
@@ -82,6 +115,7 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
   gelStock: INITIAL_GEL_STOCK,
   dailyEntries: [],
   inventoryTotals: [],
+  stockItems: INITIAL_STOCK_ITEMS,
 
   addMaterialConfig: (config) => {
     const newConfig: MaterialConfig = {
@@ -147,5 +181,23 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
     }
 
     set({ dailyEntries: newEntries, inventoryTotals: recalcTotals(newEntries) });
+  },
+
+  updateStockItem: (id, updates) => {
+    set({ stockItems: get().stockItems.map((s) => (s.id === id ? { ...s, ...updates } : s)) });
+  },
+
+  addStockItem: (item) => {
+    set({ stockItems: [...get().stockItems, { ...item, id: `si-${Date.now()}` }] });
+  },
+
+  deleteStockItem: (id) => {
+    set({ stockItems: get().stockItems.filter((s) => s.id !== id) });
+  },
+
+  getStockStatus: (item) => {
+    if (item.available <= item.minStock * 0.3) return "critico";
+    if (item.available <= item.minStock) return "bajo";
+    return "ok";
   },
 }));

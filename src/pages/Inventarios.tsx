@@ -1,7 +1,7 @@
 import MaterialConfigSection from "@/components/inventory/MaterialConfigSection";
 import ProductionRequirementsView from "@/components/inventory/ProductionRequirementsView";
 import DailyProductionEntry from "@/components/inventory/DailyProductionEntry";
-import InventoryTotalsPanel from "@/components/inventory/InventoryTotalsPanel";
+import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
 
 const Inventarios = () => {
   return (
@@ -11,8 +11,8 @@ const Inventarios = () => {
         <p className="text-muted-foreground">Gestión y control de inventarios</p>
       </div>
 
+      <CategorizedInventoryPanel />
       <DailyProductionEntry />
-      <InventoryTotalsPanel />
       <ProductionRequirementsView />
       <MaterialConfigSection />
     </div>
