@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useLogisticsStore } from "@/stores/logisticsStore";
 import { Package, Truck, CheckCircle2, Clock } from "lucide-react";
+import ShippingLabelDialog from "@/components/logistics/ShippingLabelDialog";
 
 const Logistica = () => {
   const { orders, dispatchOrder } = useLogisticsStore();
@@ -132,7 +133,8 @@ const Logistica = () => {
                           {order.quantity.toLocaleString()}
                         </TableCell>
                         <TableCell>{order.readyDate}</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right space-x-2">
+                          <ShippingLabelDialog clientName={order.clientName} />
                           <Button size="sm" onClick={() => dispatchOrder(order.id)}>
                             <Truck className="h-4 w-4 mr-1" />
                             Despachar
