@@ -152,6 +152,16 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const inkColor = fd.get("mw_colorTinta") as string;
     const gelColor = fd.get("mw_colorGel") as string;
     const referencia = fd.get("mw_referencia") as string;
+    const rutFile = fd.get("mw_rut") as File;
+    const totalAmount = parseFloat(fd.get("mw_valorTotal") as string) || 0;
+    const abono = parseFloat(fd.get("mw_abono") as string) || 0;
+
+    if (!rutFile || !rutFile.name) {
+      toast.error("RUT requerido", {
+        description: "Para ventas al por mayor debe adjuntar el RUT de la empresa.",
+      });
+      return;
+    }
 
     // Wholesale: goes to production, NOT logistics
     useProductionStore.getState().addStampingTask({
@@ -165,8 +175,21 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       observations: (fd.get("mw_observaciones") as string) || undefined,
     });
 
+    // Send to accounting as "Cliente empresa"
+    useAccountingStore.getState().addOrder({
+      clientName,
+      brand: "magical",
+      product: referencia,
+      quantity,
+      saleType: "mayor",
+      clientType: "Cliente empresa",
+      totalAmount,
+      abono,
+      hasRut: true,
+    });
+
     toast.success("Pedido al por mayor creado", {
-      description: `${clientName} — ${quantity} uds. Enviado a Producción.`,
+      description: `${clientName} — ${quantity} uds. Enviado a Producción y Contabilidad.`,
     });
     onReset();
   };
