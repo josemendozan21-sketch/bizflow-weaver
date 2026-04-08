@@ -20,7 +20,7 @@ import { useInventoryStore, type StockItem, type StockStatus } from "@/stores/in
 import { toast } from "sonner";
 
 const CATEGORY_META: Record<StockItem["category"], { label: string; description: string; icon: React.ElementType }> = {
-  materia_prima: { label: "Materia prima", description: "Gel, mezclas, rollos plásticos, tintas, silicona", icon: Beaker },
+  materia_prima: { label: "Materia prima", description: "Gel/mezcla, glicerina, carbopol, tintas PVC, colorantes, rollos de frío y calor", icon: Beaker },
   cuerpos_referencias: { label: "Cuerpos o referencias", description: "Envases o estructuras listas para llenar", icon: Box },
   producto_terminado: { label: "Productos terminados", description: "Listos para despacho", icon: PackageCheck },
 };
@@ -33,7 +33,7 @@ const STATUS_CONFIG: Record<StockStatus, { label: string; variant: "default" | "
 
 const CATEGORIES: StockItem["category"][] = ["materia_prima", "cuerpos_referencias", "producto_terminado"];
 
-const UNITS = ["unidades", "gramos", "kilos"];
+const UNITS = ["unidades", "gramos", "kilos", "tarros"];
 
 const CategorizedInventoryPanel = () => {
   const { stockItems, addStockItem, updateStockItem, deleteStockItem, getStockStatus } = useInventoryStore();

@@ -79,19 +79,27 @@ const INITIAL_GEL_STOCK: GelStock[] = [
 
 const INITIAL_STOCK_ITEMS: StockItem[] = [
   // Materia prima
-  { id: "si-1", category: "materia_prima", name: "Gel", available: 15000, unit: "gramos", minStock: 5000 },
-  { id: "si-2", category: "materia_prima", name: "Mezclas para gel", available: 8000, unit: "gramos", minStock: 3000 },
-  { id: "si-3", category: "materia_prima", name: "Rollos plásticos", available: 25, unit: "unidades", minStock: 10 },
-  { id: "si-4", category: "materia_prima", name: "Tintas", available: 12, unit: "unidades", minStock: 5 },
-  { id: "si-5", category: "materia_prima", name: "Silicona", available: 3000, unit: "gramos", minStock: 1000 },
+  { id: "si-1", category: "materia_prima", name: "Gel / mezcla", available: 15000, unit: "gramos", minStock: 5000 },
+  { id: "si-2", category: "materia_prima", name: "Glicerina", available: 25, unit: "kilos", minStock: 10 },
+  { id: "si-3", category: "materia_prima", name: "Carbopol", available: 3000, unit: "gramos", minStock: 1000 },
+  { id: "si-4", category: "materia_prima", name: "Tinta PVC - Blanco", available: 5, unit: "tarros", minStock: 2 },
+  { id: "si-4b", category: "materia_prima", name: "Tinta PVC - Negro", available: 4, unit: "tarros", minStock: 2 },
+  { id: "si-4c", category: "materia_prima", name: "Tinta PVC - Rojo", available: 3, unit: "tarros", minStock: 2 },
+  { id: "si-4d", category: "materia_prima", name: "Tinta PVC - Azul", available: 3, unit: "tarros", minStock: 2 },
+  { id: "si-5", category: "materia_prima", name: "Colorante - Azul", available: 500, unit: "gramos", minStock: 200 },
+  { id: "si-5b", category: "materia_prima", name: "Colorante - Rojo", available: 400, unit: "gramos", minStock: 200 },
+  { id: "si-5c", category: "materia_prima", name: "Colorante - Verde", available: 350, unit: "gramos", minStock: 200 },
+  { id: "si-5d", category: "materia_prima", name: "Colorante - Morado", available: 300, unit: "gramos", minStock: 200 },
+  { id: "si-6a", category: "materia_prima", name: "Rollos de frío", available: 15, unit: "unidades", minStock: 5 },
+  { id: "si-6b", category: "materia_prima", name: "Rollos de calor", available: 12, unit: "unidades", minStock: 5 },
   // Cuerpos o referencias
-  { id: "si-6", category: "cuerpos_referencias", name: "Envase Muela", available: 200, unit: "unidades", minStock: 50 },
-  { id: "si-7", category: "cuerpos_referencias", name: "Envase Cuello", available: 150, unit: "unidades", minStock: 50 },
-  { id: "si-8", category: "cuerpos_referencias", name: "Envase Rodilla", available: 80, unit: "unidades", minStock: 50 },
+  { id: "si-7", category: "cuerpos_referencias", name: "Envase Muela", available: 200, unit: "unidades", minStock: 50 },
+  { id: "si-8", category: "cuerpos_referencias", name: "Envase Cuello", available: 150, unit: "unidades", minStock: 50 },
+  { id: "si-9", category: "cuerpos_referencias", name: "Envase Rodilla", available: 80, unit: "unidades", minStock: 50 },
   // Productos terminados
-  { id: "si-9", category: "producto_terminado", name: "Muela (terminado)", available: 120, unit: "unidades", minStock: 30 },
-  { id: "si-10", category: "producto_terminado", name: "Cuello (terminado)", available: 45, unit: "unidades", minStock: 30 },
-  { id: "si-11", category: "producto_terminado", name: "Rodilla (terminado)", available: 15, unit: "unidades", minStock: 30 },
+  { id: "si-10", category: "producto_terminado", name: "Muela (terminado)", available: 120, unit: "unidades", minStock: 30 },
+  { id: "si-11", category: "producto_terminado", name: "Cuello (terminado)", available: 45, unit: "unidades", minStock: 30 },
+  { id: "si-12", category: "producto_terminado", name: "Rodilla (terminado)", available: 15, unit: "unidades", minStock: 30 },
 ];
 
 export interface ProductionRequirement {
@@ -310,7 +318,7 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
     const totalGrams = quantity * gramsPerUnit;
 
     const items = get().stockItems;
-    const gelItem = items.find((s) => s.category === "materia_prima" && s.name.toLowerCase() === "gel");
+    const gelItem = items.find((s) => s.category === "materia_prima" && s.name.toLowerCase().includes("gel"));
 
     if (!gelItem) {
       return { success: false, gramsUsed: 0, message: "No se encontró 'Gel' en materia prima." };
