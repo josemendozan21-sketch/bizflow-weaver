@@ -115,6 +115,7 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
   gelStock: INITIAL_GEL_STOCK,
   dailyEntries: [],
   inventoryTotals: [],
+  stockItems: INITIAL_STOCK_ITEMS,
 
   addMaterialConfig: (config) => {
     const newConfig: MaterialConfig = {
@@ -180,5 +181,23 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
     }
 
     set({ dailyEntries: newEntries, inventoryTotals: recalcTotals(newEntries) });
+  },
+
+  updateStockItem: (id, updates) => {
+    set({ stockItems: get().stockItems.map((s) => (s.id === id ? { ...s, ...updates } : s)) });
+  },
+
+  addStockItem: (item) => {
+    set({ stockItems: [...get().stockItems, { ...item, id: `si-${Date.now()}` }] });
+  },
+
+  deleteStockItem: (id) => {
+    set({ stockItems: get().stockItems.filter((s) => s.id !== id) });
+  },
+
+  getStockStatus: (item) => {
+    if (item.available <= item.minStock * 0.3) return "critico";
+    if (item.available <= item.minStock) return "bajo";
+    return "ok";
   },
 }));
