@@ -19,9 +19,8 @@ import {
 import { useInventoryStore, type StockItem, type StockStatus } from "@/stores/inventoryStore";
 import { toast } from "sonner";
 
-const CATEGORY_META: Record<StockItem["category"], { label: string; description: string; icon: React.ElementType }> = {
+const CATEGORY_META: Record<string, { label: string; description: string; icon: React.ElementType }> = {
   materia_prima: { label: "Materia prima", description: "Gel/mezcla, glicerina, carbopol, tintas PVC, colorantes, rollos de frío y calor", icon: Beaker },
-  cuerpos_referencias: { label: "Cuerpos o referencias", description: "Envases o estructuras listas para llenar", icon: Box },
   producto_terminado: { label: "Productos terminados", description: "Listos para despacho", icon: PackageCheck },
 };
 
@@ -31,7 +30,7 @@ const STATUS_CONFIG: Record<StockStatus, { label: string; variant: "default" | "
   critico: { label: "Crítico", variant: "destructive", icon: AlertCircle },
 };
 
-const CATEGORIES: StockItem["category"][] = ["materia_prima", "cuerpos_referencias", "producto_terminado"];
+const CATEGORIES: StockItem["category"][] = ["materia_prima", "producto_terminado"];
 
 const UNITS = ["unidades", "gramos", "kilos", "tarros"];
 
