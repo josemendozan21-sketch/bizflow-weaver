@@ -71,12 +71,23 @@ const INITIAL_STOCK_ITEMS: StockItem[] = [
   { id: "si-11", category: "producto_terminado", name: "Rodilla (terminado)", available: 15, unit: "unidades", minStock: 30 },
 ];
 
+export interface ProductionRequirement {
+  id: string;
+  brand: string;
+  product: string;
+  quantity: number;
+  reason: string;
+  createdAt: string;
+  status: "pendiente" | "en_proceso" | "completado";
+}
+
 interface InventoryStore {
   materialConfigs: MaterialConfig[];
   gelStock: GelStock[];
   dailyEntries: DailyProductionEntry[];
   inventoryTotals: InventoryTotal[];
   stockItems: StockItem[];
+  productionRequirements: ProductionRequirement[];
   addMaterialConfig: (config: Omit<MaterialConfig, "id">) => void;
   updateMaterialConfig: (id: string, config: Partial<Omit<MaterialConfig, "id">>) => void;
   deleteMaterialConfig: (id: string) => void;
@@ -88,6 +99,14 @@ interface InventoryStore {
   addStockItem: (item: Omit<StockItem, "id">) => void;
   deleteStockItem: (id: string) => void;
   getStockStatus: (item: StockItem) => StockStatus;
+  /** Retail: discount from producto_terminado. Returns { success, message } */
+  discountFinishedProduct: (productName: string, quantity: number) => { success: boolean; message: string };
+  /** Wholesale: check cuerpos_referencias, discount if available, else create production requirement */
+  reserveBodyStock: (productName: string, quantity: number, brand: string) => { available: boolean; discounted: number; message: string };
+  /** Magical Warmers: discount gel from materia_prima based on config */
+  discountGelForMagical: (productName: string, quantity: number) => { success: boolean; gramsUsed: number; message: string };
+  addProductionRequirement: (req: Omit<ProductionRequirement, "id" | "createdAt" | "status">) => void;
+  updateProductionRequirementStatus: (id: string, status: ProductionRequirement["status"]) => void;
 }
 
 function recalcTotals(entries: DailyProductionEntry[]): InventoryTotal[] {
@@ -116,6 +135,7 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
   dailyEntries: [],
   inventoryTotals: [],
   stockItems: INITIAL_STOCK_ITEMS,
+  productionRequirements: [],
 
   addMaterialConfig: (config) => {
     const newConfig: MaterialConfig = {
