@@ -1,5 +1,7 @@
 import { create } from "zustand";
 
+export type ClientType = "Venta mostrador" | "Cliente empresa";
+
 export interface AccountingOrder {
   id: string;
   clientName: string;
@@ -7,9 +9,15 @@ export interface AccountingOrder {
   product: string;
   quantity: number;
   saleType: "mayor" | "menor";
-  dispatchedAt: string;
-  transportadora: string;
-  numeroGuia: string;
+  clientType: ClientType;
+  createdAt: string;
+  totalAmount?: number;
+  abono?: number;
+  hasRut: boolean;
+  /** Filled when dispatched */
+  dispatchedAt?: string;
+  transportadora?: string;
+  numeroGuia?: string;
   status: "pendiente" | "facturado";
   invoiceNumber?: string;
   invoiceDate?: string;
@@ -19,7 +27,8 @@ export interface AccountingOrder {
 
 interface AccountingStore {
   orders: AccountingOrder[];
-  addOrder: (order: Omit<AccountingOrder, "id" | "status">) => void;
+  addOrder: (order: Omit<AccountingOrder, "id" | "status" | "createdAt">) => void;
+  updateDispatchInfo: (clientName: string, brand: string, info: { dispatchedAt: string; transportadora: string; numeroGuia: string }) => void;
   markInvoiced: (id: string, data: { invoiceNumber: string; invoiceAmount: number; invoiceNotes?: string }) => void;
 }
 
@@ -31,8 +40,20 @@ export const useAccountingStore = create<AccountingStore>((set, get) => ({
       ...order,
       id: `acc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       status: "pendiente",
+      createdAt: new Date().toISOString().slice(0, 10),
     };
     set({ orders: [...get().orders, newOrder] });
+  },
+
+  updateDispatchInfo: (clientName, brand, info) => {
+    const orders = get().orders;
+    const idx = orders.findIndex(
+      (o) => o.clientName === clientName && o.brand === brand && !o.dispatchedAt
+    );
+    if (idx === -1) return;
+    const updated = [...orders];
+    updated[idx] = { ...updated[idx], ...info };
+    set({ orders: updated });
   },
 
   markInvoiced: (id, data) => {
