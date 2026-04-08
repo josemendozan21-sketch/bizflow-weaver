@@ -7,12 +7,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowLeft, Zap, Flame, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, Zap, Flame, AlertTriangle, CheckCircle2, FileText, ShoppingCart } from "lucide-react";
 import { useLogisticsStore } from "@/stores/logisticsStore";
 import { useProductionStore } from "@/stores/productionStore";
 import { useInventoryStore } from "@/stores/inventoryStore";
 import { useAccountingStore } from "@/stores/accountingStore";
 import { toast } from "sonner";
+import QuotationGenerator from "@/components/ventas/QuotationGenerator";
 
 type Brand = "sweatspot" | "magical";
 type SaleType = "mayor" | "menor";
@@ -55,38 +57,55 @@ const Ventas = () => {
         <p className="text-muted-foreground">Gestión de cotizaciones y pedidos</p>
       </div>
 
-      {/* Stepper */}
-      <div className="flex items-center gap-2 text-sm">
-        <StepIndicator n={1} current={step} label="Marca" />
-        <div className="h-px w-6 bg-border" />
-        <StepIndicator n={2} current={step} label="Tipo de venta" />
-        <div className="h-px w-6 bg-border" />
-        <StepIndicator n={3} current={step} label="Pedido" />
-      </div>
+      <Tabs defaultValue="pedidos" className="w-full">
+        <TabsList>
+          <TabsTrigger value="pedidos" className="gap-1.5">
+            <ShoppingCart className="h-4 w-4" /> Pedidos
+          </TabsTrigger>
+          <TabsTrigger value="cotizaciones" className="gap-1.5">
+            <FileText className="h-4 w-4" /> Cotizaciones
+          </TabsTrigger>
+        </TabsList>
 
-      {step > 1 && (
-        <Button variant="ghost" size="sm" onClick={handleBack} className="gap-1">
-          <ArrowLeft className="h-4 w-4" /> Volver
-        </Button>
-      )}
+        <TabsContent value="pedidos" className="space-y-6 mt-4">
+          {/* Stepper */}
+          <div className="flex items-center gap-2 text-sm">
+            <StepIndicator n={1} current={step} label="Marca" />
+            <div className="h-px w-6 bg-border" />
+            <StepIndicator n={2} current={step} label="Tipo de venta" />
+            <div className="h-px w-6 bg-border" />
+            <StepIndicator n={3} current={step} label="Pedido" />
+          </div>
 
-      {step === 1 && (
-        <div className="grid gap-4 sm:grid-cols-2 max-w-lg">
-          <BrandCard icon={<Zap className="h-8 w-8" />} name="Sweatspot" onClick={() => handleBrandSelect("sweatspot")} />
-          <BrandCard icon={<Flame className="h-8 w-8" />} name="Magical Warmers" onClick={() => handleBrandSelect("magical")} />
-        </div>
-      )}
+          {step > 1 && (
+            <Button variant="ghost" size="sm" onClick={handleBack} className="gap-1">
+              <ArrowLeft className="h-4 w-4" /> Volver
+            </Button>
+          )}
 
-      {step === 2 && (
-        <div className="grid gap-4 sm:grid-cols-2 max-w-lg">
-          <SaleTypeCard title="Al por mayor" description="Pedidos en volumen con abono inicial" onClick={() => handleSaleTypeSelect("mayor")} />
-          <SaleTypeCard title="Al por menor" description="Venta unitaria al consumidor final" onClick={() => handleSaleTypeSelect("menor")} />
-        </div>
-      )}
+          {step === 1 && (
+            <div className="grid gap-4 sm:grid-cols-2 max-w-lg">
+              <BrandCard icon={<Zap className="h-8 w-8" />} name="Sweatspot" onClick={() => handleBrandSelect("sweatspot")} />
+              <BrandCard icon={<Flame className="h-8 w-8" />} name="Magical Warmers" onClick={() => handleBrandSelect("magical")} />
+            </div>
+          )}
 
-      {step === 3 && brand && saleType && (
-        <OrderForm brand={brand} saleType={saleType} onReset={handleReset} />
-      )}
+          {step === 2 && (
+            <div className="grid gap-4 sm:grid-cols-2 max-w-lg">
+              <SaleTypeCard title="Al por mayor" description="Pedidos en volumen con abono inicial" onClick={() => handleSaleTypeSelect("mayor")} />
+              <SaleTypeCard title="Al por menor" description="Venta unitaria al consumidor final" onClick={() => handleSaleTypeSelect("menor")} />
+            </div>
+          )}
+
+          {step === 3 && brand && saleType && (
+            <OrderForm brand={brand} saleType={saleType} onReset={handleReset} />
+          )}
+        </TabsContent>
+
+        <TabsContent value="cotizaciones" className="mt-4">
+          <QuotationGenerator />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
