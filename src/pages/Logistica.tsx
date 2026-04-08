@@ -11,18 +11,13 @@ import DispatchConfirmDialog from "@/components/logistics/DispatchConfirmDialog"
 
 const Logistica = () => {
   const { orders, dispatchOrder } = useLogisticsStore();
-  const addAccountingOrder = useAccountingStore((s) => s.addOrder);
+  const updateDispatchInfo = useAccountingStore((s) => s.updateDispatchInfo);
 
   const handleDispatch = (id: string, shipping: { transportadora: string; numeroGuia: string }) => {
     const order = orders.find((o) => o.id === id);
     dispatchOrder(id, shipping);
     if (order) {
-      addAccountingOrder({
-        clientName: order.clientName,
-        brand: order.brand,
-        product: order.product,
-        quantity: order.quantity,
-        saleType: order.saleType,
+      updateDispatchInfo(order.clientName, order.brand, {
         dispatchedAt: new Date().toISOString().slice(0, 10),
         transportadora: shipping.transportadora,
         numeroGuia: shipping.numeroGuia,
