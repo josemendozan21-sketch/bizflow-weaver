@@ -220,4 +220,111 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
     if (item.available <= item.minStock) return "bajo";
     return "ok";
   },
+
+  discountFinishedProduct: (productName, quantity) => {
+    const items = get().stockItems;
+    const item = items.find(
+      (s) => s.category === "producto_terminado" && s.name.toLowerCase().includes(productName.toLowerCase())
+    );
+    if (!item) {
+      return { success: false, message: `Producto terminado "${productName}" no encontrado en inventario.` };
+    }
+    if (item.available < quantity) {
+      return { success: false, message: `Stock insuficiente de "${item.name}". Disponible: ${item.available}, requerido: ${quantity}.` };
+    }
+    set({
+      stockItems: items.map((s) =>
+        s.id === item.id ? { ...s, available: s.available - quantity } : s
+      ),
+    });
+    return { success: true, message: `Se descontaron ${quantity} uds. de "${item.name}". Nuevo stock: ${item.available - quantity}.` };
+  },
+
+  reserveBodyStock: (productName, quantity, brand) => {
+    const items = get().stockItems;
+    const item = items.find(
+      (s) => s.category === "cuerpos_referencias" && s.name.toLowerCase().includes(productName.toLowerCase())
+    );
+
+    if (!item || item.available <= 0) {
+      // No stock at all — generate production requirement
+      get().addProductionRequirement({
+        brand,
+        product: productName,
+        quantity,
+        reason: `Sin stock de cuerpos para "${productName}". Se requieren ${quantity} unidades.`,
+      });
+      return { available: false, discounted: 0, message: `Sin stock de "${productName}". Se generó requerimiento de producción por ${quantity} uds.` };
+    }
+
+    const toDiscount = Math.min(item.available, quantity);
+    const remaining = quantity - toDiscount;
+
+    set({
+      stockItems: items.map((s) =>
+        s.id === item.id ? { ...s, available: s.available - toDiscount } : s
+      ),
+    });
+
+    if (remaining > 0) {
+      get().addProductionRequirement({
+        brand,
+        product: productName,
+        quantity: remaining,
+        reason: `Stock parcial de "${item.name}". Descontados: ${toDiscount}, faltan: ${remaining} uds.`,
+      });
+      return { available: true, discounted: toDiscount, message: `Se descontaron ${toDiscount} uds. de "${item.name}". Faltan ${remaining} uds — requerimiento de producción generado.` };
+    }
+
+    return { available: true, discounted: toDiscount, message: `Se reservaron ${toDiscount} uds. de "${item.name}".` };
+  },
+
+  discountGelForMagical: (productName, quantity) => {
+    const config = get().materialConfigs.find(
+      (c) => c.productName.toLowerCase().includes(productName.toLowerCase())
+    );
+    const gramsPerUnit = config?.gramsPerUnit || 60; // fallback
+    const totalGrams = quantity * gramsPerUnit;
+
+    const items = get().stockItems;
+    const gelItem = items.find((s) => s.category === "materia_prima" && s.name.toLowerCase() === "gel");
+
+    if (!gelItem) {
+      return { success: false, gramsUsed: 0, message: "No se encontró 'Gel' en materia prima." };
+    }
+
+    if (gelItem.available < totalGrams) {
+      // Project usage but warn
+      const newAvailable = Math.max(0, gelItem.available - totalGrams);
+      set({
+        stockItems: items.map((s) => s.id === gelItem.id ? { ...s, available: newAvailable } : s),
+        gelStock: get().gelStock.map((g) => ({ ...g, availableGrams: Math.max(0, g.availableGrams - totalGrams) })),
+      });
+      return { success: true, gramsUsed: totalGrams, message: `⚠️ Gel insuficiente. Se proyectaron ${totalGrams}g (${quantity} uds × ${gramsPerUnit}g). Stock actual negativo — reabastecer.` };
+    }
+
+    set({
+      stockItems: items.map((s) => s.id === gelItem.id ? { ...s, available: gelItem.available - totalGrams } : s),
+      gelStock: get().gelStock.map((g) => ({ ...g, availableGrams: Math.max(0, g.availableGrams - totalGrams) })),
+    });
+    return { success: true, gramsUsed: totalGrams, message: `Se descontaron ${totalGrams}g de gel (${quantity} uds × ${gramsPerUnit}g/ud).` };
+  },
+
+  addProductionRequirement: (req) => {
+    const newReq: ProductionRequirement = {
+      ...req,
+      id: `pr-${Date.now()}`,
+      createdAt: new Date().toISOString().slice(0, 10),
+      status: "pendiente",
+    };
+    set({ productionRequirements: [...get().productionRequirements, newReq] });
+  },
+
+  updateProductionRequirementStatus: (id, status) => {
+    set({
+      productionRequirements: get().productionRequirements.map((r) =>
+        r.id === id ? { ...r, status } : r
+      ),
+    });
+  },
 }));
