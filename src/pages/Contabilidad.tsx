@@ -15,9 +15,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { FileText, CheckCircle } from "lucide-react";
-import { useAccountingStore } from "@/stores/accountingStore";
+import { useAccountingStore, type AccountingOrder } from "@/stores/accountingStore";
+import OrderDetailCard from "@/components/contabilidad/OrderDetailCard";
 
-const InvoiceDialog = ({ order, onConfirm }: { order: { id: string; clientName: string; totalAmount?: number }; onConfirm: (id: string, data: { invoiceNumber: string; invoiceAmount: number; invoiceNotes?: string }) => void }) => {
+const InvoiceDialog = ({ order, onConfirm }: { order: AccountingOrder; onConfirm: (id: string, data: { invoiceNumber: string; invoiceAmount: number; invoiceNotes?: string }) => void }) => {
   const [open, setOpen] = useState(false);
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [invoiceAmount, setInvoiceAmount] = useState(order.totalAmount?.toString() || "");
@@ -38,7 +39,7 @@ const InvoiceDialog = ({ order, onConfirm }: { order: { id: string; clientName: 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">
+        <Button size="sm" className="w-full">
           <FileText className="h-4 w-4 mr-1" />
           Facturar
         </Button>
@@ -138,70 +139,35 @@ const Contabilidad = () => {
         </TabsList>
 
         <TabsContent value="pendientes">
-          <Card>
-            <CardContent className="pt-6">
-              {pending.length === 0 ? (
+          {pending.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
                 <p className="text-muted-foreground text-center py-8">No hay pedidos pendientes por facturar.</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Clasificación</TableHead>
-                      <TableHead>Marca</TableHead>
-                      <TableHead>Producto</TableHead>
-                      <TableHead>Cantidad</TableHead>
-                      <TableHead>Tipo venta</TableHead>
-                      <TableHead>Monto</TableHead>
-                      <TableHead>RUT</TableHead>
-                      <TableHead>Creado</TableHead>
-                      <TableHead>Acción</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pending.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell className="font-medium">{order.clientName}</TableCell>
-                        <TableCell>
-                          <Badge variant={order.clientType === "Cliente empresa" ? "default" : "outline"}>
-                            {order.clientType}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={order.brand === "magical" ? "default" : "secondary"}>
-                            {order.brand === "magical" ? "Magical Warmers" : "Sweatspot"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{order.product}</TableCell>
-                        <TableCell>{order.quantity}</TableCell>
-                        <TableCell>{order.saleType === "mayor" ? "Mayor" : "Menor"}</TableCell>
-                        <TableCell>{order.totalAmount ? `$${order.totalAmount.toLocaleString()}` : "—"}</TableCell>
-                        <TableCell>
-                          {order.hasRut ? (
-                            <Badge variant="default" className="bg-emerald-600">Sí</Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">No</span>
-                          )}
-                        </TableCell>
-                        <TableCell>{order.createdAt}</TableCell>
-                        <TableCell>
-                          <InvoiceDialog order={order} onConfirm={markInvoiced} />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {pending.map((order) => (
+                <OrderDetailCard
+                  key={order.id}
+                  order={order}
+                  actionSlot={<InvoiceDialog order={order} onConfirm={markInvoiced} />}
+                />
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="facturados">
-          <Card>
-            <CardContent className="pt-6">
-              {invoiced.length === 0 ? (
+          {invoiced.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
                 <p className="text-muted-foreground text-center py-8">No hay pedidos facturados aún.</p>
-              ) : (
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="pt-6">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -234,9 +200,9 @@ const Contabilidad = () => {
                     ))}
                   </TableBody>
                 </Table>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>
