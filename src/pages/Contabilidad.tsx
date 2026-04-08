@@ -17,10 +17,10 @@ import {
 import { FileText, CheckCircle } from "lucide-react";
 import { useAccountingStore } from "@/stores/accountingStore";
 
-const InvoiceDialog = ({ order, onConfirm }: { order: { id: string; clientName: string }; onConfirm: (id: string, data: { invoiceNumber: string; invoiceAmount: number; invoiceNotes?: string }) => void }) => {
+const InvoiceDialog = ({ order, onConfirm }: { order: { id: string; clientName: string; totalAmount?: number }; onConfirm: (id: string, data: { invoiceNumber: string; invoiceAmount: number; invoiceNotes?: string }) => void }) => {
   const [open, setOpen] = useState(false);
   const [invoiceNumber, setInvoiceNumber] = useState("");
-  const [invoiceAmount, setInvoiceAmount] = useState("");
+  const [invoiceAmount, setInvoiceAmount] = useState(order.totalAmount?.toString() || "");
   const [invoiceNotes, setInvoiceNotes] = useState("");
 
   const handleConfirm = () => {
@@ -101,7 +101,7 @@ const Contabilidad = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Contabilidad</h1>
-        <p className="text-muted-foreground">Facturación y control de pedidos despachados</p>
+        <p className="text-muted-foreground">Facturación y control de pedidos</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -147,13 +147,14 @@ const Contabilidad = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Cliente</TableHead>
+                      <TableHead>Clasificación</TableHead>
                       <TableHead>Marca</TableHead>
                       <TableHead>Producto</TableHead>
                       <TableHead>Cantidad</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Transportadora</TableHead>
-                      <TableHead>Guía</TableHead>
-                      <TableHead>Despachado</TableHead>
+                      <TableHead>Tipo venta</TableHead>
+                      <TableHead>Monto</TableHead>
+                      <TableHead>RUT</TableHead>
+                      <TableHead>Creado</TableHead>
                       <TableHead>Acción</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -162,6 +163,11 @@ const Contabilidad = () => {
                       <TableRow key={order.id}>
                         <TableCell className="font-medium">{order.clientName}</TableCell>
                         <TableCell>
+                          <Badge variant={order.clientType === "Cliente empresa" ? "default" : "outline"}>
+                            {order.clientType}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
                           <Badge variant={order.brand === "magical" ? "default" : "secondary"}>
                             {order.brand === "magical" ? "Magical Warmers" : "Sweatspot"}
                           </Badge>
@@ -169,9 +175,15 @@ const Contabilidad = () => {
                         <TableCell>{order.product}</TableCell>
                         <TableCell>{order.quantity}</TableCell>
                         <TableCell>{order.saleType === "mayor" ? "Mayor" : "Menor"}</TableCell>
-                        <TableCell>{order.transportadora}</TableCell>
-                        <TableCell className="font-mono text-xs">{order.numeroGuia}</TableCell>
-                        <TableCell>{order.dispatchedAt}</TableCell>
+                        <TableCell>{order.totalAmount ? `$${order.totalAmount.toLocaleString()}` : "—"}</TableCell>
+                        <TableCell>
+                          {order.hasRut ? (
+                            <Badge variant="default" className="bg-emerald-600">Sí</Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">No</span>
+                          )}
+                        </TableCell>
+                        <TableCell>{order.createdAt}</TableCell>
                         <TableCell>
                           <InvoiceDialog order={order} onConfirm={markInvoiced} />
                         </TableCell>
@@ -194,12 +206,12 @@ const Contabilidad = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Cliente</TableHead>
+                      <TableHead>Clasificación</TableHead>
                       <TableHead>Factura</TableHead>
-                      <TableHead>Monto</TableHead>
+                      <TableHead>Monto facturado</TableHead>
                       <TableHead>Fecha factura</TableHead>
                       <TableHead>Producto</TableHead>
                       <TableHead>Cantidad</TableHead>
-                      <TableHead>Guía</TableHead>
                       <TableHead>Notas</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -207,12 +219,16 @@ const Contabilidad = () => {
                     {invoiced.map((order) => (
                       <TableRow key={order.id}>
                         <TableCell className="font-medium">{order.clientName}</TableCell>
+                        <TableCell>
+                          <Badge variant={order.clientType === "Cliente empresa" ? "default" : "outline"}>
+                            {order.clientType}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="font-mono">{order.invoiceNumber}</TableCell>
                         <TableCell>${order.invoiceAmount?.toLocaleString()}</TableCell>
                         <TableCell>{order.invoiceDate}</TableCell>
                         <TableCell>{order.product}</TableCell>
                         <TableCell>{order.quantity}</TableCell>
-                        <TableCell className="font-mono text-xs">{order.numeroGuia}</TableCell>
                         <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">{order.invoiceNotes}</TableCell>
                       </TableRow>
                     ))}

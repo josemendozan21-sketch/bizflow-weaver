@@ -9,6 +9,7 @@ import { ArrowLeft, Zap, Flame } from "lucide-react";
 import { useLogisticsStore } from "@/stores/logisticsStore";
 import { useProductionStore } from "@/stores/productionStore";
 import { useInventoryStore } from "@/stores/inventoryStore";
+import { useAccountingStore } from "@/stores/accountingStore";
 import { toast } from "sonner";
 
 type Brand = "sweatspot" | "magical";
@@ -151,6 +152,16 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const inkColor = fd.get("mw_colorTinta") as string;
     const gelColor = fd.get("mw_colorGel") as string;
     const referencia = fd.get("mw_referencia") as string;
+    const rutFile = fd.get("mw_rut") as File;
+    const totalAmount = parseFloat(fd.get("mw_valorTotal") as string) || 0;
+    const abono = parseFloat(fd.get("mw_abono") as string) || 0;
+
+    if (!rutFile || !rutFile.name) {
+      toast.error("RUT requerido", {
+        description: "Para ventas al por mayor debe adjuntar el RUT de la empresa.",
+      });
+      return;
+    }
 
     // Wholesale: goes to production, NOT logistics
     useProductionStore.getState().addStampingTask({
@@ -164,8 +175,21 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       observations: (fd.get("mw_observaciones") as string) || undefined,
     });
 
+    // Send to accounting as "Cliente empresa"
+    useAccountingStore.getState().addOrder({
+      clientName,
+      brand: "magical",
+      product: referencia,
+      quantity,
+      saleType: "mayor",
+      clientType: "Cliente empresa",
+      totalAmount,
+      abono,
+      hasRut: true,
+    });
+
     toast.success("Pedido al por mayor creado", {
-      description: `${clientName} — ${quantity} uds. Enviado a Producción.`,
+      description: `${clientName} — ${quantity} uds. Enviado a Producción y Contabilidad.`,
     });
     onReset();
   };
@@ -268,6 +292,17 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     const inkColor = fd.get("ss_colorTinta") as string;
     const thermoSize = fd.get("ss_tamano") as "150 ml" | "250 ml" | "250 ml juguetón" | "500 ml";
     const siliconeColor = fd.get("ss_colorSilicona") as string;
+    const referencia = fd.get("ss_referencia") as string;
+    const rutFile = fd.get("ss_rut") as File;
+    const totalAmount = parseFloat(fd.get("ss_valorTotal") as string) || 0;
+    const abono = parseFloat(fd.get("ss_abono") as string) || 0;
+
+    if (!rutFile || !rutFile.name) {
+      toast.error("RUT requerido", {
+        description: "Para ventas al por mayor debe adjuntar el RUT de la empresa.",
+      });
+      return;
+    }
 
     // Wholesale: goes to production, NOT logistics
     useProductionStore.getState().addStampingTask({
@@ -280,8 +315,21 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       observations: (fd.get("ss_observaciones") as string) || undefined,
     });
 
+    // Send to accounting as "Cliente empresa"
+    useAccountingStore.getState().addOrder({
+      clientName,
+      brand: "sweatspot",
+      product: referencia,
+      quantity,
+      saleType: "mayor",
+      clientType: "Cliente empresa",
+      totalAmount,
+      abono,
+      hasRut: true,
+    });
+
     toast.success("Pedido al por mayor creado", {
-      description: `${clientName} — ${quantity} uds. Enviado a Producción.`,
+      description: `${clientName} — ${quantity} uds. Enviado a Producción y Contabilidad.`,
     });
     onReset();
   };
@@ -377,14 +425,22 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
     e.preventDefault();
     const form = e.target as HTMLFormElement;
     const fd = new FormData(form);
-    const clientName = fd.get("nombre") as string;
+    const clientName = (fd.get("nombre") as string)?.trim() || "";
     const quantity = parseInt(fd.get("cantidad") as string, 10);
     const referencia = fd.get("referencia") as string;
+    const totalAmount = parseFloat(fd.get("precioTotal") as string) || 0;
 
     if (saleType === "menor") {
-      // Retail: send immediately to logistics + discount inventory
+      // Determine if key client data is missing → "Venta mostrador"
+      const telefono = (fd.get("telefono") as string)?.trim() || "";
+      const ciudad = (fd.get("ciudad") as string)?.trim() || "";
+      const direccion = (fd.get("direccion") as string)?.trim() || "";
+      const isVentaMostrador = !clientName || !telefono || !ciudad || !direccion;
+      const displayName = isVentaMostrador ? (clientName || "Venta mostrador") : clientName;
+
+      // Retail: send immediately to logistics
       useLogisticsStore.getState().addOrder({
-        clientName,
+        clientName: displayName,
         brand,
         product: referencia,
         quantity,
@@ -393,8 +449,20 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
         status: "listo",
       });
 
+      // Send to accounting
+      useAccountingStore.getState().addOrder({
+        clientName: displayName,
+        brand,
+        product: referencia,
+        quantity,
+        saleType: "menor",
+        clientType: isVentaMostrador ? "Venta mostrador" : "Cliente empresa",
+        totalAmount,
+        hasRut: false,
+      });
+
       toast.success("Pedido al por menor creado", {
-        description: `${clientName} — ${quantity} uds. Enviado a Logística directamente.`,
+        description: `${displayName} — ${quantity} uds. Enviado a Logística y Contabilidad.`,
       });
     }
 
@@ -409,17 +477,20 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-5">
-          <fieldset className="space-y-4">
+           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Datos del cliente</legend>
+            {!isMayor && (
+              <p className="text-xs text-muted-foreground">Si faltan datos del cliente, se clasificará como "Venta mostrador".</p>
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Nombre completo" name="nombre" required />
-              <Field label="Teléfono" name="telefono" type="tel" />
+              <Field label="Nombre completo" name="nombre" required={isMayor} />
+              <Field label="Teléfono" name="telefono" type="tel" required={isMayor} />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Ciudad" name="ciudad" required />
-              <Field label="Departamento" name="departamento" required />
+              <Field label="Ciudad" name="ciudad" required={isMayor} />
+              <Field label="Departamento" name="departamento" required={isMayor} />
             </div>
-            <Field label="Dirección de envío" name="direccion" required />
+            <Field label="Dirección de envío" name="direccion" required={isMayor} />
           </fieldset>
 
           <fieldset className="space-y-4">
