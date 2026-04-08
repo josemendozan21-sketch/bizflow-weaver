@@ -7,12 +7,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowLeft, Zap, Flame, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, Zap, Flame, AlertTriangle, CheckCircle2, FileText, ShoppingCart } from "lucide-react";
 import { useLogisticsStore } from "@/stores/logisticsStore";
 import { useProductionStore } from "@/stores/productionStore";
 import { useInventoryStore } from "@/stores/inventoryStore";
 import { useAccountingStore } from "@/stores/accountingStore";
 import { toast } from "sonner";
+import QuotationGenerator from "@/components/ventas/QuotationGenerator";
 
 type Brand = "sweatspot" | "magical";
 type SaleType = "mayor" | "menor";
