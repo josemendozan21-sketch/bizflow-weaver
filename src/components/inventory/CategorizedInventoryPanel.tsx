@@ -21,7 +21,6 @@ import { toast } from "sonner";
 
 const CATEGORY_META: Record<string, { label: string; description: string; icon: React.ElementType }> = {
   materia_prima: { label: "Materia prima", description: "Gel/mezcla, glicerina, carbopol, tintas PVC, colorantes, rollos de frío y calor", icon: Beaker },
-  producto_terminado: { label: "Productos terminados", description: "Listos para despacho", icon: PackageCheck },
 };
 
 const STATUS_CONFIG: Record<StockStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ElementType }> = {
@@ -30,7 +29,7 @@ const STATUS_CONFIG: Record<StockStatus, { label: string; variant: "default" | "
   critico: { label: "Crítico", variant: "destructive", icon: AlertCircle },
 };
 
-const CATEGORIES: StockItem["category"][] = ["materia_prima", "producto_terminado"];
+const CATEGORIES: StockItem["category"][] = ["materia_prima"];
 
 const UNITS = ["unidades", "gramos", "kilos", "tarros"];
 
