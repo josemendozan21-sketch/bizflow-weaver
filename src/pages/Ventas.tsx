@@ -477,17 +477,20 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-5">
-          <fieldset className="space-y-4">
+           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Datos del cliente</legend>
+            {!isMayor && (
+              <p className="text-xs text-muted-foreground">Si faltan datos del cliente, se clasificará como "Venta mostrador".</p>
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Nombre completo" name="nombre" required />
-              <Field label="Teléfono" name="telefono" type="tel" />
+              <Field label="Nombre completo" name="nombre" required={isMayor} />
+              <Field label="Teléfono" name="telefono" type="tel" required={isMayor} />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Ciudad" name="ciudad" required />
-              <Field label="Departamento" name="departamento" required />
+              <Field label="Ciudad" name="ciudad" required={isMayor} />
+              <Field label="Departamento" name="departamento" required={isMayor} />
             </div>
-            <Field label="Dirección de envío" name="direccion" required />
+            <Field label="Dirección de envío" name="direccion" required={isMayor} />
           </fieldset>
 
           <fieldset className="space-y-4">
