@@ -292,6 +292,17 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     const inkColor = fd.get("ss_colorTinta") as string;
     const thermoSize = fd.get("ss_tamano") as "150 ml" | "250 ml" | "250 ml juguetón" | "500 ml";
     const siliconeColor = fd.get("ss_colorSilicona") as string;
+    const referencia = fd.get("ss_referencia") as string;
+    const rutFile = fd.get("ss_rut") as File;
+    const totalAmount = parseFloat(fd.get("ss_valorTotal") as string) || 0;
+    const abono = parseFloat(fd.get("ss_abono") as string) || 0;
+
+    if (!rutFile || !rutFile.name) {
+      toast.error("RUT requerido", {
+        description: "Para ventas al por mayor debe adjuntar el RUT de la empresa.",
+      });
+      return;
+    }
 
     // Wholesale: goes to production, NOT logistics
     useProductionStore.getState().addStampingTask({
@@ -304,8 +315,21 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       observations: (fd.get("ss_observaciones") as string) || undefined,
     });
 
+    // Send to accounting as "Cliente empresa"
+    useAccountingStore.getState().addOrder({
+      clientName,
+      brand: "sweatspot",
+      product: referencia,
+      quantity,
+      saleType: "mayor",
+      clientType: "Cliente empresa",
+      totalAmount,
+      abono,
+      hasRut: true,
+    });
+
     toast.success("Pedido al por mayor creado", {
-      description: `${clientName} — ${quantity} uds. Enviado a Producción.`,
+      description: `${clientName} — ${quantity} uds. Enviado a Producción y Contabilidad.`,
     });
     onReset();
   };
