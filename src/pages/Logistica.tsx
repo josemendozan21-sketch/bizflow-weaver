@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useLogisticsStore } from "@/stores/logisticsStore";
 import { Package, Truck, CheckCircle2, Clock } from "lucide-react";
 import ShippingLabelDialog from "@/components/logistics/ShippingLabelDialog";
+import DispatchConfirmDialog from "@/components/logistics/DispatchConfirmDialog";
 
 const Logistica = () => {
   const { orders, dispatchOrder } = useLogisticsStore();
