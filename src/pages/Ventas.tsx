@@ -540,7 +540,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
 
           <div className="space-y-1.5">
             <Label htmlFor="notas">Notas adicionales</Label>
-            <Textarea id="notas" placeholder="Observaciones del pedido..." />
+            <Textarea id="notas" name="notas" placeholder="Observaciones del pedido..." />
           </div>
 
           <div className="flex gap-3 pt-2">
