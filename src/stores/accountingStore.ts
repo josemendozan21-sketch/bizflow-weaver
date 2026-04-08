@@ -14,6 +14,11 @@ export interface AccountingOrder {
   totalAmount?: number;
   abono?: number;
   hasRut: boolean;
+  email?: string;
+  cedula?: string;
+  direccion?: string;
+  ciudad?: string;
+  observaciones?: string;
   /** Filled when dispatched */
   dispatchedAt?: string;
   transportadora?: string;
