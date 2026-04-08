@@ -133,7 +133,8 @@ const Logistica = () => {
                           {order.quantity.toLocaleString()}
                         </TableCell>
                         <TableCell>{order.readyDate}</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right space-x-2">
+                          <ShippingLabelDialog clientName={order.clientName} />
                           <Button size="sm" onClick={() => dispatchOrder(order.id)}>
                             <Truck className="h-4 w-4 mr-1" />
                             Despachar
