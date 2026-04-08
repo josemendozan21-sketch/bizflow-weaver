@@ -158,7 +158,7 @@ const Logistica = () => {
                           <DispatchConfirmDialog
                             orderId={order.id}
                             clientName={order.clientName}
-                            onConfirm={dispatchOrder}
+                            onConfirm={handleDispatch}
                           />
                         </TableCell>
                       </TableRow>
