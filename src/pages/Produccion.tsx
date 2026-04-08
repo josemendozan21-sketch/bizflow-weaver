@@ -2,6 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StampingSection } from "@/components/production/StampingSection";
 import { FillingSection } from "@/components/production/FillingSection";
+import { BodyProductionSection } from "@/components/production/BodyProductionSection";
 
 const Produccion = () => {
   return (
@@ -24,7 +25,7 @@ const Produccion = () => {
               <CardTitle>Producción de cuerpos o referencias</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">No hay órdenes de producción de cuerpos activas.</p>
+              <BodyProductionSection />
             </CardContent>
           </Card>
         </TabsContent>
