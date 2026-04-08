@@ -503,6 +503,12 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
               <Field label="Nombre completo" name="nombre" required={isMayor} />
               <Field label="Teléfono" name="telefono" type="tel" required={isMayor} />
             </div>
+            {!isMayor && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Cédula" name="cedula" />
+                <Field label="Correo electrónico" name="email" type="email" />
+              </div>
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Ciudad" name="ciudad" required={isMayor} />
               <Field label="Departamento" name="departamento" required={isMayor} />
