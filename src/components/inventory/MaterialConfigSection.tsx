@@ -14,10 +14,10 @@ const MaterialConfigSection = () => {
   const { materialConfigs, addMaterialConfig, updateMaterialConfig, deleteMaterialConfig } = useInventoryStore();
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({ productName: "", productType: "Frío", gramsPerUnit: "" });
+  const [form, setForm] = useState({ productName: "", productType: "Frío", gramsPerUnit: "", finishedUnits: "0", bodyUnits: "0" });
 
   const resetForm = () => {
-    setForm({ productName: "", productType: "Frío", gramsPerUnit: "" });
+    setForm({ productName: "", productType: "Frío", gramsPerUnit: "", finishedUnits: "0", bodyUnits: "0" });
     setIsAdding(false);
     setEditingId(null);
   };
@@ -28,6 +28,8 @@ const MaterialConfigSection = () => {
       productName: form.productName,
       productType: form.productType,
       gramsPerUnit: Number(form.gramsPerUnit),
+      finishedUnits: Number(form.finishedUnits) || 0,
+      bodyUnits: Number(form.bodyUnits) || 0,
     });
     resetForm();
   };
@@ -38,6 +40,8 @@ const MaterialConfigSection = () => {
       productName: config.productName,
       productType: config.productType,
       gramsPerUnit: String(config.gramsPerUnit),
+      finishedUnits: String(config.finishedUnits),
+      bodyUnits: String(config.bodyUnits),
     });
   };
 
@@ -47,15 +51,17 @@ const MaterialConfigSection = () => {
       productName: form.productName,
       productType: form.productType,
       gramsPerUnit: Number(form.gramsPerUnit),
+      finishedUnits: Number(form.finishedUnits) || 0,
+      bodyUnits: Number(form.bodyUnits) || 0,
     });
     resetForm();
   };
 
-  const renderFormRow = (onSave: () => void, namePlaceholder = "Ej: Lumbar") => (
+  const renderFormCells = (onSave: () => void) => (
     <>
       <TableCell>
         <Input
-          placeholder={namePlaceholder}
+          placeholder="Ej: Lumbar"
           value={form.productName}
           onChange={(e) => setForm({ ...form, productName: e.target.value })}
           className="h-8"
@@ -63,7 +69,7 @@ const MaterialConfigSection = () => {
       </TableCell>
       <TableCell>
         <Select value={form.productType} onValueChange={(v) => setForm({ ...form, productType: v })}>
-          <SelectTrigger className="h-8 w-32">
+          <SelectTrigger className="h-8 w-28">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -75,12 +81,26 @@ const MaterialConfigSection = () => {
       </TableCell>
       <TableCell className="text-right">
         <Input
-          type="number"
-          min={1}
-          placeholder="720"
+          type="number" min={0} placeholder="720"
           value={form.gramsPerUnit}
           onChange={(e) => setForm({ ...form, gramsPerUnit: e.target.value })}
-          className="h-8 w-24 ml-auto text-right"
+          className="h-8 w-20 ml-auto text-right"
+        />
+      </TableCell>
+      <TableCell className="text-right">
+        <Input
+          type="number" min={0}
+          value={form.bodyUnits}
+          onChange={(e) => setForm({ ...form, bodyUnits: e.target.value })}
+          className="h-8 w-20 ml-auto text-right"
+        />
+      </TableCell>
+      <TableCell className="text-right">
+        <Input
+          type="number" min={0}
+          value={form.finishedUnits}
+          onChange={(e) => setForm({ ...form, finishedUnits: e.target.value })}
+          className="h-8 w-20 ml-auto text-right"
         />
       </TableCell>
       <TableCell className="text-right space-x-1">
@@ -114,14 +134,16 @@ const MaterialConfigSection = () => {
             <TableRow>
               <TableHead>Nombre del producto</TableHead>
               <TableHead>Tipo</TableHead>
-              <TableHead className="text-right">Consumo por unidad</TableHead>
+              <TableHead className="text-right">Consumo / ud (g)</TableHead>
+              <TableHead className="text-right">Cuerpos (uds)</TableHead>
+              <TableHead className="text-right">Terminado (uds)</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {materialConfigs.map((config) =>
               editingId === config.id ? (
-                <TableRow key={config.id}>{renderFormRow(handleUpdate)}</TableRow>
+                <TableRow key={config.id}>{renderFormCells(handleUpdate)}</TableRow>
               ) : (
                 <TableRow key={config.id}>
                   <TableCell className="font-medium">{config.productName}</TableCell>
@@ -134,6 +156,14 @@ const MaterialConfigSection = () => {
                     <span className="font-semibold">{config.gramsPerUnit}</span>
                     <span className="text-muted-foreground ml-1">g</span>
                   </TableCell>
+                  <TableCell className="text-right">
+                    <span className="font-semibold">{config.bodyUnits}</span>
+                    <span className="text-muted-foreground ml-1">uds</span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <span className="font-semibold">{config.finishedUnits}</span>
+                    <span className="text-muted-foreground ml-1">uds</span>
+                  </TableCell>
                   <TableCell className="text-right space-x-1">
                     <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleEdit(config)}>
                       <Pencil className="h-4 w-4" />
@@ -145,10 +175,10 @@ const MaterialConfigSection = () => {
                 </TableRow>
               )
             )}
-            {isAdding && <TableRow>{renderFormRow(handleAdd)}</TableRow>}
+            {isAdding && <TableRow>{renderFormCells(handleAdd)}</TableRow>}
             {materialConfigs.length === 0 && !isAdding && (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                   No hay productos configurados. Haz clic en "Agregar producto" para comenzar.
                 </TableCell>
               </TableRow>
