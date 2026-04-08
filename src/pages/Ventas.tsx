@@ -425,14 +425,22 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
     e.preventDefault();
     const form = e.target as HTMLFormElement;
     const fd = new FormData(form);
-    const clientName = fd.get("nombre") as string;
+    const clientName = (fd.get("nombre") as string)?.trim() || "";
     const quantity = parseInt(fd.get("cantidad") as string, 10);
     const referencia = fd.get("referencia") as string;
+    const totalAmount = parseFloat(fd.get("precioTotal") as string) || 0;
 
     if (saleType === "menor") {
-      // Retail: send immediately to logistics + discount inventory
+      // Determine if key client data is missing → "Venta mostrador"
+      const telefono = (fd.get("telefono") as string)?.trim() || "";
+      const ciudad = (fd.get("ciudad") as string)?.trim() || "";
+      const direccion = (fd.get("direccion") as string)?.trim() || "";
+      const isVentaMostrador = !clientName || !telefono || !ciudad || !direccion;
+      const displayName = isVentaMostrador ? (clientName || "Venta mostrador") : clientName;
+
+      // Retail: send immediately to logistics
       useLogisticsStore.getState().addOrder({
-        clientName,
+        clientName: displayName,
         brand,
         product: referencia,
         quantity,
@@ -441,8 +449,20 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
         status: "listo",
       });
 
+      // Send to accounting
+      useAccountingStore.getState().addOrder({
+        clientName: displayName,
+        brand,
+        product: referencia,
+        quantity,
+        saleType: "menor",
+        clientType: isVentaMostrador ? "Venta mostrador" : "Cliente empresa",
+        totalAmount,
+        hasRut: false,
+      });
+
       toast.success("Pedido al por menor creado", {
-        description: `${clientName} — ${quantity} uds. Enviado a Logística directamente.`,
+        description: `${displayName} — ${quantity} uds. Enviado a Logística y Contabilidad.`,
       });
     }
 
