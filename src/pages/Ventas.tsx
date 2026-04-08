@@ -163,6 +163,12 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       return;
     }
 
+    // Wholesale: check cuerpos/referencias stock
+    const bodyResult = useInventoryStore.getState().reserveBodyStock(referencia, quantity, "magical");
+
+    // Calculate gel consumption for Magical Warmers
+    const gelResult = useInventoryStore.getState().discountGelForMagical(referencia, quantity);
+
     // Wholesale: goes to production, NOT logistics
     useProductionStore.getState().addStampingTask({
       brand: "magical",
@@ -195,6 +201,18 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     toast.success("Pedido al por mayor creado", {
       description: `${clientName} — ${quantity} uds. Enviado a Producción y Contabilidad.`,
     });
+
+    // Inventory feedback
+    if (!bodyResult.available) {
+      toast.warning("Requerimiento de producción generado", { description: bodyResult.message });
+    } else if (bodyResult.discounted < quantity) {
+      toast.warning("Stock parcial de cuerpos", { description: bodyResult.message });
+    } else {
+      toast.info("Inventario actualizado", { description: bodyResult.message });
+    }
+
+    toast.info("Consumo de gel", { description: gelResult.message });
+
     onReset();
   };
 
@@ -308,6 +326,9 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       return;
     }
 
+    // Wholesale: check cuerpos/referencias stock
+    const bodyResult = useInventoryStore.getState().reserveBodyStock(referencia, quantity, "sweatspot");
+
     // Wholesale: goes to production, NOT logistics
     useProductionStore.getState().addStampingTask({
       brand: "sweatspot",
@@ -339,6 +360,16 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     toast.success("Pedido al por mayor creado", {
       description: `${clientName} — ${quantity} uds. Enviado a Producción y Contabilidad.`,
     });
+
+    // Inventory feedback
+    if (!bodyResult.available) {
+      toast.warning("Requerimiento de producción generado", { description: bodyResult.message });
+    } else if (bodyResult.discounted < quantity) {
+      toast.warning("Stock parcial de cuerpos", { description: bodyResult.message });
+    } else {
+      toast.info("Inventario actualizado", { description: bodyResult.message });
+    }
+
     onReset();
   };
 
@@ -446,6 +477,19 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
       const isVentaMostrador = !clientName || !telefono || !ciudad || !direccion;
       const displayName = isVentaMostrador ? (clientName || "Venta mostrador") : clientName;
 
+      // Retail: discount from finished products
+      const discountResult = useInventoryStore.getState().discountFinishedProduct(referencia, quantity);
+      if (!discountResult.success) {
+        toast.error("Sin stock suficiente", { description: discountResult.message });
+        return;
+      }
+
+      // For Magical Warmers retail, also project gel consumption
+      if (brand === "magical") {
+        const gelResult = useInventoryStore.getState().discountGelForMagical(referencia, quantity);
+        toast.info("Consumo de gel", { description: gelResult.message });
+      }
+
       // Retail: send immediately to logistics
       useLogisticsStore.getState().addOrder({
         clientName: displayName,
@@ -479,7 +523,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
       });
 
       toast.success("Pedido al por menor creado", {
-        description: `${displayName} — ${quantity} uds. Enviado a Logística y Contabilidad.`,
+        description: `${displayName} — ${quantity} uds. Inventario actualizado. ${discountResult.message}`,
       });
     }
 
