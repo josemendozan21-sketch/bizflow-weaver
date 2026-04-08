@@ -10,6 +10,8 @@ export interface DispatchOrder {
   readyDate: string;
   status: "listo" | "despachado";
   dispatchedAt?: string;
+  transportadora?: string;
+  numeroGuia?: string;
   /** For wholesale orders, links to the source stamping task */
   sourceTaskId?: string;
 }
@@ -17,7 +19,7 @@ export interface DispatchOrder {
 interface LogisticsStore {
   orders: DispatchOrder[];
   addOrder: (order: Omit<DispatchOrder, "id">) => void;
-  dispatchOrder: (id: string) => void;
+  dispatchOrder: (id: string, shipping: { transportadora: string; numeroGuia: string }) => void;
   /** Called by production store when wholesale order completes */
   addWholesaleReady: (order: Omit<DispatchOrder, "id" | "status" | "readyDate">) => void;
 }
@@ -33,11 +35,17 @@ export const useLogisticsStore = create<LogisticsStore>((set, get) => ({
     set({ orders: [...get().orders, newOrder] });
   },
 
-  dispatchOrder: (id) => {
+  dispatchOrder: (id, shipping) => {
     set({
       orders: get().orders.map((o) =>
         o.id === id
-          ? { ...o, status: "despachado" as const, dispatchedAt: new Date().toISOString().slice(0, 10) }
+          ? {
+              ...o,
+              status: "despachado" as const,
+              dispatchedAt: new Date().toISOString().slice(0, 10),
+              transportadora: shipping.transportadora,
+              numeroGuia: shipping.numeroGuia,
+            }
           : o
       ),
     });
