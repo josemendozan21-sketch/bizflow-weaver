@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useLogisticsStore } from "@/stores/logisticsStore";
 import { Package, Truck, CheckCircle2, Clock } from "lucide-react";
+import ShippingLabelDialog from "@/components/logistics/ShippingLabelDialog";
 
 const Logistica = () => {
   const { orders, dispatchOrder } = useLogisticsStore();
