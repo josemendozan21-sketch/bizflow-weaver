@@ -186,6 +186,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       totalAmount,
       abono,
       hasRut: true,
+      email: (fd.get("mw_email") as string)?.trim() || undefined,
+      direccion: (fd.get("mw_direccion") as string)?.trim() || undefined,
+      ciudad: (fd.get("mw_ciudad") as string)?.trim() || undefined,
+      observaciones: (fd.get("mw_observaciones") as string)?.trim() || undefined,
     });
 
     toast.success("Pedido al por mayor creado", {
@@ -326,6 +330,10 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       totalAmount,
       abono,
       hasRut: true,
+      email: (fd.get("ss_email") as string)?.trim() || undefined,
+      direccion: (fd.get("ss_direccion") as string)?.trim() || undefined,
+      ciudad: (fd.get("ss_ciudad") as string)?.trim() || undefined,
+      observaciones: (fd.get("ss_observaciones") as string)?.trim() || undefined,
     });
 
     toast.success("Pedido al por mayor creado", {
@@ -449,6 +457,10 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
         status: "listo",
       });
 
+      const email = (fd.get("email") as string)?.trim() || undefined;
+      const cedula = (fd.get("cedula") as string)?.trim() || undefined;
+      const observaciones = (fd.get("notas") as string)?.trim() || undefined;
+
       // Send to accounting
       useAccountingStore.getState().addOrder({
         clientName: displayName,
@@ -459,6 +471,11 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
         clientType: isVentaMostrador ? "Venta mostrador" : "Cliente empresa",
         totalAmount,
         hasRut: false,
+        email,
+        cedula,
+        direccion: direccion || undefined,
+        ciudad: ciudad || undefined,
+        observaciones,
       });
 
       toast.success("Pedido al por menor creado", {
