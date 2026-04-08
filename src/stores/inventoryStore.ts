@@ -71,12 +71,23 @@ const INITIAL_STOCK_ITEMS: StockItem[] = [
   { id: "si-11", category: "producto_terminado", name: "Rodilla (terminado)", available: 15, unit: "unidades", minStock: 30 },
 ];
 
+export interface ProductionRequirement {
+  id: string;
+  brand: string;
+  product: string;
+  quantity: number;
+  reason: string;
+  createdAt: string;
+  status: "pendiente" | "en_proceso" | "completado";
+}
+
 interface InventoryStore {
   materialConfigs: MaterialConfig[];
   gelStock: GelStock[];
   dailyEntries: DailyProductionEntry[];
   inventoryTotals: InventoryTotal[];
   stockItems: StockItem[];
+  productionRequirements: ProductionRequirement[];
   addMaterialConfig: (config: Omit<MaterialConfig, "id">) => void;
   updateMaterialConfig: (id: string, config: Partial<Omit<MaterialConfig, "id">>) => void;
   deleteMaterialConfig: (id: string) => void;
@@ -88,6 +99,14 @@ interface InventoryStore {
   addStockItem: (item: Omit<StockItem, "id">) => void;
   deleteStockItem: (id: string) => void;
   getStockStatus: (item: StockItem) => StockStatus;
+  /** Retail: discount from producto_terminado. Returns { success, message } */
+  discountFinishedProduct: (productName: string, quantity: number) => { success: boolean; message: string };
+  /** Wholesale: check cuerpos_referencias, discount if available, else create production requirement */
+  reserveBodyStock: (productName: string, quantity: number, brand: string) => { available: boolean; discounted: number; message: string };
+  /** Magical Warmers: discount gel from materia_prima based on config */
+  discountGelForMagical: (productName: string, quantity: number) => { success: boolean; gramsUsed: number; message: string };
+  addProductionRequirement: (req: Omit<ProductionRequirement, "id" | "createdAt" | "status">) => void;
+  updateProductionRequirementStatus: (id: string, status: ProductionRequirement["status"]) => void;
 }
 
 function recalcTotals(entries: DailyProductionEntry[]): InventoryTotal[] {
@@ -116,6 +135,7 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
   dailyEntries: [],
   inventoryTotals: [],
   stockItems: INITIAL_STOCK_ITEMS,
+  productionRequirements: [],
 
   addMaterialConfig: (config) => {
     const newConfig: MaterialConfig = {
@@ -199,5 +219,112 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
     if (item.available <= item.minStock * 0.3) return "critico";
     if (item.available <= item.minStock) return "bajo";
     return "ok";
+  },
+
+  discountFinishedProduct: (productName, quantity) => {
+    const items = get().stockItems;
+    const item = items.find(
+      (s) => s.category === "producto_terminado" && s.name.toLowerCase().includes(productName.toLowerCase())
+    );
+    if (!item) {
+      return { success: false, message: `Producto terminado "${productName}" no encontrado en inventario.` };
+    }
+    if (item.available < quantity) {
+      return { success: false, message: `Stock insuficiente de "${item.name}". Disponible: ${item.available}, requerido: ${quantity}.` };
+    }
+    set({
+      stockItems: items.map((s) =>
+        s.id === item.id ? { ...s, available: s.available - quantity } : s
+      ),
+    });
+    return { success: true, message: `Se descontaron ${quantity} uds. de "${item.name}". Nuevo stock: ${item.available - quantity}.` };
+  },
+
+  reserveBodyStock: (productName, quantity, brand) => {
+    const items = get().stockItems;
+    const item = items.find(
+      (s) => s.category === "cuerpos_referencias" && s.name.toLowerCase().includes(productName.toLowerCase())
+    );
+
+    if (!item || item.available <= 0) {
+      // No stock at all — generate production requirement
+      get().addProductionRequirement({
+        brand,
+        product: productName,
+        quantity,
+        reason: `Sin stock de cuerpos para "${productName}". Se requieren ${quantity} unidades.`,
+      });
+      return { available: false, discounted: 0, message: `Sin stock de "${productName}". Se generó requerimiento de producción por ${quantity} uds.` };
+    }
+
+    const toDiscount = Math.min(item.available, quantity);
+    const remaining = quantity - toDiscount;
+
+    set({
+      stockItems: items.map((s) =>
+        s.id === item.id ? { ...s, available: s.available - toDiscount } : s
+      ),
+    });
+
+    if (remaining > 0) {
+      get().addProductionRequirement({
+        brand,
+        product: productName,
+        quantity: remaining,
+        reason: `Stock parcial de "${item.name}". Descontados: ${toDiscount}, faltan: ${remaining} uds.`,
+      });
+      return { available: true, discounted: toDiscount, message: `Se descontaron ${toDiscount} uds. de "${item.name}". Faltan ${remaining} uds — requerimiento de producción generado.` };
+    }
+
+    return { available: true, discounted: toDiscount, message: `Se reservaron ${toDiscount} uds. de "${item.name}".` };
+  },
+
+  discountGelForMagical: (productName, quantity) => {
+    const config = get().materialConfigs.find(
+      (c) => c.productName.toLowerCase().includes(productName.toLowerCase())
+    );
+    const gramsPerUnit = config?.gramsPerUnit || 60; // fallback
+    const totalGrams = quantity * gramsPerUnit;
+
+    const items = get().stockItems;
+    const gelItem = items.find((s) => s.category === "materia_prima" && s.name.toLowerCase() === "gel");
+
+    if (!gelItem) {
+      return { success: false, gramsUsed: 0, message: "No se encontró 'Gel' en materia prima." };
+    }
+
+    if (gelItem.available < totalGrams) {
+      // Project usage but warn
+      const newAvailable = Math.max(0, gelItem.available - totalGrams);
+      set({
+        stockItems: items.map((s) => s.id === gelItem.id ? { ...s, available: newAvailable } : s),
+        gelStock: get().gelStock.map((g) => ({ ...g, availableGrams: Math.max(0, g.availableGrams - totalGrams) })),
+      });
+      return { success: true, gramsUsed: totalGrams, message: `⚠️ Gel insuficiente. Se proyectaron ${totalGrams}g (${quantity} uds × ${gramsPerUnit}g). Stock actual negativo — reabastecer.` };
+    }
+
+    set({
+      stockItems: items.map((s) => s.id === gelItem.id ? { ...s, available: gelItem.available - totalGrams } : s),
+      gelStock: get().gelStock.map((g) => ({ ...g, availableGrams: Math.max(0, g.availableGrams - totalGrams) })),
+    });
+    return { success: true, gramsUsed: totalGrams, message: `Se descontaron ${totalGrams}g de gel (${quantity} uds × ${gramsPerUnit}g/ud).` };
+  },
+
+  addProductionRequirement: (req) => {
+    const newReq: ProductionRequirement = {
+      ...req,
+      id: `pr-${Date.now()}`,
+      createdAt: new Date().toISOString().slice(0, 10),
+      status: "pendiente",
+    };
+    set({ productionRequirements: [...get().productionRequirements, newReq] });
+  },
+
+  updateProductionRequirementStatus: (id, status) => {
+    set({
+      productionRequirements: get().productionRequirements.map((r) =>
+        r.id === id ? { ...r, status } : r
+      ),
+    });
   },
 }));
