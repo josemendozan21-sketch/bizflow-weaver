@@ -318,7 +318,7 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
     const totalGrams = quantity * gramsPerUnit;
 
     const items = get().stockItems;
-    const gelItem = items.find((s) => s.category === "materia_prima" && s.name.toLowerCase() === "gel");
+    const gelItem = items.find((s) => s.category === "materia_prima" && s.name.toLowerCase().includes("gel"));
 
     if (!gelItem) {
       return { success: false, gramsUsed: 0, message: "No se encontró 'Gel' en materia prima." };
