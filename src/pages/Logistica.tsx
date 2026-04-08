@@ -4,12 +4,31 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useLogisticsStore } from "@/stores/logisticsStore";
+import { useAccountingStore } from "@/stores/accountingStore";
 import { Package, Truck, CheckCircle2, Clock } from "lucide-react";
 import ShippingLabelDialog from "@/components/logistics/ShippingLabelDialog";
 import DispatchConfirmDialog from "@/components/logistics/DispatchConfirmDialog";
 
 const Logistica = () => {
   const { orders, dispatchOrder } = useLogisticsStore();
+  const addAccountingOrder = useAccountingStore((s) => s.addOrder);
+
+  const handleDispatch = (id: string, shipping: { transportadora: string; numeroGuia: string }) => {
+    const order = orders.find((o) => o.id === id);
+    dispatchOrder(id, shipping);
+    if (order) {
+      addAccountingOrder({
+        clientName: order.clientName,
+        brand: order.brand,
+        product: order.product,
+        quantity: order.quantity,
+        saleType: order.saleType,
+        dispatchedAt: new Date().toISOString().slice(0, 10),
+        transportadora: shipping.transportadora,
+        numeroGuia: shipping.numeroGuia,
+      });
+    }
+  };
 
   const readyOrders = orders.filter((o) => o.status === "listo");
   const dispatchedOrders = orders.filter((o) => o.status === "despachado");
