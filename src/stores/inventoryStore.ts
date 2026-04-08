@@ -45,9 +45,32 @@ export interface StockItem {
 }
 
 const INITIAL_CONFIGS: MaterialConfig[] = [
-  { id: "1", productName: "Muela", productType: "Gel terapéutico", gramsPerUnit: 60 },
-  { id: "2", productName: "Cuello", productType: "Gel terapéutico", gramsPerUnit: 120 },
-  { id: "3", productName: "Rodilla", productType: "Gel terapéutico", gramsPerUnit: 90 },
+  { id: "1", productName: "Lumbar", productType: "Frío", gramsPerUnit: 720 },
+  { id: "2", productName: "Lumbar", productType: "Térmico", gramsPerUnit: 720 },
+  { id: "3", productName: "Shoulder", productType: "Frío", gramsPerUnit: 620 },
+  { id: "4", productName: "Shoulder", productType: "Térmico", gramsPerUnit: 620 },
+  { id: "5", productName: "Cervical", productType: "Frío", gramsPerUnit: 550 },
+  { id: "6", productName: "Cervical", productType: "Térmico", gramsPerUnit: 550 },
+  { id: "7", productName: "Multiusos", productType: "Térmico", gramsPerUnit: 320 },
+  { id: "8", productName: "Multiusos", productType: "Frío", gramsPerUnit: 500 },
+  { id: "9", productName: "Pocket", productType: "Frío", gramsPerUnit: 125 },
+  { id: "10", productName: "Pocket", productType: "Térmico", gramsPerUnit: 125 },
+  { id: "11", productName: "Handy", productType: "Frío", gramsPerUnit: 75 },
+  { id: "12", productName: "Handy", productType: "Térmico", gramsPerUnit: 75 },
+  { id: "13", productName: "Muela", productType: "Frío", gramsPerUnit: 50 },
+  { id: "14", productName: "Muela", productType: "Térmico", gramsPerUnit: 50 },
+  { id: "15", productName: "Círculo 8 cm", productType: "Frío", gramsPerUnit: 35 },
+  { id: "16", productName: "Círculo 8 cm", productType: "Térmico", gramsPerUnit: 35 },
+  { id: "17", productName: "Círculo 12 cm", productType: "Frío", gramsPerUnit: 125 },
+  { id: "18", productName: "Círculo 12 cm", productType: "Térmico", gramsPerUnit: 125 },
+  { id: "19", productName: "Antifaz", productType: "Frío", gramsPerUnit: 220 },
+  { id: "20", productName: "Antifaz", productType: "Térmico", gramsPerUnit: 220 },
+  { id: "21", productName: "Tapa ojos", productType: "Frío", gramsPerUnit: 200 },
+  { id: "22", productName: "Tapa ojos", productType: "Térmico", gramsPerUnit: 200 },
+  { id: "23", productName: "Maxilo", productType: "Frío", gramsPerUnit: 280 },
+  { id: "24", productName: "Maxilo", productType: "Térmico", gramsPerUnit: 280 },
+  { id: "25", productName: "Faja", productType: "Frío", gramsPerUnit: 600 },
+  { id: "26", productName: "Faja", productType: "Térmico", gramsPerUnit: 600 },
 ];
 
 const INITIAL_GEL_STOCK: GelStock[] = [
