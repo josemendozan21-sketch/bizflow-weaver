@@ -33,6 +33,17 @@ export interface InventoryTotal {
   unit: string;
 }
 
+export type StockStatus = "ok" | "bajo" | "critico";
+
+export interface StockItem {
+  id: string;
+  category: "materia_prima" | "cuerpos_referencias" | "producto_terminado";
+  name: string;
+  available: number;
+  unit: string;
+  minStock: number;
+}
+
 const INITIAL_CONFIGS: MaterialConfig[] = [
   { id: "1", productName: "Muela", productType: "Gel terapéutico", gramsPerUnit: 60 },
   { id: "2", productName: "Cuello", productType: "Gel terapéutico", gramsPerUnit: 120 },
