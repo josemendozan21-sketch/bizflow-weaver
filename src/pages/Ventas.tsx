@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Zap, Flame } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ArrowLeft, Zap, Flame, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useLogisticsStore } from "@/stores/logisticsStore";
 import { useProductionStore } from "@/stores/productionStore";
 import { useInventoryStore } from "@/stores/inventoryStore";
@@ -142,19 +144,69 @@ function OrderForm({ brand, saleType, onReset }: { brand: Brand; saleType: SaleT
 function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [dobleTinta, setDobleTinta] = useState(false);
   const [escarcha, setEscarcha] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState("");
+  const [selectedType, setSelectedType] = useState("");
+  const [units, setUnits] = useState("");
+
+  const materialConfigs = useInventoryStore((s) => s.materialConfigs);
+  const stockItems = useInventoryStore((s) => s.stockItems);
+
+  // Unique product names
+  const productNames = useMemo(() => {
+    const names = [...new Set(materialConfigs.map((c) => c.productName))];
+    return names.sort();
+  }, [materialConfigs]);
+
+  // Types available for selected product
+  const availableTypes = useMemo(() => {
+    if (!selectedProduct) return [];
+    return materialConfigs
+      .filter((c) => c.productName === selectedProduct)
+      .map((c) => c.productType);
+  }, [materialConfigs, selectedProduct]);
+
+  // Matched config
+  const matchedConfig = useMemo(() => {
+    if (!selectedProduct || !selectedType) return null;
+    return materialConfigs.find(
+      (c) => c.productName === selectedProduct && c.productType === selectedType
+    ) || null;
+  }, [materialConfigs, selectedProduct, selectedType]);
+
+  // Gel consumption calculation
+  const gelCalc = useMemo(() => {
+    const qty = parseInt(units, 10) || 0;
+    if (!matchedConfig || qty <= 0) return null;
+    const totalGrams = qty * matchedConfig.gramsPerUnit;
+    const totalKg = totalGrams / 1000;
+    const gelItem = stockItems.find((s) => s.category === "materia_prima" && s.name.toLowerCase() === "gel");
+    const available = gelItem?.available || 0;
+    const difference = available - totalGrams;
+    return { totalGrams, totalKg, available, difference, sufficient: difference >= 0, gramsPerUnit: matchedConfig.gramsPerUnit };
+  }, [matchedConfig, units, stockItems]);
+
+  const handleProductChange = (value: string) => {
+    setSelectedProduct(value);
+    setSelectedType("");
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
     const fd = new FormData(form);
     const clientName = fd.get("mw_nombre") as string;
-    const quantity = parseInt(fd.get("mw_unidades") as string, 10);
+    const quantity = parseInt(units, 10);
     const inkColor = fd.get("mw_colorTinta") as string;
     const gelColor = fd.get("mw_colorGel") as string;
-    const referencia = fd.get("mw_referencia") as string;
+    const referencia = `${selectedProduct} (${selectedType})`;
     const rutFile = fd.get("mw_rut") as File;
     const totalAmount = parseFloat(fd.get("mw_valorTotal") as string) || 0;
     const abono = parseFloat(fd.get("mw_abono") as string) || 0;
+
+    if (!selectedProduct || !selectedType) {
+      toast.error("Producto requerido", { description: "Seleccione un producto y tipo." });
+      return;
+    }
 
     if (!rutFile || !rutFile.name) {
       toast.error("RUT requerido", {
@@ -167,7 +219,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const bodyResult = useInventoryStore.getState().reserveBodyStock(referencia, quantity, "magical");
 
     // Calculate gel consumption for Magical Warmers
-    const gelResult = useInventoryStore.getState().discountGelForMagical(referencia, quantity);
+    const gelResult = useInventoryStore.getState().discountGelForMagical(selectedProduct, quantity);
 
     // Wholesale: goes to production, NOT logistics
     useProductionStore.getState().addStampingTask({
@@ -199,7 +251,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     });
 
     toast.success("Pedido al por mayor creado", {
-      description: `${clientName} — ${quantity} uds. Enviado a Producción y Contabilidad.`,
+      description: `${clientName} — ${quantity} uds de ${referencia}. Enviado a Producción y Contabilidad.`,
     });
 
     // Inventory feedback
@@ -239,13 +291,43 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Información del pedido</legend>
-            <Field label="Referencia o molde" name="mw_referencia" required />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Producto / Referencia</Label>
+                <Select value={selectedProduct} onValueChange={handleProductChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar producto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {productNames.map((name) => (
+                      <SelectItem key={name} value={name}>{name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Tipo</Label>
+                <Select value={selectedType} onValueChange={setSelectedType} disabled={!selectedProduct}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableTypes.map((t) => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Color de gel" name="mw_colorGel" required />
               <Field label="Color de tinta" name="mw_colorTinta" required />
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
-              <Field label="Unidades" name="mw_unidades" type="number" required />
+              <div className="space-y-1.5">
+                <Label htmlFor="mw_unidades">Unidades</Label>
+                <Input id="mw_unidades" name="mw_unidades" type="number" required value={units} onChange={(e) => setUnits(e.target.value)} />
+              </div>
               <Field label="Valor unitario" name="mw_valorUnitario" type="number" required />
               <Field label="Valor total del pedido" name="mw_valorTotal" type="number" required />
             </div>
@@ -255,6 +337,52 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
               <Field label="Fecha requerida de entrega" name="mw_fechaRequerida" type="date" />
             </div>
           </fieldset>
+
+          {/* Gel consumption panel */}
+          {gelCalc && (
+            <fieldset className="space-y-3">
+              <legend className="text-sm font-semibold text-foreground mb-2">Consumo de materia prima (Gel)</legend>
+              <div className="rounded-lg border border-border p-4 space-y-3">
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                  <span className="text-muted-foreground">Producto:</span>
+                  <span className="font-medium text-foreground">{selectedProduct} ({selectedType})</span>
+                  <span className="text-muted-foreground">Gramos por unidad:</span>
+                  <span className="font-medium text-foreground">{gelCalc.gramsPerUnit.toLocaleString()} g</span>
+                  <span className="text-muted-foreground">Unidades solicitadas:</span>
+                  <span className="font-medium text-foreground">{parseInt(units, 10).toLocaleString()}</span>
+                  <span className="text-muted-foreground">Consumo total requerido:</span>
+                  <span className="font-semibold text-foreground">{gelCalc.totalGrams.toLocaleString()} g ({gelCalc.totalKg.toFixed(2)} kg)</span>
+                  <span className="text-muted-foreground">Inventario disponible (Gel):</span>
+                  <span className="font-medium text-foreground">{gelCalc.available.toLocaleString()} g</span>
+                  <span className="text-muted-foreground">Diferencia:</span>
+                  <span className={`font-semibold ${gelCalc.sufficient ? "text-green-600" : "text-destructive"}`}>
+                    {gelCalc.difference >= 0 ? "+" : ""}{gelCalc.difference.toLocaleString()} g
+                  </span>
+                </div>
+
+                {!gelCalc.sufficient && (
+                  <Alert variant="destructive" className="mt-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Materia prima insuficiente</AlertTitle>
+                    <AlertDescription>
+                      Faltan {Math.abs(gelCalc.difference).toLocaleString()} g de gel para completar este pedido.
+                      El pedido se procesará pero el inventario quedará en negativo.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {gelCalc.sufficient && (
+                  <Alert className="mt-2 border-green-200 bg-green-50 text-green-800 [&>svg]:text-green-600">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <AlertTitle>Materia prima suficiente</AlertTitle>
+                    <AlertDescription>
+                      Hay stock disponible para cubrir este pedido. Quedarán {gelCalc.difference.toLocaleString()} g después del descuento.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            </fieldset>
+          )}
 
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Opciones adicionales</legend>
