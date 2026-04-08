@@ -7,6 +7,8 @@ export interface MaterialConfig {
   gramsPerUnit: number;
   finishedUnits: number;
   bodyUnits: number;
+  minBodyUnits: number;
+  minFinishedUnits: number;
 }
 
 export interface GelStock {
