@@ -1,35 +1,39 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { StampingSection } from "@/components/production/StampingSection";
-import { FillingSection } from "@/components/production/FillingSection";
-import { BodyProductionSection } from "@/components/production/BodyProductionSection";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import ProductionBrandSelector, { type ProductionBrand } from "@/components/production/ProductionBrandSelector";
 
 const Produccion = () => {
+  const [selectedBrand, setSelectedBrand] = useState<ProductionBrand | null>(null);
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Producción</h1>
-        <p className="text-muted-foreground">Seguimiento de las etapas de producción</p>
+      <div className="flex items-center gap-3">
+        {selectedBrand && (
+          <Button variant="ghost" size="icon" onClick={() => setSelectedBrand(null)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        )}
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Producción</h1>
+          <p className="text-muted-foreground">
+            {selectedBrand
+              ? `Gestión de producción — ${selectedBrand === "magical_warmers" ? "Magical Warmers" : "Sweatspot"}`
+              : "Selecciona una marca para gestionar su producción"}
+          </p>
+        </div>
       </div>
 
-      <Tabs defaultValue="cuerpos" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="cuerpos">Cuerpos</TabsTrigger>
-          <TabsTrigger value="estampacion">Estampación</TabsTrigger>
-          <TabsTrigger value="llenado">Dosificación</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="cuerpos" className="mt-4">
-          <BodyProductionSection />
-        </TabsContent>
-
-        <TabsContent value="estampacion" className="mt-4">
-          <StampingSection />
-        </TabsContent>
-
-        <TabsContent value="llenado" className="mt-4">
-          <FillingSection />
-        </TabsContent>
-      </Tabs>
+      {!selectedBrand ? (
+        <ProductionBrandSelector selectedBrand={selectedBrand} onSelectBrand={setSelectedBrand} />
+      ) : (
+        <div className="text-center py-12 text-muted-foreground">
+          <p className="text-lg font-medium">
+            Sección de producción para {selectedBrand === "magical_warmers" ? "Magical Warmers" : "Sweatspot"}
+          </p>
+          <p className="text-sm mt-1">Próximamente se agregarán los procesos específicos de esta marca.</p>
+        </div>
+      )}
     </div>
   );
 };
