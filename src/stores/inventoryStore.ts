@@ -153,11 +153,6 @@ const INITIAL_STOCK_ITEMS: StockItem[] = [
   { id: "si-mw-pt-f-11", brand: "magical_warmers", category: "producto_terminado", name: "Tapa ojos", available: 0, unit: "unidades", minStock: 5, productType: "Frío" },
   { id: "si-mw-pt-f-12", brand: "magical_warmers", category: "producto_terminado", name: "Maxilo", available: 0, unit: "unidades", minStock: 5, productType: "Frío" },
   { id: "si-mw-pt-f-13", brand: "magical_warmers", category: "producto_terminado", name: "Faja", available: 0, unit: "unidades", minStock: 5, productType: "Frío" },
-  // Sweatspot - Materia prima
-  { id: "si-ss-mp-1", brand: "sweatspot", category: "materia_prima", name: "Tinta PVC - Blanco", available: 5, unit: "tarros", minStock: 2 },
-  { id: "si-ss-mp-2", brand: "sweatspot", category: "materia_prima", name: "Tinta PVC - Negro", available: 4, unit: "tarros", minStock: 2 },
-  { id: "si-ss-mp-3", brand: "sweatspot", category: "materia_prima", name: "Tinta PVC - Rojo", available: 3, unit: "tarros", minStock: 2 },
-  { id: "si-ss-mp-4", brand: "sweatspot", category: "materia_prima", name: "Tinta PVC - Azul", available: 3, unit: "tarros", minStock: 2 },
 ];
 
 export interface ProductionRequirement {
