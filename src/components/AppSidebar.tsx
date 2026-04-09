@@ -1,6 +1,8 @@
 import { Home, ShoppingCart, Factory, Truck, Calculator, Package, Palette } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { canAccessRoute } from "@/lib/rolePermissions";
 import {
   Sidebar,
   SidebarContent,
@@ -11,8 +13,12 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
+  SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { LogOut } from "lucide-react";
+import { getRoleLabel } from "@/lib/rolePermissions";
 
 const items = [
   { title: "Inicio", url: "/", icon: Home },
@@ -28,6 +34,9 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const { role, user, signOut } = useAuth();
+
+  const visibleItems = items.filter((item) => canAccessRoute(role, item.url));
 
   return (
     <Sidebar collapsible="icon">
@@ -53,7 +62,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Navegación</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {visibleItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
@@ -72,6 +81,26 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="p-3">
+        {!collapsed ? (
+          <div className="space-y-2">
+            <div className="text-xs text-sidebar-foreground/60 truncate">{user?.email}</div>
+            {role && (
+              <div className="text-xs font-medium text-sidebar-foreground">
+                {getRoleLabel(role)}
+              </div>
+            )}
+            <Button variant="ghost" size="sm" className="w-full justify-start text-sidebar-foreground/70" onClick={signOut}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Cerrar sesión
+            </Button>
+          </div>
+        ) : (
+          <Button variant="ghost" size="icon" className="mx-auto" onClick={signOut} title="Cerrar sesión">
+            <LogOut className="h-4 w-4" />
+          </Button>
+        )}
+      </SidebarFooter>
     </Sidebar>
   );
 }
