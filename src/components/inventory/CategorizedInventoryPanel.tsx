@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Beaker, Box, PackageCheck, Layers, Plus, Pencil, Trash2, Check, X, AlertTriangle, AlertCircle, CheckCircle2,
+  Beaker, Box, PackageCheck, Layers, Plus, Pencil, Trash2, Check, X, AlertTriangle, AlertCircle, CheckCircle2, Flame, Snowflake,
 } from "lucide-react";
 import { useInventoryStore, type StockItem, type StockStatus, type InventoryCategory, type InventoryBrand } from "@/stores/inventoryStore";
 import { toast } from "sonner";
@@ -42,6 +42,8 @@ const STATUS_CONFIG: Record<StockStatus, { label: string; variant: "default" | "
 
 const UNITS = ["unidades", "gramos", "kilos", "tarros"];
 
+const GROUPED_CATEGORIES: InventoryCategory[] = ["cuerpos_referencias", "producto_terminado"];
+
 interface CategorizedInventoryPanelProps {
   initialBrand?: InventoryBrand;
   initialCategory?: InventoryCategory;
@@ -63,14 +65,12 @@ const CategorizedInventoryPanel = ({
   const [activeHighlights, setActiveHighlights] = useState<string[]>(highlightItemNames);
   const highlightRef = useRef<HTMLTableRowElement>(null);
 
-  // Scroll to first highlighted item
   useEffect(() => {
     if (activeHighlights.length > 0 && highlightRef.current) {
       highlightRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [activeHighlights, selectedCategory]);
 
-  // Auto-clear highlights after 4s
   useEffect(() => {
     if (activeHighlights.length > 0) {
       const timer = setTimeout(() => setActiveHighlights([]), 4000);
@@ -118,6 +118,143 @@ const CategorizedInventoryPanel = ({
   const totalLow = brandItems.filter((i) => getStockStatus(i) === "bajo").length;
 
   const isHighlighted = (itemName: string) => activeHighlights.includes(itemName);
+
+  const isGroupedCategory = GROUPED_CATEGORIES.includes(selectedCategory);
+
+  const renderItemRow = (item: StockItem, idx: number, allItems: StockItem[]) => {
+    const status = getStockStatus(item);
+    const sc = STATUS_CONFIG[status];
+    const StatusIcon = sc.icon;
+    const isEditing = editingId === item.id;
+    const highlighted = isHighlighted(item.name);
+    const isFirstHighlight = highlighted && allItems.findIndex((fi) => activeHighlights.includes(fi.name)) === idx;
+
+    return (
+      <TableRow
+        key={item.id}
+        ref={isFirstHighlight ? highlightRef : undefined}
+        className={`transition-all duration-500 ${
+          highlighted
+            ? "ring-2 ring-primary ring-inset bg-primary/10 animate-pulse"
+            : status === "critico"
+            ? "bg-destructive/5"
+            : status === "bajo"
+            ? "bg-primary/5"
+            : ""
+        }`}
+      >
+        <TableCell className="font-medium">{item.name}</TableCell>
+        <TableCell className="text-right">
+          {isEditing ? (
+            <Input type="number" min={0} value={editForm.available}
+              onChange={(e) => setEditForm({ ...editForm, available: e.target.value })}
+              className="h-7 w-24 ml-auto text-right" />
+          ) : (
+            <span>
+              <span className="font-semibold">{item.available.toLocaleString("es-CO")}</span>
+              <span className="text-muted-foreground ml-1 text-xs">{item.unit}</span>
+            </span>
+          )}
+        </TableCell>
+        <TableCell className="text-right">
+          {isEditing ? (
+            <Input type="number" min={0} value={editForm.minStock}
+              onChange={(e) => setEditForm({ ...editForm, minStock: e.target.value })}
+              className="h-7 w-24 ml-auto text-right" />
+          ) : (
+            <span>
+              <span>{item.minStock.toLocaleString("es-CO")}</span>
+              <span className="text-muted-foreground ml-1 text-xs">{item.unit}</span>
+            </span>
+          )}
+        </TableCell>
+        <TableCell className="text-center">
+          <Badge variant={sc.variant} className="text-xs gap-1">
+            <StatusIcon className="h-3 w-3" />
+            {sc.label}
+          </Badge>
+        </TableCell>
+        <TableCell className="text-right space-x-1">
+          {isEditing ? (
+            <>
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => saveEdit(item.id)}>
+                <Check className="h-4 w-4 text-primary" />
+              </Button>
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)}>
+                <X className="h-4 w-4 text-destructive" />
+              </Button>
+            </>
+          ) : (
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(item)}>
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )}
+        </TableCell>
+      </TableRow>
+    );
+  };
+
+  const renderGroupedContent = (items: StockItem[]) => {
+    const termicos = items.filter((i) => i.productType === "Térmico");
+    const frios = items.filter((i) => i.productType === "Frío");
+    const otros = items.filter((i) => !i.productType);
+
+    const renderGroup = (groupItems: StockItem[], label: string, icon: React.ElementType) => {
+      const Icon = icon;
+      if (groupItems.length === 0) return null;
+      return (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 pt-2">
+            <Icon className="h-4 w-4 text-muted-foreground" />
+            <h4 className="text-sm font-semibold text-foreground">{label}</h4>
+            <Badge variant="outline" className="text-[10px]">{groupItems.length}</Badge>
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Producto</TableHead>
+                <TableHead className="text-right">Disponible</TableHead>
+                <TableHead className="text-right">Mínimo</TableHead>
+                <TableHead className="text-center">Estado</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {groupItems.map((item, idx) => renderItemRow(item, idx, items))}
+            </TableBody>
+          </Table>
+        </div>
+      );
+    };
+
+    return (
+      <div className="space-y-4">
+        {renderGroup(termicos, "Productos Térmicos", Flame)}
+        {renderGroup(frios, "Productos Fríos", Snowflake)}
+        {otros.length > 0 && renderGroup(otros, "Otros", Box)}
+      </div>
+    );
+  };
+
+  const renderFlatContent = (items: StockItem[]) => {
+    if (items.length === 0) return null;
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Producto</TableHead>
+            <TableHead className="text-right">Disponible</TableHead>
+            <TableHead className="text-right">Mínimo</TableHead>
+            <TableHead className="text-center">Estado</TableHead>
+            <TableHead className="text-right">Acciones</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {items.map((item, idx) => renderItemRow(item, idx, items))}
+        </TableBody>
+      </Table>
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -209,97 +346,10 @@ const CategorizedInventoryPanel = ({
                   <p className="text-center text-muted-foreground py-8 text-sm">
                     No hay ítems registrados en {CATEGORY_META[cat].label} para {brandLabel}.
                   </p>
+                ) : isGroupedCategory ? (
+                  renderGroupedContent(filteredItems)
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Producto</TableHead>
-                        <TableHead className="text-right">Disponible</TableHead>
-                        <TableHead className="text-right">Mínimo</TableHead>
-                        <TableHead className="text-center">Estado</TableHead>
-                        <TableHead className="text-right">Acciones</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredItems.map((item, idx) => {
-                        const status = getStockStatus(item);
-                        const sc = STATUS_CONFIG[status];
-                        const StatusIcon = sc.icon;
-                        const isEditing = editingId === item.id;
-                        const highlighted = isHighlighted(item.name);
-                        const isFirstHighlight = highlighted && filteredItems.findIndex((fi) => activeHighlights.includes(fi.name)) === idx;
-
-                        return (
-                          <TableRow
-                            key={item.id}
-                            ref={isFirstHighlight ? highlightRef : undefined}
-                            className={`transition-all duration-500 ${
-                              highlighted
-                                ? "ring-2 ring-primary ring-inset bg-primary/10 animate-pulse"
-                                : status === "critico"
-                                ? "bg-destructive/5"
-                                : status === "bajo"
-                                ? "bg-primary/5"
-                                : ""
-                            }`}
-                          >
-                            <TableCell className="font-medium">{item.name}</TableCell>
-                            <TableCell className="text-right">
-                              {isEditing ? (
-                                <Input type="number" min={0} value={editForm.available}
-                                  onChange={(e) => setEditForm({ ...editForm, available: e.target.value })}
-                                  className="h-7 w-24 ml-auto text-right" />
-                              ) : (
-                                <span>
-                                  <span className="font-semibold">{item.available.toLocaleString("es-CO")}</span>
-                                  <span className="text-muted-foreground ml-1 text-xs">{item.unit}</span>
-                                </span>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {isEditing ? (
-                                <Input type="number" min={0} value={editForm.minStock}
-                                  onChange={(e) => setEditForm({ ...editForm, minStock: e.target.value })}
-                                  className="h-7 w-24 ml-auto text-right" />
-                              ) : (
-                                <span>
-                                  <span>{item.minStock.toLocaleString("es-CO")}</span>
-                                  <span className="text-muted-foreground ml-1 text-xs">{item.unit}</span>
-                                </span>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Badge variant={sc.variant} className="text-xs gap-1">
-                                <StatusIcon className="h-3 w-3" />
-                                {sc.label}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right space-x-1">
-                              {isEditing ? (
-                                <>
-                                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => saveEdit(item.id)}>
-                                    <Check className="h-4 w-4 text-primary" />
-                                  </Button>
-                                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)}>
-                                    <X className="h-4 w-4 text-destructive" />
-                                  </Button>
-                                </>
-                              ) : (
-                                <>
-                                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(item)}>
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { deleteStockItem(item.id); toast.info("Ítem eliminado"); }}>
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                  </Button>
-                                </>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                  renderFlatContent(filteredItems)
                 )}
               </CardContent>
             </Card>
