@@ -26,8 +26,6 @@ const AdminUsuarios = () => {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
 
-  if (role !== "admin") return <Navigate to="/" replace />;
-
   const fetchUsers = async () => {
     setLoading(true);
     const { data: profiles, error: pErr } = await supabase.from("profiles").select("*");
