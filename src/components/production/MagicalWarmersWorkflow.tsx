@@ -133,7 +133,7 @@ export const MagicalWarmersWorkflow = () => {
                       <p className="font-medium text-sm">{order.clientName}</p>
                       <p className="text-xs text-muted-foreground">{order.molde} — {order.quantity} uds</p>
                     </div>
-                    <Badge variant="outline" className="text-green-600 border-green-300">
+                    <Badge variant="outline" className="text-primary border-primary/30">
                       <Truck className="h-3 w-3 mr-1" /> Enviado a Logística
                     </Badge>
                   </div>
