@@ -50,6 +50,7 @@ serve(async (req) => {
     }
 
     let productDesc = "";
+    let moldeImageUrl: string | undefined;
 
     if (productType === "softflask") {
       const sizeKey = size || "250ml";
@@ -57,8 +58,9 @@ serve(async (req) => {
       productDesc = `${sizeDesc} (Sweatspot brand, flexible running water bottle, translucent/semi-transparent body, sport bite valve cap on top). The bottle is standing upright on a clean white studio background.`;
     } else if (productType === "compresa") {
       const moldeKey = molde || "lumbar";
-      const moldeDesc = COMPRESA_MOLDES[moldeKey] || COMPRESA_MOLDES["lumbar"];
-      productDesc = `${moldeDesc} (Magical Warmers brand, soft fabric with visible stitching). The compress is laid flat on a clean white studio background.`;
+      const moldeData = COMPRESA_MOLDES[moldeKey] || COMPRESA_MOLDES["lumbar"];
+      productDesc = `${moldeData.description} (Magical Warmers brand, soft fabric with visible stitching). The compress is laid flat on a clean white studio background.`;
+      moldeImageUrl = moldeData.imageUrl;
     } else {
       return new Response(JSON.stringify({ error: "Tipo de producto no válido" }), {
         status: 400,
@@ -76,7 +78,23 @@ serve(async (req) => {
       extraInstructions = ` Additional design notes: ${observations}.`;
     }
 
-    const prompt = `Create a professional product mockup photo of ${productDesc} The product has the following client logo/design printed/applied prominently on its surface. The logo should be clearly visible, well-integrated, and respect the printable area of the product. Make it look like a real product photo suitable for a sales presentation. Professional studio lighting, high quality product photography.${extraInstructions}`;
+    // Build message content with images
+    const contentParts: Array<{ type: string; text?: string; image_url?: { url: string } }> = [];
+
+    if (moldeImageUrl) {
+      // When we have a real molde template image, use it as the base
+      contentParts.push({
+        type: "text",
+        text: `Here is the real product template/molde for a therapeutic compress. Use this EXACT product shape and design as the base. Overlay the client logo onto this product, respecting proportions and the printable area. Keep the product looking realistic. The logo should be clearly visible and well-integrated on the product surface. Make it look like a real product photo suitable for a sales presentation. Professional studio lighting.${extraInstructions}`,
+      });
+      contentParts.push({ type: "image_url", image_url: { url: moldeImageUrl } });
+      contentParts.push({ type: "image_url", image_url: { url: logoBase64 } });
+    } else {
+      // Fallback: generate from description only
+      const prompt = `Create a professional product mockup photo of ${productDesc} The product has the following client logo/design printed/applied prominently on its surface. The logo should be clearly visible, well-integrated, and respect the printable area of the product. Make it look like a real product photo suitable for a sales presentation. Professional studio lighting, high quality product photography.${extraInstructions}`;
+      contentParts.push({ type: "text", text: prompt });
+      contentParts.push({ type: "image_url", image_url: { url: logoBase64 } });
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -89,10 +107,7 @@ serve(async (req) => {
         messages: [
           {
             role: "user",
-            content: [
-              { type: "text", text: prompt },
-              { type: "image_url", image_url: { url: logoBase64 } },
-            ],
+            content: contentParts,
           },
         ],
         modalities: ["image", "text"],
