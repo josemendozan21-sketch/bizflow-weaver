@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,16 +44,39 @@ const UNITS = ["unidades", "gramos", "kilos", "tarros"];
 
 interface CategorizedInventoryPanelProps {
   initialBrand?: InventoryBrand;
+  initialCategory?: InventoryCategory;
+  highlightItemNames?: string[];
 }
 
-const CategorizedInventoryPanel = ({ initialBrand = "magical_warmers" }: CategorizedInventoryPanelProps) => {
+const CategorizedInventoryPanel = ({
+  initialBrand = "magical_warmers",
+  initialCategory = "materia_prima",
+  highlightItemNames = [],
+}: CategorizedInventoryPanelProps) => {
   const { stockItems, addStockItem, updateStockItem, deleteStockItem, getStockStatus } = useInventoryStore();
-  const [selectedBrand, setSelectedBrand] = useState<InventoryBrand>(initialBrand);
-  const [selectedCategory, setSelectedCategory] = useState<InventoryCategory>("materia_prima");
+  const [selectedBrand] = useState<InventoryBrand>(initialBrand);
+  const [selectedCategory, setSelectedCategory] = useState<InventoryCategory>(initialCategory);
   const [addOpen, setAddOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ available: "", minStock: "" });
   const [newForm, setNewForm] = useState({ name: "", available: "", unit: "unidades", minStock: "" });
+  const [activeHighlights, setActiveHighlights] = useState<string[]>(highlightItemNames);
+  const highlightRef = useRef<HTMLTableRowElement>(null);
+
+  // Scroll to first highlighted item
+  useEffect(() => {
+    if (activeHighlights.length > 0 && highlightRef.current) {
+      highlightRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [activeHighlights, selectedCategory]);
+
+  // Auto-clear highlights after 4s
+  useEffect(() => {
+    if (activeHighlights.length > 0) {
+      const timer = setTimeout(() => setActiveHighlights([]), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [activeHighlights]);
 
   const filteredItems = stockItems.filter(
     (i) => i.brand === selectedBrand && i.category === selectedCategory
@@ -90,14 +113,14 @@ const CategorizedInventoryPanel = ({ initialBrand = "magical_warmers" }: Categor
 
   const brandLabel = BRAND_OPTIONS.find((b) => b.value === selectedBrand)?.label ?? "";
 
-  // Summary counts for brand
   const brandItems = stockItems.filter((i) => i.brand === selectedBrand);
   const totalCritical = brandItems.filter((i) => getStockStatus(i) === "critico").length;
   const totalLow = brandItems.filter((i) => getStockStatus(i) === "bajo").length;
 
+  const isHighlighted = (itemName: string) => activeHighlights.includes(itemName);
+
   return (
     <div className="space-y-4">
-      {/* Brand summary badges */}
       <div className="flex items-center gap-2 flex-wrap">
         <h2 className="text-lg font-semibold text-foreground">{brandLabel}</h2>
         <div className="ml-auto flex gap-1.5">
@@ -113,7 +136,6 @@ const CategorizedInventoryPanel = ({ initialBrand = "magical_warmers" }: Categor
         </div>
       </div>
 
-      {/* Category tabs */}
       <Tabs value={selectedCategory} onValueChange={(v) => setSelectedCategory(v as InventoryCategory)}>
         <TabsList className="w-full grid grid-cols-4">
           {CATEGORIES.map((cat) => {
@@ -199,14 +221,28 @@ const CategorizedInventoryPanel = ({ initialBrand = "magical_warmers" }: Categor
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredItems.map((item) => {
+                      {filteredItems.map((item, idx) => {
                         const status = getStockStatus(item);
                         const sc = STATUS_CONFIG[status];
                         const StatusIcon = sc.icon;
                         const isEditing = editingId === item.id;
+                        const highlighted = isHighlighted(item.name);
+                        const isFirstHighlight = highlighted && filteredItems.findIndex((fi) => activeHighlights.includes(fi.name)) === idx;
 
                         return (
-                          <TableRow key={item.id} className={status === "critico" ? "bg-destructive/5" : status === "bajo" ? "bg-primary/5" : ""}>
+                          <TableRow
+                            key={item.id}
+                            ref={isFirstHighlight ? highlightRef : undefined}
+                            className={`transition-all duration-500 ${
+                              highlighted
+                                ? "ring-2 ring-primary ring-inset bg-primary/10 animate-pulse"
+                                : status === "critico"
+                                ? "bg-destructive/5"
+                                : status === "bajo"
+                                ? "bg-primary/5"
+                                : ""
+                            }`}
+                          >
                             <TableCell className="font-medium">{item.name}</TableCell>
                             <TableCell className="text-right">
                               {isEditing ? (
