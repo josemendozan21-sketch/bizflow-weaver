@@ -44,6 +44,8 @@ export type InventoryBrand = "sweatspot" | "magical_warmers";
 
 export type ProductType = "Térmico" | "Frío" | null;
 
+export type SweatspotProductCategory = "termos_150" | "termos_250" | "termos_500" | "canguros" | "chalecos";
+
 export interface StockItem {
   id: string;
   brand: InventoryBrand;
@@ -53,6 +55,9 @@ export interface StockItem {
   unit: string;
   minStock: number;
   productType?: ProductType;
+  color?: string;
+  logo?: string;
+  sweatspotCategory?: SweatspotProductCategory;
 }
 
 const INITIAL_CONFIGS: MaterialConfig[] = [
