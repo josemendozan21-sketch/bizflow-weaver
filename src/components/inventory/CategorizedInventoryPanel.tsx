@@ -26,10 +26,10 @@ const BRAND_OPTIONS: { value: InventoryBrand; label: string }[] = [
 ];
 
 const CATEGORY_META: Record<InventoryCategory, { label: string; icon: React.ElementType }> = {
-  materia_prima: { label: "Materia prima", icon: Beaker },
-  producto_en_proceso: { label: "Producto en proceso", icon: Layers },
-  cuerpos_referencias: { label: "Cuerpos o referencias", icon: Box },
-  producto_terminado: { label: "Producto terminado", icon: PackageCheck },
+  materia_prima: { label: "Materia Prima", icon: Beaker },
+  producto_en_proceso: { label: "Producto en Proceso", icon: Layers },
+  cuerpos_referencias: { label: "Cuerpos", icon: Box },
+  producto_terminado: { label: "Producto Terminado", icon: PackageCheck },
 };
 
 const CATEGORIES: InventoryCategory[] = ["materia_prima", "producto_en_proceso", "cuerpos_referencias", "producto_terminado"];
