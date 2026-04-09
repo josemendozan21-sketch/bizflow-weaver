@@ -71,7 +71,7 @@ function DesignerCard({ request: req }: { request: LogoRequest }) {
   const handleSave = async () => {
     setUploading(true);
     try {
-      const updates: Record<string, any> = {
+      const updates: Partial<LogoRequest> & { id: string } = {
         id: req.id,
         status: newStatus,
         design_notes: designNotes.trim() || null,
