@@ -240,7 +240,7 @@ function OrderCard({ order, onStart, onFinish }: OrderCardProps) {
 
 interface NewOrderFormProps {
   onClose: () => void;
-  onSubmit: (data: Parameters<ReturnType<typeof useMagicalProductionStore.getState>["addOrder"]>[0]) => void;
+  onSubmit: (data: Omit<MagicalProductionOrder, "id" | "stageStatus" | "createdAt" | "completedAt">) => void;
 }
 
 function NewOrderForm({ onClose, onSubmit }: NewOrderFormProps) {
