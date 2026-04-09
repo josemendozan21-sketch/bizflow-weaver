@@ -1,4 +1,4 @@
-import { Home, ShoppingCart, Factory, Truck, Calculator, Package, Palette } from "lucide-react";
+import { Home, ShoppingCart, Factory, Truck, Calculator, Package, Palette, Shield } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,6 +28,7 @@ const items = [
   { title: "Producción", url: "/produccion", icon: Factory },
   { title: "Logística", url: "/logistica", icon: Truck },
   { title: "Contabilidad", url: "/contabilidad", icon: Calculator },
+  { title: "Usuarios", url: "/admin-usuarios", icon: Shield },
 ];
 
 export function AppSidebar() {
