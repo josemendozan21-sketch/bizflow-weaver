@@ -85,6 +85,69 @@ export type Database = {
         }
         Relationships: []
       }
+      logo_requests: {
+        Row: {
+          additional_instructions: string | null
+          adjusted_logo_url: string | null
+          advisor_feedback: string | null
+          advisor_id: string
+          advisor_name: string
+          approved_at: string | null
+          brand: string
+          client_comments: string | null
+          client_name: string
+          created_at: string
+          design_notes: string | null
+          designer_id: string | null
+          designer_name: string | null
+          id: string
+          original_logo_url: string
+          product: string
+          status: Database["public"]["Enums"]["logo_request_status"]
+          updated_at: string
+        }
+        Insert: {
+          additional_instructions?: string | null
+          adjusted_logo_url?: string | null
+          advisor_feedback?: string | null
+          advisor_id: string
+          advisor_name: string
+          approved_at?: string | null
+          brand: string
+          client_comments?: string | null
+          client_name: string
+          created_at?: string
+          design_notes?: string | null
+          designer_id?: string | null
+          designer_name?: string | null
+          id?: string
+          original_logo_url: string
+          product: string
+          status?: Database["public"]["Enums"]["logo_request_status"]
+          updated_at?: string
+        }
+        Update: {
+          additional_instructions?: string | null
+          adjusted_logo_url?: string | null
+          advisor_feedback?: string | null
+          advisor_id?: string
+          advisor_name?: string
+          approved_at?: string | null
+          brand?: string
+          client_comments?: string | null
+          client_name?: string
+          created_at?: string
+          design_notes?: string | null
+          designer_id?: string | null
+          designer_name?: string | null
+          id?: string
+          original_logo_url?: string
+          product?: string
+          status?: Database["public"]["Enums"]["logo_request_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_costs: {
         Row: {
           brand: string
@@ -186,6 +249,14 @@ export type Database = {
     Enums: {
       app_role: "admin" | "asesor_comercial" | "produccion"
       event_type: "feria" | "carrera" | "activacion"
+      logo_request_status:
+        | "pendiente_diseno"
+        | "en_revision"
+        | "ajustado"
+        | "listo_aprobacion"
+        | "ajustes_solicitados"
+        | "aprobado"
+        | "finalizado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -315,6 +386,15 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "asesor_comercial", "produccion"],
       event_type: ["feria", "carrera", "activacion"],
+      logo_request_status: [
+        "pendiente_diseno",
+        "en_revision",
+        "ajustado",
+        "listo_aprobacion",
+        "ajustes_solicitados",
+        "aprobado",
+        "finalizado",
+      ],
     },
   },
 } as const
