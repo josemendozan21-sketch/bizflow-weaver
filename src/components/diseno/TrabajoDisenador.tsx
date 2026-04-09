@@ -112,7 +112,7 @@ function DesignerCard({ request: req }: { request: LogoRequest }) {
               <div className="flex gap-2"><Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" /><span>{req.additional_instructions}</span></div>
             )}
             {req.advisor_feedback && (
-              <div className="flex gap-2 text-orange-700"><MessageSquare className="h-4 w-4 shrink-0 mt-0.5" /><span><strong>Feedback asesor:</strong> {req.advisor_feedback}</span></div>
+              <div className="flex gap-2 text-destructive"><MessageSquare className="h-4 w-4 shrink-0 mt-0.5" /><span><strong>Feedback asesor:</strong> {req.advisor_feedback}</span></div>
             )}
           </div>
         )}
