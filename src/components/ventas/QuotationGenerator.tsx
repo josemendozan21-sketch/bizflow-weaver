@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, FileText } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Trash2, FileText, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { generateQuotationPDF } from "@/lib/generateQuotation";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ProductLine {
   id: string;
@@ -16,9 +18,18 @@ interface ProductLine {
   precioUnitario: number;
 }
 
+interface ProductCostData {
+  product_name: string;
+  brand: string;
+  total_cost: number | null;
+}
+
 const IVA_RATE = 0.19;
 
 export default function QuotationGenerator() {
+  const { role } = useAuth();
+  const isAdmin = role === "admin";
+
   const [brand, setBrand] = useState<"magical" | "sweatspot">("magical");
   const [clientName, setClientName] = useState("");
   const [empresa, setEmpresa] = useState("");
@@ -30,6 +41,15 @@ export default function QuotationGenerator() {
   const [products, setProducts] = useState<ProductLine[]>([
     { id: crypto.randomUUID(), producto: "", cantidad: 1, precioUnitario: 0 },
   ]);
+  const [costData, setCostData] = useState<ProductCostData[]>([]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      supabase.from("product_costs").select("product_name, brand, total_cost").then(({ data }) => {
+        if (data) setCostData(data as ProductCostData[]);
+      });
+    }
+  }, [isAdmin]);
 
   const addProduct = () => {
     setProducts((p) => [...p, { id: crypto.randomUUID(), producto: "", cantidad: 1, precioUnitario: 0 }]);
@@ -48,48 +68,57 @@ export default function QuotationGenerator() {
   const iva = Math.round(subtotal * IVA_RATE);
   const total = subtotal + iva;
 
-  // Auto quotation number
   const quotationNumber = `COT-${Date.now().toString(36).toUpperCase().slice(-6)}`;
 
+  // Cost lookup for admin
+  const getCostForProduct = (productName: string): number | null => {
+    const match = costData.find(
+      (c) => c.brand === brand && c.product_name.toLowerCase() === productName.toLowerCase()
+    );
+    return match?.total_cost ?? null;
+  };
+
+  const marginData = useMemo(() => {
+    if (!isAdmin) return null;
+    let totalCost = 0;
+    let totalRevenue = 0;
+    let allMatched = true;
+    const lines = products.map((p) => {
+      const cost = getCostForProduct(p.producto);
+      const revenue = p.cantidad * p.precioUnitario;
+      if (cost !== null) {
+        totalCost += cost * p.cantidad;
+      } else {
+        allMatched = false;
+      }
+      totalRevenue += revenue;
+      return { ...p, unitCost: cost, lineMargin: cost !== null ? ((p.precioUnitario - cost) / p.precioUnitario) * 100 : null };
+    });
+    const overallMargin = totalRevenue > 0 && allMatched ? ((totalRevenue - totalCost) / totalRevenue) * 100 : null;
+    return { lines, totalCost, overallMargin };
+  }, [products, costData, brand, isAdmin]);
+
   const handleGenerate = () => {
-    if (!clientName.trim()) {
-      toast.error("Nombre del cliente requerido");
-      return;
-    }
+    if (!clientName.trim()) { toast.error("Nombre del cliente requerido"); return; }
     if (products.some((p) => !p.producto.trim() || p.cantidad <= 0 || p.precioUnitario <= 0)) {
-      toast.error("Complete todos los productos con cantidad y precio válidos");
-      return;
+      toast.error("Complete todos los productos con cantidad y precio válidos"); return;
     }
 
     generateQuotationPDF({
-      brand,
-      clientName,
-      empresa,
-      ciudad,
-      fecha,
-      quotationNumber,
+      brand, clientName, empresa, ciudad, fecha, quotationNumber,
       products: products.map((p) => ({
-        producto: p.producto,
-        cantidad: p.cantidad,
-        precioUnitario: p.precioUnitario,
-        total: p.cantidad * p.precioUnitario,
+        producto: p.producto, cantidad: p.cantidad, precioUnitario: p.precioUnitario, total: p.cantidad * p.precioUnitario,
       })),
-      subtotal,
-      iva,
-      total,
-      tiempoProduccion,
-      condicionesPago,
-      vigencia,
+      subtotal, iva, total, tiempoProduccion, condicionesPago, vigencia,
     });
 
     toast.success("Cotización generada", { description: `${quotationNumber} exportada como PDF` });
   };
 
-  const fmt = (n: number) =>
-    n.toLocaleString("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 });
+  const fmt = (n: number) => n.toLocaleString("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 });
 
   return (
-    <Card className="max-w-3xl">
+    <Card className="max-w-4xl">
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
           <FileText className="h-5 w-5" /> Generar Cotización
@@ -101,9 +130,7 @@ export default function QuotationGenerator() {
         <div className="space-y-1.5">
           <Label>Marca</Label>
           <Select value={brand} onValueChange={(v) => setBrand(v as "magical" | "sweatspot")}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
+            <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="magical">Magical Warmers</SelectItem>
               <SelectItem value="sweatspot">Sweatspot</SelectItem>
@@ -144,49 +171,50 @@ export default function QuotationGenerator() {
         <fieldset className="space-y-4">
           <legend className="text-sm font-semibold text-foreground mb-2">Productos</legend>
           <div className="space-y-3">
-            {products.map((p, i) => (
-              <div key={p.id} className="grid grid-cols-[1fr_80px_120px_120px_40px] gap-2 items-end">
-                {i === 0 && (
-                  <>
-                    <Label className="text-xs text-muted-foreground">Producto</Label>
-                    <Label className="text-xs text-muted-foreground">Cant.</Label>
-                    <Label className="text-xs text-muted-foreground">P. Unitario</Label>
-                    <Label className="text-xs text-muted-foreground">Total</Label>
-                    <span />
-                  </>
-                )}
-                <Input
-                  value={p.producto}
-                  onChange={(e) => updateProduct(p.id, "producto", e.target.value)}
-                  placeholder="Nombre del producto"
-                />
-                <Input
-                  type="number"
-                  min={1}
-                  value={p.cantidad}
-                  onChange={(e) => updateProduct(p.id, "cantidad", parseInt(e.target.value) || 0)}
-                />
-                <Input
-                  type="number"
-                  min={0}
-                  value={p.precioUnitario}
-                  onChange={(e) => updateProduct(p.id, "precioUnitario", parseFloat(e.target.value) || 0)}
-                />
-                <span className="text-sm font-medium text-foreground self-center">
-                  {fmt(p.cantidad * p.precioUnitario)}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9"
-                  onClick={() => removeProduct(p.id)}
-                  disabled={products.length <= 1}
-                >
-                  <Trash2 className="h-4 w-4 text-muted-foreground" />
-                </Button>
-              </div>
-            ))}
+            {products.map((p, i) => {
+              const lineMargin = marginData?.lines[i]?.lineMargin;
+              const unitCost = marginData?.lines[i]?.unitCost;
+              return (
+                <div key={p.id}>
+                  <div className={`grid gap-2 items-end ${isAdmin ? "grid-cols-[1fr_80px_120px_120px_40px]" : "grid-cols-[1fr_80px_120px_120px_40px]"}`}>
+                    {i === 0 && (
+                      <>
+                        <Label className="text-xs text-muted-foreground">Producto</Label>
+                        <Label className="text-xs text-muted-foreground">Cant.</Label>
+                        <Label className="text-xs text-muted-foreground">P. Unitario</Label>
+                        <Label className="text-xs text-muted-foreground">Total</Label>
+                        <span />
+                      </>
+                    )}
+                    <Input value={p.producto} onChange={(e) => updateProduct(p.id, "producto", e.target.value)} placeholder="Nombre del producto" />
+                    <Input type="number" min={1} value={p.cantidad} onChange={(e) => updateProduct(p.id, "cantidad", parseInt(e.target.value) || 0)} />
+                    <Input type="number" min={0} value={p.precioUnitario} onChange={(e) => updateProduct(p.id, "precioUnitario", parseFloat(e.target.value) || 0)} />
+                    <span className="text-sm font-medium text-foreground self-center">{fmt(p.cantidad * p.precioUnitario)}</span>
+                    <Button type="button" variant="ghost" size="icon" className="h-9 w-9" onClick={() => removeProduct(p.id)} disabled={products.length <= 1}>
+                      <Trash2 className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </div>
+                  {/* Admin-only: cost & margin per line */}
+                  {isAdmin && p.producto.trim() && (
+                    <div className="ml-1 mt-1 flex items-center gap-3 text-xs">
+                      {unitCost !== null && unitCost !== undefined ? (
+                        <>
+                          <span className="text-muted-foreground">Costo: <span className="font-medium text-foreground">{fmt(unitCost)}</span></span>
+                          {lineMargin !== null && lineMargin !== undefined && (
+                            <Badge variant={lineMargin >= 30 ? "default" : lineMargin >= 15 ? "secondary" : "destructive"} className="text-xs">
+                              <TrendingUp className="h-3 w-3 mr-1" />
+                              Margen: {lineMargin.toFixed(1)}%
+                            </Badge>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground italic">Sin costo registrado</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
           <Button type="button" variant="outline" size="sm" onClick={addProduct} className="gap-1">
             <Plus className="h-4 w-4" /> Agregar producto
@@ -207,6 +235,28 @@ export default function QuotationGenerator() {
             <span className="text-foreground">Total</span>
             <span className="text-primary">{fmt(total)}</span>
           </div>
+
+          {/* Admin-only: overall cost & margin */}
+          {isAdmin && marginData && (
+            <div className="border-t border-border pt-2 mt-2 space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground flex items-center gap-1">
+                  <DollarSignIcon className="h-3.5 w-3.5" /> Costo total interno
+                </span>
+                <span className="font-medium text-foreground">{fmt(marginData.totalCost)}</span>
+              </div>
+              {marginData.overallMargin !== null && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <TrendingUp className="h-3.5 w-3.5" /> Margen general
+                  </span>
+                  <Badge variant={marginData.overallMargin >= 30 ? "default" : marginData.overallMargin >= 15 ? "secondary" : "destructive"}>
+                    {marginData.overallMargin.toFixed(1)}%
+                  </Badge>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Notes */}
@@ -236,5 +286,13 @@ export default function QuotationGenerator() {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function DollarSignIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <line x1="12" x2="12" y1="2" y2="22" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+    </svg>
   );
 }
