@@ -49,6 +49,8 @@ const AdminUsuarios = () => {
 
   useEffect(() => { fetchUsers(); }, []);
 
+  if (role !== "admin") return <Navigate to="/" replace />;
+
   const handleRoleChange = async (userId: string, newRole: string) => {
     const roleValue = newRole === "none" ? null : (newRole as AppRole);
 
