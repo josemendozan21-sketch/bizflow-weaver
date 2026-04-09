@@ -4,7 +4,7 @@ import {
   AlertCircle, Clock, Loader2, CheckCircle2, ChevronRight,
   Beaker, Box, Droplets, PackageCheck, Bell,
 } from "lucide-react";
-import { useInventoryStore, type InventoryBrand } from "@/stores/inventoryStore";
+import { useInventoryStore, type InventoryBrand, type InventoryCategory } from "@/stores/inventoryStore";
 import { useMemo } from "react";
 
 const BRANDS: { value: InventoryBrand; label: string; description: string }[] = [
@@ -12,114 +12,104 @@ const BRANDS: { value: InventoryBrand; label: string; description: string }[] = 
   { value: "sweatspot", label: "Sweatspot", description: "Termos y accesorios deportivos" },
 ];
 
-interface Notification {
+export interface InventoryNotification {
   id: string;
   type: "critico" | "bajo" | "pendiente" | "info";
   icon: React.ElementType;
   message: string;
+  targetCategory: InventoryCategory | null;
+  targetItemNames: string[];
 }
 
 interface BrandSelectionCardsProps {
   selectedBrand: InventoryBrand | null;
   onSelectBrand: (brand: InventoryBrand) => void;
+  onNotificationClick?: (brand: InventoryBrand, notification: InventoryNotification) => void;
 }
 
-const BrandSelectionCards = ({ selectedBrand, onSelectBrand }: BrandSelectionCardsProps) => {
+const BrandSelectionCards = ({ selectedBrand, onSelectBrand, onNotificationClick }: BrandSelectionCardsProps) => {
   const { stockItems, getStockStatus, productionRequirements, materialConfigs } = useInventoryStore();
 
   const getBrandNotifications = useMemo(() => {
-    return (brand: InventoryBrand): Notification[] => {
+    return (brand: InventoryBrand): InventoryNotification[] => {
       const items = stockItems.filter((i) => i.brand === brand);
-      const notifications: Notification[] = [];
+      const notifications: InventoryNotification[] = [];
 
-      // 1. Materia prima bajo/crítico
       const mpItems = items.filter((i) => i.category === "materia_prima");
       const mpCritical = mpItems.filter((i) => getStockStatus(i) === "critico");
       const mpLow = mpItems.filter((i) => getStockStatus(i) === "bajo");
 
       if (mpCritical.length > 0) {
         notifications.push({
-          id: `${brand}-mp-crit`,
-          type: "critico",
-          icon: Beaker,
+          id: `${brand}-mp-crit`, type: "critico", icon: Beaker,
           message: `${mpCritical.length} materia${mpCritical.length > 1 ? "s" : ""} prima en nivel crítico: ${mpCritical.map((i) => i.name).join(", ")}`,
+          targetCategory: "materia_prima", targetItemNames: mpCritical.map((i) => i.name),
         });
       }
       if (mpLow.length > 0) {
         notifications.push({
-          id: `${brand}-mp-low`,
-          type: "bajo",
-          icon: Beaker,
+          id: `${brand}-mp-low`, type: "bajo", icon: Beaker,
           message: `${mpLow.length} materia${mpLow.length > 1 ? "s" : ""} prima con bajo stock: ${mpLow.map((i) => i.name).join(", ")}`,
+          targetCategory: "materia_prima", targetItemNames: mpLow.map((i) => i.name),
         });
       }
 
-      // 2. Cuerpos faltantes
       const bodyItems = items.filter((i) => i.category === "cuerpos_referencias");
       const bodyCritical = bodyItems.filter((i) => getStockStatus(i) === "critico");
       const bodyLow = bodyItems.filter((i) => getStockStatus(i) === "bajo");
 
       if (bodyCritical.length > 0) {
         notifications.push({
-          id: `${brand}-body-crit`,
-          type: "critico",
-          icon: Box,
+          id: `${brand}-body-crit`, type: "critico", icon: Box,
           message: `Falta de cuerpos: ${bodyCritical.map((i) => i.name).join(", ")} — sin stock para pedidos`,
+          targetCategory: "cuerpos_referencias", targetItemNames: bodyCritical.map((i) => i.name),
         });
       }
       if (bodyLow.length > 0) {
         notifications.push({
-          id: `${brand}-body-low`,
-          type: "bajo",
-          icon: Box,
+          id: `${brand}-body-low`, type: "bajo", icon: Box,
           message: `Bajo stock de cuerpos: ${bodyLow.map((i) => i.name).join(", ")}`,
+          targetCategory: "cuerpos_referencias", targetItemNames: bodyLow.map((i) => i.name),
         });
       }
 
-      // 3. Insuficiencia de gel (Magical Warmers)
       if (brand === "magical_warmers") {
         const gelItem = items.find((i) => i.category === "materia_prima" && i.name.toLowerCase().includes("gel"));
         if (gelItem) {
           const status = getStockStatus(gelItem);
           if (status === "critico") {
             notifications.push({
-              id: `${brand}-gel-crit`,
-              type: "critico",
-              icon: Droplets,
+              id: `${brand}-gel-crit`, type: "critico", icon: Droplets,
               message: `Gel insuficiente: ${gelItem.available.toLocaleString("es-CO")} ${gelItem.unit} (mín: ${gelItem.minStock.toLocaleString("es-CO")})`,
+              targetCategory: "materia_prima", targetItemNames: [gelItem.name],
             });
           } else if (status === "bajo") {
             notifications.push({
-              id: `${brand}-gel-low`,
-              type: "bajo",
-              icon: Droplets,
+              id: `${brand}-gel-low`, type: "bajo", icon: Droplets,
               message: `Gel bajo: ${gelItem.available.toLocaleString("es-CO")} ${gelItem.unit} disponibles`,
+              targetCategory: "materia_prima", targetItemNames: [gelItem.name],
             });
           }
         }
       }
 
-      // 4. Producto terminado bajo
       const ptItems = items.filter((i) => i.category === "producto_terminado");
       const ptCritical = ptItems.filter((i) => getStockStatus(i) === "critico");
       if (ptCritical.length > 0) {
         notifications.push({
-          id: `${brand}-pt-crit`,
-          type: "critico",
-          icon: PackageCheck,
+          id: `${brand}-pt-crit`, type: "critico", icon: PackageCheck,
           message: `Producto terminado agotado: ${ptCritical.map((i) => i.name).join(", ")}`,
+          targetCategory: "producto_terminado", targetItemNames: ptCritical.map((i) => i.name),
         });
       }
 
-      // 5. Pedidos pendientes de producción
       const brandKey = brand === "magical_warmers" ? "magical" : "sweatspot";
       const pendingReqs = productionRequirements.filter((r) => r.brand === brandKey && r.status === "pendiente");
       if (pendingReqs.length > 0) {
         notifications.push({
-          id: `${brand}-prod-pending`,
-          type: "pendiente",
-          icon: Clock,
+          id: `${brand}-prod-pending`, type: "pendiente", icon: Clock,
           message: `${pendingReqs.length} pedido${pendingReqs.length > 1 ? "s" : ""} pendiente${pendingReqs.length > 1 ? "s" : ""} de producción`,
+          targetCategory: null, targetItemNames: [],
         });
       }
 
@@ -138,7 +128,7 @@ const BrandSelectionCards = ({ selectedBrand, onSelectBrand }: BrandSelectionCar
     return { critical, low, totalItems, pending, inProgress };
   };
 
-  const typeStyles: Record<Notification["type"], { bg: string; text: string; dot: string }> = {
+  const typeStyles: Record<InventoryNotification["type"], { bg: string; text: string; dot: string }> = {
     critico: { bg: "bg-destructive/10", text: "text-destructive", dot: "bg-destructive" },
     bajo: { bg: "bg-yellow-500/10", text: "text-yellow-700", dot: "bg-yellow-500" },
     pendiente: { bg: "bg-orange-500/10", text: "text-orange-700", dot: "bg-orange-500" },
@@ -162,10 +152,8 @@ const BrandSelectionCards = ({ selectedBrand, onSelectBrand }: BrandSelectionCar
             }`}
             onClick={() => onSelectBrand(brand.value)}
           >
-            {/* Top accent bar */}
             <div className={`h-1.5 w-full ${hasCritical ? "bg-destructive" : stats.low > 0 ? "bg-yellow-500" : "bg-green-500"}`} />
 
-            {/* Notification count badge */}
             {totalAlerts > 0 && (
               <div className="absolute top-4 right-4 flex items-center gap-1.5">
                 <Badge variant="destructive" className="text-xs font-bold px-2 py-1 gap-1 animate-pulse">
@@ -184,7 +172,6 @@ const BrandSelectionCards = ({ selectedBrand, onSelectBrand }: BrandSelectionCar
                 <ChevronRight className={`h-5 w-5 text-muted-foreground transition-transform ${isSelected ? "rotate-90" : ""}`} />
               </div>
 
-              {/* Stats grid */}
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div className={`flex items-center gap-2 rounded-lg p-2.5 ${stats.critical > 0 ? "bg-destructive/10" : "bg-muted/50"}`}>
                   <AlertCircle className={`h-4 w-4 ${stats.critical > 0 ? "text-destructive" : "text-muted-foreground"}`} />
@@ -216,7 +203,6 @@ const BrandSelectionCards = ({ selectedBrand, onSelectBrand }: BrandSelectionCar
                 </div>
               </div>
 
-              {/* Notification list */}
               {notifications.length > 0 ? (
                 <div className="space-y-1.5 border-t pt-3">
                   <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1">
@@ -225,11 +211,22 @@ const BrandSelectionCards = ({ selectedBrand, onSelectBrand }: BrandSelectionCar
                   {notifications.slice(0, 4).map((n) => {
                     const style = typeStyles[n.type];
                     const Icon = n.icon;
+                    const isClickable = n.targetCategory !== null && onNotificationClick;
                     return (
-                      <div key={n.id} className={`flex items-start gap-2 rounded-md px-2.5 py-2 text-xs ${style.bg}`}>
+                      <div
+                        key={n.id}
+                        className={`flex items-start gap-2 rounded-md px-2.5 py-2 text-xs ${style.bg} ${isClickable ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
+                        onClick={(e) => {
+                          if (isClickable) {
+                            e.stopPropagation();
+                            onNotificationClick(brand.value, n);
+                          }
+                        }}
+                      >
                         <div className={`mt-0.5 h-2 w-2 rounded-full shrink-0 ${style.dot}`} />
                         <Icon className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${style.text}`} />
                         <span className={`${style.text} leading-snug`}>{n.message}</span>
+                        {isClickable && <ChevronRight className={`h-3.5 w-3.5 shrink-0 mt-0.5 ml-auto ${style.text}`} />}
                       </div>
                     );
                   })}
