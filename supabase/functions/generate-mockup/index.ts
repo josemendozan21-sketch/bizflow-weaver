@@ -12,13 +12,26 @@ const SOFTFLASK_SIZES: Record<string, string> = {
   "500ml": "a large 500ml soft flask hydration bottle",
 };
 
-const COMPRESA_MOLDES: Record<string, string> = {
-  muela: "a tooth/molar-shaped therapeutic warm compress pad (shaped like a large molar tooth, designed to wrap around the jaw)",
-  antifaz: "an eye mask-shaped therapeutic warm compress pad (contoured sleep/eye mask shape with nose bridge cutout)",
-  lumbar: "a lumbar/lower-back therapeutic warm compress pad (wide rectangular belt-like shape designed to wrap around the lower back)",
-  cuello: "a neck wrap therapeutic warm compress pad (U-shaped or crescent-shaped pad designed to drape over shoulders and neck)",
-  abdomen: "an abdominal therapeutic warm compress pad (large rectangular pad designed to cover the stomach/abdomen area)",
-  rodilla: "a knee wrap therapeutic warm compress pad (contoured pad designed to wrap around the knee joint)",
+const COMPRESA_MOLDES: Record<string, { description: string; imageUrl?: string }> = {
+  muela: {
+    description: "a tooth/molar-shaped therapeutic warm compress pad (shaped like a large molar tooth, designed to wrap around the jaw)",
+    imageUrl: "https://auncgjkpwajfbvcckuny.supabase.co/storage/v1/object/public/molde-templates/muela.png",
+  },
+  antifaz: {
+    description: "an eye mask-shaped therapeutic warm compress pad (contoured sleep/eye mask shape with nose bridge cutout)",
+  },
+  lumbar: {
+    description: "a lumbar/lower-back therapeutic warm compress pad (wide rectangular belt-like shape designed to wrap around the lower back)",
+  },
+  cuello: {
+    description: "a neck wrap therapeutic warm compress pad (U-shaped or crescent-shaped pad designed to drape over shoulders and neck)",
+  },
+  abdomen: {
+    description: "an abdominal therapeutic warm compress pad (large rectangular pad designed to cover the stomach/abdomen area)",
+  },
+  rodilla: {
+    description: "a knee wrap therapeutic warm compress pad (contoured pad designed to wrap around the knee joint)",
+  },
 };
 
 serve(async (req) => {
