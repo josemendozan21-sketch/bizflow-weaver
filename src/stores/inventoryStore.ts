@@ -39,9 +39,13 @@ export interface InventoryTotal {
 
 export type StockStatus = "ok" | "bajo" | "critico";
 
+export type InventoryCategory = "materia_prima" | "producto_en_proceso" | "cuerpos_referencias" | "producto_terminado";
+export type InventoryBrand = "sweatspot" | "magical_warmers";
+
 export interface StockItem {
   id: string;
-  category: "materia_prima" | "cuerpos_referencias" | "producto_terminado";
+  brand: InventoryBrand;
+  category: InventoryCategory;
   name: string;
   available: number;
   unit: string;
