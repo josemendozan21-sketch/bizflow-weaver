@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      product_costs: {
+        Row: {
+          brand: string
+          created_at: string
+          id: string
+          product_name: string
+          production_cost: number
+          raw_material_cost: number
+          total_cost: number | null
+          updated_at: string
+        }
+        Insert: {
+          brand: string
+          created_at?: string
+          id?: string
+          product_name: string
+          production_cost?: number
+          raw_material_cost?: number
+          total_cost?: number | null
+          updated_at?: string
+        }
+        Update: {
+          brand?: string
+          created_at?: string
+          id?: string
+          product_name?: string
+          production_cost?: number
+          raw_material_cost?: number
+          total_cost?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
