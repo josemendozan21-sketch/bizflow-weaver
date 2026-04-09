@@ -14,6 +14,7 @@ import Produccion from "./pages/Produccion";
 import Logistica from "./pages/Logistica";
 import Contabilidad from "./pages/Contabilidad";
 import Auth from "./pages/Auth";
+import AdminUsuarios from "./pages/AdminUsuarios";
 import NotFound from "./pages/NotFound";
 import { ReactNode } from "react";
 
@@ -50,6 +51,7 @@ const App = () => (
                 <Route path="/produccion" element={<ProtectedRoute path="/produccion"><Produccion /></ProtectedRoute>} />
                 <Route path="/logistica" element={<ProtectedRoute path="/logistica"><Logistica /></ProtectedRoute>} />
                 <Route path="/contabilidad" element={<ProtectedRoute path="/contabilidad"><Contabilidad /></ProtectedRoute>} />
+                <Route path="/admin-usuarios" element={<ProtectedRoute path="/admin-usuarios"><AdminUsuarios /></ProtectedRoute>} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
