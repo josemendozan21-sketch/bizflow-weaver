@@ -1,6 +1,4 @@
 import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
-import ProductionRequirementsPanel from "@/components/inventory/ProductionRequirementsPanel";
-import MaterialConfigSection from "@/components/inventory/MaterialConfigSection";
 
 const Inventarios = () => {
   return (
@@ -11,8 +9,6 @@ const Inventarios = () => {
       </div>
 
       <CategorizedInventoryPanel />
-      <ProductionRequirementsPanel />
-      <MaterialConfigSection />
     </div>
   );
 };
