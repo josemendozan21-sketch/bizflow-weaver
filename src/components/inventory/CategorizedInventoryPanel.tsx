@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import SweatspotFinishedProducts from "./SweatspotFinishedProducts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -291,68 +292,72 @@ const CategorizedInventoryPanel = ({
 
         {CATEGORIES.map((cat) => (
           <TabsContent key={cat} value={cat}>
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">
-                    {CATEGORY_META[cat].label} — {brandLabel}
-                  </CardTitle>
-                  <Dialog open={addOpen} onOpenChange={setAddOpen}>
-                    <DialogTrigger asChild>
-                      <Button size="sm"><Plus className="h-4 w-4 mr-1" />Agregar ítem</Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-md">
-                      <DialogHeader>
-                        <DialogTitle>Agregar ítem</DialogTitle>
-                        <DialogDescription>
-                          {brandLabel} → {CATEGORY_META[selectedCategory].label}
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-2">
-                        <div className="grid gap-1.5">
-                          <Label>Nombre *</Label>
-                          <Input placeholder="Ej: Gel, Envase…" value={newForm.name} onChange={(e) => setNewForm({ ...newForm, name: e.target.value })} />
+            {cat === "producto_terminado" && selectedBrand === "sweatspot" ? (
+              <SweatspotFinishedProducts />
+            ) : (
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">
+                      {CATEGORY_META[cat].label} — {brandLabel}
+                    </CardTitle>
+                    <Dialog open={addOpen} onOpenChange={setAddOpen}>
+                      <DialogTrigger asChild>
+                        <Button size="sm"><Plus className="h-4 w-4 mr-1" />Agregar ítem</Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Agregar ítem</DialogTitle>
+                          <DialogDescription>
+                            {brandLabel} → {CATEGORY_META[selectedCategory].label}
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-2">
+                          <div className="grid gap-1.5">
+                            <Label>Nombre *</Label>
+                            <Input placeholder="Ej: Gel, Envase…" value={newForm.name} onChange={(e) => setNewForm({ ...newForm, name: e.target.value })} />
+                          </div>
+                          <div className="grid grid-cols-3 gap-3">
+                            <div className="grid gap-1.5">
+                              <Label>Cantidad *</Label>
+                              <Input type="number" min={0} value={newForm.available} onChange={(e) => setNewForm({ ...newForm, available: e.target.value })} />
+                            </div>
+                            <div className="grid gap-1.5">
+                              <Label>Unidad</Label>
+                              <Select value={newForm.unit} onValueChange={(v) => setNewForm({ ...newForm, unit: v })}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  {UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="grid gap-1.5">
+                              <Label>Mínimo *</Label>
+                              <Input type="number" min={0} value={newForm.minStock} onChange={(e) => setNewForm({ ...newForm, minStock: e.target.value })} />
+                            </div>
+                          </div>
                         </div>
-                        <div className="grid grid-cols-3 gap-3">
-                          <div className="grid gap-1.5">
-                            <Label>Cantidad *</Label>
-                            <Input type="number" min={0} value={newForm.available} onChange={(e) => setNewForm({ ...newForm, available: e.target.value })} />
-                          </div>
-                          <div className="grid gap-1.5">
-                            <Label>Unidad</Label>
-                            <Select value={newForm.unit} onValueChange={(v) => setNewForm({ ...newForm, unit: v })}>
-                              <SelectTrigger><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                {UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="grid gap-1.5">
-                            <Label>Mínimo *</Label>
-                            <Input type="number" min={0} value={newForm.minStock} onChange={(e) => setNewForm({ ...newForm, minStock: e.target.value })} />
-                          </div>
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => setAddOpen(false)}>Cancelar</Button>
-                        <Button onClick={handleAdd}>Guardar</Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {filteredItems.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8 text-sm">
-                    No hay ítems registrados en {CATEGORY_META[cat].label} para {brandLabel}.
-                  </p>
-                ) : isGroupedCategory ? (
-                  renderGroupedContent(filteredItems)
-                ) : (
-                  renderFlatContent(filteredItems)
-                )}
-              </CardContent>
-            </Card>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setAddOpen(false)}>Cancelar</Button>
+                          <Button onClick={handleAdd}>Guardar</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {filteredItems.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8 text-sm">
+                      No hay ítems registrados en {CATEGORY_META[cat].label} para {brandLabel}.
+                    </p>
+                  ) : isGroupedCategory ? (
+                    renderGroupedContent(filteredItems)
+                  ) : (
+                    renderFlatContent(filteredItems)
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         ))}
       </Tabs>
