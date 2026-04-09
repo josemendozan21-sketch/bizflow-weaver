@@ -1,5 +1,4 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StampingSection } from "@/components/production/StampingSection";
 import { FillingSection } from "@/components/production/FillingSection";
 import { BodyProductionSection } from "@/components/production/BodyProductionSection";
@@ -14,42 +13,21 @@ const Produccion = () => {
 
       <Tabs defaultValue="cuerpos" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="cuerpos">Cuerpos / Referencias</TabsTrigger>
-          <TabsTrigger value="estampacion">Estampación / Serigrafía</TabsTrigger>
-          <TabsTrigger value="llenado">Llenado / Dosificación</TabsTrigger>
+          <TabsTrigger value="cuerpos">Cuerpos</TabsTrigger>
+          <TabsTrigger value="estampacion">Estampación</TabsTrigger>
+          <TabsTrigger value="llenado">Dosificación</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="cuerpos">
-          <Card>
-            <CardHeader>
-              <CardTitle>Producción de cuerpos o referencias</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <BodyProductionSection />
-            </CardContent>
-          </Card>
+        <TabsContent value="cuerpos" className="mt-4">
+          <BodyProductionSection />
         </TabsContent>
 
-        <TabsContent value="estampacion">
-          <Card>
-            <CardHeader>
-              <CardTitle>Producción de estampación o serigrafía</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <StampingSection />
-            </CardContent>
-          </Card>
+        <TabsContent value="estampacion" className="mt-4">
+          <StampingSection />
         </TabsContent>
 
-        <TabsContent value="llenado">
-          <Card>
-            <CardHeader>
-              <CardTitle>Producción de llenado o dosificación</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <FillingSection />
-            </CardContent>
-          </Card>
+        <TabsContent value="llenado" className="mt-4">
+          <FillingSection />
         </TabsContent>
       </Tabs>
     </div>

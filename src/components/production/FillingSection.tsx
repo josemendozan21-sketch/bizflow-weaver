@@ -1,18 +1,13 @@
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Info } from "lucide-react";
 import { FillingTaskCard } from "./FillingTaskCard";
 import { GelRequirementsPanel } from "./GelRequirementsPanel";
 import { useProductionStore } from "@/stores/productionStore";
-import { useState } from "react";
-import type { FillingTask } from "@/types/production";
 
 export function FillingSection() {
   const fillingTasks = useProductionStore((s) => s.fillingTasks);
-  const [statusFilter, setStatusFilter] = useState<FillingTask["status"] | "todos">("todos");
-
-  const filtered = fillingTasks.filter((t) =>
-    statusFilter === "todos" ? true : t.status === statusFilter
-  );
 
   const counts = {
     pendiente: fillingTasks.filter((t) => t.status === "pendiente").length,
@@ -21,42 +16,47 @@ export function FillingSection() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+      {/* Instructions */}
+      <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+        <div className="flex items-start gap-3">
+          <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+          <div>
+            <p className="font-semibold text-foreground">¿Qué hacer aquí?</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Gestiona las tareas de llenado y dosificación. Las tareas se crean automáticamente cuando se completa una estampación de Magical Warmers. Solo necesitas avanzar el estado de cada tarea.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Status summary */}
       <div className="flex flex-wrap gap-3">
         <Badge variant="secondary" className="text-sm px-3 py-1">🟡 Pendientes: {counts.pendiente}</Badge>
         <Badge variant="default" className="text-sm px-3 py-1">🔵 En proceso: {counts.en_proceso}</Badge>
         <Badge variant="outline" className="text-sm px-3 py-1">✅ Completados: {counts.completado}</Badge>
       </div>
 
-      <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
-        <SelectTrigger className="w-[180px]">
-          <SelectValue placeholder="Filtrar por estado" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="todos">Todos los estados</SelectItem>
-          <SelectItem value="pendiente">Pendiente</SelectItem>
-          <SelectItem value="en_proceso">En proceso</SelectItem>
-          <SelectItem value="completado">Completado</SelectItem>
-        </SelectContent>
-      </Select>
-
       <GelRequirementsPanel />
 
-      {filtered.length === 0 ? (
-        <p className="text-muted-foreground py-8 text-center">
-          No hay tareas de llenado activas. Las tareas se crean automáticamente cuando una estampación de Magical Warmers se marca como completada.
-        </p>
+      {fillingTasks.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">
+              No hay tareas de llenado activas.
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Las tareas aparecen aquí automáticamente al completar una estampación de Magical Warmers.
+            </p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {filtered.map((task) => (
+          {fillingTasks.map((task) => (
             <FillingTaskCard key={task.id} task={task} />
           ))}
         </div>
       )}
-
-      <p className="text-xs text-muted-foreground">
-        Las tareas de llenado se generan automáticamente desde estampación (solo Magical Warmers).
-      </p>
     </div>
   );
 }
