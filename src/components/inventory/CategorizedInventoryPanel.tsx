@@ -13,15 +13,26 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Beaker, Box, PackageCheck, Plus, Pencil, Trash2, Check, X, AlertTriangle, AlertCircle, CheckCircle2,
+  Beaker, Box, PackageCheck, Layers, Plus, Pencil, Trash2, Check, X, AlertTriangle, AlertCircle, CheckCircle2,
 } from "lucide-react";
-import { useInventoryStore, type StockItem, type StockStatus } from "@/stores/inventoryStore";
+import { useInventoryStore, type StockItem, type StockStatus, type InventoryCategory, type InventoryBrand } from "@/stores/inventoryStore";
 import { toast } from "sonner";
 
-const CATEGORY_META: Record<string, { label: string; description: string; icon: React.ElementType }> = {
-  materia_prima: { label: "Materia prima", description: "Gel/mezcla, glicerina, carbopol, tintas PVC, colorantes, rollos de frío y calor", icon: Beaker },
+const BRAND_OPTIONS: { value: InventoryBrand; label: string }[] = [
+  { value: "sweatspot", label: "Sweatspot" },
+  { value: "magical_warmers", label: "Magical Warmers" },
+];
+
+const CATEGORY_META: Record<InventoryCategory, { label: string; icon: React.ElementType }> = {
+  materia_prima: { label: "Materia prima", icon: Beaker },
+  producto_en_proceso: { label: "Producto en proceso", icon: Layers },
+  cuerpos_referencias: { label: "Cuerpos o referencias", icon: Box },
+  producto_terminado: { label: "Producto terminado", icon: PackageCheck },
 };
+
+const CATEGORIES: InventoryCategory[] = ["materia_prima", "producto_en_proceso", "cuerpos_referencias", "producto_terminado"];
 
 const STATUS_CONFIG: Record<StockStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ElementType }> = {
   ok: { label: "OK", variant: "secondary", icon: CheckCircle2 },
@@ -29,31 +40,36 @@ const STATUS_CONFIG: Record<StockStatus, { label: string; variant: "default" | "
   critico: { label: "Crítico", variant: "destructive", icon: AlertCircle },
 };
 
-const CATEGORIES: StockItem["category"][] = ["materia_prima"];
-
 const UNITS = ["unidades", "gramos", "kilos", "tarros"];
 
 const CategorizedInventoryPanel = () => {
   const { stockItems, addStockItem, updateStockItem, deleteStockItem, getStockStatus } = useInventoryStore();
+  const [selectedBrand, setSelectedBrand] = useState<InventoryBrand>("magical_warmers");
+  const [selectedCategory, setSelectedCategory] = useState<InventoryCategory>("materia_prima");
   const [addOpen, setAddOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ available: "", minStock: "" });
-  const [newForm, setNewForm] = useState({ category: "" as string, name: "", available: "", unit: "unidades", minStock: "" });
+  const [newForm, setNewForm] = useState({ name: "", available: "", unit: "unidades", minStock: "" });
+
+  const filteredItems = stockItems.filter(
+    (i) => i.brand === selectedBrand && i.category === selectedCategory
+  );
 
   const handleAdd = () => {
-    if (!newForm.category || !newForm.name || !newForm.available || !newForm.minStock) {
+    if (!newForm.name || !newForm.available || !newForm.minStock) {
       toast.error("Completa todos los campos");
       return;
     }
     addStockItem({
-      category: newForm.category as StockItem["category"],
+      brand: selectedBrand,
+      category: selectedCategory,
       name: newForm.name,
       available: Number(newForm.available),
       unit: newForm.unit,
       minStock: Number(newForm.minStock),
     });
     toast.success("Ítem agregado al inventario");
-    setNewForm({ category: "", name: "", available: "", unit: "unidades", minStock: "" });
+    setNewForm({ name: "", available: "", unit: "unidades", minStock: "" });
     setAddOpen(false);
   };
 
@@ -68,183 +84,200 @@ const CategorizedInventoryPanel = () => {
     toast.success("Inventario actualizado");
   };
 
+  const brandLabel = BRAND_OPTIONS.find((b) => b.value === selectedBrand)?.label ?? "";
+
+  // Summary counts for brand
+  const brandItems = stockItems.filter((i) => i.brand === selectedBrand);
+  const totalCritical = brandItems.filter((i) => getStockStatus(i) === "critico").length;
+  const totalLow = brandItems.filter((i) => getStockStatus(i) === "bajo").length;
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-foreground">Inventario por categoría</h2>
-        <Dialog open={addOpen} onOpenChange={setAddOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm"><Plus className="h-4 w-4 mr-1" />Agregar ítem</Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Agregar ítem al inventario</DialogTitle>
-              <DialogDescription>Registra un nuevo material, cuerpo o producto terminado.</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-2">
-              <div className="grid gap-1.5">
-                <Label>Categoría *</Label>
-                <Select value={newForm.category} onValueChange={(v) => setNewForm({ ...newForm, category: v })}>
-                  <SelectTrigger><SelectValue placeholder="Seleccionar categoría" /></SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map((c) => (
-                      <SelectItem key={c} value={c}>{CATEGORY_META[c].label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-1.5">
-                <Label>Nombre *</Label>
-                <Input placeholder="Ej: Gel, Envase Muela…" value={newForm.name} onChange={(e) => setNewForm({ ...newForm, name: e.target.value })} />
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="grid gap-1.5">
-                  <Label>Cantidad *</Label>
-                  <Input type="number" min={0} value={newForm.available} onChange={(e) => setNewForm({ ...newForm, available: e.target.value })} />
-                </div>
-                <div className="grid gap-1.5">
-                  <Label>Unidad *</Label>
-                  <Select value={newForm.unit} onValueChange={(v) => setNewForm({ ...newForm, unit: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-1.5">
-                  <Label>Mínimo *</Label>
-                  <Input type="number" min={0} value={newForm.minStock} onChange={(e) => setNewForm({ ...newForm, minStock: e.target.value })} />
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setAddOpen(false)}>Cancelar</Button>
-              <Button onClick={handleAdd}>Guardar</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+      {/* Brand selector */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <Label className="text-sm font-medium">Marca:</Label>
+        <div className="flex gap-2">
+          {BRAND_OPTIONS.map((b) => (
+            <Button
+              key={b.value}
+              variant={selectedBrand === b.value ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedBrand(b.value)}
+            >
+              {b.label}
+            </Button>
+          ))}
+        </div>
+        <div className="ml-auto flex gap-1.5">
+          {totalCritical > 0 && (
+            <Badge variant="destructive" className="text-xs">{totalCritical} crítico{totalCritical > 1 ? "s" : ""}</Badge>
+          )}
+          {totalLow > 0 && (
+            <Badge className="text-xs">{totalLow} bajo stock</Badge>
+          )}
+          {totalCritical === 0 && totalLow === 0 && (
+            <Badge variant="secondary" className="text-xs">Todo OK</Badge>
+          )}
+        </div>
       </div>
 
-      {CATEGORIES.map((cat) => {
-        const meta = CATEGORY_META[cat];
-        const Icon = meta.icon;
-        const items = stockItems.filter((i) => i.category === cat);
-        const criticalCount = items.filter((i) => getStockStatus(i) === "critico").length;
-        const lowCount = items.filter((i) => getStockStatus(i) === "bajo").length;
+      {/* Category tabs */}
+      <Tabs value={selectedCategory} onValueChange={(v) => setSelectedCategory(v as InventoryCategory)}>
+        <TabsList className="w-full grid grid-cols-4">
+          {CATEGORIES.map((cat) => {
+            const meta = CATEGORY_META[cat];
+            const Icon = meta.icon;
+            const count = stockItems.filter((i) => i.brand === selectedBrand && i.category === cat).length;
+            return (
+              <TabsTrigger key={cat} value={cat} className="gap-1.5 text-xs sm:text-sm">
+                <Icon className="h-4 w-4 hidden sm:block" />
+                {meta.label}
+                {count > 0 && <span className="text-muted-foreground">({count})</span>}
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
 
-        return (
-          <Card key={cat}>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Icon className="h-5 w-5 text-primary" />
-                  <div>
-                    <CardTitle className="text-base">{meta.label}</CardTitle>
-                    <p className="text-xs text-muted-foreground">{meta.description}</p>
-                  </div>
+        {CATEGORIES.map((cat) => (
+          <TabsContent key={cat} value={cat}>
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">
+                    {CATEGORY_META[cat].label} — {brandLabel}
+                  </CardTitle>
+                  <Dialog open={addOpen} onOpenChange={setAddOpen}>
+                    <DialogTrigger asChild>
+                      <Button size="sm"><Plus className="h-4 w-4 mr-1" />Agregar ítem</Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Agregar ítem</DialogTitle>
+                        <DialogDescription>
+                          {brandLabel} → {CATEGORY_META[selectedCategory].label}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-2">
+                        <div className="grid gap-1.5">
+                          <Label>Nombre *</Label>
+                          <Input placeholder="Ej: Gel, Envase…" value={newForm.name} onChange={(e) => setNewForm({ ...newForm, name: e.target.value })} />
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="grid gap-1.5">
+                            <Label>Cantidad *</Label>
+                            <Input type="number" min={0} value={newForm.available} onChange={(e) => setNewForm({ ...newForm, available: e.target.value })} />
+                          </div>
+                          <div className="grid gap-1.5">
+                            <Label>Unidad</Label>
+                            <Select value={newForm.unit} onValueChange={(v) => setNewForm({ ...newForm, unit: v })}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid gap-1.5">
+                            <Label>Mínimo *</Label>
+                            <Input type="number" min={0} value={newForm.minStock} onChange={(e) => setNewForm({ ...newForm, minStock: e.target.value })} />
+                          </div>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setAddOpen(false)}>Cancelar</Button>
+                        <Button onClick={handleAdd}>Guardar</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                 </div>
-                <div className="flex gap-1.5">
-                  {criticalCount > 0 && (
-                    <Badge variant="destructive" className="text-xs">{criticalCount} crítico{criticalCount > 1 ? "s" : ""}</Badge>
-                  )}
-                  {lowCount > 0 && (
-                    <Badge className="text-xs">{lowCount} bajo stock</Badge>
-                  )}
-                  {criticalCount === 0 && lowCount === 0 && (
-                    <Badge variant="secondary" className="text-xs">Todo OK</Badge>
-                  )}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {items.length === 0 ? (
-                <p className="text-center text-muted-foreground py-4 text-sm">No hay ítems registrados en esta categoría.</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Ítem</TableHead>
-                      <TableHead className="text-right">Disponible</TableHead>
-                      <TableHead className="text-right">Mínimo</TableHead>
-                      <TableHead className="text-center">Estado</TableHead>
-                      <TableHead className="text-right">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {items.map((item) => {
-                      const status = getStockStatus(item);
-                      const sc = STATUS_CONFIG[status];
-                      const StatusIcon = sc.icon;
-                      const isEditing = editingId === item.id;
+              </CardHeader>
+              <CardContent>
+                {filteredItems.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8 text-sm">
+                    No hay ítems registrados en {CATEGORY_META[cat].label} para {brandLabel}.
+                  </p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Producto</TableHead>
+                        <TableHead className="text-right">Disponible</TableHead>
+                        <TableHead className="text-right">Mínimo</TableHead>
+                        <TableHead className="text-center">Estado</TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredItems.map((item) => {
+                        const status = getStockStatus(item);
+                        const sc = STATUS_CONFIG[status];
+                        const StatusIcon = sc.icon;
+                        const isEditing = editingId === item.id;
 
-                      return (
-                        <TableRow key={item.id} className={status === "critico" ? "bg-destructive/5" : status === "bajo" ? "bg-primary/5" : ""}>
-                          <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell className="text-right">
-                            {isEditing ? (
-                              <Input
-                                type="number" min={0} value={editForm.available}
-                                onChange={(e) => setEditForm({ ...editForm, available: e.target.value })}
-                                className="h-7 w-24 ml-auto text-right"
-                              />
-                            ) : (
-                              <span>
-                                <span className="font-semibold">{item.available.toLocaleString("es-CO")}</span>
-                                <span className="text-muted-foreground ml-1 text-xs">{item.unit}</span>
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {isEditing ? (
-                              <Input
-                                type="number" min={0} value={editForm.minStock}
-                                onChange={(e) => setEditForm({ ...editForm, minStock: e.target.value })}
-                                className="h-7 w-24 ml-auto text-right"
-                              />
-                            ) : (
-                              <span>
-                                <span>{item.minStock.toLocaleString("es-CO")}</span>
-                                <span className="text-muted-foreground ml-1 text-xs">{item.unit}</span>
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant={sc.variant} className="text-xs gap-1">
-                              <StatusIcon className="h-3 w-3" />
-                              {sc.label}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right space-x-1">
-                            {isEditing ? (
-                              <>
-                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => saveEdit(item.id)}>
-                                  <Check className="h-4 w-4 text-primary" />
-                                </Button>
-                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)}>
-                                  <X className="h-4 w-4 text-destructive" />
-                                </Button>
-                              </>
-                            ) : (
-                              <>
-                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(item)}>
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { deleteStockItem(item.id); toast.info("Ítem eliminado"); }}>
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              </>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
+                        return (
+                          <TableRow key={item.id} className={status === "critico" ? "bg-destructive/5" : status === "bajo" ? "bg-primary/5" : ""}>
+                            <TableCell className="font-medium">{item.name}</TableCell>
+                            <TableCell className="text-right">
+                              {isEditing ? (
+                                <Input type="number" min={0} value={editForm.available}
+                                  onChange={(e) => setEditForm({ ...editForm, available: e.target.value })}
+                                  className="h-7 w-24 ml-auto text-right" />
+                              ) : (
+                                <span>
+                                  <span className="font-semibold">{item.available.toLocaleString("es-CO")}</span>
+                                  <span className="text-muted-foreground ml-1 text-xs">{item.unit}</span>
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {isEditing ? (
+                                <Input type="number" min={0} value={editForm.minStock}
+                                  onChange={(e) => setEditForm({ ...editForm, minStock: e.target.value })}
+                                  className="h-7 w-24 ml-auto text-right" />
+                              ) : (
+                                <span>
+                                  <span>{item.minStock.toLocaleString("es-CO")}</span>
+                                  <span className="text-muted-foreground ml-1 text-xs">{item.unit}</span>
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant={sc.variant} className="text-xs gap-1">
+                                <StatusIcon className="h-3 w-3" />
+                                {sc.label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right space-x-1">
+                              {isEditing ? (
+                                <>
+                                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => saveEdit(item.id)}>
+                                    <Check className="h-4 w-4 text-primary" />
+                                  </Button>
+                                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)}>
+                                    <X className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <>
+                                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(item)}>
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { deleteStockItem(item.id); toast.info("Ítem eliminado"); }}>
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        ))}
+      </Tabs>
     </div>
   );
 };

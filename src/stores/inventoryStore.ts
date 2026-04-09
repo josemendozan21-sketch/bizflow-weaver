@@ -86,20 +86,23 @@ const INITIAL_GEL_STOCK: GelStock[] = [
 ];
 
 const INITIAL_STOCK_ITEMS: StockItem[] = [
-  // Materia prima
-  { id: "si-1", category: "materia_prima", name: "Gel / mezcla", available: 15000, unit: "gramos", minStock: 5000 },
-  { id: "si-2", category: "materia_prima", name: "Glicerina", available: 25, unit: "kilos", minStock: 10 },
-  { id: "si-3", category: "materia_prima", name: "Carbopol", available: 3000, unit: "gramos", minStock: 1000 },
-  { id: "si-4", category: "materia_prima", name: "Tinta PVC - Blanco", available: 5, unit: "tarros", minStock: 2 },
-  { id: "si-4b", category: "materia_prima", name: "Tinta PVC - Negro", available: 4, unit: "tarros", minStock: 2 },
-  { id: "si-4c", category: "materia_prima", name: "Tinta PVC - Rojo", available: 3, unit: "tarros", minStock: 2 },
-  { id: "si-4d", category: "materia_prima", name: "Tinta PVC - Azul", available: 3, unit: "tarros", minStock: 2 },
-  { id: "si-5", category: "materia_prima", name: "Colorante - Azul", available: 500, unit: "gramos", minStock: 200 },
-  { id: "si-5b", category: "materia_prima", name: "Colorante - Rojo", available: 400, unit: "gramos", minStock: 200 },
-  { id: "si-5c", category: "materia_prima", name: "Colorante - Verde", available: 350, unit: "gramos", minStock: 200 },
-  { id: "si-5d", category: "materia_prima", name: "Colorante - Morado", available: 300, unit: "gramos", minStock: 200 },
-  { id: "si-6a", category: "materia_prima", name: "Rollos de frío", available: 15, unit: "unidades", minStock: 5 },
-  { id: "si-6b", category: "materia_prima", name: "Rollos de calor", available: 12, unit: "unidades", minStock: 5 },
+  // Magical Warmers - Materia prima
+  { id: "si-mw-mp-1", brand: "magical_warmers", category: "materia_prima", name: "Gel / mezcla", available: 15000, unit: "gramos", minStock: 5000 },
+  { id: "si-mw-mp-2", brand: "magical_warmers", category: "materia_prima", name: "Glicerina", available: 25, unit: "kilos", minStock: 10 },
+  { id: "si-mw-mp-3", brand: "magical_warmers", category: "materia_prima", name: "Carbopol", available: 3000, unit: "gramos", minStock: 1000 },
+  { id: "si-mw-mp-4", brand: "magical_warmers", category: "materia_prima", name: "Colorante - Azul", available: 500, unit: "gramos", minStock: 200 },
+  { id: "si-mw-mp-5", brand: "magical_warmers", category: "materia_prima", name: "Colorante - Rojo", available: 400, unit: "gramos", minStock: 200 },
+  { id: "si-mw-mp-6", brand: "magical_warmers", category: "materia_prima", name: "Rollos de frío", available: 15, unit: "unidades", minStock: 5 },
+  { id: "si-mw-mp-7", brand: "magical_warmers", category: "materia_prima", name: "Rollos de calor", available: 12, unit: "unidades", minStock: 5 },
+  // Magical Warmers - Cuerpos
+  { id: "si-mw-cr-1", brand: "magical_warmers", category: "cuerpos_referencias", name: "Lumbar", available: 0, unit: "unidades", minStock: 10 },
+  { id: "si-mw-cr-2", brand: "magical_warmers", category: "cuerpos_referencias", name: "Cervical", available: 0, unit: "unidades", minStock: 10 },
+  { id: "si-mw-cr-3", brand: "magical_warmers", category: "cuerpos_referencias", name: "Muela", available: 0, unit: "unidades", minStock: 20 },
+  // Sweatspot - Materia prima
+  { id: "si-ss-mp-1", brand: "sweatspot", category: "materia_prima", name: "Tinta PVC - Blanco", available: 5, unit: "tarros", minStock: 2 },
+  { id: "si-ss-mp-2", brand: "sweatspot", category: "materia_prima", name: "Tinta PVC - Negro", available: 4, unit: "tarros", minStock: 2 },
+  { id: "si-ss-mp-3", brand: "sweatspot", category: "materia_prima", name: "Tinta PVC - Rojo", available: 3, unit: "tarros", minStock: 2 },
+  { id: "si-ss-mp-4", brand: "sweatspot", category: "materia_prima", name: "Tinta PVC - Azul", available: 3, unit: "tarros", minStock: 2 },
 ];
 
 export interface ProductionRequirement {
