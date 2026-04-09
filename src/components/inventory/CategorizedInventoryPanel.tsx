@@ -42,9 +42,13 @@ const STATUS_CONFIG: Record<StockStatus, { label: string; variant: "default" | "
 
 const UNITS = ["unidades", "gramos", "kilos", "tarros"];
 
-const CategorizedInventoryPanel = () => {
+interface CategorizedInventoryPanelProps {
+  initialBrand?: InventoryBrand;
+}
+
+const CategorizedInventoryPanel = ({ initialBrand = "magical_warmers" }: CategorizedInventoryPanelProps) => {
   const { stockItems, addStockItem, updateStockItem, deleteStockItem, getStockStatus } = useInventoryStore();
-  const [selectedBrand, setSelectedBrand] = useState<InventoryBrand>("magical_warmers");
+  const [selectedBrand, setSelectedBrand] = useState<InventoryBrand>(initialBrand);
   const [selectedCategory, setSelectedCategory] = useState<InventoryCategory>("materia_prima");
   const [addOpen, setAddOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
