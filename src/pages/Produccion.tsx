@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import ProductionBrandSelector, { type ProductionBrand } from "@/components/production/ProductionBrandSelector";
+import { MagicalWarmersWorkflow } from "@/components/production/MagicalWarmersWorkflow";
 
 const Produccion = () => {
   const [selectedBrand, setSelectedBrand] = useState<ProductionBrand | null>(null);
@@ -26,11 +27,11 @@ const Produccion = () => {
 
       {!selectedBrand ? (
         <ProductionBrandSelector selectedBrand={selectedBrand} onSelectBrand={setSelectedBrand} />
+      ) : selectedBrand === "magical_warmers" ? (
+        <MagicalWarmersWorkflow />
       ) : (
         <div className="text-center py-12 text-muted-foreground">
-          <p className="text-lg font-medium">
-            Sección de producción para {selectedBrand === "magical_warmers" ? "Magical Warmers" : "Sweatspot"}
-          </p>
+          <p className="text-lg font-medium">Sección de producción para Sweatspot</p>
           <p className="text-sm mt-1">Próximamente se agregarán los procesos específicos de esta marca.</p>
         </div>
       )}
