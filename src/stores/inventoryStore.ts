@@ -89,6 +89,21 @@ const INITIAL_GEL_STOCK: GelStock[] = [
 ];
 
 const INITIAL_STOCK_ITEMS: StockItem[] = [
+  // Sweatspot - Materia prima
+  { id: "si-ss-mp-1", brand: "sweatspot", category: "materia_prima", name: "Silicona Negro 250 ML", available: 433, unit: "unidades", minStock: 200 },
+  { id: "si-ss-mp-2", brand: "sweatspot", category: "materia_prima", name: "Silicona Azul 250 ML", available: 433, unit: "unidades", minStock: 200 },
+  { id: "si-ss-mp-3", brand: "sweatspot", category: "materia_prima", name: "Silicona Rosado 250 ML", available: 433, unit: "unidades", minStock: 200 },
+  { id: "si-ss-mp-4", brand: "sweatspot", category: "materia_prima", name: "Silicona Morado 250 ML", available: 433, unit: "unidades", minStock: 200 },
+  { id: "si-ss-mp-5", brand: "sweatspot", category: "materia_prima", name: "Silicona Negro 500 ML", available: 433, unit: "unidades", minStock: 200 },
+  { id: "si-ss-mp-6", brand: "sweatspot", category: "materia_prima", name: "Silicona Azul 500 ML", available: 433, unit: "unidades", minStock: 200 },
+  { id: "si-ss-mp-7", brand: "sweatspot", category: "materia_prima", name: "Silicona Rosado 500 ML", available: 433, unit: "unidades", minStock: 200 },
+  { id: "si-ss-mp-8", brand: "sweatspot", category: "materia_prima", name: "Silicona Morado 500 ML", available: 433, unit: "unidades", minStock: 200 },
+  { id: "si-ss-mp-9", brand: "sweatspot", category: "materia_prima", name: "Cuello Transparente", available: 433, unit: "unidades", minStock: 200 },
+  { id: "si-ss-mp-10", brand: "sweatspot", category: "materia_prima", name: "Cuello Azul", available: 433, unit: "unidades", minStock: 200 },
+  { id: "si-ss-mp-11", brand: "sweatspot", category: "materia_prima", name: "Cuello Negro", available: 433, unit: "unidades", minStock: 200 },
+  { id: "si-ss-mp-12", brand: "sweatspot", category: "materia_prima", name: "Cuello Morado", available: 433, unit: "unidades", minStock: 200 },
+  { id: "si-ss-mp-13", brand: "sweatspot", category: "materia_prima", name: "Cuello Rosado", available: 433, unit: "unidades", minStock: 200 },
+  { id: "si-ss-mp-14", brand: "sweatspot", category: "materia_prima", name: "Boquillas", available: 433, unit: "unidades", minStock: 400 },
   // Magical Warmers - Materia prima
   { id: "si-mw-mp-1", brand: "magical_warmers", category: "materia_prima", name: "Gel / mezcla", available: 15000, unit: "gramos", minStock: 5000 },
   { id: "si-mw-mp-2", brand: "magical_warmers", category: "materia_prima", name: "Glicerina", available: 25, unit: "kilos", minStock: 10 },
