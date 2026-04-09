@@ -14,6 +14,77 @@ export type Database = {
   }
   public: {
     Tables: {
+      event_products: {
+        Row: {
+          brand: string
+          created_at: string
+          event_id: string
+          id: string
+          product_name: string
+          quantity_needed: number
+        }
+        Insert: {
+          brand?: string
+          created_at?: string
+          event_id: string
+          id?: string
+          product_name: string
+          quantity_needed?: number
+        }
+        Update: {
+          brand?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          product_name?: string
+          quantity_needed?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_products_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          city: string
+          created_at: string
+          created_by: string | null
+          event_date: string
+          event_type: Database["public"]["Enums"]["event_type"]
+          id: string
+          name: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          city: string
+          created_at?: string
+          created_by?: string | null
+          event_date: string
+          event_type: Database["public"]["Enums"]["event_type"]
+          id?: string
+          name: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          city?: string
+          created_at?: string
+          created_by?: string | null
+          event_date?: string
+          event_type?: Database["public"]["Enums"]["event_type"]
+          id?: string
+          name?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_costs: {
         Row: {
           brand: string
@@ -114,6 +185,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "asesor_comercial" | "produccion"
+      event_type: "feria" | "carrera" | "activacion"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -242,6 +314,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "asesor_comercial", "produccion"],
+      event_type: ["feria", "carrera", "activacion"],
     },
   },
 } as const
