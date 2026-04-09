@@ -42,9 +42,13 @@ const STATUS_CONFIG: Record<StockStatus, { label: string; variant: "default" | "
 
 const UNITS = ["unidades", "gramos", "kilos", "tarros"];
 
-const CategorizedInventoryPanel = () => {
+interface CategorizedInventoryPanelProps {
+  initialBrand?: InventoryBrand;
+}
+
+const CategorizedInventoryPanel = ({ initialBrand = "magical_warmers" }: CategorizedInventoryPanelProps) => {
   const { stockItems, addStockItem, updateStockItem, deleteStockItem, getStockStatus } = useInventoryStore();
-  const [selectedBrand, setSelectedBrand] = useState<InventoryBrand>("magical_warmers");
+  const [selectedBrand, setSelectedBrand] = useState<InventoryBrand>(initialBrand);
   const [selectedCategory, setSelectedCategory] = useState<InventoryCategory>("materia_prima");
   const [addOpen, setAddOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -93,21 +97,9 @@ const CategorizedInventoryPanel = () => {
 
   return (
     <div className="space-y-4">
-      {/* Brand selector */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <Label className="text-sm font-medium">Marca:</Label>
-        <div className="flex gap-2">
-          {BRAND_OPTIONS.map((b) => (
-            <Button
-              key={b.value}
-              variant={selectedBrand === b.value ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedBrand(b.value)}
-            >
-              {b.label}
-            </Button>
-          ))}
-        </div>
+      {/* Brand summary badges */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <h2 className="text-lg font-semibold text-foreground">{brandLabel}</h2>
         <div className="ml-auto flex gap-1.5">
           {totalCritical > 0 && (
             <Badge variant="destructive" className="text-xs">{totalCritical} crítico{totalCritical > 1 ? "s" : ""}</Badge>
