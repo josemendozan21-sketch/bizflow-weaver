@@ -26,6 +26,7 @@ import {
   STAGE_ORDER,
   STAGE_LABELS,
   type MagicalProductionStage,
+  type MagicalProductionOrder,
   type StageStatus,
 } from "@/types/magicalProduction";
 
