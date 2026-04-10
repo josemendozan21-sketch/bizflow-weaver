@@ -8,7 +8,7 @@ const ROLE_ROUTES: Record<AppRole, string[]> = {
   asesor_comercial: ["/", "/ventas", "/inventarios", "/diseno-logos", "/logistica", "/contabilidad", "/eventos"],
   produccion: ["/", "/produccion", "/inventarios"],
   contabilidad: ["/", "/contabilidad"],
-  estampacion: ["/", "/produccion", "/inventarios"],
+  estampacion: ["/", "/diseno-logos", "/produccion"],
   usuario_visual: ["/", "/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/eventos"],
   disenador: ["/", "/diseno-logos"],
 };
@@ -19,7 +19,7 @@ const ROLE_EDIT_SECTIONS: Record<AppRole, string[]> = {
   asesor_comercial: ["/ventas", "/diseno-logos"],
   produccion: ["/produccion", "/inventarios"],
   contabilidad: [],
-  estampacion: ["/produccion"],
+  estampacion: ["/produccion", "/diseno-logos"],
   usuario_visual: [],
   disenador: ["/diseno-logos"],
 };
