@@ -141,37 +141,6 @@ export default function AsesorInventoryView() {
             </div>
           ) : (
             <div className="space-y-6">
-              {/* Sweatspot — Materia prima */}
-              <Card>
-                <CardHeader><CardTitle>Cuerpos / Materia prima</CardTitle></CardHeader>
-                <CardContent>
-                  {sweatspotMaterials.length === 0 ? <EmptyMessage /> : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Material</TableHead>
-                          <TableHead className="text-right">Disponible</TableHead>
-                          <TableHead>Unidad</TableHead>
-                          <TableHead className="text-right">Mínimo</TableHead>
-                          <TableHead>Estado</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {sweatspotMaterials.map((item) => (
-                          <TableRow key={item.id}>
-                            <TableCell className="font-medium">{item.name}</TableCell>
-                            <TableCell className="text-right">{item.available}</TableCell>
-                            <TableCell>{item.unit}</TableCell>
-                            <TableCell className="text-right">{item.min_stock}</TableCell>
-                            <TableCell><StockIndicator available={item.available} minStock={item.min_stock} /></TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </CardContent>
-              </Card>
-
               {/* Sweatspot — Producto terminado */}
               <Card>
                 <CardHeader><CardTitle>Producto terminado</CardTitle></CardHeader>
