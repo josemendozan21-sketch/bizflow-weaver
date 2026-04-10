@@ -555,6 +555,17 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                 ))}
               </div>
             </div>
+            <div className="space-y-1.5">
+              <Label>Tipo de logo</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {["Impresión full", "Impresión básica"].map((tipo) => (
+                  <label key={tipo} className="flex items-center gap-2 rounded-md border border-input p-3 cursor-pointer hover:bg-accent transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                    <input type="radio" name="ss_tipoLogo" value={tipo} required className="accent-primary h-4 w-4" />
+                    <span className="text-sm text-foreground">{tipo}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Color de silicona" name="ss_colorSilicona" required />
               <Field label="Color de tinta" name="ss_colorTinta" required />
