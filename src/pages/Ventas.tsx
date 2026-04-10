@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, AlertTriangle, CheckCircle2, FileText, ShoppingCart, ClipboardList } from "lucide-react";
 import { useLogisticsStore } from "@/stores/logisticsStore";
 import { useInventoryStore } from "@/stores/inventoryStore";
+import { useInventory } from "@/hooks/useInventory";
 import { useAccountingStore } from "@/stores/accountingStore";
 import { useDeliveryStore } from "@/stores/deliveryStore";
 import { toast } from "sonner";
@@ -181,7 +182,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [units, setUnits] = useState("");
 
   const materialConfigs = useInventoryStore((s) => s.materialConfigs);
-  const stockItems = useInventoryStore((s) => s.stockItems);
+  const zustandStockItems = useInventoryStore((s) => s.stockItems);
+  const { reserveBodyStock: reserveBodyStockDB, discountStock: discountStockDB } = useInventory();
 
   // Unique product names
   const productNames = useMemo(() => {
@@ -211,11 +213,11 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     if (!matchedConfig || qty <= 0) return null;
     const totalGrams = qty * matchedConfig.gramsPerUnit;
     const totalKg = totalGrams / 1000;
-    const gelItem = stockItems.find((s) => s.category === "materia_prima" && s.name.toLowerCase() === "gel");
+    const gelItem = zustandStockItems.find((s) => s.category === "materia_prima" && s.name.toLowerCase() === "gel");
     const available = gelItem?.available || 0;
     const difference = available - totalGrams;
     return { totalGrams, totalKg, available, difference, sufficient: difference >= 0, gramsPerUnit: matchedConfig.gramsPerUnit };
-  }, [matchedConfig, units, stockItems]);
+  }, [matchedConfig, units, zustandStockItems]);
 
   const handleProductChange = (value: string) => {
     setSelectedProduct(value);
@@ -273,11 +275,11 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       }
     }
 
-    // Wholesale: check cuerpos/referencias stock
-    const bodyResult = useInventoryStore.getState().reserveBodyStock(referencia, quantity, "magical");
+    // Wholesale: check cuerpos/referencias stock (persisted in Supabase)
+    const bodyResult = await reserveBodyStockDB("magical", referencia, quantity);
 
-    // Calculate gel consumption for Magical Warmers
-    const gelResult = useInventoryStore.getState().discountGelForMagical(selectedProduct, quantity);
+    // Calculate gel consumption for Magical Warmers (persisted in Supabase)
+    const gelResult = await discountStockDB("gel", quantity * (matchedConfig?.gramsPerUnit || 60));
 
     // Production order will be created after persisting to DB (see below)
 
@@ -564,6 +566,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { reserveBodyStock: reserveBodyStockDB } = useInventory();
   const tamanos = ["150 ml", "250 ml", "250 ml juguetón", "500 ml"] as const;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -612,8 +615,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       }
     }
 
-    // Wholesale: check cuerpos/referencias stock
-    const bodyResult = useInventoryStore.getState().reserveBodyStock(referencia, quantity, "sweatspot");
+    // Wholesale: check cuerpos/referencias stock (persisted in Supabase)
+    const bodyResult = await reserveBodyStockDB("sweatspot", referencia, quantity);
     const hasStock = bodyResult.available;
 
     // Determine logo type for production workflow
