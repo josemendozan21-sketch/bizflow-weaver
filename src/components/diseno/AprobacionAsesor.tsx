@@ -3,12 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LogoRequest, useUpdateLogoRequest } from "@/hooks/useLogoRequests";
 import { StatusBadge } from "./StatusBadge";
-import { CheckCircle2, FileText, User, Loader2 } from "lucide-react";
+import { CheckCircle2, FileText, User, Loader2, Download } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   requests: LogoRequest[];
