@@ -1,3 +1,8 @@
+/**
+ * @deprecated Este store local será reemplazado por el hook useInventory que persiste en Supabase.
+ * Se mantiene temporalmente para componentes que aún lo usan (CategorizedInventoryPanel, etc.).
+ * Para nuevas funcionalidades de inventario, usar src/hooks/useInventory.ts
+ */
 import { create } from "zustand";
 
 export interface MaterialConfig {
