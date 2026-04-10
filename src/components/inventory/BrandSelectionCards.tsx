@@ -5,6 +5,7 @@ import {
   Beaker, Box, Droplets, PackageCheck, Bell,
 } from "lucide-react";
 import { useInventoryStore, type InventoryBrand, type InventoryCategory } from "@/stores/inventoryStore";
+import { useAuth } from "@/contexts/AuthContext";
 import { useMemo } from "react";
 
 const BRANDS: { value: InventoryBrand; label: string; description: string }[] = [
