@@ -38,7 +38,6 @@ const ProductionBrandSelector = ({ selectedBrand, onSelectBrand }: ProductionBra
                       <Icon className={`h-7 w-7 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
                     ) : null}
                   </div>
-                  </div>
                   <div>
                     <h3 className="text-lg font-bold text-foreground">{brand.label}</h3>
                     <p className="text-sm text-muted-foreground">{brand.description}</p>
