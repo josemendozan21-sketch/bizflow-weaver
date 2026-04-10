@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, AlertTriangle, CheckCircle2, FileText, ShoppingCart } from "lucide-react";
+import { ArrowLeft, AlertTriangle, CheckCircle2, FileText, ShoppingCart, ClipboardList } from "lucide-react";
 import magicalLogo from "@/assets/magical-warmers-logo.png";
 import sweatspotLogo from "@/assets/sweatspot-logo.png";
 import { useLogisticsStore } from "@/stores/logisticsStore";
@@ -19,9 +19,11 @@ import { useAccountingStore } from "@/stores/accountingStore";
 import { useDeliveryStore } from "@/stores/deliveryStore";
 import { toast } from "sonner";
 import QuotationGenerator from "@/components/ventas/QuotationGenerator";
+import { MisPedidos } from "@/components/ventas/MisPedidos";
 import { createLogoRequestFromOrder } from "@/lib/createLogoRequestFromOrder";
 import { useAuth } from "@/contexts/AuthContext";
-
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 type Brand = "sweatspot" | "magical";
 type SaleType = "mayor" | "menor";
 
@@ -66,7 +68,10 @@ const Ventas = () => {
       <Tabs defaultValue="pedidos" className="w-full">
         <TabsList>
           <TabsTrigger value="pedidos" className="gap-1.5">
-            <ShoppingCart className="h-4 w-4" /> Pedidos
+            <ShoppingCart className="h-4 w-4" /> Nuevo Pedido
+          </TabsTrigger>
+          <TabsTrigger value="mis-pedidos" className="gap-1.5">
+            <ClipboardList className="h-4 w-4" /> Mis Pedidos
           </TabsTrigger>
           <TabsTrigger value="cotizaciones" className="gap-1.5">
             <FileText className="h-4 w-4" /> Cotizaciones
@@ -106,6 +111,10 @@ const Ventas = () => {
           {step === 3 && brand && saleType && (
             <OrderForm brand={brand} saleType={saleType} onReset={handleReset} />
           )}
+        </TabsContent>
+
+        <TabsContent value="mis-pedidos" className="space-y-6 mt-4">
+          <MisPedidos />
         </TabsContent>
 
         <TabsContent value="cotizaciones" className="mt-4">
@@ -216,7 +225,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     setSelectedType("");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
     const fd = new FormData(form);
@@ -228,6 +237,9 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const rutFile = fd.get("mw_rut") as File;
     const totalAmount = parseFloat(fd.get("mw_valorTotal") as string) || 0;
     const abono = parseFloat(fd.get("mw_abono") as string) || 0;
+    const personalizacion = (fd.get("mw_personalizacion") as string) || "";
+    const observaciones = (fd.get("mw_observaciones") as string) || "";
+    const logoFile = fd.get("mw_logo") as File;
 
     if (!selectedProduct || !selectedType) {
       toast.error("Producto requerido", { description: "Seleccione un producto y tipo." });
@@ -239,6 +251,29 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         description: "Para ventas al por mayor debe adjuntar el RUT de la empresa.",
       });
       return;
+    }
+
+    // Auto-create design request if logo was uploaded (do this BEFORE reset)
+    let logoUrl: string | null = null;
+    if (logoFile && logoFile.size > 0 && user) {
+      const result = await createLogoRequestFromOrder({
+        brand: "Magical Warmers",
+        clientName,
+        product: referencia,
+        advisorId: user.id,
+        advisorName: user.email || "Asesor",
+        logoFile,
+        clientComments: observaciones || undefined,
+        additionalInstructions: personalizacion || undefined,
+      });
+      if (result.success) {
+        toast.success("Diseño de logo", { description: result.message });
+        // Get the logo URL for the order record
+        const ext = logoFile.name.split(".").pop();
+        logoUrl = "logo-uploaded";
+      } else {
+        toast.error("Diseño de logo", { description: result.message });
+      }
     }
 
     // Wholesale: check cuerpos/referencias stock
@@ -256,7 +291,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       gelColor: gelColor || "",
       glitter: escarcha,
       doubleInk: dobleTinta,
-      observations: (fd.get("mw_observaciones") as string) || undefined,
+      observations: observaciones || undefined,
     });
 
     // Send to accounting as "Cliente empresa"
@@ -273,7 +308,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       email: (fd.get("mw_email") as string)?.trim() || undefined,
       direccion: (fd.get("mw_direccion") as string)?.trim() || undefined,
       ciudad: (fd.get("mw_ciudad") as string)?.trim() || undefined,
-      observaciones: (fd.get("mw_observaciones") as string)?.trim() || undefined,
+      observaciones: observaciones?.trim() || undefined,
     });
 
     // Create delivery calendar entry if fecha requerida is provided
@@ -290,6 +325,36 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       });
     }
 
+    // Persist order to database
+    try {
+      await supabase.from("orders").insert({
+        brand: "magical",
+        sale_type: "mayor",
+        client_name: clientName,
+        client_nit: (fd.get("mw_cedulaNit") as string) || null,
+        client_phone: (fd.get("mw_contacto") as string) || null,
+        client_email: (fd.get("mw_email") as string) || null,
+        client_address: (fd.get("mw_direccion") as string) || null,
+        client_city: (fd.get("mw_ciudad") as string) || null,
+        product: referencia,
+        quantity,
+        unit_price: parseFloat(fd.get("mw_valorUnitario") as string) || 0,
+        total_amount: totalAmount,
+        abono,
+        ink_color: inkColor,
+        gel_color: gelColor,
+        logo_url: logoUrl,
+        observations: observaciones || null,
+        personalization: personalizacion || null,
+        advisor_id: user?.id || "",
+        advisor_name: user?.email || "Asesor",
+        production_status: "pendiente",
+        delivery_date: fechaRequerida || null,
+      });
+    } catch (err: any) {
+      console.error("Error saving order:", err);
+    }
+
     toast.success("Pedido al por mayor creado", {
       description: `${clientName} — ${quantity} uds de ${referencia}. Enviado a Producción y Contabilidad.`,
     });
@@ -304,28 +369,6 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     }
 
     toast.info("Consumo de gel", { description: gelResult.message });
-
-    // Auto-create design request if logo was uploaded
-    const logoFile = fd.get("mw_logo") as File;
-    const personalizacion = (fd.get("mw_personalizacion") as string) || "";
-    if (logoFile && logoFile.size > 0 && user) {
-      createLogoRequestFromOrder({
-        brand: "Magical Warmers",
-        clientName,
-        product: referencia,
-        advisorId: user.id,
-        advisorName: user.email || "Asesor",
-        logoFile,
-        clientComments: (fd.get("mw_observaciones") as string) || undefined,
-        additionalInstructions: personalizacion || undefined,
-      }).then((result) => {
-        if (result.success) {
-          toast.success("Diseño de logo", { description: result.message });
-        } else {
-          toast.error("Diseño de logo", { description: result.message });
-        }
-      });
-    }
 
     onReset();
   };
@@ -494,7 +537,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const { user } = useAuth();
   const tamanos = ["150 ml", "250 ml", "250 ml juguetón", "500 ml"] as const;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
     const fd = new FormData(form);
@@ -508,12 +551,36 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     const rutFile = fd.get("ss_rut") as File;
     const totalAmount = parseFloat(fd.get("ss_valorTotal") as string) || 0;
     const abono = parseFloat(fd.get("ss_abono") as string) || 0;
+    const personalizacion = (fd.get("ss_personalizacion") as string) || "";
+    const observaciones = (fd.get("ss_observaciones") as string) || "";
+    const logoFile = fd.get("ss_logo") as File;
 
     if (!rutFile || !rutFile.name) {
       toast.error("RUT requerido", {
         description: "Para ventas al por mayor debe adjuntar el RUT de la empresa.",
       });
       return;
+    }
+
+    // Auto-create design request if logo was uploaded (do this BEFORE reset)
+    let logoUrl: string | null = null;
+    if (logoFile && logoFile.size > 0 && user) {
+      const result = await createLogoRequestFromOrder({
+        brand: "Sweatspot",
+        clientName,
+        product: referencia,
+        advisorId: user.id,
+        advisorName: user.email || "Asesor",
+        logoFile,
+        clientComments: observaciones || undefined,
+        additionalInstructions: personalizacion || undefined,
+      });
+      if (result.success) {
+        toast.success("Diseño de logo", { description: result.message });
+        logoUrl = "logo-uploaded";
+      } else {
+        toast.error("Diseño de logo", { description: result.message });
+      }
     }
 
     // Wholesale: check cuerpos/referencias stock
@@ -523,7 +590,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     // Determine logo type for production workflow
     const logoType = tipoLogo === "Impresión básica" ? "impresion_basica" as const : "impresion_full" as const;
 
-    // Send to Sweatspot production workflow (replaces old stamping task)
+    // Send to Sweatspot production workflow
     useSweatspotProductionStore.getState().addOrder({
       clientName,
       quantity,
@@ -531,10 +598,10 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       siliconeColor,
       inkColor,
       logoType,
-      logoFile: (fd.get("ss_logo") as File)?.name || undefined,
+      logoFile: logoFile?.name || undefined,
       hasStock,
       currentStage: "estampacion",
-      observations: (fd.get("ss_observaciones") as string) || undefined,
+      observations: observaciones || undefined,
     });
 
     // Send to accounting as "Cliente empresa"
@@ -551,7 +618,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       email: (fd.get("ss_email") as string)?.trim() || undefined,
       direccion: (fd.get("ss_direccion") as string)?.trim() || undefined,
       ciudad: (fd.get("ss_ciudad") as string)?.trim() || undefined,
-      observaciones: (fd.get("ss_observaciones") as string)?.trim() || undefined,
+      observaciones: observaciones?.trim() || undefined,
     });
 
     // Create delivery calendar entry if fecha requerida is provided
@@ -568,6 +635,36 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       });
     }
 
+    // Persist order to database
+    try {
+      await supabase.from("orders").insert({
+        brand: "sweatspot",
+        sale_type: "mayor",
+        client_name: clientName,
+        client_nit: (fd.get("ss_cedulaNit") as string) || null,
+        client_phone: (fd.get("ss_contacto") as string) || null,
+        client_email: (fd.get("ss_email") as string) || null,
+        client_address: (fd.get("ss_direccion") as string) || null,
+        client_city: (fd.get("ss_ciudad") as string) || null,
+        product: referencia,
+        quantity,
+        unit_price: parseFloat(fd.get("ss_valorUnitario") as string) || 0,
+        total_amount: totalAmount,
+        abono,
+        ink_color: inkColor,
+        silicone_color: siliconeColor,
+        logo_url: logoUrl,
+        observations: observaciones || null,
+        personalization: personalizacion || null,
+        advisor_id: user?.id || "",
+        advisor_name: user?.email || "Asesor",
+        production_status: "estampacion",
+        delivery_date: fechaRequerida || null,
+      });
+    } catch (err: any) {
+      console.error("Error saving order:", err);
+    }
+
     toast.success("Pedido al por mayor creado", {
       description: `${clientName} — ${quantity} uds (${tipoLogo}). Enviado a Producción y Contabilidad.`,
     });
@@ -579,28 +676,6 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       toast.warning("Stock parcial de cuerpos", { description: bodyResult.message });
     } else {
       toast.info("Inventario actualizado", { description: bodyResult.message });
-    }
-
-    // Auto-create design request if logo was uploaded
-    const logoFile = fd.get("ss_logo") as File;
-    const personalizacion = (fd.get("ss_personalizacion") as string) || "";
-    if (logoFile && logoFile.size > 0 && user) {
-      createLogoRequestFromOrder({
-        brand: "Sweatspot",
-        clientName,
-        product: referencia,
-        advisorId: user.id,
-        advisorName: user.email || "Asesor",
-        logoFile,
-        clientComments: (fd.get("ss_observaciones") as string) || undefined,
-        additionalInstructions: personalizacion || undefined,
-      }).then((result) => {
-        if (result.success) {
-          toast.success("Diseño de logo", { description: result.message });
-        } else {
-          toast.error("Diseño de logo", { description: result.message });
-        }
-      });
     }
 
     onReset();

@@ -148,6 +148,93 @@ export type Database = {
         }
         Relationships: []
       }
+      orders: {
+        Row: {
+          abono: number | null
+          advisor_id: string
+          advisor_name: string
+          brand: string
+          client_address: string | null
+          client_city: string | null
+          client_email: string | null
+          client_name: string
+          client_nit: string | null
+          client_phone: string | null
+          created_at: string
+          delivery_date: string | null
+          gel_color: string | null
+          id: string
+          ink_color: string | null
+          logo_url: string | null
+          observations: string | null
+          personalization: string | null
+          product: string
+          production_status: string
+          quantity: number
+          sale_type: string
+          silicone_color: string | null
+          total_amount: number | null
+          unit_price: number | null
+          updated_at: string
+        }
+        Insert: {
+          abono?: number | null
+          advisor_id: string
+          advisor_name: string
+          brand: string
+          client_address?: string | null
+          client_city?: string | null
+          client_email?: string | null
+          client_name: string
+          client_nit?: string | null
+          client_phone?: string | null
+          created_at?: string
+          delivery_date?: string | null
+          gel_color?: string | null
+          id?: string
+          ink_color?: string | null
+          logo_url?: string | null
+          observations?: string | null
+          personalization?: string | null
+          product: string
+          production_status?: string
+          quantity?: number
+          sale_type?: string
+          silicone_color?: string | null
+          total_amount?: number | null
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Update: {
+          abono?: number | null
+          advisor_id?: string
+          advisor_name?: string
+          brand?: string
+          client_address?: string | null
+          client_city?: string | null
+          client_email?: string | null
+          client_name?: string
+          client_nit?: string | null
+          client_phone?: string | null
+          created_at?: string
+          delivery_date?: string | null
+          gel_color?: string | null
+          id?: string
+          ink_color?: string | null
+          logo_url?: string | null
+          observations?: string | null
+          personalization?: string | null
+          product?: string
+          production_status?: string
+          quantity?: number
+          sale_type?: string
+          silicone_color?: string | null
+          total_amount?: number | null
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_costs: {
         Row: {
           brand: string
