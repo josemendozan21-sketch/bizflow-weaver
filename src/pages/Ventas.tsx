@@ -615,8 +615,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       }
     }
 
-    // Wholesale: check cuerpos/referencias stock
-    const bodyResult = useInventoryStore.getState().reserveBodyStock(referencia, quantity, "sweatspot");
+    // Wholesale: check cuerpos/referencias stock (persisted in Supabase)
+    const bodyResult = await reserveBodyStockDB("sweatspot", referencia, quantity);
     const hasStock = bodyResult.available;
 
     // Determine logo type for production workflow
