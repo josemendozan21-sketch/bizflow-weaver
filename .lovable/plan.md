@@ -1,61 +1,81 @@
 
 
-## Plan: Corregir descuento automático de inventario al crear pedidos
+## Plan: Sistema de notificaciones por rol al crear pedidos
 
-### Problema raíz identificado
+### Objetivo
+Cuando un asesor comercial crea un pedido al por mayor, el sistema debe notificar automáticamente a los roles involucrados y crear las órdenes de producción/reabastecimiento necesarias.
 
-Hay **3 bugs** que impiden el descuento correcto de inventario:
+### Diseño
 
-**Bug 1 — Diferencia de acentos en la referencia:**
-El formulario genera `referencia = "Lumbar (Frío)"` (con tilde) desde `materialConfigs`, pero la tabla `body_stock` almacena `"Lumbar (Frio)"` (sin tilde). La comparación con `.includes()` falla porque `"frío" ≠ "frio"`, así que **nunca encuentra coincidencia** y siempre reporta `has_stock: false`.
+**Nueva tabla `notifications` en Supabase** para almacenar notificaciones persistentes por usuario/rol:
 
-Evidencia: Todas las production_orders en la DB tienen `has_stock: false` y `needs_cuerpos: true`, incluso para productos con stock disponible (ej: Lumbar Frio tiene 43 unidades).
+```text
+notifications
+├── id (uuid, PK)
+├── target_role (app_role) — rol destinatario
+├── target_user_id (uuid, nullable) — usuario específico (opcional)
+├── title (text)
+├── message (text)
+├── type (text) — "nuevo_pedido", "bajo_inventario", "diseno_logo", "produccion"
+├── reference_id (uuid, nullable) — ID del pedido/orden relacionada
+├── read (boolean, default false)
+├── created_at (timestamptz)
+```
 
-**Bug 2 — `discountStock` usa estado local que puede estar vacío:**
-La función `discountStock` (para descontar gel) busca en el array `stockItems` del hook, que depende de la suscripción realtime. Si los datos no han cargado aún, el array está vacío y no descuenta nada. A diferencia de `reserveBodyStock` (ya corregido para consultar directo a DB), `discountStock` nunca fue actualizado.
+**Notificaciones generadas al crear un pedido:**
 
-**Bug 3 — Datos de gel duplicados entre Zustand y DB:**
-El panel de consumo de gel (`gelCalc`) lee del Zustand store (`zustandStockItems`) que tiene datos hardcodeados (15,000g), mientras la DB muestra `"Mezcla Gel"` con `available: 0`. Los dos sistemas están desincronizados.
+| Rol | Tipo | Condición |
+|-----|------|-----------|
+| produccion | nuevo_pedido | Siempre (nuevo pedido entra a producción) |
+| produccion | bajo_inventario | Cuando `needsCuerpos = true` (auto-crear supply order ya funciona) |
+| disenador | diseno_logo | Cuando se sube un logo (ya se crea `logo_request`, ahora también notificación) |
+| contabilidad | nuevo_pedido | Siempre (para registro financiero) |
+| logistica | nuevo_pedido | Siempre (para preparar despacho futuro) |
+| asesor_comercial | confirmacion | Al propio asesor, confirmando su pedido |
+
+**Componente de notificaciones en el sidebar/header:**
+- Icono de campana con badge de conteo de no leídas
+- Dropdown con lista de notificaciones recientes
+- Click en notificación la marca como leída
+- Filtrado automático por rol del usuario logueado
 
 ### Cambios propuestos
 
-#### 1. Normalizar acentos en la comparación de referencias
-**Archivo:** `src/hooks/useInventory.ts` — función `reserveBodyStock`
+#### 1. Migración SQL
+- Crear tabla `notifications` con RLS (cada rol solo ve sus notificaciones)
+- Habilitar realtime en la tabla
+- Políticas: SELECT filtrado por `target_role` o `target_user_id`, INSERT para roles autorizados
 
-Agregar una función de normalización que elimine acentos antes de comparar:
-```typescript
-const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-```
-Aplicarla en todas las comparaciones de referencia.
+#### 2. `src/hooks/useNotifications.ts` (nuevo)
+- Hook con `useQuery` para traer notificaciones del rol actual
+- Suscripción realtime para notificaciones nuevas
+- Mutation `markAsRead` y `markAllAsRead`
+- Función `createOrderNotifications(orderData)` que inserta las notificaciones relevantes
 
-#### 2. Hacer que `discountStock` consulte directo a la DB
-**Archivo:** `src/hooks/useInventory.ts` — función `discountStock`
+#### 3. `src/components/NotificationBell.tsx` (nuevo)
+- Campana en el sidebar/header con badge de no leídas
+- Popover con lista scrolleable de notificaciones
+- Cada item muestra tipo, mensaje, tiempo relativo y estado leído/no leído
 
-Igual que se hizo con `reserveBodyStock`, hacer una consulta fresca a `stock_items` en vez de depender del estado local:
-```typescript
-const { data: freshItems } = await supabase
-  .from("stock_items").select("*")
-  .ilike("name", `%${itemName}%`);
-```
+#### 4. `src/pages/Ventas.tsx` — MagicalMayorForm y SweatspotMayorForm
+- Después de crear el pedido y la production_order, llamar `createOrderNotifications()` que inserta en batch las notificaciones para cada rol
+- Si `needsCuerpos`, la notificación a producción incluye el detalle de cantidad faltante
 
-#### 3. Hacer que `gelCalc` en el formulario lea de la DB
-**Archivo:** `src/pages/Ventas.tsx` — `MagicalMayorForm`
+#### 5. `src/components/AppSidebar.tsx` o `src/components/DashboardLayout.tsx`
+- Agregar el componente `NotificationBell` visible para todos los roles
 
-Reemplazar la lectura del Zustand store para gel por los datos del hook `useInventory` (que ya trae `stockItems` desde Supabase), aplicando la misma normalización.
-
-#### 4. Sincronizar los nombres de referencia
-**Archivo:** `src/hooks/useInventory.ts`
-
-Asegurar que la búsqueda de body_stock use normalización en todas las comparaciones (nombre de producto, tipo), para que `"Frío" == "Frio"`, `"Térmico" == "Termico"`, `"Círculo" == "Circulo"`.
-
-### Archivos a modificar
-- `src/hooks/useInventory.ts` — Normalización de acentos + `discountStock` con consulta fresca
-- `src/pages/Ventas.tsx` — Leer gel desde hook DB en vez de Zustand
+### Archivos a crear/modificar
+- **Nuevo:** Migración SQL para tabla `notifications`
+- **Nuevo:** `src/hooks/useNotifications.ts`
+- **Nuevo:** `src/components/NotificationBell.tsx`
+- **Modificar:** `src/pages/Ventas.tsx` — agregar llamada a crear notificaciones
+- **Modificar:** `src/components/AppSidebar.tsx` o `DashboardLayout.tsx` — agregar campana
 
 ### Resultado esperado
 Al crear un pedido de "Lumbar Frío, 1000 unidades":
-1. Se encuentra correctamente el stock de cuerpos "Lumbar (Frio)" → se descuentan las 43 disponibles, se genera orden de producción por las 957 faltantes
-2. Se descuenta el gel de la tabla `stock_items` en la DB
-3. La production_order se crea con `has_stock` y `needs_cuerpos` correctos
-4. Todo queda persistido y sincronizado entre Ventas, Producción e Inventarios
+1. Producción recibe notificación: "Nuevo pedido: 1000 uds Lumbar (Frío) — Magical Warmers" + alerta de bajo inventario si aplica
+2. Diseñador recibe notificación si se subió logo: "Nueva solicitud de diseño para [cliente]"
+3. Contabilidad y Logística reciben aviso del nuevo pedido
+4. El asesor ve confirmación de su pedido creado
+5. Todos ven la campana con badge actualizado en tiempo real
 
