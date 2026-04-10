@@ -853,11 +853,41 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
               <Field label="Color de tinta" name="ss_colorTinta" required />
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
-              <Field label="Unidades" name="ss_unidades" type="number" required />
-              <Field label="Valor unitario" name="ss_valorUnitario" type="number" required />
-              <Field label="Valor total del pedido" name="ss_valorTotal" type="number" required />
+              <div className="space-y-1.5">
+                <Label htmlFor="ss_unidades">Unidades</Label>
+                <Input id="ss_unidades" name="ss_unidades" type="number" required value={ssUnits} onChange={(e) => setSsUnits(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ss_valorUnitario">Valor unitario</Label>
+                <Input id="ss_valorUnitario" name="ss_valorUnitario" type="number" required value={ssValorUnitario} onChange={(e) => { setSsValorUnitario(e.target.value); setSsAutoCalc(true); }} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ss_valorTotal">Valor total del pedido</Label>
+                <Input id="ss_valorTotal" name="ss_valorTotal" type="number" required value={ssValorTotal} onChange={(e) => { setSsValorTotal(e.target.value); setSsAutoCalc(false); }} />
+                {ssAutoCalc && parseInt(ssUnits, 10) > 0 && parseFloat(ssValorUnitario) > 0 && (
+                  <p className="text-xs text-muted-foreground">Calculado automáticamente</p>
+                )}
+              </div>
             </div>
-            <Field label="Abono del total del pedido" name="ss_abono" type="number" />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="ss_abono">Abono del total del pedido</Label>
+                <Input id="ss_abono" name="ss_abono" type="number" value={ssAbono} onChange={(e) => setSsAbono(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Estado del pago</Label>
+                <Select value={ssEstadoPago} onValueChange={(v) => setSsEstadoPago(v as typeof ssEstadoPago)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="abono_inicial">Abono inicial recibido</SelectItem>
+                    <SelectItem value="pago_total">Pago total recibido</SelectItem>
+                    <SelectItem value="pendiente">Pago pendiente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <Field label="Fecha requerida de entrega" name="ss_fechaRequerida" type="date" />
           </fieldset>
 
@@ -880,6 +910,12 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
               <Textarea id="ss_observaciones" name="ss_observaciones" placeholder="Notas u observaciones adicionales..." />
             </div>
           </fieldset>
+
+          <PaymentSummary
+            totalAmount={parseFloat(ssValorTotal) || 0}
+            abono={ssEstadoPago === "pago_total" ? (parseFloat(ssValorTotal) || 0) : (parseFloat(ssAbono) || 0)}
+            estadoPago={ssEstadoPago}
+          />
 
           <div className="flex gap-3 pt-2">
             <Button type="submit">Crear pedido</Button>
