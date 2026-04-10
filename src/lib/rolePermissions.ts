@@ -7,6 +7,9 @@ const ROLE_ROUTES: Record<AppRole, string[]> = {
   admin: ["/", "/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/admin-usuarios", "/costos", "/eventos"],
   asesor_comercial: ["/", "/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/eventos"],
   produccion: ["/", "/produccion", "/inventarios"],
+  contabilidad: ["/", "/contabilidad", "/logistica"],
+  estampacion: ["/", "/produccion", "/inventarios"],
+  usuario_visual: ["/", "/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/eventos"],
 };
 
 // Sections where the role can edit (create, update, delete)
@@ -14,6 +17,9 @@ const ROLE_EDIT_SECTIONS: Record<AppRole, string[]> = {
   admin: ["/", "/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/admin-usuarios", "/costos", "/eventos"],
   asesor_comercial: ["/ventas", "/diseno-logos"],
   produccion: ["/produccion", "/inventarios"],
+  contabilidad: [],
+  estampacion: ["/produccion"],
+  usuario_visual: [],
 };
 
 export function canAccessRoute(role: AppRole | null, path: string): boolean {
@@ -36,6 +42,9 @@ export function getRoleLabel(role: AppRole): string {
     admin: "Administrador",
     asesor_comercial: "Asesor Comercial",
     produccion: "Producción",
+    contabilidad: "Contabilidad",
+    estampacion: "Estampación",
+    usuario_visual: "Usuario Visual",
   };
   return labels[role];
 }

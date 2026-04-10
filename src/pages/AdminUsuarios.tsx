@@ -130,6 +130,9 @@ const AdminUsuarios = () => {
                           <SelectItem value="admin">Administrador</SelectItem>
                           <SelectItem value="asesor_comercial">Asesor Comercial</SelectItem>
                           <SelectItem value="produccion">Producción</SelectItem>
+                          <SelectItem value="contabilidad">Contabilidad</SelectItem>
+                          <SelectItem value="estampacion">Estampación</SelectItem>
+                          <SelectItem value="usuario_visual">Usuario Visual</SelectItem>
                         </SelectContent>
                       </Select>
                     </TableCell>
