@@ -88,7 +88,7 @@ const Ventas = () => {
           {step === 1 && (
             <div className="grid gap-4 sm:grid-cols-2 max-w-lg">
               <BrandCard icon={<Zap className="h-8 w-8" />} name="Sweatspot" onClick={() => handleBrandSelect("sweatspot")} />
-              <BrandCard icon={<img src={magicalLogo} alt="Magical Warmers" className="h-8 w-auto object-contain" />} name="Magical Warmers" onClick={() => handleBrandSelect("magical")} />
+              <BrandCard icon={<img src={magicalLogo} alt="Magical Warmers" className="h-16 w-auto object-contain" />} onClick={() => handleBrandSelect("magical")} />
             </div>
           )}
 
@@ -126,12 +126,12 @@ function StepIndicator({ n, current, label }: { n: number; current: number; labe
   );
 }
 
-function BrandCard({ icon, name, onClick }: { icon: React.ReactNode; name: string; onClick: () => void }) {
+function BrandCard({ icon, name, onClick }: { icon: React.ReactNode; name?: string; onClick: () => void }) {
   return (
     <Card className="cursor-pointer transition-all hover:border-primary hover:shadow-md" onClick={onClick}>
       <CardContent className="flex flex-col items-center gap-3 p-8">
         <div className="text-primary">{icon}</div>
-        <span className="text-lg font-semibold text-foreground">{name}</span>
+        {name && <span className="text-lg font-semibold text-foreground">{name}</span>}
       </CardContent>
     </Card>
   );

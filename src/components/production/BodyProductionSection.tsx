@@ -108,7 +108,7 @@ export const BodyProductionSection = () => {
           {step === 1 && (
             <div className="grid grid-cols-2 gap-4">
               <BrandButton brand="sweatspot" icon={<Zap className="h-8 w-8" />} label="Sweatspot" onClick={() => handleSelectBrand("sweatspot")} />
-              <BrandButton brand="magical" icon={<img src={magicalLogo} alt="Magical Warmers" className="h-8 w-auto object-contain" />} label="Magical Warmers" onClick={() => handleSelectBrand("magical")} />
+              <BrandButton brand="magical" icon={<img src={magicalLogo} alt="Magical Warmers" className="h-14 w-auto object-contain" />} onClick={() => handleSelectBrand("magical")} />
             </div>
           )}
 
@@ -202,11 +202,11 @@ export const BodyProductionSection = () => {
   );
 };
 
-function BrandButton({ icon, label, onClick }: { brand: string; icon: React.ReactNode; label: string; onClick: () => void }) {
+function BrandButton({ icon, label, onClick }: { brand: string; icon: React.ReactNode; label?: string; onClick: () => void }) {
   return (
     <button onClick={onClick} className="flex flex-col items-center gap-3 rounded-lg border-2 border-border p-6 hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer">
       <span className="text-primary">{icon}</span>
-      <span className="font-semibold text-foreground">{label}</span>
+      {label && <span className="font-semibold text-foreground">{label}</span>}
     </button>
   );
 }
