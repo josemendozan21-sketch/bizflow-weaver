@@ -189,7 +189,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
   const materialConfigs = useInventoryStore((s) => s.materialConfigs);
   const zustandStockItems = useInventoryStore((s) => s.stockItems);
-  const { reserveBodyStock: reserveBodyStockDB, discountStock: discountStockDB } = useInventory();
+  const { reserveBodyStock: reserveBodyStockDB, discountStock: discountStockDB, stockItems: inventoryStockItems } = useInventory();
 
   // Auto-calculate total
   useEffect(() => {
