@@ -22,6 +22,7 @@ import { createLogoRequestFromOrder } from "@/lib/createLogoRequestFromOrder";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { createOrderNotifications } from "@/hooks/useNotifications";
 type Brand = "sweatspot" | "magical";
 type SaleType = "mayor" | "menor";
 
