@@ -592,6 +592,50 @@ const Eventos = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delivery day detail dialog */}
+      <Dialog open={deliveryDetailOpen} onOpenChange={setDeliveryDetailOpen}>
+        <DialogContent className="max-w-lg">
+          {selectedDayDeliveries && selectedDayDeliveries.length > 0 && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Truck className="h-5 w-5" />
+                  Entregas — {format(new Date(selectedDayDeliveries[0].deliveryDate + "T12:00:00"), "dd 'de' MMMM yyyy", { locale: es })}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3">
+                {selectedDayDeliveries.map((entry) => (
+                  <div key={entry.id} className="rounded-lg border border-border p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-foreground">{entry.clientName}</span>
+                      <Badge className={cn(DELIVERY_STATUS_COLORS[entry.status])}>{DELIVERY_STATUS_LABELS[entry.status]}</Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Producto: </span>
+                        <span className="text-foreground">{entry.product}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Cantidad: </span>
+                        <span className="text-foreground">{entry.quantity} uds</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Marca: </span>
+                        <span className="text-foreground">{entry.brand === "magical" ? "Magical Warmers" : "Sweatspot"}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Tipo: </span>
+                        <span className="text-foreground">{entry.saleType === "mayor" ? "Al por mayor" : "Al por menor"}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
