@@ -161,7 +161,6 @@ const Logistica = () => {
                             />
                           )}
                         </TableCell>
-                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
