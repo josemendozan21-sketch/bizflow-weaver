@@ -269,6 +269,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
     if (!selectedProduct || !selectedType) {
       toast.error("Producto requerido", { description: "Seleccione un producto y tipo." });
+      setIsSubmitting(false);
       return;
     }
 
@@ -276,6 +277,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       toast.error("RUT requerido", {
         description: "Para ventas al por mayor debe adjuntar el RUT de la empresa.",
       });
+      setIsSubmitting(false);
       return;
     }
 
@@ -377,6 +379,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       toast.error("Error al crear el pedido", {
         description: "No se pudo guardar el pedido ni enviar a producción. Intenta de nuevo o contacta soporte.",
       });
+      setIsSubmitting(false);
       return;
     }
 
@@ -384,6 +387,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       toast.error("Error al crear el pedido", {
         description: "No se recibió confirmación de la base de datos. Intenta de nuevo.",
       });
+      setIsSubmitting(false);
       return;
     }
 
