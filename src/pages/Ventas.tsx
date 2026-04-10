@@ -250,8 +250,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const gelColor = fd.get("mw_colorGel") as string;
     const referencia = `${selectedProduct} (${selectedType})`;
     const rutFile = fd.get("mw_rut") as File;
-    const totalAmount = parseFloat(fd.get("mw_valorTotal") as string) || 0;
-    const abono = parseFloat(fd.get("mw_abono") as string) || 0;
+    const totalAmount = parseFloat(valorTotal) || 0;
+    const abonoAmount = estadoPago === "pago_total" ? totalAmount : (parseFloat(abono) || 0);
     const personalizacion = (fd.get("mw_personalizacion") as string) || "";
     const observaciones = (fd.get("mw_observaciones") as string) || "";
     const logoFile = fd.get("mw_logo") as File;
