@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, AlertTriangle, CheckCircle2, FileText, ShoppingCart, ClipboardList } from "lucide-react";
 import { useLogisticsStore } from "@/stores/logisticsStore";
 import { useInventoryStore } from "@/stores/inventoryStore";
