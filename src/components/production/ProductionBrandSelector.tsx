@@ -31,17 +31,19 @@ const ProductionBrandSelector = ({ selectedBrand, onSelectBrand }: ProductionBra
             <CardContent className="pt-6 pb-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className={`rounded-xl p-3 ${isSelected ? "bg-primary/10" : "bg-muted"} flex items-center justify-center`}>
-                    {brand.logo ? (
-                      <img src={brand.logo} alt={brand.label} className="h-7 w-auto object-contain" />
-                    ) : Icon ? (
-                      <Icon className={`h-7 w-7 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
-                    ) : null}
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-foreground">{brand.label}</h3>
-                    <p className="text-sm text-muted-foreground">{brand.description}</p>
-                  </div>
+                  {brand.logo ? (
+                    <img src={brand.logo} alt={brand.label} className="h-10 w-auto object-contain" />
+                  ) : (
+                    <>
+                      <div className={`rounded-xl p-3 ${isSelected ? "bg-primary/10" : "bg-muted"} flex items-center justify-center`}>
+                        {Icon && <Icon className={`h-7 w-7 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />}
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-foreground">{brand.label}</h3>
+                        <p className="text-sm text-muted-foreground">{brand.description}</p>
+                      </div>
+                    </>
+                  )}
                 </div>
                 <ChevronRight className={`h-5 w-5 text-muted-foreground transition-transform ${isSelected ? "rotate-90" : ""}`} />
               </div>
