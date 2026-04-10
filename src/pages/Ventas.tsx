@@ -617,7 +617,23 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { reserveBodyStock: reserveBodyStockDB } = useInventory();
+  const [ssUnits, setSsUnits] = useState("");
+  const [ssValorUnitario, setSsValorUnitario] = useState("");
+  const [ssValorTotal, setSsValorTotal] = useState("");
+  const [ssAutoCalc, setSsAutoCalc] = useState(true);
+  const [ssAbono, setSsAbono] = useState("");
+  const [ssEstadoPago, setSsEstadoPago] = useState<"abono_inicial" | "pago_total" | "pendiente">("abono_inicial");
   const tamanos = ["150 ml", "250 ml", "250 ml juguetón", "500 ml"] as const;
+
+  // Auto-calculate total
+  useEffect(() => {
+    if (!ssAutoCalc) return;
+    const qty = parseInt(ssUnits, 10) || 0;
+    const unitP = parseFloat(ssValorUnitario) || 0;
+    if (qty > 0 && unitP > 0) {
+      setSsValorTotal(String(qty * unitP));
+    }
+  }, [ssUnits, ssValorUnitario, ssAutoCalc]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
