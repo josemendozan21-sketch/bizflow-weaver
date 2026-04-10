@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      body_production_tasks: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          production_order_id: string | null
+          referencia: string
+          status: string
+          tipo_plastico: string
+          unidades: number
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          production_order_id?: string | null
+          referencia: string
+          status?: string
+          tipo_plastico: string
+          unidades?: number
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          production_order_id?: string | null
+          referencia?: string
+          status?: string
+          tipo_plastico?: string
+          unidades?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "body_production_tasks_production_order_id_fkey"
+            columns: ["production_order_id"]
+            isOneToOne: false
+            referencedRelation: "production_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_products: {
         Row: {
           brand: string
@@ -267,6 +311,92 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      production_orders: {
+        Row: {
+          advisor_id: string | null
+          brand: string
+          client_name: string
+          completed_at: string | null
+          created_at: string
+          current_stage: string
+          gel_color: string | null
+          has_stock: boolean | null
+          id: string
+          ink_color: string | null
+          logo_file: string | null
+          logo_type: string | null
+          molde: string | null
+          needs_cuerpos: boolean | null
+          observations: string | null
+          order_id: string | null
+          quantity: number
+          silicone_color: string | null
+          stage_status: string
+          stages: string[]
+          thermo_size: string | null
+          updated_at: string
+          workflow_type: string
+        }
+        Insert: {
+          advisor_id?: string | null
+          brand: string
+          client_name: string
+          completed_at?: string | null
+          created_at?: string
+          current_stage?: string
+          gel_color?: string | null
+          has_stock?: boolean | null
+          id?: string
+          ink_color?: string | null
+          logo_file?: string | null
+          logo_type?: string | null
+          molde?: string | null
+          needs_cuerpos?: boolean | null
+          observations?: string | null
+          order_id?: string | null
+          quantity?: number
+          silicone_color?: string | null
+          stage_status?: string
+          stages?: string[]
+          thermo_size?: string | null
+          updated_at?: string
+          workflow_type?: string
+        }
+        Update: {
+          advisor_id?: string | null
+          brand?: string
+          client_name?: string
+          completed_at?: string | null
+          created_at?: string
+          current_stage?: string
+          gel_color?: string | null
+          has_stock?: boolean | null
+          id?: string
+          ink_color?: string | null
+          logo_file?: string | null
+          logo_type?: string | null
+          molde?: string | null
+          needs_cuerpos?: boolean | null
+          observations?: string | null
+          order_id?: string | null
+          quantity?: number
+          silicone_color?: string | null
+          stage_status?: string
+          stages?: string[]
+          thermo_size?: string | null
+          updated_at?: string
+          workflow_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
