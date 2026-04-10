@@ -22,7 +22,7 @@ export function FillingTaskCard({ task }: { task: FillingTask }) {
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Flame className="h-5 w-5 text-primary shrink-0" />
+            <img src={magicalLogo} alt="Magical Warmers" className="h-5 w-auto object-contain shrink-0" />
             <CardTitle className="text-base">Magical Warmers</CardTitle>
           </div>
           <Badge variant={status.variant}>{status.label}</Badge>
