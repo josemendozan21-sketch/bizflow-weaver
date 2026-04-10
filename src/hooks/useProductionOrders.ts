@@ -211,8 +211,9 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
 
   const updateBodyTaskStatus = useMutation({
     mutationFn: async ({ taskId, status }: { taskId: string; status: string }) => {
-      const updates: Record<string, unknown> = { status };
-      if (status === "finalizado") updates.completed_at = new Date().toISOString();
+      const updates = status === "finalizado"
+        ? { status, completed_at: new Date().toISOString() }
+        : { status };
       const { error } = await supabase.from("body_production_tasks").update(updates).eq("id", taskId);
       if (error) throw error;
     },
