@@ -364,7 +364,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         personalization: personalizacion || null,
         advisor_id: user?.id || "",
         advisor_name: user?.email || "Asesor",
-        production_status: "estampacion",
+        production_status: "pendiente",
         delivery_date: fechaRequerida || null,
       }).select("id").single();
       orderData = data;
@@ -389,8 +389,13 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       requestedBy: user?.id || undefined,
     });
 
-    const needsCuerpos = !bodyResult.available;
+    const needsCuerpos = !bodyResult.available || bodyResult.discounted < quantity;
     const initialStage = needsCuerpos ? "produccion_cuerpos" : "estampacion";
+
+    // Update the order with the correct production_status now that we know
+    await supabase.from("orders")
+      .update({ production_status: initialStage })
+      .eq("id", orderData.id);
 
     // Create production order
     try {
@@ -778,7 +783,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         personalization: personalizacion || null,
         advisor_id: user?.id || "",
         advisor_name: user?.email || "Asesor",
-        production_status: "estampacion",
+        production_status: "pendiente",
         delivery_date: fechaRequerida || null,
       }).select("id").single();
       orderData = data;
@@ -802,10 +807,17 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       clientName,
       requestedBy: user?.id || undefined,
     });
-    const hasStock = bodyResult.available;
+    const needsCuerpos = !bodyResult.available || bodyResult.discounted < quantity;
+    const hasStock = bodyResult.available && bodyResult.discounted >= quantity;
 
     const workflowType = (logoType === "impresion_basica" && hasStock) ? "short" : "full";
     const ssStages = workflowType === "short" ? ssShortStages : ssFullStages;
+    const initialStage = needsCuerpos ? "produccion_cuerpos" : "estampacion";
+
+    // Update the order with the correct production_status
+    await supabase.from("orders")
+      .update({ production_status: initialStage })
+      .eq("id", orderData.id);
 
     // Create production order
     try {
@@ -814,7 +826,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         brand: "sweatspot",
         client_name: clientName,
         quantity,
-        current_stage: "estampacion",
+        current_stage: initialStage,
         stage_status: "pendiente",
         workflow_type: workflowType,
         stages: ssStages,
