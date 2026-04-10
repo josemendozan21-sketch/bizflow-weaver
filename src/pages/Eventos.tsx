@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInventoryStore } from "@/stores/inventoryStore";
+import { useDeliveryStore, type DeliveryEntry } from "@/stores/deliveryStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarIcon, Plus, Trash2, ChevronLeft, ChevronRight, MapPin, Package, AlertTriangle, CheckCircle } from "lucide-react";
+import { CalendarIcon, Plus, Trash2, ChevronLeft, ChevronRight, MapPin, Package, AlertTriangle, CheckCircle, Truck, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -44,12 +45,16 @@ interface EventWithProducts extends EventRow {
 const Eventos = () => {
   const { user } = useAuth();
   const { materialConfigs } = useInventoryStore();
+  const deliveryEntries = useDeliveryStore((s) => s.entries);
+  const updateDeliveryStatus = useDeliveryStore((s) => s.updateStatus);
   const [events, setEvents] = useState<EventWithProducts[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<EventWithProducts | null>(null);
+  const [selectedDayDeliveries, setSelectedDayDeliveries] = useState<DeliveryEntry[] | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [deliveryDetailOpen, setDeliveryDetailOpen] = useState(false);
 
   // Form state
   const [formName, setFormName] = useState("");
@@ -167,7 +172,33 @@ const Eventos = () => {
   const eventsOnDay = (day: Date) =>
     events.filter((e) => isSameDay(new Date(e.event_date + "T12:00:00"), day));
 
+  const deliveriesOnDay = (day: Date) =>
+    deliveryEntries.filter((d) => isSameDay(new Date(d.deliveryDate + "T12:00:00"), day));
+
   const productNames = [...new Set(materialConfigs.map((c) => c.productName))];
+
+  const DELIVERY_STATUS_LABELS: Record<DeliveryEntry["status"], string> = {
+    pendiente: "Pendiente",
+    en_produccion: "En producción",
+    listo: "Listo",
+    entregado: "Entregado",
+  };
+
+  const DELIVERY_STATUS_COLORS: Record<DeliveryEntry["status"], string> = {
+    pendiente: "bg-yellow-100 text-yellow-800",
+    en_produccion: "bg-blue-100 text-blue-800",
+    listo: "bg-green-100 text-green-800",
+    entregado: "bg-muted text-muted-foreground",
+  };
+
+  // Group deliveries by date for the "Entregas" tab
+  const deliveriesByDate = deliveryEntries.reduce<Record<string, DeliveryEntry[]>>((acc, d) => {
+    if (!acc[d.deliveryDate]) acc[d.deliveryDate] = [];
+    acc[d.deliveryDate].push(d);
+    return acc;
+  }, {});
+
+  const sortedDeliveryDates = Object.keys(deliveriesByDate).sort();
 
   return (
     <div className="space-y-6">
@@ -280,7 +311,13 @@ const Eventos = () => {
       <Tabs defaultValue="calendar">
         <TabsList>
           <TabsTrigger value="calendar">Calendario</TabsTrigger>
-          <TabsTrigger value="list">Lista</TabsTrigger>
+          <TabsTrigger value="entregas" className="gap-1.5">
+            <Truck className="h-4 w-4" /> Entregas
+            {deliveryEntries.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">{deliveryEntries.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="list">Lista de eventos</TabsTrigger>
         </TabsList>
 
         {/* CALENDAR VIEW */}
@@ -307,6 +344,7 @@ const Eventos = () => {
                 ))}
                 {days.map((day) => {
                   const dayEvents = eventsOnDay(day);
+                  const dayDeliveries = deliveriesOnDay(day);
                   const isToday = isSameDay(day, new Date());
                   return (
                     <div
@@ -329,14 +367,95 @@ const Eventos = () => {
                             {ev.name}
                           </button>
                         ))}
-                        {dayEvents.length > 2 && (
-                          <span className="text-[10px] text-muted-foreground pl-1">+{dayEvents.length - 2} más</span>
+                        {dayDeliveries.slice(0, 2).map((del) => (
+                          <button
+                            key={del.id}
+                            onClick={() => { setSelectedDayDeliveries(dayDeliveries); setDeliveryDetailOpen(true); }}
+                            className="w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded truncate bg-orange-100 text-orange-800"
+                          >
+                            🚚 {del.clientName}
+                          </button>
+                        ))}
+                        {(dayEvents.length + dayDeliveries.length) > 4 && (
+                          <span className="text-[10px] text-muted-foreground pl-1">+{(dayEvents.length + dayDeliveries.length) - 4} más</span>
                         )}
                       </div>
                     </div>
                   );
                 })}
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ENTREGAS VIEW */}
+        <TabsContent value="entregas">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Truck className="h-5 w-5" /> Entregas programadas
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {sortedDeliveryDates.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">No hay entregas programadas.</p>
+              ) : (
+                <div className="space-y-6">
+                  {sortedDeliveryDates.map((date) => {
+                    const entries = deliveriesByDate[date];
+                    return (
+                      <div key={date} className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                          <h3 className="font-semibold text-foreground">
+                            {format(new Date(date + "T12:00:00"), "EEEE, dd 'de' MMMM yyyy", { locale: es })}
+                          </h3>
+                          <Badge variant="outline">{entries.length} entrega(s)</Badge>
+                        </div>
+                        <div className="ml-6 space-y-2">
+                          {entries.map((entry) => (
+                            <div key={entry.id} className="flex items-center justify-between rounded-lg border border-border p-3">
+                              <div className="flex-1 grid grid-cols-4 gap-4 text-sm">
+                                <div>
+                                  <span className="text-muted-foreground text-xs">Cliente</span>
+                                  <p className="font-medium text-foreground">{entry.clientName}</p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground text-xs">Producto</span>
+                                  <p className="font-medium text-foreground">{entry.product}</p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground text-xs">Cantidad</span>
+                                  <p className="font-medium text-foreground">{entry.quantity} uds</p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground text-xs">Estado</span>
+                                  <div className="mt-0.5">
+                                    <Select value={entry.status} onValueChange={(v) => updateDeliveryStatus(entry.id, v as DeliveryEntry["status"])}>
+                                      <SelectTrigger className="h-7 text-xs">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="pendiente">Pendiente</SelectItem>
+                                        <SelectItem value="en_produccion">En producción</SelectItem>
+                                        <SelectItem value="listo">Listo</SelectItem>
+                                        <SelectItem value="entregado">Entregado</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                              </div>
+                              <Badge className={cn("ml-2 shrink-0", entry.brand === "magical" ? "bg-primary/10 text-primary" : "bg-secondary text-secondary-foreground")}>
+                                {entry.brand === "magical" ? "Magical" : "Sweatspot"}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -468,6 +587,50 @@ const Eventos = () => {
                     <Trash2 className="mr-2 h-4 w-4" /> Eliminar evento
                   </Button>
                 </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delivery day detail dialog */}
+      <Dialog open={deliveryDetailOpen} onOpenChange={setDeliveryDetailOpen}>
+        <DialogContent className="max-w-lg">
+          {selectedDayDeliveries && selectedDayDeliveries.length > 0 && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Truck className="h-5 w-5" />
+                  Entregas — {format(new Date(selectedDayDeliveries[0].deliveryDate + "T12:00:00"), "dd 'de' MMMM yyyy", { locale: es })}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3">
+                {selectedDayDeliveries.map((entry) => (
+                  <div key={entry.id} className="rounded-lg border border-border p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-foreground">{entry.clientName}</span>
+                      <Badge className={cn(DELIVERY_STATUS_COLORS[entry.status])}>{DELIVERY_STATUS_LABELS[entry.status]}</Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Producto: </span>
+                        <span className="text-foreground">{entry.product}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Cantidad: </span>
+                        <span className="text-foreground">{entry.quantity} uds</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Marca: </span>
+                        <span className="text-foreground">{entry.brand === "magical" ? "Magical Warmers" : "Sweatspot"}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Tipo: </span>
+                        <span className="text-foreground">{entry.saleType === "mayor" ? "Al por mayor" : "Al por menor"}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </>
           )}
