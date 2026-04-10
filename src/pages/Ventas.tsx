@@ -491,6 +491,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 /* ---- Sweatspot – Al por mayor ---- */
 
 function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
+  const { user } = useAuth();
   const tamanos = ["150 ml", "250 ml", "250 ml juguetón", "500 ml"] as const;
 
   const handleSubmit = (e: React.FormEvent) => {
