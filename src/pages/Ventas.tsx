@@ -707,6 +707,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       toast.error("RUT requerido", {
         description: "Para ventas al por mayor debe adjuntar el RUT de la empresa.",
       });
+      setIsSubmitting(false);
       return;
     }
 
