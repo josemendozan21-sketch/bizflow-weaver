@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowRight, ArrowLeft, CheckCircle2, Flame, Zap, Info } from "lucide-react";
+import { ArrowRight, ArrowLeft, CheckCircle2, Zap, Info } from "lucide-react";
+import magicalLogo from "@/assets/magical-warmers-logo.png";
 import { StampingTaskCard } from "./StampingTaskCard";
 import { useProductionStore } from "@/stores/productionStore";
 import type { Brand } from "@/types/production";
@@ -135,7 +136,7 @@ export function StampingSection() {
           {step === 1 && (
             <div className="grid grid-cols-2 gap-4">
               <BrandButton icon={<Zap className="h-8 w-8" />} label="Sweatspot" onClick={() => handleSelectBrand("sweatspot")} />
-              <BrandButton icon={<Flame className="h-8 w-8" />} label="Magical Warmers" onClick={() => handleSelectBrand("magical")} />
+              <BrandButton icon={<img src={magicalLogo} alt="Magical Warmers" className="h-8 w-auto object-contain" />} label="Magical Warmers" onClick={() => handleSelectBrand("magical")} />
             </div>
           )}
 
