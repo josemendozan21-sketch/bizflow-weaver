@@ -68,7 +68,10 @@ const Ventas = () => {
       <Tabs defaultValue="pedidos" className="w-full">
         <TabsList>
           <TabsTrigger value="pedidos" className="gap-1.5">
-            <ShoppingCart className="h-4 w-4" /> Pedidos
+            <ShoppingCart className="h-4 w-4" /> Nuevo Pedido
+          </TabsTrigger>
+          <TabsTrigger value="mis-pedidos" className="gap-1.5">
+            <ClipboardList className="h-4 w-4" /> Mis Pedidos
           </TabsTrigger>
           <TabsTrigger value="cotizaciones" className="gap-1.5">
             <FileText className="h-4 w-4" /> Cotizaciones
