@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronRight, Zap } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import magicalLogo from "@/assets/magical-warmers-logo.png";
+import sweatspotLogo from "@/assets/sweatspot-logo.png";
 
 export type ProductionBrand = "magical_warmers" | "sweatspot";
 
@@ -9,9 +10,9 @@ interface ProductionBrandSelectorProps {
   onSelectBrand: (brand: ProductionBrand) => void;
 }
 
-const BRANDS: { value: ProductionBrand; label: string; description: string; icon?: React.ElementType; logo?: string }[] = [
+const BRANDS: { value: ProductionBrand; label: string; description: string; logo: string }[] = [
   { value: "magical_warmers", label: "Magical Warmers", description: "Compresas terapéuticas de gel", logo: magicalLogo },
-  { value: "sweatspot", label: "Sweatspot", description: "Termos y accesorios deportivos", icon: Zap },
+  { value: "sweatspot", label: "Sweatspot", description: "Termos y accesorios deportivos", logo: sweatspotLogo },
 ];
 
 const ProductionBrandSelector = ({ selectedBrand, onSelectBrand }: ProductionBrandSelectorProps) => {

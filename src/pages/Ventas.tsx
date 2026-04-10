@@ -8,8 +8,9 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Zap, Flame, AlertTriangle, CheckCircle2, FileText, ShoppingCart } from "lucide-react";
+import { ArrowLeft, AlertTriangle, CheckCircle2, FileText, ShoppingCart } from "lucide-react";
 import magicalLogo from "@/assets/magical-warmers-logo.png";
+import sweatspotLogo from "@/assets/sweatspot-logo.png";
 import { useLogisticsStore } from "@/stores/logisticsStore";
 import { useProductionStore } from "@/stores/productionStore";
 import { useSweatspotProductionStore } from "@/stores/sweatspotProductionStore";
@@ -87,7 +88,7 @@ const Ventas = () => {
 
           {step === 1 && (
             <div className="grid gap-4 sm:grid-cols-2 max-w-lg">
-              <BrandCard icon={<Zap className="h-8 w-8" />} name="Sweatspot" onClick={() => handleBrandSelect("sweatspot")} />
+              <BrandCard icon={<img src={sweatspotLogo} alt="Sweatspot" className="h-16 w-auto object-contain" />} onClick={() => handleBrandSelect("sweatspot")} />
               <BrandCard icon={<img src={magicalLogo} alt="Magical Warmers" className="h-16 w-auto object-contain" />} onClick={() => handleBrandSelect("magical")} />
             </div>
           )}
