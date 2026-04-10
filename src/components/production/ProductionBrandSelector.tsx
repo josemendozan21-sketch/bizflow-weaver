@@ -1,7 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronRight } from "lucide-react";
-import magicalLogo from "@/assets/magical-warmers-logo.png";
-import sweatspotLogo from "@/assets/sweatspot-logo.png";
 
 export type ProductionBrand = "magical_warmers" | "sweatspot";
 
@@ -10,9 +8,9 @@ interface ProductionBrandSelectorProps {
   onSelectBrand: (brand: ProductionBrand) => void;
 }
 
-const BRANDS: { value: ProductionBrand; label: string; logo: string }[] = [
-  { value: "magical_warmers", label: "Magical Warmers", logo: magicalLogo },
-  { value: "sweatspot", label: "Sweatspot", logo: sweatspotLogo },
+const BRANDS: { value: ProductionBrand; label: string }[] = [
+  { value: "magical_warmers", label: "Magical Warmers" },
+  { value: "sweatspot", label: "Sweatspot" },
 ];
 
 const ProductionBrandSelector = ({ selectedBrand, onSelectBrand }: ProductionBrandSelectorProps) => {
@@ -30,9 +28,7 @@ const ProductionBrandSelector = ({ selectedBrand, onSelectBrand }: ProductionBra
           >
             <CardContent className="pt-6 pb-6">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <img src={brand.logo} alt={brand.label} className="h-10 w-auto object-contain" />
-                </div>
+                <span className="text-lg font-semibold text-foreground">{brand.label}</span>
                 <ChevronRight className={`h-5 w-5 text-muted-foreground transition-transform ${isSelected ? "rotate-90" : ""}`} />
               </div>
             </CardContent>
