@@ -804,6 +804,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       toast.error("Error al crear el pedido", {
         description: "No se pudo guardar el pedido ni enviar a producción. Intenta de nuevo o contacta soporte.",
       });
+      setIsSubmitting(false);
       return;
     }
 
@@ -811,6 +812,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       toast.error("Error al crear el pedido", {
         description: "No se recibió confirmación de la base de datos. Intenta de nuevo.",
       });
+      setIsSubmitting(false);
       return;
     }
 
