@@ -151,6 +151,33 @@ const BrandSelectionCards = ({ selectedBrand, onSelectBrand, onNotificationClick
     info: { bg: "bg-blue-500/10", text: "text-blue-700", dot: "bg-blue-500" },
   };
 
+  // Asesor: vista simplificada — solo dos botones de marca
+  if (isAsesor) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {BRANDS.map((brand) => (
+          <Card
+            key={brand.value}
+            className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
+              selectedBrand === brand.value ? "ring-2 ring-primary shadow-md" : "hover:ring-1 hover:ring-primary/30"
+            }`}
+            onClick={() => onSelectBrand(brand.value)}
+          >
+            <CardContent className="pt-6 pb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-foreground">{brand.label}</h3>
+                  <p className="text-sm text-muted-foreground">{brand.description}</p>
+                </div>
+                <ChevronRight className={`h-5 w-5 text-muted-foreground transition-transform ${selectedBrand === brand.value ? "rotate-90" : ""}`} />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {BRANDS.map((brand) => {
