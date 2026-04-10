@@ -43,7 +43,8 @@ interface EventWithProducts extends EventRow {
 }
 
 const Eventos = () => {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const isReadOnly = role === "asesor_comercial";
   const { materialConfigs } = useInventoryStore();
   const deliveryEntries = useDeliveryStore((s) => s.entries);
   const updateDeliveryStatus = useDeliveryStore((s) => s.updateStatus);
@@ -207,12 +208,13 @@ const Eventos = () => {
           <h1 className="text-2xl font-bold text-foreground">Eventos</h1>
           <p className="text-muted-foreground">Calendario y planificación de eventos</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={resetForm}>
-              <Plus className="mr-2 h-4 w-4" /> Crear evento
-            </Button>
-          </DialogTrigger>
+        {!isReadOnly && (
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={resetForm}>
+                <Plus className="mr-2 h-4 w-4" /> Crear evento
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Nuevo evento</DialogTitle>
@@ -306,6 +308,7 @@ const Eventos = () => {
             </div>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       <Tabs defaultValue="calendar">
@@ -431,17 +434,23 @@ const Eventos = () => {
                                 <div>
                                   <span className="text-muted-foreground text-xs">Estado</span>
                                   <div className="mt-0.5">
-                                    <Select value={entry.status} onValueChange={(v) => updateDeliveryStatus(entry.id, v as DeliveryEntry["status"])}>
-                                      <SelectTrigger className="h-7 text-xs">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="pendiente">Pendiente</SelectItem>
-                                        <SelectItem value="en_produccion">En producción</SelectItem>
-                                        <SelectItem value="listo">Listo</SelectItem>
-                                        <SelectItem value="entregado">Entregado</SelectItem>
-                                      </SelectContent>
-                                    </Select>
+                                    {isReadOnly ? (
+                                      <Badge className={cn("text-xs", DELIVERY_STATUS_COLORS[entry.status])}>
+                                        {DELIVERY_STATUS_LABELS[entry.status]}
+                                      </Badge>
+                                    ) : (
+                                      <Select value={entry.status} onValueChange={(v) => updateDeliveryStatus(entry.id, v as DeliveryEntry["status"])}>
+                                        <SelectTrigger className="h-7 text-xs">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="pendiente">Pendiente</SelectItem>
+                                          <SelectItem value="en_produccion">En producción</SelectItem>
+                                          <SelectItem value="listo">Listo</SelectItem>
+                                          <SelectItem value="entregado">Entregado</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -488,11 +497,13 @@ const Eventos = () => {
                         <TableCell><span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{ev.city}</span></TableCell>
                         <TableCell><Badge className={EVENT_TYPE_COLORS[ev.event_type]}>{EVENT_TYPE_LABELS[ev.event_type]}</Badge></TableCell>
                         <TableCell>{ev.event_products.length} producto(s)</TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleDelete(ev.id); }}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
+                        {!isReadOnly && (
+                          <TableCell>
+                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleDelete(ev.id); }}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -582,11 +593,13 @@ const Eventos = () => {
                   <p className="text-sm text-muted-foreground">No hay productos planificados para este evento.</p>
                 )}
 
-                <div className="flex justify-end">
-                  <Button variant="destructive" size="sm" onClick={() => handleDelete(selectedEvent.id)}>
-                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar evento
-                  </Button>
-                </div>
+                {!isReadOnly && (
+                  <div className="flex justify-end">
+                    <Button variant="destructive" size="sm" onClick={() => handleDelete(selectedEvent.id)}>
+                      <Trash2 className="mr-2 h-4 w-4" /> Eliminar evento
+                    </Button>
+                  </div>
+                )}
               </div>
             </>
           )}

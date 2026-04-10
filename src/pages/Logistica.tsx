@@ -5,11 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useLogisticsStore } from "@/stores/logisticsStore";
 import { useAccountingStore } from "@/stores/accountingStore";
+import { useAuth } from "@/contexts/AuthContext";
 import { Package, Truck, CheckCircle2, Clock } from "lucide-react";
 import ShippingLabelDialog from "@/components/logistics/ShippingLabelDialog";
 import DispatchConfirmDialog from "@/components/logistics/DispatchConfirmDialog";
 
 const Logistica = () => {
+  const { role } = useAuth();
+  const isReadOnly = role === "asesor_comercial";
   const { orders, dispatchOrder } = useLogisticsStore();
   const updateDispatchInfo = useAccountingStore((s) => s.updateDispatchInfo);
 
@@ -150,11 +153,13 @@ const Logistica = () => {
                         <TableCell>{order.readyDate}</TableCell>
                         <TableCell className="text-right space-x-2">
                           <ShippingLabelDialog clientName={order.clientName} />
-                          <DispatchConfirmDialog
-                            orderId={order.id}
-                            clientName={order.clientName}
-                            onConfirm={handleDispatch}
-                          />
+                          {!isReadOnly && (
+                            <DispatchConfirmDialog
+                              orderId={order.id}
+                              clientName={order.clientName}
+                              onConfirm={handleDispatch}
+                            />
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}

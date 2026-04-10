@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -78,6 +79,8 @@ const InvoiceDialog = ({ order, onConfirm }: { order: AccountingOrder; onConfirm
 };
 
 const Contabilidad = () => {
+  const { role } = useAuth();
+  const isReadOnly = role === "asesor_comercial";
   const { orders, markInvoiced } = useAccountingStore();
   const [selectedPending, setSelectedPending] = useState<Set<string>>(new Set());
   const [selectedInvoiced, setSelectedInvoiced] = useState<Set<string>>(new Set());
@@ -195,9 +198,11 @@ const Contabilidad = () => {
                       order={order}
                       actionSlot={
                         <div className="flex gap-2">
-                          <div className="flex-1">
-                            <InvoiceDialog order={order} onConfirm={markInvoiced} />
-                          </div>
+                          {!isReadOnly && (
+                            <div className="flex-1">
+                              <InvoiceDialog order={order} onConfirm={markInvoiced} />
+                            </div>
+                          )}
                           <Button size="sm" variant="outline" onClick={() => handleExportSingle(order)}>
                             <Download className="h-4 w-4" />
                           </Button>

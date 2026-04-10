@@ -19,6 +19,7 @@ import {
   Beaker, Box, PackageCheck, Layers, Plus, Pencil, Trash2, Check, X, AlertTriangle, AlertCircle, CheckCircle2, Flame, Snowflake,
 } from "lucide-react";
 import { useInventoryStore, type StockItem, type StockStatus, type InventoryCategory, type InventoryBrand } from "@/stores/inventoryStore";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 const BRAND_OPTIONS: { value: InventoryBrand; label: string }[] = [
@@ -33,7 +34,8 @@ const CATEGORY_META: Record<InventoryCategory, { label: string; icon: React.Elem
   producto_terminado: { label: "Producto Terminado", icon: PackageCheck },
 };
 
-const CATEGORIES: InventoryCategory[] = ["materia_prima", "producto_en_proceso", "cuerpos_referencias", "producto_terminado"];
+const ALL_CATEGORIES: InventoryCategory[] = ["materia_prima", "producto_en_proceso", "cuerpos_referencias", "producto_terminado"];
+const ASESOR_CATEGORIES: InventoryCategory[] = ["cuerpos_referencias", "producto_terminado"];
 
 const STATUS_CONFIG: Record<StockStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ElementType }> = {
   ok: { label: "OK", variant: "secondary", icon: CheckCircle2 },
@@ -57,8 +59,12 @@ const CategorizedInventoryPanel = ({
   highlightItemNames = [],
 }: CategorizedInventoryPanelProps) => {
   const { stockItems, addStockItem, updateStockItem, deleteStockItem, getStockStatus } = useInventoryStore();
+  const { role } = useAuth();
+  const isReadOnly = role === "asesor_comercial";
+  const CATEGORIES = isReadOnly ? ASESOR_CATEGORIES : ALL_CATEGORIES;
+  const effectiveInitialCategory = isReadOnly && !ASESOR_CATEGORIES.includes(initialCategory) ? "cuerpos_referencias" : initialCategory;
   const [selectedBrand] = useState<InventoryBrand>(initialBrand);
-  const [selectedCategory, setSelectedCategory] = useState<InventoryCategory>(initialCategory);
+  const [selectedCategory, setSelectedCategory] = useState<InventoryCategory>(effectiveInitialCategory);
   const [addOpen, setAddOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ available: "", minStock: "" });
@@ -175,22 +181,24 @@ const CategorizedInventoryPanel = ({
             {sc.label}
           </Badge>
         </TableCell>
-        <TableCell className="text-right space-x-1">
-          {isEditing ? (
-            <>
-              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => saveEdit(item.id)}>
-                <Check className="h-4 w-4 text-primary" />
+        {!isReadOnly && (
+          <TableCell className="text-right space-x-1">
+            {isEditing ? (
+              <>
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => saveEdit(item.id)}>
+                  <Check className="h-4 w-4 text-primary" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)}>
+                  <X className="h-4 w-4 text-destructive" />
+                </Button>
+              </>
+            ) : (
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(item)}>
+                <Pencil className="h-4 w-4" />
               </Button>
-              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)}>
-                <X className="h-4 w-4 text-destructive" />
-              </Button>
-            </>
-          ) : (
-            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(item)}>
-              <Pencil className="h-4 w-4" />
-            </Button>
-          )}
-        </TableCell>
+            )}
+          </TableCell>
+        )}
       </TableRow>
     );
   };
@@ -217,7 +225,7 @@ const CategorizedInventoryPanel = ({
                 <TableHead className="text-right">Disponible</TableHead>
                 <TableHead className="text-right">Mínimo</TableHead>
                 <TableHead className="text-center">Estado</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
+                {!isReadOnly && <TableHead className="text-right">Acciones</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -247,7 +255,7 @@ const CategorizedInventoryPanel = ({
             <TableHead className="text-right">Disponible</TableHead>
             <TableHead className="text-right">Mínimo</TableHead>
             <TableHead className="text-center">Estado</TableHead>
-            <TableHead className="text-right">Acciones</TableHead>
+            {!isReadOnly && <TableHead className="text-right">Acciones</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -275,7 +283,7 @@ const CategorizedInventoryPanel = ({
       </div>
 
       <Tabs value={selectedCategory} onValueChange={(v) => setSelectedCategory(v as InventoryCategory)}>
-        <TabsList className="w-full grid grid-cols-4">
+        <TabsList className={`w-full grid ${isReadOnly ? "grid-cols-2" : "grid-cols-4"}`}>
           {CATEGORIES.map((cat) => {
             const meta = CATEGORY_META[cat];
             const Icon = meta.icon;
@@ -297,52 +305,54 @@ const CategorizedInventoryPanel = ({
             ) : (
               <Card>
                 <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
+                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base">
                       {CATEGORY_META[cat].label} — {brandLabel}
                     </CardTitle>
-                    <Dialog open={addOpen} onOpenChange={setAddOpen}>
-                      <DialogTrigger asChild>
-                        <Button size="sm"><Plus className="h-4 w-4 mr-1" />Agregar ítem</Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                          <DialogTitle>Agregar ítem</DialogTitle>
-                          <DialogDescription>
-                            {brandLabel} → {CATEGORY_META[selectedCategory].label}
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-2">
-                          <div className="grid gap-1.5">
-                            <Label>Nombre *</Label>
-                            <Input placeholder="Ej: Gel, Envase…" value={newForm.name} onChange={(e) => setNewForm({ ...newForm, name: e.target.value })} />
+                    {!isReadOnly && (
+                      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+                        <DialogTrigger asChild>
+                          <Button size="sm"><Plus className="h-4 w-4 mr-1" />Agregar ítem</Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>Agregar ítem</DialogTitle>
+                            <DialogDescription>
+                              {brandLabel} → {CATEGORY_META[selectedCategory].label}
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-2">
+                            <div className="grid gap-1.5">
+                              <Label>Nombre *</Label>
+                              <Input placeholder="Ej: Gel, Envase…" value={newForm.name} onChange={(e) => setNewForm({ ...newForm, name: e.target.value })} />
+                            </div>
+                            <div className="grid grid-cols-3 gap-3">
+                              <div className="grid gap-1.5">
+                                <Label>Cantidad *</Label>
+                                <Input type="number" min={0} value={newForm.available} onChange={(e) => setNewForm({ ...newForm, available: e.target.value })} />
+                              </div>
+                              <div className="grid gap-1.5">
+                                <Label>Unidad</Label>
+                                <Select value={newForm.unit} onValueChange={(v) => setNewForm({ ...newForm, unit: v })}>
+                                  <SelectTrigger><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    {UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="grid gap-1.5">
+                                <Label>Mínimo *</Label>
+                                <Input type="number" min={0} value={newForm.minStock} onChange={(e) => setNewForm({ ...newForm, minStock: e.target.value })} />
+                              </div>
+                            </div>
                           </div>
-                          <div className="grid grid-cols-3 gap-3">
-                            <div className="grid gap-1.5">
-                              <Label>Cantidad *</Label>
-                              <Input type="number" min={0} value={newForm.available} onChange={(e) => setNewForm({ ...newForm, available: e.target.value })} />
-                            </div>
-                            <div className="grid gap-1.5">
-                              <Label>Unidad</Label>
-                              <Select value={newForm.unit} onValueChange={(v) => setNewForm({ ...newForm, unit: v })}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                  {UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="grid gap-1.5">
-                              <Label>Mínimo *</Label>
-                              <Input type="number" min={0} value={newForm.minStock} onChange={(e) => setNewForm({ ...newForm, minStock: e.target.value })} />
-                            </div>
-                          </div>
-                        </div>
-                        <DialogFooter>
-                          <Button variant="outline" onClick={() => setAddOpen(false)}>Cancelar</Button>
-                          <Button onClick={handleAdd}>Guardar</Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancelar</Button>
+                            <Button onClick={handleAdd}>Guardar</Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent>
