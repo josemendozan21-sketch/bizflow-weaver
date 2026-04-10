@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Droplets, FileImage, Package } from "lucide-react";
-import magicalLogo from "@/assets/magical-warmers-logo.png";
+
 import type { FillingTask } from "@/types/production";
 import { useProductionStore } from "@/stores/productionStore";
 
@@ -22,7 +22,6 @@ export function FillingTaskCard({ task }: { task: FillingTask }) {
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
-            <img src={magicalLogo} alt="Magical Warmers" className="h-5 w-auto object-contain shrink-0" />
             <CardTitle className="text-base">Magical Warmers</CardTitle>
           </div>
           <Badge variant={status.variant}>{status.label}</Badge>

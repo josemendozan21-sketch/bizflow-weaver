@@ -9,8 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, AlertTriangle, CheckCircle2, FileText, ShoppingCart, ClipboardList } from "lucide-react";
-import magicalLogo from "@/assets/magical-warmers-logo.png";
-import sweatspotLogo from "@/assets/sweatspot-logo.png";
 import { useLogisticsStore } from "@/stores/logisticsStore";
 import { useInventoryStore } from "@/stores/inventoryStore";
 import { useAccountingStore } from "@/stores/accountingStore";
@@ -94,8 +92,8 @@ const Ventas = () => {
 
           {step === 1 && (
             <div className="grid gap-4 sm:grid-cols-2 max-w-lg">
-              <BrandCard icon={<img src={sweatspotLogo} alt="Sweatspot" className="h-16 w-auto object-contain" />} onClick={() => handleBrandSelect("sweatspot")} />
-              <BrandCard icon={<img src={magicalLogo} alt="Magical Warmers" className="h-16 w-auto object-contain" />} onClick={() => handleBrandSelect("magical")} />
+              <BrandCard icon={<span className="text-xl font-bold">Sweatspot</span>} onClick={() => handleBrandSelect("sweatspot")} />
+              <BrandCard icon={<span className="text-xl font-bold">Magical Warmers</span>} onClick={() => handleBrandSelect("magical")} />
             </div>
           )}
 

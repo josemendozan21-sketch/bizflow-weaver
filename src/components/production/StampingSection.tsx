@@ -9,8 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowRight, ArrowLeft, CheckCircle2, Info } from "lucide-react";
-import magicalLogo from "@/assets/magical-warmers-logo.png";
-import sweatspotLogo from "@/assets/sweatspot-logo.png";
 import { StampingTaskCard } from "./StampingTaskCard";
 import { useProductionStore } from "@/stores/productionStore";
 import type { Brand } from "@/types/production";
@@ -136,8 +134,8 @@ export function StampingSection() {
         <CardContent>
           {step === 1 && (
             <div className="grid grid-cols-2 gap-4">
-              <BrandButton icon={<img src={sweatspotLogo} alt="Sweatspot" className="h-14 w-auto object-contain" />} onClick={() => handleSelectBrand("sweatspot")} />
-              <BrandButton icon={<img src={magicalLogo} alt="Magical Warmers" className="h-14 w-auto object-contain" />} onClick={() => handleSelectBrand("magical")} />
+              <BrandButton icon={<span className="text-lg font-semibold">Sweatspot</span>} onClick={() => handleSelectBrand("sweatspot")} />
+              <BrandButton icon={<span className="text-lg font-semibold">Magical Warmers</span>} onClick={() => handleSelectBrand("magical")} />
             </div>
           )}
 
