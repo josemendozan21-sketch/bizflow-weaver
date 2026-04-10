@@ -172,7 +172,33 @@ const Eventos = () => {
   const eventsOnDay = (day: Date) =>
     events.filter((e) => isSameDay(new Date(e.event_date + "T12:00:00"), day));
 
+  const deliveriesOnDay = (day: Date) =>
+    deliveryEntries.filter((d) => isSameDay(new Date(d.deliveryDate + "T12:00:00"), day));
+
   const productNames = [...new Set(materialConfigs.map((c) => c.productName))];
+
+  const DELIVERY_STATUS_LABELS: Record<DeliveryEntry["status"], string> = {
+    pendiente: "Pendiente",
+    en_produccion: "En producción",
+    listo: "Listo",
+    entregado: "Entregado",
+  };
+
+  const DELIVERY_STATUS_COLORS: Record<DeliveryEntry["status"], string> = {
+    pendiente: "bg-yellow-100 text-yellow-800",
+    en_produccion: "bg-blue-100 text-blue-800",
+    listo: "bg-green-100 text-green-800",
+    entregado: "bg-muted text-muted-foreground",
+  };
+
+  // Group deliveries by date for the "Entregas" tab
+  const deliveriesByDate = deliveryEntries.reduce<Record<string, DeliveryEntry[]>>((acc, d) => {
+    if (!acc[d.deliveryDate]) acc[d.deliveryDate] = [];
+    acc[d.deliveryDate].push(d);
+    return acc;
+  }, {});
+
+  const sortedDeliveryDates = Object.keys(deliveriesByDate).sort();
 
   return (
     <div className="space-y-6">
