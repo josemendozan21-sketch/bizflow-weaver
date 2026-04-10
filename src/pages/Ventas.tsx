@@ -19,6 +19,8 @@ import { useAccountingStore } from "@/stores/accountingStore";
 import { useDeliveryStore } from "@/stores/deliveryStore";
 import { toast } from "sonner";
 import QuotationGenerator from "@/components/ventas/QuotationGenerator";
+import { createLogoRequestFromOrder } from "@/lib/createLogoRequestFromOrder";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Brand = "sweatspot" | "magical";
 type SaleType = "mayor" | "menor";
@@ -165,6 +167,7 @@ function OrderForm({ brand, saleType, onReset }: { brand: Brand; saleType: SaleT
 /* ---- Magical Warmers – Al por mayor ---- */
 
 function MagicalMayorForm({ onReset }: { onReset: () => void }) {
+  const { user } = useAuth();
   const [dobleTinta, setDobleTinta] = useState(false);
   const [escarcha, setEscarcha] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState("");
@@ -301,6 +304,28 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     }
 
     toast.info("Consumo de gel", { description: gelResult.message });
+
+    // Auto-create design request if logo was uploaded
+    const logoFile = fd.get("mw_logo") as File;
+    const personalizacion = (fd.get("mw_personalizacion") as string) || "";
+    if (logoFile && logoFile.size > 0 && user) {
+      createLogoRequestFromOrder({
+        brand: "Magical Warmers",
+        clientName,
+        product: referencia,
+        advisorId: user.id,
+        advisorName: user.email || "Asesor",
+        logoFile,
+        clientComments: (fd.get("mw_observaciones") as string) || undefined,
+        additionalInstructions: personalizacion || undefined,
+      }).then((result) => {
+        if (result.success) {
+          toast.success("Diseño de logo", { description: result.message });
+        } else {
+          toast.error("Diseño de logo", { description: result.message });
+        }
+      });
+    }
 
     onReset();
   };
@@ -445,7 +470,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             <legend className="text-sm font-semibold text-foreground mb-2">Personalización</legend>
             <div className="space-y-1.5">
               <Label htmlFor="mw_personalizacion">Modificaciones o adiciones al logo</Label>
-              <Textarea id="mw_personalizacion" placeholder="Describa qué desea adicionar o modificar en el logo..." />
+              <Textarea id="mw_personalizacion" name="mw_personalizacion" placeholder="Describa qué desea adicionar o modificar en el logo..." />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="mw_observaciones">Observaciones generales del pedido</Label>
@@ -466,6 +491,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 /* ---- Sweatspot – Al por mayor ---- */
 
 function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
+  const { user } = useAuth();
   const tamanos = ["150 ml", "250 ml", "250 ml juguetón", "500 ml"] as const;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -555,6 +581,28 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       toast.info("Inventario actualizado", { description: bodyResult.message });
     }
 
+    // Auto-create design request if logo was uploaded
+    const logoFile = fd.get("ss_logo") as File;
+    const personalizacion = (fd.get("ss_personalizacion") as string) || "";
+    if (logoFile && logoFile.size > 0 && user) {
+      createLogoRequestFromOrder({
+        brand: "Sweatspot",
+        clientName,
+        product: referencia,
+        advisorId: user.id,
+        advisorName: user.email || "Asesor",
+        logoFile,
+        clientComments: (fd.get("ss_observaciones") as string) || undefined,
+        additionalInstructions: personalizacion || undefined,
+      }).then((result) => {
+        if (result.success) {
+          toast.success("Diseño de logo", { description: result.message });
+        } else {
+          toast.error("Diseño de logo", { description: result.message });
+        }
+      });
+    }
+
     onReset();
   };
 
@@ -630,7 +678,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
             <legend className="text-sm font-semibold text-foreground mb-2">Personalización</legend>
             <div className="space-y-1.5">
               <Label htmlFor="ss_personalizacion">Modificaciones o adiciones al logo</Label>
-              <Textarea id="ss_personalizacion" placeholder="Describa qué desea adicionar o modificar en el logo..." />
+              <Textarea id="ss_personalizacion" name="ss_personalizacion" placeholder="Describa qué desea adicionar o modificar en el logo..." />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="ss_observaciones">Observaciones generales del pedido</Label>
