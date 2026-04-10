@@ -593,11 +593,13 @@ const Eventos = () => {
                   <p className="text-sm text-muted-foreground">No hay productos planificados para este evento.</p>
                 )}
 
-                <div className="flex justify-end">
-                  <Button variant="destructive" size="sm" onClick={() => handleDelete(selectedEvent.id)}>
-                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar evento
-                  </Button>
-                </div>
+                {!isReadOnly && (
+                  <div className="flex justify-end">
+                    <Button variant="destructive" size="sm" onClick={() => handleDelete(selectedEvent.id)}>
+                      <Trash2 className="mr-2 h-4 w-4" /> Eliminar evento
+                    </Button>
+                  </div>
+                )}
               </div>
             </>
           )}
