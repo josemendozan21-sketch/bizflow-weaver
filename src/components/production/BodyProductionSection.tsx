@@ -169,7 +169,7 @@ export const BodyProductionSection = () => {
                 <CardContent className="pt-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      {entry.brand === "magical" ? <Flame className="h-4 w-4 text-primary" /> : <Zap className="h-4 w-4 text-primary" />}
+                      {entry.brand === "magical" ? <img src={magicalLogo} alt="Magical Warmers" className="h-4 w-auto object-contain" /> : <Zap className="h-4 w-4 text-primary" />}
                       <span className="font-medium text-sm">{entry.brand === "magical" ? "Magical Warmers" : "Sweatspot"}</span>
                     </div>
                     <StatusBadge status={entry.status} />
