@@ -11,7 +11,7 @@ interface Props {
 }
 
 export function DisenosFinalizados({ requests }: Props) {
-  const approved = requests.filter((r) => r.status === "aprobado" || r.status === "finalizado");
+  const approved = requests.filter((r) => r.status === "finalizado");
   const updateRequest = useUpdateLogoRequest();
 
   const handleFinalize = async (id: string) => {
