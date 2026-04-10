@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import ProductionBrandSelector, { type ProductionBrand } from "@/components/production/ProductionBrandSelector";
 import { MagicalWarmersWorkflow } from "@/components/production/MagicalWarmersWorkflow";
+import { SweatspotWorkflow } from "@/components/production/SweatspotWorkflow";
 
 const Produccion = () => {
   const [selectedBrand, setSelectedBrand] = useState<ProductionBrand | null>(null);

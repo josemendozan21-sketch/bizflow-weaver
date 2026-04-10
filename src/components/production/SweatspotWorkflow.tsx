@@ -1,0 +1,265 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import {
+  CheckCircle2,
+  Play,
+  Paintbrush,
+  Cylinder,
+  CircleDot,
+  Stamp,
+  Scissors,
+  Target,
+  Truck,
+  Info,
+  Zap,
+} from "lucide-react";
+import { toast } from "sonner";
+import { useSweatspotProductionStore } from "@/stores/sweatspotProductionStore";
+import {
+  FULL_STAGE_ORDER,
+  SS_STAGE_LABELS,
+  type SweatspotProductionStage,
+  type SweatspotStageStatus,
+} from "@/types/sweatspotProduction";
+
+const STAGE_ICONS: Record<SweatspotProductionStage, React.ElementType> = {
+  estampacion: Paintbrush,
+  produccion_tubos: Cylinder,
+  ensamble_cuello: CircleDot,
+  sello_base: Stamp,
+  refile: Scissors,
+  colocacion_boquilla: Target,
+  listo: Truck,
+};
+
+const STATUS_BADGE: Record<SweatspotStageStatus, { label: string; variant: "secondary" | "default" | "outline" }> = {
+  pendiente: { label: "Pendiente", variant: "secondary" },
+  en_proceso: { label: "En proceso", variant: "default" },
+  finalizado: { label: "Finalizado", variant: "outline" },
+};
+
+export const SweatspotWorkflow = () => {
+  const { orders, updateStageStatus, advanceStage } = useSweatspotProductionStore();
+
+  const activeOrders = orders.filter((o) => o.currentStage !== "listo");
+  const completedOrders = orders.filter((o) => o.currentStage === "listo");
+
+  return (
+    <div className="space-y-6">
+      {/* Instructions */}
+      <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+        <div className="flex items-start gap-3">
+          <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+          <div>
+            <p className="font-semibold text-foreground">Flujo de producción — Sweatspot</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Los pedidos provienen de <span className="font-medium">Ventas</span>. El flujo de etapas se determina automáticamente según el tipo de impresión y la disponibilidad de stock.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Stage legend */}
+      <div className="flex flex-wrap gap-2">
+        {FULL_STAGE_ORDER.map((stage) => {
+          const Icon = STAGE_ICONS[stage];
+          return (
+            <div key={stage} className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+              <Icon className="h-3 w-3" />
+              {SS_STAGE_LABELS[stage]}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Active Orders */}
+      <Separator />
+      <h3 className="text-sm font-semibold text-foreground">
+        Órdenes de producción ({activeOrders.length} activas)
+      </h3>
+      <p className="text-xs text-muted-foreground -mt-4">
+        Estas órdenes se crean automáticamente desde la sección de Ventas.
+      </p>
+
+      {activeOrders.length === 0 && (
+        <p className="text-sm text-muted-foreground text-center py-8">No hay órdenes activas. Las órdenes se generan desde Ventas.</p>
+      )}
+
+      <div className="grid gap-4">
+        {activeOrders.map((order) => (
+          <OrderCard
+            key={order.id}
+            order={order}
+            onStart={() => updateStageStatus(order.id, "en_proceso")}
+            onFinish={() => {
+              updateStageStatus(order.id, "finalizado");
+              advanceStage(order.id);
+              const isLastActionable = order.stages.indexOf(order.currentStage) >= order.stages.length - 2;
+              toast.success(
+                isLastActionable
+                  ? `Orden de ${order.clientName} completada. Enviada a Logística.`
+                  : `${SS_STAGE_LABELS[order.currentStage]} finalizada. Avanzando a la siguiente etapa.`
+              );
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Completed */}
+      {completedOrders.length > 0 && (
+        <>
+          <Separator />
+          <h3 className="text-sm font-semibold text-foreground">Órdenes completadas ({completedOrders.length})</h3>
+          <div className="grid gap-3 md:grid-cols-2">
+            {completedOrders.map((order) => (
+              <Card key={order.id} className="border opacity-75">
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-sm">{order.clientName}</p>
+                      <p className="text-xs text-muted-foreground">Termo {order.thermoSize} — {order.quantity} uds</p>
+                    </div>
+                    <Badge variant="outline" className="text-primary border-primary/30">
+                      <Truck className="h-3 w-3 mr-1" /> Enviado a Logística
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+/* ─── Order Card ─── */
+
+function OrderCard({
+  order,
+  onStart,
+  onFinish,
+}: {
+  order: ReturnType<typeof useSweatspotProductionStore.getState>["orders"][0];
+  onStart: () => void;
+  onFinish: () => void;
+}) {
+  const currentIdx = order.stages.indexOf(order.currentStage);
+  const Icon = STAGE_ICONS[order.currentStage];
+  const badge = STATUS_BADGE[order.stageStatus];
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-primary/10 p-2">
+              <Icon className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-base">{order.clientName}</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Termo {order.thermoSize} — {order.quantity} uds
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-1">
+            <Badge variant={badge.variant}>{badge.label}</Badge>
+            <Badge variant="outline" className="text-xs">
+              {order.workflowType === "short" ? "Flujo corto" : "Flujo completo"}
+            </Badge>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {/* Visual progress: show each stage in the order's workflow */}
+        <div className="flex items-center gap-1">
+          {order.stages.map((stage, idx) => {
+            const isCurrent = stage === order.currentStage;
+            const isDone = idx < currentIdx || order.currentStage === "listo";
+            return (
+              <div key={stage} className="flex-1 group relative">
+                <div
+                  className={`h-2 rounded-full transition-colors ${
+                    isDone ? "bg-primary" : isCurrent ? "bg-primary/40" : "bg-muted"
+                  }`}
+                  title={SS_STAGE_LABELS[stage]}
+                />
+                {/* Stage label on hover */}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Stage labels below progress bar */}
+        <div className="flex items-center gap-1 overflow-x-auto">
+          {order.stages.map((stage, idx) => {
+            const isCurrent = stage === order.currentStage;
+            const isDone = idx < currentIdx || order.currentStage === "listo";
+            const StageIcon = STAGE_ICONS[stage];
+            return (
+              <div
+                key={stage}
+                className={`flex-1 flex flex-col items-center text-center ${
+                  isCurrent ? "text-primary font-medium" : isDone ? "text-primary/60" : "text-muted-foreground"
+                }`}
+              >
+                <StageIcon className={`h-3.5 w-3.5 mb-0.5 ${isDone ? "text-primary" : ""}`} />
+                <span className="text-[10px] leading-tight">{SS_STAGE_LABELS[stage]}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        <Separator />
+
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">
+            Etapa actual: <span className="font-medium text-foreground">{SS_STAGE_LABELS[order.currentStage]}</span>
+          </span>
+          <span className="text-xs text-muted-foreground">Creado: {order.createdAt}</span>
+        </div>
+
+        {/* Technical details */}
+        <div className="rounded-md border p-3 text-xs space-y-1">
+          <Row label="Tipo de logo" value={order.logoType === "impresion_full" ? "Impresión full" : "Impresión básica"} />
+          <Row label="Stock disponible" value={order.hasStock ? "Sí" : "No"} />
+          <Row label="Tamaño" value={order.thermoSize} />
+          <Row label="Color de silicona" value={order.siliconeColor} />
+          <Row label="Color de tinta" value={order.inkColor} />
+          {order.logoFile && <Row label="Logo" value={order.logoFile} />}
+        </div>
+
+        {order.observations && (
+          <p className="text-xs text-muted-foreground italic">Obs: {order.observations}</p>
+        )}
+
+        {order.currentStage !== "listo" && (
+          <div className="flex gap-2 pt-1">
+            {order.stageStatus === "pendiente" && (
+              <Button size="sm" variant="outline" onClick={onStart}>
+                <Play className="h-3 w-3 mr-1" /> Iniciar proceso
+              </Button>
+            )}
+            {order.stageStatus === "en_proceso" && (
+              <Button size="sm" onClick={onFinish}>
+                <CheckCircle2 className="h-3 w-3 mr-1" /> Finalizar proceso
+              </Button>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <span className="text-muted-foreground">{label}:</span>{" "}
+      <span className="font-medium text-foreground">{value}</span>
+    </div>
+  );
+}
