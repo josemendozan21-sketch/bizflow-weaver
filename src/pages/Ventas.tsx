@@ -275,11 +275,11 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       }
     }
 
-    // Wholesale: check cuerpos/referencias stock
-    const bodyResult = useInventoryStore.getState().reserveBodyStock(referencia, quantity, "magical");
+    // Wholesale: check cuerpos/referencias stock (persisted in Supabase)
+    const bodyResult = await reserveBodyStockDB("magical", referencia, quantity);
 
-    // Calculate gel consumption for Magical Warmers
-    const gelResult = useInventoryStore.getState().discountGelForMagical(selectedProduct, quantity);
+    // Calculate gel consumption for Magical Warmers (persisted in Supabase)
+    const gelResult = await discountStockDB("gel", quantity * (matchedConfig?.gramsPerUnit || 60));
 
     // Production order will be created after persisting to DB (see below)
 
@@ -566,6 +566,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { reserveBodyStock: reserveBodyStockDB } = useInventory();
   const tamanos = ["150 ml", "250 ml", "250 ml juguetón", "500 ml"] as const;
 
   const handleSubmit = async (e: React.FormEvent) => {
