@@ -173,20 +173,26 @@ function ApprovedCard({ request: req, role }: { request: LogoRequest; role: stri
           )}
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadLogo}
+          >
+            <Download className="mr-1 h-3 w-3" /> Descargar logo
+          </Button>
           {canGeneratePDF && (
             <Button
               variant="outline"
               size="sm"
-              className="flex-1"
               onClick={handleGeneratePDF}
               disabled={generating}
             >
-              {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <><FileText className="mr-1 h-3 w-3" /> 📄 Generar PDF para estampado</>}
+              {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <><FileText className="mr-1 h-3 w-3" /> Orden de estampado</>}
             </Button>
           )}
           {canGeneratePDF && (
-            <Button size="sm" className="flex-1" onClick={handleFinalize}>
+            <Button size="sm" onClick={handleFinalize}>
               <CheckCircle2 className="mr-1 h-3 w-3" /> Finalizar
             </Button>
           )}
