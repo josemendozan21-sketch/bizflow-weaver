@@ -311,7 +311,13 @@ const Eventos = () => {
       <Tabs defaultValue="calendar">
         <TabsList>
           <TabsTrigger value="calendar">Calendario</TabsTrigger>
-          <TabsTrigger value="list">Lista</TabsTrigger>
+          <TabsTrigger value="entregas" className="gap-1.5">
+            <Truck className="h-4 w-4" /> Entregas
+            {deliveryEntries.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">{deliveryEntries.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="list">Lista de eventos</TabsTrigger>
         </TabsList>
 
         {/* CALENDAR VIEW */}
@@ -338,6 +344,7 @@ const Eventos = () => {
                 ))}
                 {days.map((day) => {
                   const dayEvents = eventsOnDay(day);
+                  const dayDeliveries = deliveriesOnDay(day);
                   const isToday = isSameDay(day, new Date());
                   return (
                     <div
@@ -360,14 +367,95 @@ const Eventos = () => {
                             {ev.name}
                           </button>
                         ))}
-                        {dayEvents.length > 2 && (
-                          <span className="text-[10px] text-muted-foreground pl-1">+{dayEvents.length - 2} más</span>
+                        {dayDeliveries.slice(0, 2).map((del) => (
+                          <button
+                            key={del.id}
+                            onClick={() => { setSelectedDayDeliveries(dayDeliveries); setDeliveryDetailOpen(true); }}
+                            className="w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded truncate bg-orange-100 text-orange-800"
+                          >
+                            🚚 {del.clientName}
+                          </button>
+                        ))}
+                        {(dayEvents.length + dayDeliveries.length) > 4 && (
+                          <span className="text-[10px] text-muted-foreground pl-1">+{(dayEvents.length + dayDeliveries.length) - 4} más</span>
                         )}
                       </div>
                     </div>
                   );
                 })}
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ENTREGAS VIEW */}
+        <TabsContent value="entregas">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Truck className="h-5 w-5" /> Entregas programadas
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {sortedDeliveryDates.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">No hay entregas programadas.</p>
+              ) : (
+                <div className="space-y-6">
+                  {sortedDeliveryDates.map((date) => {
+                    const entries = deliveriesByDate[date];
+                    return (
+                      <div key={date} className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                          <h3 className="font-semibold text-foreground">
+                            {format(new Date(date + "T12:00:00"), "EEEE, dd 'de' MMMM yyyy", { locale: es })}
+                          </h3>
+                          <Badge variant="outline">{entries.length} entrega(s)</Badge>
+                        </div>
+                        <div className="ml-6 space-y-2">
+                          {entries.map((entry) => (
+                            <div key={entry.id} className="flex items-center justify-between rounded-lg border border-border p-3">
+                              <div className="flex-1 grid grid-cols-4 gap-4 text-sm">
+                                <div>
+                                  <span className="text-muted-foreground text-xs">Cliente</span>
+                                  <p className="font-medium text-foreground">{entry.clientName}</p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground text-xs">Producto</span>
+                                  <p className="font-medium text-foreground">{entry.product}</p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground text-xs">Cantidad</span>
+                                  <p className="font-medium text-foreground">{entry.quantity} uds</p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground text-xs">Estado</span>
+                                  <div className="mt-0.5">
+                                    <Select value={entry.status} onValueChange={(v) => updateDeliveryStatus(entry.id, v as DeliveryEntry["status"])}>
+                                      <SelectTrigger className="h-7 text-xs">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="pendiente">Pendiente</SelectItem>
+                                        <SelectItem value="en_produccion">En producción</SelectItem>
+                                        <SelectItem value="listo">Listo</SelectItem>
+                                        <SelectItem value="entregado">Entregado</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                              </div>
+                              <Badge className={cn("ml-2 shrink-0", entry.brand === "magical" ? "bg-primary/10 text-primary" : "bg-secondary text-secondary-foreground")}>
+                                {entry.brand === "magical" ? "Magical" : "Sweatspot"}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
