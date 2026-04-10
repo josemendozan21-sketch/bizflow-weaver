@@ -1017,6 +1017,40 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
   );
 }
 
+/* ---- Payment Summary ---- */
+
+function PaymentSummary({ totalAmount, abono, estadoPago }: { totalAmount: number; abono: number; estadoPago: "abono_inicial" | "pago_total" | "pendiente" }) {
+  const saldo = totalAmount - abono;
+  const badgeConfig = {
+    pago_total: { label: "Pago total", variant: "default" as const, className: "bg-green-600 hover:bg-green-700" },
+    abono_inicial: { label: "Abono inicial", variant: "default" as const, className: "bg-yellow-500 hover:bg-yellow-600 text-foreground" },
+    pendiente: { label: "Pendiente", variant: "destructive" as const, className: "" },
+  };
+  const cfg = badgeConfig[estadoPago];
+
+  if (totalAmount <= 0) return null;
+
+  return (
+    <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
+      <h4 className="text-sm font-semibold text-foreground">Resumen de pago</h4>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+        <span className="text-muted-foreground">Total del pedido:</span>
+        <span className="font-semibold text-foreground text-right">${totalAmount.toLocaleString("es-CO")}</span>
+        <span className="text-muted-foreground">Abono recibido:</span>
+        <span className="font-semibold text-foreground text-right">${abono.toLocaleString("es-CO")}</span>
+        <span className="text-muted-foreground">Saldo pendiente:</span>
+        <span className={`font-semibold text-right ${saldo > 0 ? "text-destructive" : "text-green-600"}`}>
+          ${saldo.toLocaleString("es-CO")}
+        </span>
+        <span className="text-muted-foreground">Estado:</span>
+        <span className="text-right">
+          <Badge variant={cfg.variant} className={cfg.className}>{cfg.label}</Badge>
+        </span>
+      </div>
+    </div>
+  );
+}
+
 /* ---- Shared helpers ---- */
 
 function Field({ label, name, type = "text", required }: { label: string; name: string; type?: string; required?: boolean }) {
