@@ -5,6 +5,7 @@ import { CreateRequestDialog } from "./CreateRequestDialog";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { FileImage, User, MessageSquare, Info } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
   requests: LogoRequest[];
