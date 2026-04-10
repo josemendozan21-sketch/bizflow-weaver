@@ -604,21 +604,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     // Determine logo type for production workflow
     const logoType = tipoLogo === "Impresión básica" ? "impresion_basica" as const : "impresion_full" as const;
 
-    // Send to Sweatspot production workflow
-    useSweatspotProductionStore.getState().addOrder({
-      clientName,
-      quantity,
-      thermoSize,
-      siliconeColor,
-      inkColor,
-      logoType,
-      logoFile: logoFile?.name || undefined,
-      hasStock,
-      currentStage: "estampacion",
-      observations: observaciones || undefined,
-    });
-
-    // Send to accounting as "Cliente empresa"
+    // Production order will be created after persisting to DB (see below)
     useAccountingStore.getState().addOrder({
       clientName,
       brand: "sweatspot",
