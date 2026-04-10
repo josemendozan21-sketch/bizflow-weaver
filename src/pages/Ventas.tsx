@@ -19,6 +19,8 @@ import { useAccountingStore } from "@/stores/accountingStore";
 import { useDeliveryStore } from "@/stores/deliveryStore";
 import { toast } from "sonner";
 import QuotationGenerator from "@/components/ventas/QuotationGenerator";
+import { createLogoRequestFromOrder } from "@/lib/createLogoRequestFromOrder";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Brand = "sweatspot" | "magical";
 type SaleType = "mayor" | "menor";
