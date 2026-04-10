@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronRight, Flame, Zap } from "lucide-react";
+import { ChevronRight, Zap } from "lucide-react";
+import magicalLogo from "@/assets/magical-warmers-logo.png";
 
 export type ProductionBrand = "magical_warmers" | "sweatspot";
 
@@ -8,8 +9,8 @@ interface ProductionBrandSelectorProps {
   onSelectBrand: (brand: ProductionBrand) => void;
 }
 
-const BRANDS: { value: ProductionBrand; label: string; description: string; icon: React.ElementType }[] = [
-  { value: "magical_warmers", label: "Magical Warmers", description: "Compresas terapéuticas de gel", icon: Flame },
+const BRANDS: { value: ProductionBrand; label: string; description: string; icon?: React.ElementType; logo?: string }[] = [
+  { value: "magical_warmers", label: "Magical Warmers", description: "Compresas terapéuticas de gel", logo: magicalLogo },
   { value: "sweatspot", label: "Sweatspot", description: "Termos y accesorios deportivos", icon: Zap },
 ];
 
@@ -30,8 +31,13 @@ const ProductionBrandSelector = ({ selectedBrand, onSelectBrand }: ProductionBra
             <CardContent className="pt-6 pb-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className={`rounded-xl p-3 ${isSelected ? "bg-primary/10" : "bg-muted"}`}>
-                    <Icon className={`h-7 w-7 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                  <div className={`rounded-xl p-3 ${isSelected ? "bg-primary/10" : "bg-muted"} flex items-center justify-center`}>
+                    {brand.logo ? (
+                      <img src={brand.logo} alt={brand.label} className="h-7 w-auto object-contain" />
+                    ) : Icon ? (
+                      <Icon className={`h-7 w-7 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                    ) : null}
+                  </div>
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-foreground">{brand.label}</h3>
