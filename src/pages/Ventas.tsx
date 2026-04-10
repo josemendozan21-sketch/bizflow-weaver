@@ -595,6 +595,12 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             </div>
           </fieldset>
 
+          <PaymentSummary
+            totalAmount={parseFloat(valorTotal) || 0}
+            abono={estadoPago === "pago_total" ? (parseFloat(valorTotal) || 0) : (parseFloat(abono) || 0)}
+            estadoPago={estadoPago}
+          />
+
           <div className="flex gap-3 pt-2">
             <Button type="submit">Crear pedido</Button>
             <Button type="button" variant="outline" onClick={onReset}>Cancelar</Button>
