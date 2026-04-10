@@ -2,7 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Flame, Droplets, FileImage, Package } from "lucide-react";
+import { Droplets, FileImage, Package } from "lucide-react";
+import magicalLogo from "@/assets/magical-warmers-logo.png";
 import type { FillingTask } from "@/types/production";
 import { useProductionStore } from "@/stores/productionStore";
 
