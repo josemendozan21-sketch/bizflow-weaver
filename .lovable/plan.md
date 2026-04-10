@@ -1,74 +1,61 @@
 
 
-## Plan: Conectar Ventas, Inventarios y Producción con persistencia en base de datos
+## Plan: Corregir descuento automático de inventario al crear pedidos
 
-### Problema actual
-Los pedidos se guardan en la tabla `orders` de la base de datos, pero las órdenes de producción se almacenan **solo en memoria** (Zustand stores). Esto significa que:
-- Al recargar la página, las órdenes de producción desaparecen
-- Otros usuarios no ven las órdenes creadas por Ventas
-- No hay conexión real entre el pedido persistido y su flujo de producción
+### Problema raíz identificado
 
-### Solución
+Hay **3 bugs** que impiden el descuento correcto de inventario:
 
-#### 1. Crear tabla `production_orders` en la base de datos
-Almacenará cada orden de producción con su etapa actual, estado, marca, tipo de flujo y datos técnicos. Campos clave:
-- `order_id` (referencia al pedido original en `orders`)
-- `brand` (magical / sweatspot)
-- `current_stage`, `stage_status`, `workflow_type`, `stages` (array)
-- Campos técnicos: `gel_color`, `ink_color`, `logo_file`, `thermo_size`, `silicone_color`, `needs_cuerpos`, `has_stock`, `logo_type`
-- RLS: visible para producción, estampación, admin; actualizable por producción y admin
+**Bug 1 — Diferencia de acentos en la referencia:**
+El formulario genera `referencia = "Lumbar (Frío)"` (con tilde) desde `materialConfigs`, pero la tabla `body_stock` almacena `"Lumbar (Frio)"` (sin tilde). La comparación con `.includes()` falla porque `"frío" ≠ "frio"`, así que **nunca encuentra coincidencia** y siempre reporta `has_stock: false`.
 
-#### 2. Crear tabla `body_production_tasks`
-Para tareas manuales de producción de cuerpos (Magical Warmers):
-- `tipo_plastico`, `referencia`, `unidades`, `status`
-- RLS similar a `production_orders`
+Evidencia: Todas las production_orders en la DB tienen `has_stock: false` y `needs_cuerpos: true`, incluso para productos con stock disponible (ej: Lumbar Frio tiene 43 unidades).
 
-#### 3. Modificar los formularios de Ventas (`Ventas.tsx`)
-Al crear un pedido al por mayor:
-- Insertar el pedido en `orders` (ya existe)
-- Insertar una orden de producción en `production_orders` con la etapa inicial correcta
-- Para Magical: evaluar stock de cuerpos → si insuficiente, `needs_cuerpos = true` y etapa inicial = `produccion_cuerpos`; si suficiente, etapa inicial = `estampacion`
-- Para Sweatspot: evaluar stock y tipo de logo → determinar `workflow_type` (short/full) y etapa inicial = `estampacion`
-- Descontar/reservar inventario (mantener lógica actual del inventoryStore)
+**Bug 2 — `discountStock` usa estado local que puede estar vacío:**
+La función `discountStock` (para descontar gel) busca en el array `stockItems` del hook, que depende de la suscripción realtime. Si los datos no han cargado aún, el array está vacío y no descuenta nada. A diferencia de `reserveBodyStock` (ya corregido para consultar directo a DB), `discountStock` nunca fue actualizado.
 
-#### 4. Crear hook `useProductionOrders`
-Hook con React Query que:
-- Lee las órdenes de producción desde `production_orders`
-- Provee mutaciones para actualizar `stage_status` y avanzar etapa (`current_stage`)
-- Al completar la última etapa, actualiza `production_status` en `orders` a `listo` y envía a logística
+**Bug 3 — Datos de gel duplicados entre Zustand y DB:**
+El panel de consumo de gel (`gelCalc`) lee del Zustand store (`zustandStockItems`) que tiene datos hardcodeados (15,000g), mientras la DB muestra `"Mezcla Gel"` con `available: 0`. Los dos sistemas están desincronizados.
 
-#### 5. Modificar `MagicalWarmersWorkflow` y `SweatspotWorkflow`
-- Reemplazar los Zustand stores por el nuevo hook `useProductionOrders`
-- Filtrar por marca
-- Las tarjetas y botones de avance usarán las mutaciones del hook
-- Los datos se actualizan en tiempo real para todos los usuarios
+### Cambios propuestos
 
-#### 6. Actualizar `production_status` en `orders` automáticamente
-Cuando producción avanza de etapa, también actualizar el campo `production_status` en la tabla `orders` para que el asesor vea el progreso en "Mis Pedidos".
+#### 1. Normalizar acentos en la comparación de referencias
+**Archivo:** `src/hooks/useInventory.ts` — función `reserveBodyStock`
 
-### Archivos a modificar/crear
-- **Nueva migración SQL**: crear `production_orders` y `body_production_tasks` con RLS
-- **Nuevo**: `src/hooks/useProductionOrders.ts`
-- **Modificar**: `src/pages/Ventas.tsx` (insertar en `production_orders` al crear pedido)
-- **Modificar**: `src/components/production/MagicalWarmersWorkflow.tsx` (usar hook en vez de store)
-- **Modificar**: `src/components/production/SweatspotWorkflow.tsx` (usar hook en vez de store)
-
-### Lógica de evaluación automática al crear pedido
-
-```text
-Pedido al por mayor creado en Ventas
-  │
-  ├─ Magical Warmers
-  │   ├─ Verificar stock de cuerpos (inventoryStore.reserveBodyStock)
-  │   │   ├─ Suficiente → needsCuerpos=false, etapa=estampacion
-  │   │   └─ Insuficiente → needsCuerpos=true, etapa=produccion_cuerpos
-  │   ├─ Descontar gel (inventoryStore.discountGelForMagical)
-  │   └─ INSERT en production_orders
-  │
-  └─ Sweatspot
-      ├─ Verificar stock de cuerpos (inventoryStore.reserveBodyStock)
-      │   ├─ hasStock + impresión básica → workflow=short
-      │   └─ Otro caso → workflow=full
-      └─ INSERT en production_orders
+Agregar una función de normalización que elimine acentos antes de comparar:
+```typescript
+const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 ```
+Aplicarla en todas las comparaciones de referencia.
+
+#### 2. Hacer que `discountStock` consulte directo a la DB
+**Archivo:** `src/hooks/useInventory.ts` — función `discountStock`
+
+Igual que se hizo con `reserveBodyStock`, hacer una consulta fresca a `stock_items` en vez de depender del estado local:
+```typescript
+const { data: freshItems } = await supabase
+  .from("stock_items").select("*")
+  .ilike("name", `%${itemName}%`);
+```
+
+#### 3. Hacer que `gelCalc` en el formulario lea de la DB
+**Archivo:** `src/pages/Ventas.tsx` — `MagicalMayorForm`
+
+Reemplazar la lectura del Zustand store para gel por los datos del hook `useInventory` (que ya trae `stockItems` desde Supabase), aplicando la misma normalización.
+
+#### 4. Sincronizar los nombres de referencia
+**Archivo:** `src/hooks/useInventory.ts`
+
+Asegurar que la búsqueda de body_stock use normalización en todas las comparaciones (nombre de producto, tipo), para que `"Frío" == "Frio"`, `"Térmico" == "Termico"`, `"Círculo" == "Circulo"`.
+
+### Archivos a modificar
+- `src/hooks/useInventory.ts` — Normalización de acentos + `discountStock` con consulta fresca
+- `src/pages/Ventas.tsx` — Leer gel desde hook DB en vez de Zustand
+
+### Resultado esperado
+Al crear un pedido de "Lumbar Frío, 1000 unidades":
+1. Se encuentra correctamente el stock de cuerpos "Lumbar (Frio)" → se descuentan las 43 disponibles, se genera orden de producción por las 957 faltantes
+2. Se descuenta el gel de la tabla `stock_items` en la DB
+3. La production_order se crea con `has_stock` y `needs_cuerpos` correctos
+4. Todo queda persistido y sincronizado entre Ventas, Producción e Inventarios
 
