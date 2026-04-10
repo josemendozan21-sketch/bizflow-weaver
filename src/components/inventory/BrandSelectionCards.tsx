@@ -29,6 +29,9 @@ interface BrandSelectionCardsProps {
 }
 
 const BrandSelectionCards = ({ selectedBrand, onSelectBrand, onNotificationClick }: BrandSelectionCardsProps) => {
+  const { role } = useAuth();
+  const isAsesor = role === "asesor_comercial";
+
   const { stockItems, getStockStatus, productionRequirements, materialConfigs } = useInventoryStore();
 
   const getBrandNotifications = useMemo(() => {
