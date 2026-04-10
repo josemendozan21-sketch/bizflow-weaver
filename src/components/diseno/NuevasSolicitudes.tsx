@@ -5,12 +5,15 @@ import { CreateRequestDialog } from "./CreateRequestDialog";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { FileImage, User, MessageSquare, Info } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
   requests: LogoRequest[];
 }
 
 export function NuevasSolicitudes({ requests }: Props) {
+  const { role } = useAuth();
+  const canCreate = role === "admin" || role === "produccion";
   const filtered = requests.filter((r) => r.status === "pendiente_diseno");
 
   return (
@@ -20,7 +23,7 @@ export function NuevasSolicitudes({ requests }: Props) {
           <h2 className="text-lg font-semibold text-foreground">Solicitudes nuevas</h2>
           <p className="text-sm text-muted-foreground">{filtered.length} solicitud(es) pendiente(s) de diseño</p>
         </div>
-        <CreateRequestDialog />
+        {canCreate && <CreateRequestDialog />}
       </div>
 
       {filtered.length === 0 ? (
