@@ -195,10 +195,7 @@ export const MagicalWarmersWorkflow = () => {
             key={order.id}
             order={order}
             onStart={() => updateStageStatus.mutate({ orderId: order.id, status: "en_proceso" })}
-            onFinish={() => {
-              updateStageStatus.mutate({ orderId: order.id, status: "finalizado" });
-              advanceStage.mutate(order.id);
-            }}
+            onFinish={() => advanceStage.mutate(order.id)}
           />
         ))}
       </div>

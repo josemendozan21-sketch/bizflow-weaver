@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useLogisticsStore } from "@/stores/logisticsStore";
@@ -41,17 +42,6 @@ export interface BodyTask {
   completed_at: string | null;
 }
 
-// Magical stage order
-const MAGICAL_STAGES = [
-  "produccion_cuerpos",
-  "estampacion",
-  "dosificacion",
-  "sellado",
-  "recorte",
-  "empaque",
-  "listo",
-];
-
 const MAGICAL_STAGE_LABELS: Record<string, string> = {
   produccion_cuerpos: "Producción de Cuerpos",
   estampacion: "Estampación",
@@ -74,6 +64,31 @@ const SS_STAGE_LABELS: Record<string, string> = {
 
 export function useProductionOrders(brand?: "magical" | "sweatspot") {
   const queryClient = useQueryClient();
+
+  // Realtime subscription for production_orders
+  useEffect(() => {
+    const channel = supabase
+      .channel("production_orders_realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "production_orders" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["production_orders"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "body_production_tasks" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["body_production_tasks"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const ordersQuery = useQuery({
     queryKey: ["production_orders", brand],
@@ -112,7 +127,7 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
 
   const advanceStage = useMutation({
     mutationFn: async (orderId: string) => {
-      // Get current order
+      // Get fresh order data
       const { data: order, error: fetchErr } = await supabase
         .from("production_orders")
         .select("*")
@@ -124,6 +139,28 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
       const stages = po.stages;
       const currentIdx = stages.indexOf(po.current_stage);
       const lastActionableIdx = stages.length - 2; // before "listo"
+
+      // If current stage is produccion_cuerpos, add produced quantity to body_stock
+      if (po.current_stage === "produccion_cuerpos" && po.molde) {
+        // Try to increment existing body_stock
+        const { data: existing } = await supabase
+          .from("body_stock")
+          .select("*")
+          .eq("brand", po.brand)
+          .ilike("referencia", po.molde)
+          .maybeSingle();
+
+        if (existing) {
+          await supabase
+            .from("body_stock")
+            .update({ available: existing.available + po.quantity })
+            .eq("id", existing.id);
+        } else {
+          await supabase
+            .from("body_stock")
+            .insert({ brand: po.brand, referencia: po.molde, available: po.quantity });
+        }
+      }
 
       if (currentIdx >= lastActionableIdx) {
         // Complete the order
@@ -137,7 +174,7 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
           .eq("id", orderId);
         if (error) throw error;
 
-        // Update the parent order's production_status
+        // Update parent order
         if (po.order_id) {
           await supabase.from("orders").update({ production_status: "listo" }).eq("id", po.order_id);
         }
@@ -183,7 +220,6 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
 
       if (result.completed) {
-        const labels = result.order.brand === "magical" ? MAGICAL_STAGE_LABELS : SS_STAGE_LABELS;
         toast.success(`Orden de ${result.order.client_name} completada. Enviada a Logística.`);
       } else {
         const labels = result.order.brand === "magical" ? MAGICAL_STAGE_LABELS : SS_STAGE_LABELS;
