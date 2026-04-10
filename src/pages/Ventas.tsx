@@ -481,10 +481,37 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 <Label htmlFor="mw_unidades">Unidades</Label>
                 <Input id="mw_unidades" name="mw_unidades" type="number" required value={units} onChange={(e) => setUnits(e.target.value)} />
               </div>
-              <Field label="Valor unitario" name="mw_valorUnitario" type="number" required />
-              <Field label="Valor total del pedido" name="mw_valorTotal" type="number" required />
+              <div className="space-y-1.5">
+                <Label htmlFor="mw_valorUnitario">Valor unitario</Label>
+                <Input id="mw_valorUnitario" name="mw_valorUnitario" type="number" required value={valorUnitario} onChange={(e) => { setValorUnitario(e.target.value); setAutoCalc(true); }} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="mw_valorTotal">Valor total del pedido</Label>
+                <Input id="mw_valorTotal" name="mw_valorTotal" type="number" required value={valorTotal} onChange={(e) => { setValorTotal(e.target.value); setAutoCalc(false); }} />
+                {autoCalc && parseInt(units, 10) > 0 && parseFloat(valorUnitario) > 0 && (
+                  <p className="text-xs text-muted-foreground">Calculado automáticamente</p>
+                )}
+              </div>
             </div>
-            <Field label="Abono del total del pedido" name="mw_abono" type="number" />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="mw_abono">Abono del total del pedido</Label>
+                <Input id="mw_abono" name="mw_abono" type="number" value={abono} onChange={(e) => setAbono(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Estado del pago</Label>
+                <Select value={estadoPago} onValueChange={(v) => setEstadoPago(v as typeof estadoPago)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="abono_inicial">Abono inicial recibido</SelectItem>
+                    <SelectItem value="pago_total">Pago total recibido</SelectItem>
+                    <SelectItem value="pendiente">Pago pendiente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <Field label="Fecha requerida de entrega" name="mw_fechaRequerida" type="date" />
           </fieldset>
 
