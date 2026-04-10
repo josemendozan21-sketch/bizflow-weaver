@@ -149,9 +149,17 @@ export function useInventory() {
       options?: { clientName?: string; requestedBy?: string }
     ): Promise<{ available: boolean; discounted: number; message: string }> => {
       console.log("reserveBodyStock called:", { brand, referencia, qty });
-      console.log("bodyStock available:", bodyStock);
 
-      const item = bodyStock.find(
+      // Always fetch fresh from DB to avoid stale state
+      const { data: freshBodyStock } = await supabase
+        .from("body_stock")
+        .select("*")
+        .ilike("brand", brand);
+
+      const stockToSearch = (freshBodyStock as unknown as SupabaseBodyStock[]) || bodyStock;
+      console.log("Fresh body stock from DB:", freshBodyStock);
+
+      const item = stockToSearch.find(
         (b) =>
           b.brand.toLowerCase() === brand.toLowerCase() && (
             b.referencia.toLowerCase() === referencia.toLowerCase() ||
@@ -159,7 +167,7 @@ export function useInventory() {
             referencia.toLowerCase().includes(b.referencia.toLowerCase())
           )
       );
-      console.log("matched item:", item);
+      console.log("Matched item:", item);
 
       if (!item || item.available <= 0) {
         // Auto-create supply order when no stock found
