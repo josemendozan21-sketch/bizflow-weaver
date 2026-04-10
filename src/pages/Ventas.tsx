@@ -12,8 +12,6 @@ import { ArrowLeft, AlertTriangle, CheckCircle2, FileText, ShoppingCart, Clipboa
 import magicalLogo from "@/assets/magical-warmers-logo.png";
 import sweatspotLogo from "@/assets/sweatspot-logo.png";
 import { useLogisticsStore } from "@/stores/logisticsStore";
-import { useProductionStore } from "@/stores/productionStore";
-import { useSweatspotProductionStore } from "@/stores/sweatspotProductionStore";
 import { useInventoryStore } from "@/stores/inventoryStore";
 import { useAccountingStore } from "@/stores/accountingStore";
 import { useDeliveryStore } from "@/stores/deliveryStore";
