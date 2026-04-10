@@ -40,7 +40,7 @@ export default function AsesorInventoryView() {
 
       {!selectedBrand ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {(["magical", "sweatspot"] as InventoryBrand[]).map((brand) => (
+          {(["magical_warmers", "sweatspot"] as InventoryBrand[]).map((brand) => (
             <Card
               key={brand}
               className="cursor-pointer hover:shadow-md transition-shadow"
@@ -48,7 +48,7 @@ export default function AsesorInventoryView() {
             >
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg">
-                  {brand === "magical" ? "Magical Warmers" : "Sweatspot"}
+                  {brand === "magical_warmers" ? "Magical Warmers" : "Sweatspot"}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -68,13 +68,13 @@ export default function AsesorInventoryView() {
           <Card>
             <CardHeader>
               <CardTitle>
-                {selectedBrand === "magical" ? "Magical Warmers — Cuerpos" : "Sweatspot — Productos"}
+                {selectedBrand === "magical_warmers" ? "Magical Warmers — Cuerpos" : "Sweatspot — Productos"}
               </CardTitle>
             </CardHeader>
             <CardContent>
               {isLoading ? (
                 <p className="text-muted-foreground text-sm">Cargando...</p>
-              ) : selectedBrand === "magical" ? (
+              ) : selectedBrand === "magical_warmers" ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
