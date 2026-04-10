@@ -31,10 +31,7 @@ const Produccion = () => {
       ) : selectedBrand === "magical_warmers" ? (
         <MagicalWarmersWorkflow />
       ) : (
-        <div className="text-center py-12 text-muted-foreground">
-          <p className="text-lg font-medium">Sección de producción para Sweatspot</p>
-          <p className="text-sm mt-1">Próximamente se agregarán los procesos específicos de esta marca.</p>
-        </div>
+        <SweatspotWorkflow />
       )}
     </div>
   );
