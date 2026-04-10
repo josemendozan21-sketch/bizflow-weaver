@@ -45,12 +45,16 @@ interface EventWithProducts extends EventRow {
 const Eventos = () => {
   const { user } = useAuth();
   const { materialConfigs } = useInventoryStore();
+  const deliveryEntries = useDeliveryStore((s) => s.entries);
+  const updateDeliveryStatus = useDeliveryStore((s) => s.updateStatus);
   const [events, setEvents] = useState<EventWithProducts[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<EventWithProducts | null>(null);
+  const [selectedDayDeliveries, setSelectedDayDeliveries] = useState<DeliveryEntry[] | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [deliveryDetailOpen, setDeliveryDetailOpen] = useState(false);
 
   // Form state
   const [formName, setFormName] = useState("");
