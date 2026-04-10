@@ -5,6 +5,7 @@ import {
   Beaker, Box, Droplets, PackageCheck, Bell,
 } from "lucide-react";
 import { useInventoryStore, type InventoryBrand, type InventoryCategory } from "@/stores/inventoryStore";
+import { useAuth } from "@/contexts/AuthContext";
 import { useMemo } from "react";
 
 const BRANDS: { value: InventoryBrand; label: string; description: string }[] = [
@@ -28,30 +29,38 @@ interface BrandSelectionCardsProps {
 }
 
 const BrandSelectionCards = ({ selectedBrand, onSelectBrand, onNotificationClick }: BrandSelectionCardsProps) => {
+  const { role } = useAuth();
+  const isAsesor = role === "asesor_comercial";
+
   const { stockItems, getStockStatus, productionRequirements, materialConfigs } = useInventoryStore();
+
+  const ASESOR_VISIBLE_CATEGORIES: InventoryCategory[] = ["cuerpos_referencias", "producto_terminado"];
 
   const getBrandNotifications = useMemo(() => {
     return (brand: InventoryBrand): InventoryNotification[] => {
       const items = stockItems.filter((i) => i.brand === brand);
       const notifications: InventoryNotification[] = [];
 
-      const mpItems = items.filter((i) => i.category === "materia_prima");
-      const mpCritical = mpItems.filter((i) => getStockStatus(i) === "critico");
-      const mpLow = mpItems.filter((i) => getStockStatus(i) === "bajo");
+      // Materia prima alerts — hide for asesores
+      if (!isAsesor) {
+        const mpItems = items.filter((i) => i.category === "materia_prima");
+        const mpCritical = mpItems.filter((i) => getStockStatus(i) === "critico");
+        const mpLow = mpItems.filter((i) => getStockStatus(i) === "bajo");
 
-      if (mpCritical.length > 0) {
-        notifications.push({
-          id: `${brand}-mp-crit`, type: "critico", icon: Beaker,
-          message: `${mpCritical.length} materia${mpCritical.length > 1 ? "s" : ""} prima en nivel crítico: ${mpCritical.map((i) => i.name).join(", ")}`,
-          targetCategory: "materia_prima", targetItemNames: mpCritical.map((i) => i.name),
-        });
-      }
-      if (mpLow.length > 0) {
-        notifications.push({
-          id: `${brand}-mp-low`, type: "bajo", icon: Beaker,
-          message: `${mpLow.length} materia${mpLow.length > 1 ? "s" : ""} prima con bajo stock: ${mpLow.map((i) => i.name).join(", ")}`,
-          targetCategory: "materia_prima", targetItemNames: mpLow.map((i) => i.name),
-        });
+        if (mpCritical.length > 0) {
+          notifications.push({
+            id: `${brand}-mp-crit`, type: "critico", icon: Beaker,
+            message: `${mpCritical.length} materia${mpCritical.length > 1 ? "s" : ""} prima en nivel crítico: ${mpCritical.map((i) => i.name).join(", ")}`,
+            targetCategory: "materia_prima", targetItemNames: mpCritical.map((i) => i.name),
+          });
+        }
+        if (mpLow.length > 0) {
+          notifications.push({
+            id: `${brand}-mp-low`, type: "bajo", icon: Beaker,
+            message: `${mpLow.length} materia${mpLow.length > 1 ? "s" : ""} prima con bajo stock: ${mpLow.map((i) => i.name).join(", ")}`,
+            targetCategory: "materia_prima", targetItemNames: mpLow.map((i) => i.name),
+          });
+        }
       }
 
       const bodyItems = items.filter((i) => i.category === "cuerpos_referencias");
@@ -73,7 +82,8 @@ const BrandSelectionCards = ({ selectedBrand, onSelectBrand, onNotificationClick
         });
       }
 
-      if (brand === "magical_warmers") {
+      // Gel alerts — hide for asesores
+      if (!isAsesor && brand === "magical_warmers") {
         const gelItem = items.find((i) => i.category === "materia_prima" && i.name.toLowerCase().includes("gel"));
         if (gelItem) {
           const status = getStockStatus(gelItem);
@@ -103,28 +113,34 @@ const BrandSelectionCards = ({ selectedBrand, onSelectBrand, onNotificationClick
         });
       }
 
-      const brandKey = brand === "magical_warmers" ? "magical" : "sweatspot";
-      const pendingReqs = productionRequirements.filter((r) => r.brand === brandKey && r.status === "pendiente");
-      if (pendingReqs.length > 0) {
-        notifications.push({
-          id: `${brand}-prod-pending`, type: "pendiente", icon: Clock,
-          message: `${pendingReqs.length} pedido${pendingReqs.length > 1 ? "s" : ""} pendiente${pendingReqs.length > 1 ? "s" : ""} de producción`,
-          targetCategory: null, targetItemNames: [],
-        });
+      // Production pending alerts — hide for asesores
+      if (!isAsesor) {
+        const brandKey = brand === "magical_warmers" ? "magical" : "sweatspot";
+        const pendingReqs = productionRequirements.filter((r) => r.brand === brandKey && r.status === "pendiente");
+        if (pendingReqs.length > 0) {
+          notifications.push({
+            id: `${brand}-prod-pending`, type: "pendiente", icon: Clock,
+            message: `${pendingReqs.length} pedido${pendingReqs.length > 1 ? "s" : ""} pendiente${pendingReqs.length > 1 ? "s" : ""} de producción`,
+            targetCategory: null, targetItemNames: [],
+          });
+        }
       }
 
       return notifications;
     };
-  }, [stockItems, getStockStatus, productionRequirements, materialConfigs]);
+  }, [stockItems, getStockStatus, productionRequirements, materialConfigs, isAsesor]);
 
   const getBrandStats = (brand: InventoryBrand) => {
-    const items = stockItems.filter((i) => i.brand === brand);
+    const allItems = stockItems.filter((i) => i.brand === brand);
+    const items = isAsesor
+      ? allItems.filter((i) => ASESOR_VISIBLE_CATEGORIES.includes(i.category))
+      : allItems;
     const critical = items.filter((i) => getStockStatus(i) === "critico").length;
     const low = items.filter((i) => getStockStatus(i) === "bajo").length;
     const totalItems = items.length;
     const brandKey = brand === "magical_warmers" ? "magical" : "sweatspot";
-    const pending = productionRequirements.filter((r) => r.brand === brandKey && r.status === "pendiente").length;
-    const inProgress = productionRequirements.filter((r) => r.brand === brandKey && r.status === "en_proceso").length;
+    const pending = isAsesor ? 0 : productionRequirements.filter((r) => r.brand === brandKey && r.status === "pendiente").length;
+    const inProgress = isAsesor ? 0 : productionRequirements.filter((r) => r.brand === brandKey && r.status === "en_proceso").length;
     return { critical, low, totalItems, pending, inProgress };
   };
 
