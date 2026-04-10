@@ -58,6 +58,33 @@ export type Database = {
           },
         ]
       }
+      body_stock: {
+        Row: {
+          available: number
+          brand: string
+          created_at: string
+          id: string
+          referencia: string
+          updated_at: string
+        }
+        Insert: {
+          available?: number
+          brand: string
+          created_at?: string
+          id?: string
+          referencia: string
+          updated_at?: string
+        }
+        Update: {
+          available?: number
+          brand?: string
+          created_at?: string
+          id?: string
+          referencia?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       event_products: {
         Row: {
           brand: string
@@ -422,6 +449,54 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      stock_items: {
+        Row: {
+          available: number
+          brand: string
+          category: string
+          color: string | null
+          created_at: string
+          id: string
+          logo: string | null
+          min_stock: number
+          name: string
+          product_type: string | null
+          sweatspot_category: string | null
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          available?: number
+          brand: string
+          category: string
+          color?: string | null
+          created_at?: string
+          id?: string
+          logo?: string | null
+          min_stock?: number
+          name: string
+          product_type?: string | null
+          sweatspot_category?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          available?: number
+          brand?: string
+          category?: string
+          color?: string | null
+          created_at?: string
+          id?: string
+          logo?: string | null
+          min_stock?: number
+          name?: string
+          product_type?: string | null
+          sweatspot_category?: string | null
+          unit?: string
+          updated_at?: string
         }
         Relationships: []
       }
