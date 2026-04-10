@@ -308,6 +308,7 @@ const Eventos = () => {
             </div>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       <Tabs defaultValue="calendar">
