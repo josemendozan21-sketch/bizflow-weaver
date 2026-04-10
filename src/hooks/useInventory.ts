@@ -147,11 +147,18 @@ export function useInventory() {
       referencia: string,
       qty: number
     ): Promise<{ available: boolean; discounted: number; message: string }> => {
+      console.log("reserveBodyStock called:", { brand, referencia, qty });
+      console.log("bodyStock available:", bodyStock);
+
       const item = bodyStock.find(
         (b) =>
-          b.brand.toLowerCase() === brand.toLowerCase() &&
-          b.referencia.toLowerCase().includes(referencia.toLowerCase())
+          b.brand.toLowerCase() === brand.toLowerCase() && (
+            b.referencia.toLowerCase() === referencia.toLowerCase() ||
+            b.referencia.toLowerCase().includes(referencia.toLowerCase()) ||
+            referencia.toLowerCase().includes(b.referencia.toLowerCase())
+          )
       );
+      console.log("matched item:", item);
 
       if (!item || item.available <= 0) {
         return {
