@@ -8,7 +8,12 @@ import { ArrowLeft, Package } from "lucide-react";
 import { useInventory } from "@/hooks/useInventory";
 import type { InventoryBrand } from "@/stores/inventoryStore";
 
-const StockIndicator = ({ available }: { available: number }) => {
+const StockIndicator = ({ available, minStock }: { available: number; minStock?: number }) => {
+  if (minStock !== undefined) {
+    if (available < minStock) return <Badge variant="destructive">Crítico</Badge>;
+    if (available < minStock * 1.5) return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white">Bajo</Badge>;
+    return <Badge className="bg-green-500 hover:bg-green-600 text-white">OK</Badge>;
+  }
   if (available === 0) return <Badge variant="destructive">Sin stock</Badge>;
   if (available <= 10) return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white">Bajo</Badge>;
   return <Badge className="bg-green-500 hover:bg-green-600 text-white">Disponible</Badge>;
@@ -20,9 +25,18 @@ const classifyType = (referencia: string): string => {
   return "Térmico";
 };
 
+const EmptyMessage = () => (
+  <p className="text-sm text-muted-foreground py-4 text-center">No hay registros en esta categoría.</p>
+);
+
 export default function AsesorInventoryView() {
   const [selectedBrand, setSelectedBrand] = useState<InventoryBrand | null>(null);
   const { bodyStock, stockItems, isLoading } = useInventory();
+
+  const magicalBodies = bodyStock.filter((b) => b.brand.toLowerCase() === "magical");
+  const magicalFinished = stockItems.filter((s) => s.brand.toLowerCase() === "magical" && s.category === "producto_terminado");
+  const sweatspotMaterials = stockItems.filter((s) => s.brand.toLowerCase() === "sweatspot" && s.category === "materia_prima");
+  const sweatspotFinished = stockItems.filter((s) => s.brand.toLowerCase() === "sweatspot" && s.category === "producto_terminado");
 
   return (
     <div className="space-y-6">
@@ -52,9 +66,7 @@ export default function AsesorInventoryView() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Ver disponibilidad de productos
-                </p>
+                <p className="text-sm text-muted-foreground">Ver disponibilidad de productos</p>
               </CardContent>
             </Card>
           ))}
@@ -65,78 +77,133 @@ export default function AsesorInventoryView() {
             <ArrowLeft className="h-4 w-4" /> Volver a marcas
           </Button>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                {selectedBrand === "magical_warmers" ? "Magical Warmers — Cuerpos" : "Sweatspot — Productos"}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <p className="text-muted-foreground text-sm">Cargando...</p>
-              ) : selectedBrand === "magical_warmers" ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Referencia</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead className="text-right">Disponible</TableHead>
-                      <TableHead>Estado</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {bodyStock
-                      .filter((b) => b.brand.toLowerCase() === "magical")
-                      .map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.referencia}</TableCell>
-                          <TableCell>{classifyType(item.referencia)}</TableCell>
-                          <TableCell className="text-right">{item.available}</TableCell>
-                          <TableCell><StockIndicator available={item.available} /></TableCell>
+          {isLoading ? (
+            <p className="text-muted-foreground text-sm">Cargando...</p>
+          ) : selectedBrand === "magical_warmers" ? (
+            <div className="space-y-6">
+              {/* Magical — Cuerpos */}
+              <Card>
+                <CardHeader><CardTitle>Cuerpos disponibles</CardTitle></CardHeader>
+                <CardContent>
+                  {magicalBodies.length === 0 ? <EmptyMessage /> : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Referencia</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead className="text-right">Disponible</TableHead>
+                          <TableHead>Estado</TableHead>
                         </TableRow>
-                      ))}
-                    {bodyStock.filter((b) => b.brand.toLowerCase() === "magical").length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground">
-                          No hay registros de cuerpos
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Producto</TableHead>
-                      <TableHead>Categoría</TableHead>
-                      <TableHead className="text-right">Disponible</TableHead>
-                      <TableHead>Estado</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {stockItems
-                      .filter((s) => s.brand.toLowerCase() === "sweatspot" && s.category !== "materia_prima")
-                      .map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell>{item.category}</TableCell>
-                          <TableCell className="text-right">{item.available} {item.unit}</TableCell>
-                          <TableCell><StockIndicator available={item.available} /></TableCell>
+                      </TableHeader>
+                      <TableBody>
+                        {magicalBodies.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="font-medium">{item.referencia}</TableCell>
+                            <TableCell>{classifyType(item.referencia)}</TableCell>
+                            <TableCell className="text-right">{item.available}</TableCell>
+                            <TableCell><StockIndicator available={item.available} /></TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Magical — Producto terminado */}
+              <Card>
+                <CardHeader><CardTitle>Producto terminado</CardTitle></CardHeader>
+                <CardContent>
+                  {magicalFinished.length === 0 ? <EmptyMessage /> : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Producto</TableHead>
+                          <TableHead className="text-right">Disponible</TableHead>
+                          <TableHead>Unidad</TableHead>
+                          <TableHead>Estado</TableHead>
                         </TableRow>
-                      ))}
-                    {stockItems.filter((s) => s.brand.toLowerCase() === "sweatspot" && s.category !== "materia_prima").length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground">
-                          No hay productos registrados
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+                      </TableHeader>
+                      <TableBody>
+                        {magicalFinished.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="font-medium">{item.name}</TableCell>
+                            <TableCell className="text-right">{item.available}</TableCell>
+                            <TableCell>{item.unit}</TableCell>
+                            <TableCell><StockIndicator available={item.available} /></TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Sweatspot — Materia prima */}
+              <Card>
+                <CardHeader><CardTitle>Cuerpos / Materia prima</CardTitle></CardHeader>
+                <CardContent>
+                  {sweatspotMaterials.length === 0 ? <EmptyMessage /> : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Material</TableHead>
+                          <TableHead className="text-right">Disponible</TableHead>
+                          <TableHead>Unidad</TableHead>
+                          <TableHead className="text-right">Mínimo</TableHead>
+                          <TableHead>Estado</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {sweatspotMaterials.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="font-medium">{item.name}</TableCell>
+                            <TableCell className="text-right">{item.available}</TableCell>
+                            <TableCell>{item.unit}</TableCell>
+                            <TableCell className="text-right">{item.min_stock}</TableCell>
+                            <TableCell><StockIndicator available={item.available} minStock={item.min_stock} /></TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Sweatspot — Producto terminado */}
+              <Card>
+                <CardHeader><CardTitle>Producto terminado</CardTitle></CardHeader>
+                <CardContent>
+                  {sweatspotFinished.length === 0 ? <EmptyMessage /> : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Producto</TableHead>
+                          <TableHead>Color</TableHead>
+                          <TableHead className="text-right">Disponible</TableHead>
+                          <TableHead>Unidad</TableHead>
+                          <TableHead>Estado</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {sweatspotFinished.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="font-medium">{item.name}</TableCell>
+                            <TableCell>{item.color || "—"}</TableCell>
+                            <TableCell className="text-right">{item.available}</TableCell>
+                            <TableCell>{item.unit}</TableCell>
+                            <TableCell><StockIndicator available={item.available} /></TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </>
       )}
     </div>
