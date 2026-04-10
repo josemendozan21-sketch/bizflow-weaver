@@ -3,9 +3,11 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import BrandSelectionCards, { type InventoryNotification } from "@/components/inventory/BrandSelectionCards";
 import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
+import AsesorInventoryView from "@/components/inventory/AsesorInventoryView";
 import type { InventoryBrand, InventoryCategory } from "@/stores/inventoryStore";
+import { useAuth } from "@/contexts/AuthContext";
 
-const Inventarios = () => {
+const FullInventoryView = () => {
   const [selectedBrand, setSelectedBrand] = useState<InventoryBrand | null>(null);
   const [initialCategory, setInitialCategory] = useState<InventoryCategory>("materia_prima");
   const [highlightNames, setHighlightNames] = useState<string[]>([]);
@@ -55,6 +57,16 @@ const Inventarios = () => {
       )}
     </div>
   );
+};
+
+const Inventarios = () => {
+  const { role } = useAuth();
+
+  if (role === "asesor_comercial") {
+    return <AsesorInventoryView />;
+  }
+
+  return <FullInventoryView />;
 };
 
 export default Inventarios;
