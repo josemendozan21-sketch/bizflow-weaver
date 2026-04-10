@@ -181,10 +181,25 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [selectedProduct, setSelectedProduct] = useState("");
   const [selectedType, setSelectedType] = useState("");
   const [units, setUnits] = useState("");
+  const [valorUnitario, setValorUnitario] = useState("");
+  const [valorTotal, setValorTotal] = useState("");
+  const [autoCalc, setAutoCalc] = useState(true);
+  const [abono, setAbono] = useState("");
+  const [estadoPago, setEstadoPago] = useState<"abono_inicial" | "pago_total" | "pendiente">("abono_inicial");
 
   const materialConfigs = useInventoryStore((s) => s.materialConfigs);
   const zustandStockItems = useInventoryStore((s) => s.stockItems);
   const { reserveBodyStock: reserveBodyStockDB, discountStock: discountStockDB } = useInventory();
+
+  // Auto-calculate total
+  useEffect(() => {
+    if (!autoCalc) return;
+    const qty = parseInt(units, 10) || 0;
+    const unitP = parseFloat(valorUnitario) || 0;
+    if (qty > 0 && unitP > 0) {
+      setValorTotal(String(qty * unitP));
+    }
+  }, [units, valorUnitario, autoCalc]);
 
   // Unique product names
   const productNames = useMemo(() => {
