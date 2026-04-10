@@ -201,6 +201,13 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     }
   }, [units, valorUnitario, autoCalc]);
 
+  // Auto-fill abono when pago_total
+  useEffect(() => {
+    if (estadoPago === "pago_total") {
+      setAbono(valorTotal);
+    }
+  }, [estadoPago, valorTotal]);
+
   // Unique product names
   const productNames = useMemo(() => {
     const names = [...new Set(materialConfigs.map((c) => c.productName))];
@@ -310,6 +317,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       totalAmount,
       abono: abonoAmount,
       paymentStatus: estadoPago,
+      canDispatch: estadoPago === "pago_total",
       hasRut: true,
       email: (fd.get("mw_email") as string)?.trim() || undefined,
       direccion: (fd.get("mw_direccion") as string)?.trim() || undefined,
@@ -406,6 +414,15 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       description: `${clientName} — ${quantity} uds de ${referencia}. Enviado a Producción y Contabilidad.`,
     });
 
+    const saldoFinal = estadoPago === "pago_total"
+      ? 0
+      : (parseFloat(valorTotal) || 0) - (parseFloat(abono) || 0);
+    if (saldoFinal > 0) {
+      toast.warning("Saldo pendiente registrado", {
+        description: `Falta $${saldoFinal.toLocaleString("es-CO")} para completar el pago. Contabilidad fue notificada.`,
+      });
+    }
+
     // Inventory feedback
     if (!bodyResult.available) {
       toast.warning("Requerimiento de producción generado", { description: bodyResult.message });
@@ -494,10 +511,12 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="mw_abono">Abono del total del pedido</Label>
-                <Input id="mw_abono" name="mw_abono" type="number" value={abono} onChange={(e) => setAbono(e.target.value)} />
-              </div>
+              {estadoPago !== "pago_total" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="mw_abono">Abono del total del pedido</Label>
+                  <Input id="mw_abono" name="mw_abono" type="number" value={abono} onChange={(e) => setAbono(e.target.value)} />
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label>Estado del pago</Label>
                 <Select value={estadoPago} onValueChange={(v) => setEstadoPago(v as typeof estadoPago)}>
@@ -635,6 +654,13 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     }
   }, [ssUnits, ssValorUnitario, ssAutoCalc]);
 
+  // Auto-fill abono when pago_total
+  useEffect(() => {
+    if (ssEstadoPago === "pago_total") {
+      setSsAbono(ssValorTotal);
+    }
+  }, [ssEstadoPago, ssValorTotal]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
@@ -699,6 +725,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       totalAmount,
       abono: abonoAmount,
       paymentStatus: ssEstadoPago,
+      canDispatch: ssEstadoPago === "pago_total",
       hasRut: true,
       email: (fd.get("ss_email") as string)?.trim() || undefined,
       direccion: (fd.get("ss_direccion") as string)?.trim() || undefined,
@@ -789,6 +816,15 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       description: `${clientName} — ${quantity} uds (${tipoLogo}). Enviado a Producción y Contabilidad.`,
     });
 
+    const saldoFinal = ssEstadoPago === "pago_total"
+      ? 0
+      : (parseFloat(ssValorTotal) || 0) - (parseFloat(ssAbono) || 0);
+    if (saldoFinal > 0) {
+      toast.warning("Saldo pendiente registrado", {
+        description: `Falta $${saldoFinal.toLocaleString("es-CO")} para completar el pago. Contabilidad fue notificada.`,
+      });
+    }
+
     // Inventory feedback
     if (!bodyResult.available) {
       toast.warning("Requerimiento de producción generado", { description: bodyResult.message });
@@ -870,10 +906,12 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="ss_abono">Abono del total del pedido</Label>
-                <Input id="ss_abono" name="ss_abono" type="number" value={ssAbono} onChange={(e) => setSsAbono(e.target.value)} />
-              </div>
+              {ssEstadoPago !== "pago_total" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="ss_abono">Abono del total del pedido</Label>
+                  <Input id="ss_abono" name="ss_abono" type="number" value={ssAbono} onChange={(e) => setSsAbono(e.target.value)} />
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label>Estado del pago</Label>
                 <Select value={ssEstadoPago} onValueChange={(v) => setSsEstadoPago(v as typeof ssEstadoPago)}>
@@ -1084,22 +1122,38 @@ function PaymentSummary({ totalAmount, abono, estadoPago }: { totalAmount: numbe
   if (totalAmount <= 0) return null;
 
   return (
-    <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
+    <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
       <h4 className="text-sm font-semibold text-foreground">Resumen de pago</h4>
       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
         <span className="text-muted-foreground">Total del pedido:</span>
         <span className="font-semibold text-foreground text-right">${totalAmount.toLocaleString("es-CO")}</span>
         <span className="text-muted-foreground">Abono recibido:</span>
         <span className="font-semibold text-foreground text-right">${abono.toLocaleString("es-CO")}</span>
-        <span className="text-muted-foreground">Saldo pendiente:</span>
-        <span className={`font-semibold text-right ${saldo > 0 ? "text-destructive" : "text-green-600"}`}>
-          ${saldo.toLocaleString("es-CO")}
-        </span>
         <span className="text-muted-foreground">Estado:</span>
         <span className="text-right">
           <Badge variant={cfg.variant} className={cfg.className}>{cfg.label}</Badge>
         </span>
       </div>
+
+      {saldo > 0 && (
+        <Alert className="border-orange-300 bg-orange-50 text-orange-800 [&>svg]:text-orange-600">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Saldo pendiente</AlertTitle>
+          <AlertDescription>
+            ${saldo.toLocaleString("es-CO")} — El pedido no podrá despacharse hasta completar el pago.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {saldo === 0 && totalAmount > 0 && (
+        <Alert className="border-green-300 bg-green-50 text-green-800 [&>svg]:text-green-600">
+          <CheckCircle2 className="h-4 w-4" />
+          <AlertTitle>Pago completo</AlertTitle>
+          <AlertDescription>
+            El pedido puede despacharse una vez esté listo en producción.
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 }

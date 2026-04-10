@@ -14,6 +14,7 @@ export interface AccountingOrder {
   totalAmount?: number;
   abono?: number;
   paymentStatus?: "abono_inicial" | "pago_total" | "pendiente";
+  canDispatch?: boolean;
   hasRut: boolean;
   email?: string;
   cedula?: string;
