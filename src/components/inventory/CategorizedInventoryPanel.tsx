@@ -283,7 +283,7 @@ const CategorizedInventoryPanel = ({
       </div>
 
       <Tabs value={selectedCategory} onValueChange={(v) => setSelectedCategory(v as InventoryCategory)}>
-        <TabsList className={`w-full grid grid-cols-${CATEGORIES.length}`}>
+        <TabsList className={`w-full grid ${isReadOnly ? "grid-cols-2" : "grid-cols-4"}`}>
           {CATEGORIES.map((cat) => {
             const meta = CATEGORY_META[cat];
             const Icon = meta.icon;
