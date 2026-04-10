@@ -12,6 +12,8 @@ interface Props {
 }
 
 export function NuevasSolicitudes({ requests }: Props) {
+  const { role } = useAuth();
+  const canCreate = role === "admin" || role === "produccion";
   const filtered = requests.filter((r) => r.status === "pendiente_diseno");
 
   return (
@@ -21,7 +23,7 @@ export function NuevasSolicitudes({ requests }: Props) {
           <h2 className="text-lg font-semibold text-foreground">Solicitudes nuevas</h2>
           <p className="text-sm text-muted-foreground">{filtered.length} solicitud(es) pendiente(s) de diseño</p>
         </div>
-        <CreateRequestDialog />
+        {canCreate && <CreateRequestDialog />}
       </div>
 
       {filtered.length === 0 ? (
