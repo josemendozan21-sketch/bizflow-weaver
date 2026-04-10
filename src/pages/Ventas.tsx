@@ -681,6 +681,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     const form = e.target as HTMLFormElement;
     const fd = new FormData(form);
     const clientName = fd.get("ss_nombre") as string;
