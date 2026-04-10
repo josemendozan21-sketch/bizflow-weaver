@@ -167,6 +167,7 @@ function OrderForm({ brand, saleType, onReset }: { brand: Brand; saleType: SaleT
 /* ---- Magical Warmers – Al por mayor ---- */
 
 function MagicalMayorForm({ onReset }: { onReset: () => void }) {
+  const { user } = useAuth();
   const [dobleTinta, setDobleTinta] = useState(false);
   const [escarcha, setEscarcha] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState("");
@@ -303,6 +304,28 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     }
 
     toast.info("Consumo de gel", { description: gelResult.message });
+
+    // Auto-create design request if logo was uploaded
+    const logoFile = fd.get("mw_logo") as File;
+    const personalizacion = (document.getElementById("mw_personalizacion") as HTMLTextAreaElement)?.value || "";
+    if (logoFile && logoFile.size > 0 && user) {
+      createLogoRequestFromOrder({
+        brand: "Magical Warmers",
+        clientName,
+        product: referencia,
+        advisorId: user.id,
+        advisorName: user.email || "Asesor",
+        logoFile,
+        clientComments: (fd.get("mw_observaciones") as string) || undefined,
+        additionalInstructions: personalizacion || undefined,
+      }).then((result) => {
+        if (result.success) {
+          toast.success("Diseño de logo", { description: result.message });
+        } else {
+          toast.error("Diseño de logo", { description: result.message });
+        }
+      });
+    }
 
     onReset();
   };
