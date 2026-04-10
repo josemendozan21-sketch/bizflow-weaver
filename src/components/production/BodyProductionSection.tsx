@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { CheckCircle2, Package, ArrowRight, ArrowLeft, Zap, Info } from "lucide-react";
+import { CheckCircle2, Package, ArrowRight, ArrowLeft, Info } from "lucide-react";
 import magicalLogo from "@/assets/magical-warmers-logo.png";
+import sweatspotLogo from "@/assets/sweatspot-logo.png";
 import { toast } from "sonner";
 
 type Brand = "sweatspot" | "magical";
@@ -107,7 +108,7 @@ export const BodyProductionSection = () => {
         <CardContent>
           {step === 1 && (
             <div className="grid grid-cols-2 gap-4">
-              <BrandButton brand="sweatspot" icon={<Zap className="h-8 w-8" />} label="Sweatspot" onClick={() => handleSelectBrand("sweatspot")} />
+              <BrandButton brand="sweatspot" icon={<img src={sweatspotLogo} alt="Sweatspot" className="h-14 w-auto object-contain" />} onClick={() => handleSelectBrand("sweatspot")} />
               <BrandButton brand="magical" icon={<img src={magicalLogo} alt="Magical Warmers" className="h-14 w-auto object-contain" />} onClick={() => handleSelectBrand("magical")} />
             </div>
           )}
@@ -169,7 +170,7 @@ export const BodyProductionSection = () => {
                 <CardContent className="pt-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      {entry.brand === "magical" ? <img src={magicalLogo} alt="Magical Warmers" className="h-4 w-auto object-contain" /> : <Zap className="h-4 w-4 text-primary" />}
+                      {entry.brand === "magical" ? <img src={magicalLogo} alt="Magical Warmers" className="h-4 w-auto object-contain" /> : <img src={sweatspotLogo} alt="Sweatspot" className="h-4 w-auto object-contain" />}
                       <span className="font-medium text-sm">{entry.brand === "magical" ? "Magical Warmers" : "Sweatspot"}</span>
                     </div>
                     <StatusBadge status={entry.status} />
