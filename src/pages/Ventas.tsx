@@ -635,9 +635,14 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       });
     }
 
-    // Persist order to database
+    // Persist order to database and create production order
+    const ssShortStages = ["estampacion", "colocacion_boquilla", "listo"];
+    const ssFullStages = ["estampacion", "produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"];
+    const workflowType = (logoType === "impresion_basica" && hasStock) ? "short" : "full";
+    const ssStages = workflowType === "short" ? ssShortStages : ssFullStages;
+
     try {
-      await supabase.from("orders").insert({
+      const { data: orderData } = await supabase.from("orders").insert({
         brand: "sweatspot",
         sale_type: "mayor",
         client_name: clientName,
@@ -660,7 +665,29 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         advisor_name: user?.email || "Asesor",
         production_status: "estampacion",
         delivery_date: fechaRequerida || null,
-      });
+      }).select("id").single();
+
+      // Create production order
+      if (orderData) {
+        await supabase.from("production_orders").insert({
+          order_id: orderData.id,
+          brand: "sweatspot",
+          client_name: clientName,
+          quantity,
+          current_stage: "estampacion",
+          stage_status: "pendiente",
+          workflow_type: workflowType,
+          stages: ssStages,
+          ink_color: inkColor,
+          thermo_size: thermoSize,
+          silicone_color: siliconeColor,
+          logo_type: logoType,
+          logo_file: logoFile?.name || null,
+          has_stock: hasStock,
+          observations: observaciones || null,
+          advisor_id: user?.id || null,
+        });
+      }
     } catch (err: any) {
       console.error("Error saving order:", err);
     }
