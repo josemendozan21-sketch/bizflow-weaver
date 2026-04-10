@@ -186,6 +186,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [autoCalc, setAutoCalc] = useState(true);
   const [abono, setAbono] = useState("");
   const [estadoPago, setEstadoPago] = useState<"abono_inicial" | "pago_total" | "pendiente">("abono_inicial");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const materialConfigs = useInventoryStore((s) => s.materialConfigs);
   const zustandStockItems = useInventoryStore((s) => s.stockItems);
@@ -250,6 +251,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     const form = e.target as HTMLFormElement;
     const fd = new FormData(form);
     const clientName = fd.get("mw_nombre") as string;
@@ -266,6 +269,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
     if (!selectedProduct || !selectedType) {
       toast.error("Producto requerido", { description: "Seleccione un producto y tipo." });
+      setIsSubmitting(false);
       return;
     }
 
@@ -273,6 +277,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       toast.error("RUT requerido", {
         description: "Para ventas al por mayor debe adjuntar el RUT de la empresa.",
       });
+      setIsSubmitting(false);
       return;
     }
 
@@ -374,6 +379,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       toast.error("Error al crear el pedido", {
         description: "No se pudo guardar el pedido ni enviar a producción. Intenta de nuevo o contacta soporte.",
       });
+      setIsSubmitting(false);
       return;
     }
 
@@ -381,6 +387,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       toast.error("Error al crear el pedido", {
         description: "No se recibió confirmación de la base de datos. Intenta de nuevo.",
       });
+      setIsSubmitting(false);
       return;
     }
 
@@ -656,6 +663,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const [ssAutoCalc, setSsAutoCalc] = useState(true);
   const [ssAbono, setSsAbono] = useState("");
   const [ssEstadoPago, setSsEstadoPago] = useState<"abono_inicial" | "pago_total" | "pendiente">("abono_inicial");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const tamanos = ["150 ml", "250 ml", "250 ml juguetón", "500 ml"] as const;
 
   // Auto-calculate total
@@ -677,6 +685,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     const form = e.target as HTMLFormElement;
     const fd = new FormData(form);
     const clientName = fd.get("ss_nombre") as string;
@@ -697,6 +707,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       toast.error("RUT requerido", {
         description: "Para ventas al por mayor debe adjuntar el RUT de la empresa.",
       });
+      setIsSubmitting(false);
       return;
     }
 
@@ -793,6 +804,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       toast.error("Error al crear el pedido", {
         description: "No se pudo guardar el pedido ni enviar a producción. Intenta de nuevo o contacta soporte.",
       });
+      setIsSubmitting(false);
       return;
     }
 
@@ -800,6 +812,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       toast.error("Error al crear el pedido", {
         description: "No se recibió confirmación de la base de datos. Intenta de nuevo.",
       });
+      setIsSubmitting(false);
       return;
     }
 
