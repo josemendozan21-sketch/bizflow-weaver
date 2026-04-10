@@ -319,8 +319,9 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const initialStage = needsCuerpos ? "produccion_cuerpos" : "estampacion";
     const magicalStages = ["produccion_cuerpos", "estampacion", "dosificacion", "sellado", "recorte", "empaque", "listo"];
 
+    let orderData: { id: string } | null = null;
     try {
-      const { data: orderData } = await supabase.from("orders").insert({
+      const { data } = await supabase.from("orders").insert({
         brand: "magical",
         sale_type: "mayor",
         client_name: clientName,
