@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { CheckCircle2, Package, ArrowRight, ArrowLeft, Flame, Zap, Info } from "lucide-react";
+import { CheckCircle2, Package, ArrowRight, ArrowLeft, Zap, Info } from "lucide-react";
+import magicalLogo from "@/assets/magical-warmers-logo.png";
 import { toast } from "sonner";
 
 type Brand = "sweatspot" | "magical";
@@ -107,7 +108,7 @@ export const BodyProductionSection = () => {
           {step === 1 && (
             <div className="grid grid-cols-2 gap-4">
               <BrandButton brand="sweatspot" icon={<Zap className="h-8 w-8" />} label="Sweatspot" onClick={() => handleSelectBrand("sweatspot")} />
-              <BrandButton brand="magical" icon={<Flame className="h-8 w-8" />} label="Magical Warmers" onClick={() => handleSelectBrand("magical")} />
+              <BrandButton brand="magical" icon={<img src={magicalLogo} alt="Magical Warmers" className="h-8 w-auto object-contain" />} label="Magical Warmers" onClick={() => handleSelectBrand("magical")} />
             </div>
           )}
 
