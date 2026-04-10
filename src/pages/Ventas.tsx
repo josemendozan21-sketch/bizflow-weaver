@@ -317,13 +317,14 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             <legend className="text-sm font-semibold text-foreground mb-2">Información del cliente</legend>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Nombre del cliente" name="mw_nombre" required />
-              <Field label="Número de contacto" name="mw_contacto" type="tel" required />
+              <Field label="Cédula o NIT" name="mw_cedulaNit" required />
             </div>
-            <Field label="Dirección del cliente" name="mw_direccion" required />
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Ciudad" name="mw_ciudad" required />
+              <Field label="Número de contacto" name="mw_contacto" type="tel" required />
               <Field label="Correo electrónico" name="mw_email" type="email" />
             </div>
+            <Field label="Dirección del cliente" name="mw_direccion" required />
+            <Field label="Ciudad" name="mw_ciudad" required />
           </fieldset>
 
           <fieldset className="space-y-4">
@@ -569,13 +570,14 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
             <legend className="text-sm font-semibold text-foreground mb-2">Información del cliente</legend>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Nombre del cliente" name="ss_nombre" required />
-              <Field label="Número de contacto" name="ss_contacto" type="tel" required />
+              <Field label="Cédula o NIT" name="ss_cedulaNit" required />
             </div>
-            <Field label="Dirección del cliente" name="ss_direccion" required />
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Ciudad" name="ss_ciudad" required />
+              <Field label="Número de contacto" name="ss_contacto" type="tel" required />
               <Field label="Correo electrónico" name="ss_email" type="email" />
             </div>
+            <Field label="Dirección del cliente" name="ss_direccion" required />
+            <Field label="Ciudad" name="ss_ciudad" required />
           </fieldset>
 
           <fieldset className="space-y-4">
