@@ -189,7 +189,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
   const materialConfigs = useInventoryStore((s) => s.materialConfigs);
   const zustandStockItems = useInventoryStore((s) => s.stockItems);
-  const { reserveBodyStock: reserveBodyStockDB, discountStock: discountStockDB } = useInventory();
+  const { reserveBodyStock: reserveBodyStockDB, discountStock: discountStockDB, stockItems: inventoryStockItems } = useInventory();
 
   // Auto-calculate total
   useEffect(() => {
@@ -236,11 +236,12 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     if (!matchedConfig || qty <= 0) return null;
     const totalGrams = qty * matchedConfig.gramsPerUnit;
     const totalKg = totalGrams / 1000;
-    const gelItem = zustandStockItems.find((s) => s.category === "materia_prima" && s.name.toLowerCase() === "gel");
+    const normalizeStr = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const gelItem = inventoryStockItems.find((s) => s.category === "materia_prima" && normalizeStr(s.name).includes("gel"));
     const available = gelItem?.available || 0;
     const difference = available - totalGrams;
     return { totalGrams, totalKg, available, difference, sufficient: difference >= 0, gramsPerUnit: matchedConfig.gramsPerUnit };
-  }, [matchedConfig, units, zustandStockItems]);
+  }, [matchedConfig, units, inventoryStockItems]);
 
   const handleProductChange = (value: string) => {
     setSelectedProduct(value);

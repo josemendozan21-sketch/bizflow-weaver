@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+/** Remove accents/diacritics for reliable comparison */
+const normalize = (s: string) =>
+  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
 export interface SupabaseStockItem {
   id: string;
   name: string;
@@ -102,10 +106,21 @@ export function useInventory() {
       itemName: string,
       amount: number
     ): Promise<{ success: boolean; message: string }> => {
-      // Find the item locally first
-      const item = stockItems.find(
-        (s) => s.name.toLowerCase().includes(itemName.toLowerCase())
+      // Always fetch fresh from DB to avoid stale state
+      const { data: freshItems } = await supabase
+        .from("stock_items")
+        .select("*");
+
+      const searchPool = (freshItems as unknown as SupabaseStockItem[]) || stockItems;
+      const normalizedName = normalize(itemName);
+
+      const item = searchPool.find(
+        (s) => normalize(s.name).includes(normalizedName)
       );
+
+      console.log("discountStock - searching for:", itemName, "normalized:", normalizedName);
+      console.log("discountStock - matched item:", item);
+
       if (!item) {
         return { success: false, message: `Producto "${itemName}" no encontrado en inventario.` };
       }
@@ -159,12 +174,15 @@ export function useInventory() {
       const stockToSearch = (freshBodyStock as unknown as SupabaseBodyStock[]) || bodyStock;
       console.log("Fresh body stock from DB:", freshBodyStock);
 
+      const normalizedRef = normalize(referencia);
+      const normalizedBrand = normalize(brand);
+
       const item = stockToSearch.find(
         (b) =>
-          b.brand.toLowerCase() === brand.toLowerCase() && (
-            b.referencia.toLowerCase() === referencia.toLowerCase() ||
-            b.referencia.toLowerCase().includes(referencia.toLowerCase()) ||
-            referencia.toLowerCase().includes(b.referencia.toLowerCase())
+          normalize(b.brand) === normalizedBrand && (
+            normalize(b.referencia) === normalizedRef ||
+            normalize(b.referencia).includes(normalizedRef) ||
+            normalizedRef.includes(normalize(b.referencia))
           )
       );
       console.log("Matched item:", item);
