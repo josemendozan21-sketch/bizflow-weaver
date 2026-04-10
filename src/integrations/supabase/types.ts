@@ -425,6 +425,54 @@ export type Database = {
           },
         ]
       }
+      production_supply_orders: {
+        Row: {
+          brand: string
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          id: string
+          item_name: string
+          item_type: string
+          notes: string | null
+          quantity_requested: number
+          requested_by: string
+          status: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          brand: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          item_name: string
+          item_type?: string
+          notes?: string | null
+          quantity_requested: number
+          requested_by: string
+          status?: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          brand?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          item_name?: string
+          item_type?: string
+          notes?: string | null
+          quantity_requested?: number
+          requested_by?: string
+          status?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
