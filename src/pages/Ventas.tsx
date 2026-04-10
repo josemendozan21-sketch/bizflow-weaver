@@ -273,6 +273,20 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       observaciones: (fd.get("mw_observaciones") as string)?.trim() || undefined,
     });
 
+    // Create delivery calendar entry if fecha requerida is provided
+    const fechaRequerida = fd.get("mw_fechaRequerida") as string;
+    if (fechaRequerida) {
+      useDeliveryStore.getState().addEntry({
+        clientName,
+        brand: "magical",
+        product: referencia,
+        quantity,
+        saleType: "mayor",
+        deliveryDate: fechaRequerida,
+        status: "en_produccion",
+      });
+    }
+
     toast.success("Pedido al por mayor creado", {
       description: `${clientName} — ${quantity} uds de ${referencia}. Enviado a Producción y Contabilidad.`,
     });
@@ -515,6 +529,20 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       ciudad: (fd.get("ss_ciudad") as string)?.trim() || undefined,
       observaciones: (fd.get("ss_observaciones") as string)?.trim() || undefined,
     });
+
+    // Create delivery calendar entry if fecha requerida is provided
+    const fechaRequerida = fd.get("ss_fechaRequerida") as string;
+    if (fechaRequerida) {
+      useDeliveryStore.getState().addEntry({
+        clientName,
+        brand: "sweatspot",
+        product: referencia,
+        quantity,
+        saleType: "mayor",
+        deliveryDate: fechaRequerida,
+        status: "en_produccion",
+      });
+    }
 
     toast.success("Pedido al por mayor creado", {
       description: `${clientName} — ${quantity} uds (${tipoLogo}). Enviado a Producción y Contabilidad.`,
