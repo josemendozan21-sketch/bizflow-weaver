@@ -252,7 +252,7 @@ function OrderCard({ order, onStart, onFinish }: { order: ProductionOrder; onSta
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex items-center gap-1">
-          {stages.filter((s) => order.needs_cuerpos || s !== "produccion_cuerpos").map((stage) => {
+          {stages.filter((s) => order.needs_cuerpos || s !== "produccion_cuerpos").map((stage, idx) => {
             const stageIdx = stages.indexOf(stage);
             const isCurrent = stage === order.current_stage;
             const isDone = stageIdx < currentIdx || order.current_stage === "listo";
@@ -266,6 +266,23 @@ function OrderCard({ order, onStart, onFinish }: { order: ProductionOrder; onSta
             );
           })}
         </div>
+
+        <div className="flex items-center gap-1 overflow-x-auto">
+          {stages.filter((s) => order.needs_cuerpos || s !== "produccion_cuerpos").map((stage) => {
+            const stageIdx = stages.indexOf(stage);
+            const isCurrent = stage === order.current_stage;
+            const isDone = stageIdx < currentIdx || order.current_stage === "listo";
+            const StageIcon = STAGE_ICONS[stage] || Package;
+            return (
+              <div key={stage} className={`flex-1 flex flex-col items-center text-center ${isCurrent ? "text-primary font-medium" : isDone ? "text-primary/60" : "text-muted-foreground"}`}>
+                <StageIcon className={`h-3.5 w-3.5 mb-0.5 ${isDone ? "text-primary" : ""}`} />
+                <span className="text-[10px] leading-tight">{STAGE_LABELS[stage] || stage}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        <Separator />
 
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">
