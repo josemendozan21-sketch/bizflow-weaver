@@ -13,6 +13,7 @@ export interface AccountingOrder {
   createdAt: string;
   totalAmount?: number;
   abono?: number;
+  paymentStatus?: "abono_inicial" | "pago_total" | "pendiente";
   hasRut: boolean;
   email?: string;
   cedula?: string;

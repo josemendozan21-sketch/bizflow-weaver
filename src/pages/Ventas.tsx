@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, AlertTriangle, CheckCircle2, FileText, ShoppingCart, ClipboardList } from "lucide-react";
 import { useLogisticsStore } from "@/stores/logisticsStore";
 import { useInventoryStore } from "@/stores/inventoryStore";
@@ -180,10 +181,25 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [selectedProduct, setSelectedProduct] = useState("");
   const [selectedType, setSelectedType] = useState("");
   const [units, setUnits] = useState("");
+  const [valorUnitario, setValorUnitario] = useState("");
+  const [valorTotal, setValorTotal] = useState("");
+  const [autoCalc, setAutoCalc] = useState(true);
+  const [abono, setAbono] = useState("");
+  const [estadoPago, setEstadoPago] = useState<"abono_inicial" | "pago_total" | "pendiente">("abono_inicial");
 
   const materialConfigs = useInventoryStore((s) => s.materialConfigs);
   const zustandStockItems = useInventoryStore((s) => s.stockItems);
   const { reserveBodyStock: reserveBodyStockDB, discountStock: discountStockDB } = useInventory();
+
+  // Auto-calculate total
+  useEffect(() => {
+    if (!autoCalc) return;
+    const qty = parseInt(units, 10) || 0;
+    const unitP = parseFloat(valorUnitario) || 0;
+    if (qty > 0 && unitP > 0) {
+      setValorTotal(String(qty * unitP));
+    }
+  }, [units, valorUnitario, autoCalc]);
 
   // Unique product names
   const productNames = useMemo(() => {
@@ -234,8 +250,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const gelColor = fd.get("mw_colorGel") as string;
     const referencia = `${selectedProduct} (${selectedType})`;
     const rutFile = fd.get("mw_rut") as File;
-    const totalAmount = parseFloat(fd.get("mw_valorTotal") as string) || 0;
-    const abono = parseFloat(fd.get("mw_abono") as string) || 0;
+    const totalAmount = parseFloat(valorTotal) || 0;
+    const abonoAmount = estadoPago === "pago_total" ? totalAmount : (parseFloat(abono) || 0);
     const personalizacion = (fd.get("mw_personalizacion") as string) || "";
     const observaciones = (fd.get("mw_observaciones") as string) || "";
     const logoFile = fd.get("mw_logo") as File;
@@ -292,7 +308,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       saleType: "mayor",
       clientType: "Cliente empresa",
       totalAmount,
-      abono,
+      abono: abonoAmount,
+      paymentStatus: estadoPago,
       hasRut: true,
       email: (fd.get("mw_email") as string)?.trim() || undefined,
       direccion: (fd.get("mw_direccion") as string)?.trim() || undefined,
@@ -332,9 +349,9 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         client_city: (fd.get("mw_ciudad") as string) || null,
         product: referencia,
         quantity,
-        unit_price: parseFloat(fd.get("mw_valorUnitario") as string) || 0,
+        unit_price: parseFloat(valorUnitario) || 0,
         total_amount: totalAmount,
-        abono,
+        abono: abonoAmount,
         ink_color: inkColor,
         gel_color: gelColor,
         logo_url: logoUrl,
@@ -464,10 +481,37 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 <Label htmlFor="mw_unidades">Unidades</Label>
                 <Input id="mw_unidades" name="mw_unidades" type="number" required value={units} onChange={(e) => setUnits(e.target.value)} />
               </div>
-              <Field label="Valor unitario" name="mw_valorUnitario" type="number" required />
-              <Field label="Valor total del pedido" name="mw_valorTotal" type="number" required />
+              <div className="space-y-1.5">
+                <Label htmlFor="mw_valorUnitario">Valor unitario</Label>
+                <Input id="mw_valorUnitario" name="mw_valorUnitario" type="number" required value={valorUnitario} onChange={(e) => { setValorUnitario(e.target.value); setAutoCalc(true); }} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="mw_valorTotal">Valor total del pedido</Label>
+                <Input id="mw_valorTotal" name="mw_valorTotal" type="number" required value={valorTotal} onChange={(e) => { setValorTotal(e.target.value); setAutoCalc(false); }} />
+                {autoCalc && parseInt(units, 10) > 0 && parseFloat(valorUnitario) > 0 && (
+                  <p className="text-xs text-muted-foreground">Calculado automáticamente</p>
+                )}
+              </div>
             </div>
-            <Field label="Abono del total del pedido" name="mw_abono" type="number" />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="mw_abono">Abono del total del pedido</Label>
+                <Input id="mw_abono" name="mw_abono" type="number" value={abono} onChange={(e) => setAbono(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Estado del pago</Label>
+                <Select value={estadoPago} onValueChange={(v) => setEstadoPago(v as typeof estadoPago)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="abono_inicial">Abono inicial recibido</SelectItem>
+                    <SelectItem value="pago_total">Pago total recibido</SelectItem>
+                    <SelectItem value="pendiente">Pago pendiente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <Field label="Fecha requerida de entrega" name="mw_fechaRequerida" type="date" />
           </fieldset>
 
@@ -551,6 +595,12 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             </div>
           </fieldset>
 
+          <PaymentSummary
+            totalAmount={parseFloat(valorTotal) || 0}
+            abono={estadoPago === "pago_total" ? (parseFloat(valorTotal) || 0) : (parseFloat(abono) || 0)}
+            estadoPago={estadoPago}
+          />
+
           <div className="flex gap-3 pt-2">
             <Button type="submit">Crear pedido</Button>
             <Button type="button" variant="outline" onClick={onReset}>Cancelar</Button>
@@ -567,22 +617,38 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { reserveBodyStock: reserveBodyStockDB } = useInventory();
+  const [ssUnits, setSsUnits] = useState("");
+  const [ssValorUnitario, setSsValorUnitario] = useState("");
+  const [ssValorTotal, setSsValorTotal] = useState("");
+  const [ssAutoCalc, setSsAutoCalc] = useState(true);
+  const [ssAbono, setSsAbono] = useState("");
+  const [ssEstadoPago, setSsEstadoPago] = useState<"abono_inicial" | "pago_total" | "pendiente">("abono_inicial");
   const tamanos = ["150 ml", "250 ml", "250 ml juguetón", "500 ml"] as const;
+
+  // Auto-calculate total
+  useEffect(() => {
+    if (!ssAutoCalc) return;
+    const qty = parseInt(ssUnits, 10) || 0;
+    const unitP = parseFloat(ssValorUnitario) || 0;
+    if (qty > 0 && unitP > 0) {
+      setSsValorTotal(String(qty * unitP));
+    }
+  }, [ssUnits, ssValorUnitario, ssAutoCalc]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
     const fd = new FormData(form);
     const clientName = fd.get("ss_nombre") as string;
-    const quantity = parseInt(fd.get("ss_unidades") as string, 10);
+    const quantity = parseInt(ssUnits, 10);
     const inkColor = fd.get("ss_colorTinta") as string;
     const thermoSize = fd.get("ss_tamano") as "150 ml" | "250 ml" | "250 ml juguetón" | "500 ml";
     const siliconeColor = fd.get("ss_colorSilicona") as string;
     const referencia = fd.get("ss_referencia") as string;
     const tipoLogo = fd.get("ss_tipoLogo") as string;
     const rutFile = fd.get("ss_rut") as File;
-    const totalAmount = parseFloat(fd.get("ss_valorTotal") as string) || 0;
-    const abono = parseFloat(fd.get("ss_abono") as string) || 0;
+    const totalAmount = parseFloat(ssValorTotal) || 0;
+    const abonoAmount = ssEstadoPago === "pago_total" ? totalAmount : (parseFloat(ssAbono) || 0);
     const personalizacion = (fd.get("ss_personalizacion") as string) || "";
     const observaciones = (fd.get("ss_observaciones") as string) || "";
     const logoFile = fd.get("ss_logo") as File;
@@ -631,7 +697,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       saleType: "mayor",
       clientType: "Cliente empresa",
       totalAmount,
-      abono,
+      abono: abonoAmount,
+      paymentStatus: ssEstadoPago,
       hasRut: true,
       email: (fd.get("ss_email") as string)?.trim() || undefined,
       direccion: (fd.get("ss_direccion") as string)?.trim() || undefined,
@@ -671,9 +738,9 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         client_city: (fd.get("ss_ciudad") as string) || null,
         product: referencia,
         quantity,
-        unit_price: parseFloat(fd.get("ss_valorUnitario") as string) || 0,
+        unit_price: parseFloat(ssValorUnitario) || 0,
         total_amount: totalAmount,
-        abono,
+        abono: abonoAmount,
         ink_color: inkColor,
         silicone_color: siliconeColor,
         logo_url: logoUrl,
@@ -786,11 +853,41 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
               <Field label="Color de tinta" name="ss_colorTinta" required />
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
-              <Field label="Unidades" name="ss_unidades" type="number" required />
-              <Field label="Valor unitario" name="ss_valorUnitario" type="number" required />
-              <Field label="Valor total del pedido" name="ss_valorTotal" type="number" required />
+              <div className="space-y-1.5">
+                <Label htmlFor="ss_unidades">Unidades</Label>
+                <Input id="ss_unidades" name="ss_unidades" type="number" required value={ssUnits} onChange={(e) => setSsUnits(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ss_valorUnitario">Valor unitario</Label>
+                <Input id="ss_valorUnitario" name="ss_valorUnitario" type="number" required value={ssValorUnitario} onChange={(e) => { setSsValorUnitario(e.target.value); setSsAutoCalc(true); }} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ss_valorTotal">Valor total del pedido</Label>
+                <Input id="ss_valorTotal" name="ss_valorTotal" type="number" required value={ssValorTotal} onChange={(e) => { setSsValorTotal(e.target.value); setSsAutoCalc(false); }} />
+                {ssAutoCalc && parseInt(ssUnits, 10) > 0 && parseFloat(ssValorUnitario) > 0 && (
+                  <p className="text-xs text-muted-foreground">Calculado automáticamente</p>
+                )}
+              </div>
             </div>
-            <Field label="Abono del total del pedido" name="ss_abono" type="number" />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="ss_abono">Abono del total del pedido</Label>
+                <Input id="ss_abono" name="ss_abono" type="number" value={ssAbono} onChange={(e) => setSsAbono(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Estado del pago</Label>
+                <Select value={ssEstadoPago} onValueChange={(v) => setSsEstadoPago(v as typeof ssEstadoPago)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="abono_inicial">Abono inicial recibido</SelectItem>
+                    <SelectItem value="pago_total">Pago total recibido</SelectItem>
+                    <SelectItem value="pendiente">Pago pendiente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <Field label="Fecha requerida de entrega" name="ss_fechaRequerida" type="date" />
           </fieldset>
 
@@ -813,6 +910,12 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
               <Textarea id="ss_observaciones" name="ss_observaciones" placeholder="Notas u observaciones adicionales..." />
             </div>
           </fieldset>
+
+          <PaymentSummary
+            totalAmount={parseFloat(ssValorTotal) || 0}
+            abono={ssEstadoPago === "pago_total" ? (parseFloat(ssValorTotal) || 0) : (parseFloat(ssAbono) || 0)}
+            estadoPago={ssEstadoPago}
+          />
 
           <div className="flex gap-3 pt-2">
             <Button type="submit">Crear pedido</Button>
@@ -964,6 +1067,40 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
         </form>
       </CardContent>
     </Card>
+  );
+}
+
+/* ---- Payment Summary ---- */
+
+function PaymentSummary({ totalAmount, abono, estadoPago }: { totalAmount: number; abono: number; estadoPago: "abono_inicial" | "pago_total" | "pendiente" }) {
+  const saldo = totalAmount - abono;
+  const badgeConfig = {
+    pago_total: { label: "Pago total", variant: "default" as const, className: "bg-green-600 hover:bg-green-700" },
+    abono_inicial: { label: "Abono inicial", variant: "default" as const, className: "bg-yellow-500 hover:bg-yellow-600 text-foreground" },
+    pendiente: { label: "Pendiente", variant: "destructive" as const, className: "" },
+  };
+  const cfg = badgeConfig[estadoPago];
+
+  if (totalAmount <= 0) return null;
+
+  return (
+    <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
+      <h4 className="text-sm font-semibold text-foreground">Resumen de pago</h4>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+        <span className="text-muted-foreground">Total del pedido:</span>
+        <span className="font-semibold text-foreground text-right">${totalAmount.toLocaleString("es-CO")}</span>
+        <span className="text-muted-foreground">Abono recibido:</span>
+        <span className="font-semibold text-foreground text-right">${abono.toLocaleString("es-CO")}</span>
+        <span className="text-muted-foreground">Saldo pendiente:</span>
+        <span className={`font-semibold text-right ${saldo > 0 ? "text-destructive" : "text-green-600"}`}>
+          ${saldo.toLocaleString("es-CO")}
+        </span>
+        <span className="text-muted-foreground">Estado:</span>
+        <span className="text-right">
+          <Badge variant={cfg.variant} className={cfg.className}>{cfg.label}</Badge>
+        </span>
+      </div>
+    </div>
   );
 }
 
