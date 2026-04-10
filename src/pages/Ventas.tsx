@@ -307,7 +307,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
     // Auto-create design request if logo was uploaded
     const logoFile = fd.get("mw_logo") as File;
-    const personalizacion = (document.getElementById("mw_personalizacion") as HTMLTextAreaElement)?.value || "";
+    const personalizacion = (fd.get("mw_personalizacion") as string) || "";
     if (logoFile && logoFile.size > 0 && user) {
       createLogoRequestFromOrder({
         brand: "Magical Warmers",
