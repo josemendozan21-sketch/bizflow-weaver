@@ -219,6 +219,42 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          read: boolean
+          reference_id: string | null
+          target_role: Database["public"]["Enums"]["app_role"]
+          target_user_id: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          read?: boolean
+          reference_id?: string | null
+          target_role: Database["public"]["Enums"]["app_role"]
+          target_user_id?: string | null
+          title: string
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          read?: boolean
+          reference_id?: string | null
+          target_role?: Database["public"]["Enums"]["app_role"]
+          target_user_id?: string | null
+          title?: string
+          type?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           abono: number | null

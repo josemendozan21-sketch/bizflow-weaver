@@ -22,6 +22,7 @@ import { createLogoRequestFromOrder } from "@/lib/createLogoRequestFromOrder";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { createOrderNotifications } from "@/hooks/useNotifications";
 type Brand = "sweatspot" | "magical";
 type SaleType = "mayor" | "menor";
 
@@ -430,6 +431,19 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     } catch (err: any) {
       console.error("Error creating production order:", err);
     }
+
+    // Send notifications to all roles
+    await createOrderNotifications({
+      orderId: orderData.id,
+      brand: "magical",
+      product: referencia,
+      quantity,
+      clientName,
+      needsCuerpos,
+      shortage: needsCuerpos ? quantity - bodyResult.discounted : 0,
+      hasLogo: !!logoFile,
+      advisorId: user?.id || "",
+    });
 
     toast.success("Pedido al por mayor creado", {
       description: `${clientName} — ${quantity} uds de ${referencia}. Enviado a Producción y Contabilidad.`,
@@ -859,6 +873,19 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     } catch (err: any) {
       console.error("Error creating production order:", err);
     }
+
+    // Send notifications to all roles
+    await createOrderNotifications({
+      orderId: orderData.id,
+      brand: "sweatspot",
+      product: referencia,
+      quantity,
+      clientName,
+      needsCuerpos,
+      shortage: needsCuerpos ? quantity - bodyResult.discounted : 0,
+      hasLogo: !!logoFile,
+      advisorId: user?.id || "",
+    });
 
     toast.success("Pedido al por mayor creado", {
       description: `${clientName} — ${quantity} uds (${tipoLogo}). Enviado a Producción y Contabilidad.`,
