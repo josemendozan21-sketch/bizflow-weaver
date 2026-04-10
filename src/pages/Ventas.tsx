@@ -345,6 +345,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         production_status: initialStage,
         delivery_date: fechaRequerida || null,
       }).select("id").single();
+      orderData = data;
 
       // Create production order
       if (orderData) {
