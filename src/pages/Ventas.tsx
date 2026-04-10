@@ -181,7 +181,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [units, setUnits] = useState("");
 
   const materialConfigs = useInventoryStore((s) => s.materialConfigs);
-  const stockItems = useInventoryStore((s) => s.stockItems);
+  const zustandStockItems = useInventoryStore((s) => s.stockItems);
+  const { reserveBodyStock: reserveBodyStockDB, discountStock: discountStockDB } = useInventory();
 
   // Unique product names
   const productNames = useMemo(() => {
