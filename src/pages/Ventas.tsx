@@ -217,7 +217,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const available = gelItem?.available || 0;
     const difference = available - totalGrams;
     return { totalGrams, totalKg, available, difference, sufficient: difference >= 0, gramsPerUnit: matchedConfig.gramsPerUnit };
-  }, [matchedConfig, units, stockItems]);
+  }, [matchedConfig, units, zustandStockItems]);
 
   const handleProductChange = (value: string) => {
     setSelectedProduct(value);
