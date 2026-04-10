@@ -280,17 +280,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     // Calculate gel consumption for Magical Warmers
     const gelResult = useInventoryStore.getState().discountGelForMagical(selectedProduct, quantity);
 
-    // Wholesale: goes to production, NOT logistics
-    useProductionStore.getState().addStampingTask({
-      brand: "magical",
-      clientName,
-      quantity,
-      inkColor,
-      gelColor: gelColor || "",
-      glitter: escarcha,
-      doubleInk: dobleTinta,
-      observations: observaciones || undefined,
-    });
+    // Production order will be created after persisting to DB (see below)
 
     // Send to accounting as "Cliente empresa"
     useAccountingStore.getState().addOrder({
@@ -323,9 +313,13 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       });
     }
 
-    // Persist order to database
+    // Persist order to database and create production order
+    const needsCuerpos = !bodyResult.available;
+    const initialStage = needsCuerpos ? "produccion_cuerpos" : "estampacion";
+    const magicalStages = ["produccion_cuerpos", "estampacion", "dosificacion", "sellado", "recorte", "empaque", "listo"];
+
     try {
-      await supabase.from("orders").insert({
+      const { data: orderData } = await supabase.from("orders").insert({
         brand: "magical",
         sale_type: "mayor",
         client_name: clientName,
@@ -346,9 +340,31 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         personalization: personalizacion || null,
         advisor_id: user?.id || "",
         advisor_name: user?.email || "Asesor",
-        production_status: "pendiente",
+        production_status: initialStage,
         delivery_date: fechaRequerida || null,
-      });
+      }).select("id").single();
+
+      // Create production order
+      if (orderData) {
+        await supabase.from("production_orders").insert({
+          order_id: orderData.id,
+          brand: "magical",
+          client_name: clientName,
+          quantity,
+          current_stage: initialStage,
+          stage_status: "pendiente",
+          workflow_type: "full",
+          stages: magicalStages,
+          gel_color: gelColor,
+          ink_color: inkColor,
+          logo_file: logoFile?.name || null,
+          needs_cuerpos: needsCuerpos,
+          has_stock: bodyResult.available,
+          molde: referencia,
+          observations: observaciones || null,
+          advisor_id: user?.id || null,
+        });
+      }
     } catch (err: any) {
       console.error("Error saving order:", err);
     }
