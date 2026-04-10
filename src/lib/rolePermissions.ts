@@ -5,11 +5,12 @@ type AppRole = Database["public"]["Enums"]["app_role"];
 // Define which routes each role can access
 const ROLE_ROUTES: Record<AppRole, string[]> = {
   admin: ["/", "/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/admin-usuarios", "/costos", "/eventos"],
-  asesor_comercial: ["/", "/ventas", "/inventarios", "/diseno-logos", "/logistica", "/contabilidad", "/eventos"],
+  asesor_comercial: ["/", "/ventas", "/diseno-logos", "/logistica", "/contabilidad", "/eventos"],
   produccion: ["/", "/produccion", "/inventarios"],
-  contabilidad: ["/", "/contabilidad", "/logistica"],
+  contabilidad: ["/", "/contabilidad"],
   estampacion: ["/", "/produccion", "/inventarios"],
   usuario_visual: ["/", "/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/eventos"],
+  disenador: ["/", "/diseno-logos"],
 };
 
 // Sections where the role can edit (create, update, delete)
@@ -20,6 +21,7 @@ const ROLE_EDIT_SECTIONS: Record<AppRole, string[]> = {
   contabilidad: [],
   estampacion: ["/produccion"],
   usuario_visual: [],
+  disenador: ["/diseno-logos"],
 };
 
 export function canAccessRoute(role: AppRole | null, path: string): boolean {
@@ -45,6 +47,7 @@ export function getRoleLabel(role: AppRole): string {
     contabilidad: "Contabilidad",
     estampacion: "Estampación",
     usuario_visual: "Usuario Visual",
+    disenador: "Diseñador",
   };
   return labels[role];
 }

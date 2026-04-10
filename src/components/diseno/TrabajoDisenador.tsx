@@ -64,7 +64,7 @@ function DesignerCard({ request: req }: { request: LogoRequest }) {
   const { user, role } = useAuth();
   const { toast } = useToast();
 
-  const isDesigner = role === "produccion" || role === "admin";
+  const isDesigner = role === "disenador" || role === "admin";
   const isAdvisor = role === "asesor_comercial" || role === "admin";
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
