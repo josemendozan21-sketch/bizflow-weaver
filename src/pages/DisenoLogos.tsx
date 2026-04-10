@@ -5,9 +5,12 @@ import { TrabajoDisenador } from "@/components/diseno/TrabajoDisenador";
 import { AprobacionAsesor } from "@/components/diseno/AprobacionAsesor";
 import { DisenosFinalizados } from "@/components/diseno/DisenosFinalizados";
 import { Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const DisenoLogos = () => {
   const { data: requests = [], isLoading } = useLogoRequests();
+  const { role } = useAuth();
+  const isEstampacion = role === "estampacion";
 
   if (isLoading) {
     return (
@@ -21,6 +24,19 @@ const DisenoLogos = () => {
   const designCount = requests.filter((r) => ["pendiente_diseno", "en_revision", "ajustado", "ajustes_solicitados"].includes(r.status)).length;
   const approvalCount = requests.filter((r) => r.status === "aprobado").length;
   const doneCount = requests.filter((r) => r.status === "finalizado").length;
+
+  // Estampacion only sees the Aprobación tab (read-only)
+  if (isEstampacion) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Diseño de Logos</h1>
+          <p className="text-muted-foreground">Logos aprobados para estampación</p>
+        </div>
+        <AprobacionAsesor requests={requests} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

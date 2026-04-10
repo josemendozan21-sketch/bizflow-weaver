@@ -16,6 +16,7 @@ import {
   Info,
 } from "lucide-react";
 import { useProductionOrders, type ProductionOrder } from "@/hooks/useProductionOrders";
+import { useAuth } from "@/contexts/AuthContext";
 
 const STAGE_ICONS: Record<string, React.ElementType> = {
   estampacion: Paintbrush,
@@ -47,6 +48,7 @@ const STATUS_BADGE: Record<string, { label: string; variant: "secondary" | "defa
 
 export const SweatspotWorkflow = () => {
   const { orders, isLoading, updateStageStatus, advanceStage } = useProductionOrders("sweatspot");
+  const { role } = useAuth();
 
   const activeOrders = orders.filter((o) => o.current_stage !== "listo");
   const completedOrders = orders.filter((o) => o.current_stage === "listo");
@@ -94,6 +96,7 @@ export const SweatspotWorkflow = () => {
           <OrderCard
             key={order.id}
             order={order}
+            role={role}
             onStart={() => updateStageStatus.mutate({ orderId: order.id, status: "en_proceso" })}
             onFinish={() => advanceStage.mutate(order.id)}
           />
@@ -128,11 +131,13 @@ export const SweatspotWorkflow = () => {
 };
 
 /* Order Card */
-function OrderCard({ order, onStart, onFinish }: { order: ProductionOrder; onStart: () => void; onFinish: () => void }) {
+function OrderCard({ order, role, onStart, onFinish }: { order: ProductionOrder; role: string | null; onStart: () => void; onFinish: () => void }) {
   const stages = order.stages;
   const currentIdx = stages.indexOf(order.current_stage);
   const Icon = STAGE_ICONS[order.current_stage] || Paintbrush;
   const badge = STATUS_BADGE[order.stage_status] || STATUS_BADGE.pendiente;
+  const isEstampacionStage = order.current_stage === "estampacion";
+  const disableButtons = isEstampacionStage && role === "produccion";
 
   return (
     <Card>
@@ -205,12 +210,12 @@ function OrderCard({ order, onStart, onFinish }: { order: ProductionOrder; onSta
         {order.current_stage !== "listo" && (
           <div className="flex gap-2 pt-1">
             {order.stage_status === "pendiente" && (
-              <Button size="sm" variant="outline" onClick={onStart}>
+              <Button size="sm" variant="outline" onClick={onStart} disabled={disableButtons}>
                 <Play className="h-3 w-3 mr-1" /> Iniciar proceso
               </Button>
             )}
             {order.stage_status === "en_proceso" && (
-              <Button size="sm" onClick={onFinish}>
+              <Button size="sm" onClick={onFinish} disabled={disableButtons}>
                 <CheckCircle2 className="h-3 w-3 mr-1" /> Finalizar proceso
               </Button>
             )}

@@ -6,11 +6,26 @@ import { useAuth } from "@/contexts/AuthContext";
 import ProductionBrandSelector, { type ProductionBrand } from "@/components/production/ProductionBrandSelector";
 import { MagicalWarmersWorkflow } from "@/components/production/MagicalWarmersWorkflow";
 import { SweatspotWorkflow } from "@/components/production/SweatspotWorkflow";
+import { EstampacionProductionView } from "@/components/production/EstampacionProductionView";
 
 const Produccion = () => {
   const { role } = useAuth();
-  const isReadOnly = role === "asesor_comercial";
+  const isReadOnly = role === "asesor_comercial" || role === "usuario_visual";
+  const isEstampacion = role === "estampacion";
   const [selectedBrand, setSelectedBrand] = useState<ProductionBrand | null>(null);
+
+  // Estampacion role sees a dedicated view
+  if (isEstampacion) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Estampación</h1>
+          <p className="text-muted-foreground">Órdenes en etapa de estampación</p>
+        </div>
+        <EstampacionProductionView />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
