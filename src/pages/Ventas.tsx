@@ -369,10 +369,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
               <Field label="Valor total del pedido" name="mw_valorTotal" type="number" required />
             </div>
             <Field label="Abono del total del pedido" name="mw_abono" type="number" />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Fecha estimada de entrega" name="mw_fechaEstimada" type="date" />
-              <Field label="Fecha requerida de entrega" name="mw_fechaRequerida" type="date" />
-            </div>
+            <Field label="Fecha requerida de entrega" name="mw_fechaRequerida" type="date" />
           </fieldset>
 
           {/* Gel consumption panel */}
@@ -616,10 +613,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
               <Field label="Valor total del pedido" name="ss_valorTotal" type="number" required />
             </div>
             <Field label="Abono del total del pedido" name="ss_abono" type="number" />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Fecha estimada de entrega" name="ss_fechaEstimada" type="date" />
-              <Field label="Fecha requerida de entrega" name="ss_fechaRequerida" type="date" />
-            </div>
+            <Field label="Fecha requerida de entrega" name="ss_fechaRequerida" type="date" />
           </fieldset>
 
           <fieldset className="space-y-4">
