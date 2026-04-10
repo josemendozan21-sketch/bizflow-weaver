@@ -10,9 +10,9 @@ interface ProductionBrandSelectorProps {
   onSelectBrand: (brand: ProductionBrand) => void;
 }
 
-const BRANDS: { value: ProductionBrand; label: string; description: string; logo: string }[] = [
-  { value: "magical_warmers", label: "Magical Warmers", description: "Compresas terapéuticas de gel", logo: magicalLogo },
-  { value: "sweatspot", label: "Sweatspot", description: "Termos y accesorios deportivos", logo: sweatspotLogo },
+const BRANDS: { value: ProductionBrand; label: string; logo: string }[] = [
+  { value: "magical_warmers", label: "Magical Warmers", logo: magicalLogo },
+  { value: "sweatspot", label: "Sweatspot", logo: sweatspotLogo },
 ];
 
 const ProductionBrandSelector = ({ selectedBrand, onSelectBrand }: ProductionBrandSelectorProps) => {
@@ -32,8 +32,6 @@ const ProductionBrandSelector = ({ selectedBrand, onSelectBrand }: ProductionBra
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <img src={brand.logo} alt={brand.label} className="h-10 w-auto object-contain" />
-                </div>
-                <ChevronRight className={`h-5 w-5 text-muted-foreground transition-transform ${isSelected ? "rotate-90" : ""}`} />
                 </div>
                 <ChevronRight className={`h-5 w-5 text-muted-foreground transition-transform ${isSelected ? "rotate-90" : ""}`} />
               </div>
