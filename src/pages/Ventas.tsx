@@ -338,9 +338,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       });
     }
 
-    // Persist order to database and create production order
-    const needsCuerpos = !bodyResult.available;
-    const initialStage = needsCuerpos ? "produccion_cuerpos" : "estampacion";
+    // Persist order to database first, then reserve stock
     const magicalStages = ["produccion_cuerpos", "estampacion", "dosificacion", "sellado", "recorte", "empaque", "listo"];
 
     let orderData: { id: string } | null = null;
@@ -366,34 +364,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         personalization: personalizacion || null,
         advisor_id: user?.id || "",
         advisor_name: user?.email || "Asesor",
-        production_status: initialStage,
+        production_status: "estampacion",
         delivery_date: fechaRequerida || null,
       }).select("id").single();
       orderData = data;
-
-      // Create production order
-      if (orderData) {
-        await supabase.from("production_orders").insert({
-          order_id: orderData.id,
-          brand: "magical",
-          client_name: clientName,
-          quantity,
-          current_stage: initialStage,
-          stage_status: "pendiente",
-          workflow_type: "full",
-          stages: magicalStages,
-          gel_color: gelColor,
-          ink_color: inkColor,
-          logo_file: logoFile?.name || null,
-          needs_cuerpos: needsCuerpos,
-          has_stock: bodyResult.available,
-          molde: referencia,
-          observations: observaciones || null,
-          advisor_id: user?.id || null,
-        });
-      }
-      queryClient.invalidateQueries({ queryKey: ["production-orders"] });
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
     } catch (err: any) {
       console.error("Error saving order:", err);
       toast.error("Error al crear el pedido", {
@@ -407,6 +381,41 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         description: "No se recibió confirmación de la base de datos. Intenta de nuevo.",
       });
       return;
+    }
+
+    // Reserve body stock AFTER successful order creation
+    const bodyResult = await reserveBodyStockDB("magical", referencia, quantity, {
+      clientName,
+      requestedBy: user?.id || undefined,
+    });
+
+    const needsCuerpos = !bodyResult.available;
+    const initialStage = needsCuerpos ? "produccion_cuerpos" : "estampacion";
+
+    // Create production order
+    try {
+      await supabase.from("production_orders").insert({
+        order_id: orderData.id,
+        brand: "magical",
+        client_name: clientName,
+        quantity,
+        current_stage: initialStage,
+        stage_status: "pendiente",
+        workflow_type: "full",
+        stages: magicalStages,
+        gel_color: gelColor,
+        ink_color: inkColor,
+        logo_file: logoFile?.name || null,
+        needs_cuerpos: needsCuerpos,
+        has_stock: bodyResult.available,
+        molde: referencia,
+        observations: observaciones || null,
+        advisor_id: user?.id || null,
+      });
+      queryClient.invalidateQueries({ queryKey: ["production-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    } catch (err: any) {
+      console.error("Error creating production order:", err);
     }
 
     toast.success("Pedido al por mayor creado", {
