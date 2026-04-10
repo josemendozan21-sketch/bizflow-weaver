@@ -45,7 +45,7 @@ export function AprobacionAsesor({ requests }: Props) {
 function ApprovedCard({ request: req, role }: { request: LogoRequest; role: string | null }) {
   const [generating, setGenerating] = useState(false);
   const updateRequest = useUpdateLogoRequest();
-  const canGeneratePDF = role === "admin" || role === "produccion";
+  const canGeneratePDF = role === "admin" || role === "produccion" || role === "disenador";
 
   const handleGeneratePDF = () => {
     setGenerating(true);
