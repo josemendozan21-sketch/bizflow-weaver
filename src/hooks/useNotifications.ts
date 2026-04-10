@@ -2,6 +2,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import type { Database } from "@/integrations/supabase/types";
+
+type AppRole = Database["public"]["Enums"]["app_role"];
 
 export interface Notification {
   id: string;
@@ -97,7 +100,7 @@ interface OrderNotificationData {
 
 export async function createOrderNotifications(data: OrderNotificationData) {
   const notifications: Array<{
-    target_role: string;
+    target_role: AppRole;
     target_user_id?: string;
     title: string;
     message: string;
