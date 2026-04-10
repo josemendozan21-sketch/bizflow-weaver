@@ -715,10 +715,6 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       }
     }
 
-    // Wholesale: check cuerpos/referencias stock (persisted in Supabase)
-    const bodyResult = await reserveBodyStockDB("sweatspot", referencia, quantity);
-    const hasStock = bodyResult.available;
-
     // Determine logo type for production workflow
     const logoType = tipoLogo === "Impresión básica" ? "impresion_basica" as const : "impresion_full" as const;
 
@@ -755,14 +751,13 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       });
     }
 
-    // Persist order to database and create production order
+    // Persist order to database FIRST
     const ssShortStages = ["estampacion", "colocacion_boquilla", "listo"];
     const ssFullStages = ["estampacion", "produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"];
-    const workflowType = (logoType === "impresion_basica" && hasStock) ? "short" : "full";
-    const ssStages = workflowType === "short" ? ssShortStages : ssFullStages;
 
+    let orderData: { id: string } | null = null;
     try {
-      const { data: orderData } = await supabase.from("orders").insert({
+      const { data } = await supabase.from("orders").insert({
         brand: "sweatspot",
         sale_type: "mayor",
         client_name: clientName,
@@ -786,38 +781,57 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         production_status: "estampacion",
         delivery_date: fechaRequerida || null,
       }).select("id").single();
-
-      // Create production order
-      if (orderData) {
-        await supabase.from("production_orders").insert({
-          order_id: orderData.id,
-          brand: "sweatspot",
-          client_name: clientName,
-          quantity,
-          current_stage: "estampacion",
-          stage_status: "pendiente",
-          workflow_type: workflowType,
-          stages: ssStages,
-          ink_color: inkColor,
-          thermo_size: thermoSize,
-          silicone_color: siliconeColor,
-          logo_type: logoType,
-          logo_file: logoFile?.name || null,
-          has_stock: hasStock,
-          needs_cuerpos: !hasStock,
-          observations: observaciones || null,
-          advisor_id: user?.id || null,
-        });
-      }
-
-      queryClient.invalidateQueries({ queryKey: ["production-orders"] });
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      orderData = data;
     } catch (err: any) {
       console.error("Error saving order:", err);
       toast.error("Error al crear el pedido", {
         description: "No se pudo guardar el pedido ni enviar a producción. Intenta de nuevo o contacta soporte.",
       });
       return;
+    }
+
+    if (!orderData) {
+      toast.error("Error al crear el pedido", {
+        description: "No se recibió confirmación de la base de datos. Intenta de nuevo.",
+      });
+      return;
+    }
+
+    // Reserve body stock AFTER successful order creation
+    const bodyResult = await reserveBodyStockDB("sweatspot", referencia, quantity, {
+      clientName,
+      requestedBy: user?.id || undefined,
+    });
+    const hasStock = bodyResult.available;
+
+    const workflowType = (logoType === "impresion_basica" && hasStock) ? "short" : "full";
+    const ssStages = workflowType === "short" ? ssShortStages : ssFullStages;
+
+    // Create production order
+    try {
+      await supabase.from("production_orders").insert({
+        order_id: orderData.id,
+        brand: "sweatspot",
+        client_name: clientName,
+        quantity,
+        current_stage: "estampacion",
+        stage_status: "pendiente",
+        workflow_type: workflowType,
+        stages: ssStages,
+        ink_color: inkColor,
+        thermo_size: thermoSize,
+        silicone_color: siliconeColor,
+        logo_type: logoType,
+        logo_file: logoFile?.name || null,
+        has_stock: hasStock,
+        needs_cuerpos: !hasStock,
+        observations: observaciones || null,
+        advisor_id: user?.id || null,
+      });
+      queryClient.invalidateQueries({ queryKey: ["production-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    } catch (err: any) {
+      console.error("Error creating production order:", err);
     }
 
     toast.success("Pedido al por mayor creado", {
