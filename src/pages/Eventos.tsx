@@ -434,17 +434,23 @@ const Eventos = () => {
                                 <div>
                                   <span className="text-muted-foreground text-xs">Estado</span>
                                   <div className="mt-0.5">
-                                    <Select value={entry.status} onValueChange={(v) => updateDeliveryStatus(entry.id, v as DeliveryEntry["status"])}>
-                                      <SelectTrigger className="h-7 text-xs">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="pendiente">Pendiente</SelectItem>
-                                        <SelectItem value="en_produccion">En producción</SelectItem>
-                                        <SelectItem value="listo">Listo</SelectItem>
-                                        <SelectItem value="entregado">Entregado</SelectItem>
-                                      </SelectContent>
-                                    </Select>
+                                    {isReadOnly ? (
+                                      <Badge className={cn("text-xs", DELIVERY_STATUS_COLORS[entry.status])}>
+                                        {DELIVERY_STATUS_LABELS[entry.status]}
+                                      </Badge>
+                                    ) : (
+                                      <Select value={entry.status} onValueChange={(v) => updateDeliveryStatus(entry.id, v as DeliveryEntry["status"])}>
+                                        <SelectTrigger className="h-7 text-xs">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="pendiente">Pendiente</SelectItem>
+                                          <SelectItem value="en_produccion">En producción</SelectItem>
+                                          <SelectItem value="listo">Listo</SelectItem>
+                                          <SelectItem value="entregado">Entregado</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    )}
                                   </div>
                                 </div>
                               </div>
