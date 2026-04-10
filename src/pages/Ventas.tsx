@@ -581,6 +581,28 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       toast.info("Inventario actualizado", { description: bodyResult.message });
     }
 
+    // Auto-create design request if logo was uploaded
+    const logoFile = fd.get("ss_logo") as File;
+    const personalizacion = (document.getElementById("ss_personalizacion") as HTMLTextAreaElement)?.value || "";
+    if (logoFile && logoFile.size > 0 && user) {
+      createLogoRequestFromOrder({
+        brand: "Sweatspot",
+        clientName,
+        product: referencia,
+        advisorId: user.id,
+        advisorName: user.email || "Asesor",
+        logoFile,
+        clientComments: (fd.get("ss_observaciones") as string) || undefined,
+        additionalInstructions: personalizacion || undefined,
+      }).then((result) => {
+        if (result.success) {
+          toast.success("Diseño de logo", { description: result.message });
+        } else {
+          toast.error("Diseño de logo", { description: result.message });
+        }
+      });
+    }
+
     onReset();
   };
 
