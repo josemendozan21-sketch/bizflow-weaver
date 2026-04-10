@@ -583,7 +583,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
     // Auto-create design request if logo was uploaded
     const logoFile = fd.get("ss_logo") as File;
-    const personalizacion = (document.getElementById("ss_personalizacion") as HTMLTextAreaElement)?.value || "";
+    const personalizacion = (fd.get("ss_personalizacion") as string) || "";
     if (logoFile && logoFile.size > 0 && user) {
       createLogoRequestFromOrder({
         brand: "Sweatspot",
