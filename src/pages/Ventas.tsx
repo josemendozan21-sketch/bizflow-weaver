@@ -175,6 +175,7 @@ function OrderForm({ brand, saleType, onReset }: { brand: Brand; saleType: SaleT
 
 function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [dobleTinta, setDobleTinta] = useState(false);
   const [escarcha, setEscarcha] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState("");
@@ -318,8 +319,9 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const initialStage = needsCuerpos ? "produccion_cuerpos" : "estampacion";
     const magicalStages = ["produccion_cuerpos", "estampacion", "dosificacion", "sellado", "recorte", "empaque", "listo"];
 
+    let orderData: { id: string } | null = null;
     try {
-      const { data: orderData } = await supabase.from("orders").insert({
+      const { data } = await supabase.from("orders").insert({
         brand: "magical",
         sale_type: "mayor",
         client_name: clientName,
@@ -343,6 +345,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         production_status: initialStage,
         delivery_date: fechaRequerida || null,
       }).select("id").single();
+      orderData = data;
 
       // Create production order
       if (orderData) {
@@ -365,8 +368,21 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           advisor_id: user?.id || null,
         });
       }
+      queryClient.invalidateQueries({ queryKey: ["production-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
     } catch (err: any) {
       console.error("Error saving order:", err);
+      toast.error("Error al crear el pedido", {
+        description: "No se pudo guardar el pedido ni enviar a producción. Intenta de nuevo o contacta soporte.",
+      });
+      return;
+    }
+
+    if (!orderData) {
+      toast.error("Error al crear el pedido", {
+        description: "No se recibió confirmación de la base de datos. Intenta de nuevo.",
+      });
+      return;
     }
 
     toast.success("Pedido al por mayor creado", {
@@ -549,6 +565,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
 function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const tamanos = ["150 ml", "250 ml", "250 ml juguetón", "500 ml"] as const;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -684,12 +701,20 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
           logo_type: logoType,
           logo_file: logoFile?.name || null,
           has_stock: hasStock,
+          needs_cuerpos: !hasStock,
           observations: observaciones || null,
           advisor_id: user?.id || null,
         });
       }
+
+      queryClient.invalidateQueries({ queryKey: ["production-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
     } catch (err: any) {
       console.error("Error saving order:", err);
+      toast.error("Error al crear el pedido", {
+        description: "No se pudo guardar el pedido ni enviar a producción. Intenta de nuevo o contacta soporte.",
+      });
+      return;
     }
 
     toast.success("Pedido al por mayor creado", {
