@@ -113,6 +113,10 @@ const Ventas = () => {
           )}
         </TabsContent>
 
+        <TabsContent value="mis-pedidos" className="space-y-6 mt-4">
+          <MisPedidos />
+        </TabsContent>
+
         <TabsContent value="cotizaciones" className="mt-4">
           <QuotationGenerator />
         </TabsContent>
