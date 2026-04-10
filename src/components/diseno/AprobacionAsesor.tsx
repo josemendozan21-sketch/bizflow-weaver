@@ -3,12 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LogoRequest, useUpdateLogoRequest } from "@/hooks/useLogoRequests";
 import { StatusBadge } from "./StatusBadge";
-import { CheckCircle2, FileText, User, Loader2 } from "lucide-react";
+import { CheckCircle2, FileText, User, Loader2, Download } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   requests: LogoRequest[];
@@ -47,9 +48,29 @@ function ApprovedCard({ request: req, role }: { request: LogoRequest; role: stri
   const updateRequest = useUpdateLogoRequest();
   const canGeneratePDF = role === "admin" || role === "produccion" || role === "disenador" || role === "estampacion";
 
-  const handleGeneratePDF = () => {
+  const handleDownloadLogo = () => {
+    const logoUrl = req.adjusted_logo_url || req.original_logo_url;
+    const link = document.createElement("a");
+    link.href = logoUrl;
+    link.download = `logo_${req.client_name.replace(/\s+/g, "_")}.png`;
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleGeneratePDF = async () => {
     setGenerating(true);
     try {
+      // Fetch production order data
+      const { data: prodOrders } = await supabase
+        .from("production_orders")
+        .select("*")
+        .ilike("client_name", req.client_name)
+        .limit(1);
+
+      const prod = prodOrders?.[0];
+
       const printWindow = window.open("", "_blank");
       if (!printWindow) {
         toast.error("No se pudo abrir la ventana de impresión. Permite las ventanas emergentes.");
@@ -78,6 +99,7 @@ function ApprovedCard({ request: req, role }: { request: LogoRequest; role: stri
             table { width: 100%; border-collapse: collapse; margin: 20px 0; }
             th, td { padding: 10px 14px; text-align: left; border: 1px solid #d1d5db; }
             th { background: #f3f4f6; font-weight: 600; width: 200px; }
+            .section-title { font-size: 16px; font-weight: 600; color: #1e40af; margin: 25px 0 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
             .footer { text-align: center; margin-top: 40px; padding-top: 15px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #9ca3af; }
             @media print { body { padding: 20px; } }
           </style>
@@ -90,13 +112,19 @@ function ApprovedCard({ request: req, role }: { request: LogoRequest; role: stri
           <div class="logo-container">
             <img src="${req.adjusted_logo_url || req.original_logo_url}" alt="Logo para estampar" />
           </div>
+          <p class="section-title">Información del pedido</p>
           <table>
             <tr><th>Cliente</th><td>${req.client_name}</td></tr>
             <tr><th>Marca</th><td>${req.brand}</td></tr>
             <tr><th>Producto</th><td>${req.product}</td></tr>
+            <tr><th>Molde / Referencia</th><td>${prod?.molde || prod?.thermo_size || "—"}</td></tr>
+            <tr><th>Color de tinta</th><td>${prod?.ink_color || "—"}</td></tr>
+            <tr><th>Color de gel / silicona</th><td>${prod?.gel_color || prod?.silicone_color || "—"}</td></tr>
+            <tr><th>Unidades a estampar</th><td>${prod?.quantity || "—"}</td></tr>
             <tr><th>Fecha de aprobación</th><td>${approvedDate}</td></tr>
             <tr><th>Asesor responsable</th><td>${req.advisor_name}</td></tr>
             ${req.design_notes ? `<tr><th>Notas del diseñador</th><td>${req.design_notes}</td></tr>` : ""}
+            ${prod?.observations ? `<tr><th>Observaciones</th><td>${prod.observations}</td></tr>` : ""}
           </table>
           <div class="footer">Generado el ${today}</div>
           <script>
@@ -145,20 +173,26 @@ function ApprovedCard({ request: req, role }: { request: LogoRequest; role: stri
           )}
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadLogo}
+          >
+            <Download className="mr-1 h-3 w-3" /> Descargar logo
+          </Button>
           {canGeneratePDF && (
             <Button
               variant="outline"
               size="sm"
-              className="flex-1"
               onClick={handleGeneratePDF}
               disabled={generating}
             >
-              {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <><FileText className="mr-1 h-3 w-3" /> 📄 Generar PDF para estampado</>}
+              {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <><FileText className="mr-1 h-3 w-3" /> Orden de estampado</>}
             </Button>
           )}
           {canGeneratePDF && (
-            <Button size="sm" className="flex-1" onClick={handleFinalize}>
+            <Button size="sm" onClick={handleFinalize}>
               <CheckCircle2 className="mr-1 h-3 w-3" /> Finalizar
             </Button>
           )}
