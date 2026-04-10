@@ -213,7 +213,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     if (!matchedConfig || qty <= 0) return null;
     const totalGrams = qty * matchedConfig.gramsPerUnit;
     const totalKg = totalGrams / 1000;
-    const gelItem = stockItems.find((s) => s.category === "materia_prima" && s.name.toLowerCase() === "gel");
+    const gelItem = zustandStockItems.find((s) => s.category === "materia_prima" && s.name.toLowerCase() === "gel");
     const available = gelItem?.available || 0;
     const difference = available - totalGrams;
     return { totalGrams, totalKg, available, difference, sufficient: difference >= 0, gramsPerUnit: matchedConfig.gramsPerUnit };
