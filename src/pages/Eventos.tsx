@@ -43,7 +43,8 @@ interface EventWithProducts extends EventRow {
 }
 
 const Eventos = () => {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const isReadOnly = role === "asesor_comercial";
   const { materialConfigs } = useInventoryStore();
   const deliveryEntries = useDeliveryStore((s) => s.entries);
   const updateDeliveryStatus = useDeliveryStore((s) => s.updateStatus);
@@ -207,12 +208,13 @@ const Eventos = () => {
           <h1 className="text-2xl font-bold text-foreground">Eventos</h1>
           <p className="text-muted-foreground">Calendario y planificación de eventos</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={resetForm}>
-              <Plus className="mr-2 h-4 w-4" /> Crear evento
-            </Button>
-          </DialogTrigger>
+        {!isReadOnly && (
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={resetForm}>
+                <Plus className="mr-2 h-4 w-4" /> Crear evento
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Nuevo evento</DialogTitle>
