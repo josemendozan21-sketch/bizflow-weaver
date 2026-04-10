@@ -470,7 +470,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             <legend className="text-sm font-semibold text-foreground mb-2">Personalización</legend>
             <div className="space-y-1.5">
               <Label htmlFor="mw_personalizacion">Modificaciones o adiciones al logo</Label>
-              <Textarea id="mw_personalizacion" placeholder="Describa qué desea adicionar o modificar en el logo..." />
+              <Textarea id="mw_personalizacion" name="mw_personalizacion" placeholder="Describa qué desea adicionar o modificar en el logo..." />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="mw_observaciones">Observaciones generales del pedido</Label>
@@ -678,7 +678,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
             <legend className="text-sm font-semibold text-foreground mb-2">Personalización</legend>
             <div className="space-y-1.5">
               <Label htmlFor="ss_personalizacion">Modificaciones o adiciones al logo</Label>
-              <Textarea id="ss_personalizacion" placeholder="Describa qué desea adicionar o modificar en el logo..." />
+              <Textarea id="ss_personalizacion" name="ss_personalizacion" placeholder="Describa qué desea adicionar o modificar en el logo..." />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="ss_observaciones">Observaciones generales del pedido</Label>
