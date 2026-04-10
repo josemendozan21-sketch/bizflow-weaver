@@ -19,8 +19,8 @@ const DisenoLogos = () => {
 
   const pendingCount = requests.filter((r) => r.status === "pendiente_diseno").length;
   const designCount = requests.filter((r) => ["pendiente_diseno", "en_revision", "ajustado", "ajustes_solicitados"].includes(r.status)).length;
-  const approvalCount = requests.filter((r) => r.status === "listo_aprobacion").length;
-  const doneCount = requests.filter((r) => r.status === "aprobado" || r.status === "finalizado").length;
+  const approvalCount = requests.filter((r) => r.status === "aprobado").length;
+  const doneCount = requests.filter((r) => r.status === "finalizado").length;
 
   return (
     <div className="space-y-6">
