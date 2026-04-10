@@ -2,8 +2,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Zap, FileImage, Droplets, Paintbrush, Sparkles, Layers, Ruler, CircleDot, ArrowRight, PackageCheck } from "lucide-react";
+import { FileImage, Droplets, Paintbrush, Sparkles, Layers, Ruler, CircleDot, ArrowRight, PackageCheck } from "lucide-react";
 import magicalLogo from "@/assets/magical-warmers-logo.png";
+import sweatspotLogo from "@/assets/sweatspot-logo.png";
 import type { StampingTask, StampingStatus } from "@/types/production";
 import { useProductionStore } from "@/stores/productionStore";
 import { toast } from "sonner";
@@ -38,7 +39,7 @@ export function StampingTaskCard({ task }: { task: StampingTask }) {
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
-            {isMagical ? <img src={magicalLogo} alt="Magical Warmers" className="h-5 w-auto object-contain shrink-0" /> : <Zap className="h-5 w-5 text-primary shrink-0" />}
+            {isMagical ? <img src={magicalLogo} alt="Magical Warmers" className="h-5 w-auto object-contain shrink-0" /> : <img src={sweatspotLogo} alt="Sweatspot" className="h-5 w-auto object-contain shrink-0" />}
             <CardTitle className="text-base">{isMagical ? "Magical Warmers" : "Sweatspot"}</CardTitle>
           </div>
           <Badge variant={status.variant}>{status.label}</Badge>
