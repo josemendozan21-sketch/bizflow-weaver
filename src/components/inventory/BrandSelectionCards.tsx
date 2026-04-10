@@ -131,13 +131,16 @@ const BrandSelectionCards = ({ selectedBrand, onSelectBrand, onNotificationClick
   }, [stockItems, getStockStatus, productionRequirements, materialConfigs, isAsesor]);
 
   const getBrandStats = (brand: InventoryBrand) => {
-    const items = stockItems.filter((i) => i.brand === brand);
+    const allItems = stockItems.filter((i) => i.brand === brand);
+    const items = isAsesor
+      ? allItems.filter((i) => ASESOR_VISIBLE_CATEGORIES.includes(i.category))
+      : allItems;
     const critical = items.filter((i) => getStockStatus(i) === "critico").length;
     const low = items.filter((i) => getStockStatus(i) === "bajo").length;
     const totalItems = items.length;
     const brandKey = brand === "magical_warmers" ? "magical" : "sweatspot";
-    const pending = productionRequirements.filter((r) => r.brand === brandKey && r.status === "pendiente").length;
-    const inProgress = productionRequirements.filter((r) => r.brand === brandKey && r.status === "en_proceso").length;
+    const pending = isAsesor ? 0 : productionRequirements.filter((r) => r.brand === brandKey && r.status === "pendiente").length;
+    const inProgress = isAsesor ? 0 : productionRequirements.filter((r) => r.brand === brandKey && r.status === "en_proceso").length;
     return { critical, low, totalItems, pending, inProgress };
   };
 
