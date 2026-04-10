@@ -48,3 +48,15 @@ export interface MagicalProductionOrder {
   completedAt?: string;
   sourceOrderId?: string;
 }
+
+export type PlasticoTipo = "frio" | "calor";
+
+export interface BodyProductionTask {
+  id: string;
+  tipoPlastico: PlasticoTipo;
+  referencia: string;
+  unidades: number;
+  status: StageStatus;
+  createdAt: string;
+  completedAt?: string;
+}
