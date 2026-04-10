@@ -13,7 +13,6 @@ import {
   Target,
   Truck,
   Info,
-  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useSweatspotProductionStore } from "@/stores/sweatspotProductionStore";
