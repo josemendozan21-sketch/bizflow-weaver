@@ -298,8 +298,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       }
     }
 
-    // Wholesale: check cuerpos/referencias stock (persisted in Supabase)
-    const bodyResult = await reserveBodyStockDB("magical", referencia, quantity);
+    // Stock reservation moved to AFTER successful production_orders insert (see below)
 
     // Calculate gel consumption for Magical Warmers (persisted in Supabase)
     const gelResult = await discountStockDB("gel", quantity * (matchedConfig?.gramsPerUnit || 60));

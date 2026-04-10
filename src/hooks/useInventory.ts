@@ -145,7 +145,8 @@ export function useInventory() {
     async (
       brand: string,
       referencia: string,
-      qty: number
+      qty: number,
+      options?: { clientName?: string; requestedBy?: string }
     ): Promise<{ available: boolean; discounted: number; message: string }> => {
       console.log("reserveBodyStock called:", { brand, referencia, qty });
       console.log("bodyStock available:", bodyStock);
@@ -161,6 +162,18 @@ export function useInventory() {
       console.log("matched item:", item);
 
       if (!item || item.available <= 0) {
+        // Auto-create supply order when no stock found
+        if (options?.requestedBy) {
+          await supabase.from("production_supply_orders").insert({
+            brand,
+            item_name: referencia,
+            item_type: "cuerpos",
+            quantity_requested: qty,
+            unit: "Unidades",
+            notes: `Auto-generado por pedido de ${options.clientName || "cliente"}`,
+            requested_by: options.requestedBy,
+          } as any);
+        }
         return {
           available: false,
           discounted: 0,
@@ -184,6 +197,19 @@ export function useInventory() {
           discounted: 0,
           message: `Error al reservar cuerpos: ${error.message}`,
         };
+      }
+
+      // If partial stock, also create supply order for remaining
+      if (remaining > 0 && options?.requestedBy) {
+        await supabase.from("production_supply_orders").insert({
+          brand,
+          item_name: referencia,
+          item_type: "cuerpos",
+          quantity_requested: remaining,
+          unit: "Unidades",
+          notes: `Auto-generado (parcial) por pedido de ${options.clientName || "cliente"}`,
+          requested_by: options.requestedBy,
+        } as any);
       }
 
       if (remaining > 0) {
