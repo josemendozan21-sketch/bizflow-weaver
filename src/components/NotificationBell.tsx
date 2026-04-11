@@ -15,6 +15,16 @@ const typeIcons: Record<string, string> = {
   produccion: "🏭",
 };
 
+const typeColors: Record<string, { bg: string; border: string; dot: string }> = {
+  bajo_inventario: { bg: "bg-destructive/10", border: "border-l-4 border-l-destructive", dot: "bg-destructive" },
+  nuevo_pedido: { bg: "bg-yellow-500/10", border: "border-l-4 border-l-yellow-500", dot: "bg-yellow-500" },
+  confirmacion: { bg: "bg-green-500/10", border: "border-l-4 border-l-green-500", dot: "bg-green-500" },
+  diseno_logo: { bg: "bg-blue-500/10", border: "border-l-4 border-l-blue-500", dot: "bg-blue-500" },
+  produccion: { bg: "bg-orange-500/10", border: "border-l-4 border-l-orange-500", dot: "bg-orange-500" },
+};
+
+const defaultColor = { bg: "", border: "border-l-4 border-l-muted", dot: "bg-muted-foreground" };
+
 export function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
 
@@ -52,35 +62,38 @@ export function NotificationBell() {
             </div>
           ) : (
             <div className="divide-y">
-              {notifications.map((n) => (
-                <button
-                  key={n.id}
-                  className={`w-full text-left px-4 py-3 hover:bg-accent/50 transition-colors ${
-                    !n.read ? "bg-accent/20" : ""
-                  }`}
-                  onClick={() => {
-                    if (!n.read) markAsRead.mutate(n.id);
-                  }}
-                >
-                  <div className="flex gap-2">
-                    <span className="text-base mt-0.5">{typeIcons[n.type] || "🔔"}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm ${!n.read ? "font-semibold text-foreground" : "text-foreground/80"}`}>
-                        {n.title}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                        {n.message}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground/60 mt-1">
-                        {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: es })}
-                      </p>
+              {notifications.map((n) => {
+                const colors = typeColors[n.type] || defaultColor;
+                return (
+                  <button
+                    key={n.id}
+                    className={`w-full text-left px-4 py-3 hover:bg-accent/50 transition-colors ${colors.border} ${
+                      !n.read ? colors.bg : ""
+                    }`}
+                    onClick={() => {
+                      if (!n.read) markAsRead.mutate(n.id);
+                    }}
+                  >
+                    <div className="flex gap-2">
+                      <span className="text-base mt-0.5">{typeIcons[n.type] || "🔔"}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm ${!n.read ? "font-semibold text-foreground" : "text-foreground/80"}`}>
+                          {n.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                          {n.message}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground/60 mt-1">
+                          {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: es })}
+                        </p>
+                      </div>
+                      {!n.read && (
+                        <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${colors.dot}`} />
+                      )}
                     </div>
-                    {!n.read && (
-                      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
-                    )}
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
           )}
         </ScrollArea>
