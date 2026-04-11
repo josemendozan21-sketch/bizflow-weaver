@@ -41,6 +41,7 @@ export interface Order {
   invoice_notes: string | null;
   invoice_date: string | null;
   invoice_status: string;
+  invoice_file_url: string | null;
 }
 
 export const PRODUCTION_STATUS_LABELS: Record<string, string> = {
