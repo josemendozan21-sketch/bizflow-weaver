@@ -274,6 +274,11 @@ export type Database = {
           gel_color: string | null
           id: string
           ink_color: string | null
+          invoice_amount: number | null
+          invoice_date: string | null
+          invoice_notes: string | null
+          invoice_number: string | null
+          invoice_status: string
           logo_url: string | null
           numero_guia: string | null
           observations: string | null
@@ -309,6 +314,11 @@ export type Database = {
           gel_color?: string | null
           id?: string
           ink_color?: string | null
+          invoice_amount?: number | null
+          invoice_date?: string | null
+          invoice_notes?: string | null
+          invoice_number?: string | null
+          invoice_status?: string
           logo_url?: string | null
           numero_guia?: string | null
           observations?: string | null
@@ -344,6 +354,11 @@ export type Database = {
           gel_color?: string | null
           id?: string
           ink_color?: string | null
+          invoice_amount?: number | null
+          invoice_date?: string | null
+          invoice_notes?: string | null
+          invoice_number?: string | null
+          invoice_status?: string
           logo_url?: string | null
           numero_guia?: string | null
           observations?: string | null

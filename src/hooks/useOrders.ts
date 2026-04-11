@@ -36,6 +36,11 @@ export interface Order {
   transportadora: string | null;
   numero_guia: string | null;
   dispatch_notes: string | null;
+  invoice_number: string | null;
+  invoice_amount: number | null;
+  invoice_notes: string | null;
+  invoice_date: string | null;
+  invoice_status: string;
 }
 
 export const PRODUCTION_STATUS_LABELS: Record<string, string> = {
