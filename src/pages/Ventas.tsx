@@ -569,51 +569,6 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             <Field label="Fecha requerida de entrega" name="mw_fechaRequerida" type="date" />
           </fieldset>
 
-          {/* Gel consumption panel */}
-          {gelCalc && (
-            <fieldset className="space-y-3">
-              <legend className="text-sm font-semibold text-foreground mb-2">Consumo de materia prima (Gel)</legend>
-              <div className="rounded-lg border border-border p-4 space-y-3">
-                <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                  <span className="text-muted-foreground">Producto:</span>
-                  <span className="font-medium text-foreground">{selectedProduct} ({selectedType})</span>
-                  <span className="text-muted-foreground">Gramos por unidad:</span>
-                  <span className="font-medium text-foreground">{gelCalc.gramsPerUnit.toLocaleString()} g</span>
-                  <span className="text-muted-foreground">Unidades solicitadas:</span>
-                  <span className="font-medium text-foreground">{parseInt(units, 10).toLocaleString()}</span>
-                  <span className="text-muted-foreground">Consumo total requerido:</span>
-                  <span className="font-semibold text-foreground">{gelCalc.totalGrams.toLocaleString()} g ({gelCalc.totalKg.toFixed(2)} kg)</span>
-                  <span className="text-muted-foreground">Inventario disponible (Gel):</span>
-                  <span className="font-medium text-foreground">{gelCalc.available.toLocaleString()} g</span>
-                  <span className="text-muted-foreground">Diferencia:</span>
-                  <span className={`font-semibold ${gelCalc.sufficient ? "text-green-600" : "text-destructive"}`}>
-                    {gelCalc.difference >= 0 ? "+" : ""}{gelCalc.difference.toLocaleString()} g
-                  </span>
-                </div>
-
-                {!gelCalc.sufficient && (
-                  <Alert variant="destructive" className="mt-2">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>Materia prima insuficiente</AlertTitle>
-                    <AlertDescription>
-                      Faltan {Math.abs(gelCalc.difference).toLocaleString()} g de gel para completar este pedido.
-                      El pedido se procesará pero el inventario quedará en negativo.
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {gelCalc.sufficient && (
-                  <Alert className="mt-2 border-green-200 bg-green-50 text-green-800 [&>svg]:text-green-600">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <AlertTitle>Materia prima suficiente</AlertTitle>
-                    <AlertDescription>
-                      Hay stock disponible para cubrir este pedido. Quedarán {gelCalc.difference.toLocaleString()} g después del descuento.
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </div>
-            </fieldset>
-          )}
 
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Opciones adicionales</legend>
