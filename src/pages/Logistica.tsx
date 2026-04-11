@@ -1,126 +1,93 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useLogisticsStore } from "@/stores/logisticsStore";
-import { useAccountingStore } from "@/stores/accountingStore";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useOrders, type Order } from "@/hooks/useOrders";
 import { useAuth } from "@/contexts/AuthContext";
-import { Package, Truck, CheckCircle2, Clock } from "lucide-react";
+import { canEditSection } from "@/lib/rolePermissions";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { Package, Truck, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
 import ShippingLabelDialog from "@/components/logistics/ShippingLabelDialog";
-import DispatchConfirmDialog from "@/components/logistics/DispatchConfirmDialog";
 
 const Logistica = () => {
   const { role } = useAuth();
-  const isReadOnly = role === "asesor_comercial";
-  const { orders, dispatchOrder } = useLogisticsStore();
-  const updateDispatchInfo = useAccountingStore((s) => s.updateDispatchInfo);
+  const canEdit = canEditSection(role, "/logistica");
+  const { data: allOrders = [] } = useOrders();
+  const queryClient = useQueryClient();
 
-  const handleDispatch = (id: string, shipping: { transportadora: string; numeroGuia: string }) => {
-    const order = orders.find((o) => o.id === id);
-    dispatchOrder(id, shipping);
-    if (order) {
-      updateDispatchInfo(order.clientName, order.brand, {
-        dispatchedAt: new Date().toISOString().slice(0, 10),
-        transportadora: shipping.transportadora,
-        numeroGuia: shipping.numeroGuia,
-      });
+  // Ready for dispatch: retail orders with status "listo" OR wholesale orders that are production-complete AND fully paid
+  const readyOrders = allOrders.filter((o) => {
+    if (o.production_status === "despachado" || o.production_status === "entregado") return false;
+    if (o.dispatched_at) return false;
+    if (o.sale_type === "menor") {
+      return o.production_status === "listo";
     }
-  };
+    // Wholesale: must be in "listo" stage AND payment complete
+    const productionDone = o.production_status === "listo";
+    const paid = o.payment_complete === true || (o.total_amount && o.abono && Number(o.abono) >= Number(o.total_amount));
+    return productionDone && paid;
+  });
 
-  const readyOrders = orders.filter((o) => o.status === "listo");
-  const dispatchedOrders = orders.filter((o) => o.status === "despachado");
+  // Pending: wholesale orders not yet ready (production not done or not paid)
+  const pendingOrders = allOrders.filter((o) => {
+    if (o.sale_type === "menor") return false;
+    if (o.dispatched_at) return false;
+    if (o.production_status === "despachado" || o.production_status === "entregado") return false;
+    const productionDone = o.production_status === "listo";
+    const paid = o.payment_complete === true || (o.total_amount && o.abono && Number(o.abono) >= Number(o.total_amount));
+    return !(productionDone && paid);
+  });
 
-  const brandLabel = (brand: string) =>
-    brand === "magical" ? "Magical Warmers" : "Sweatspot";
+  const dispatchedOrders = allOrders.filter((o) => o.dispatched_at || o.production_status === "despachado");
 
-  const saleLabel = (type: string) =>
-    type === "mayor" ? "Por mayor" : "Por menor";
+  const brandLabel = (brand: string) => brand === "magical" ? "Magical Warmers" : "Sweatspot";
+  const saleLabel = (type: string) => type === "mayor" ? "Por mayor" : "Por menor";
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Logística</h1>
-        <p className="text-muted-foreground">
-          Gestión de despachos y seguimiento de envíos
-        </p>
+        <p className="text-muted-foreground">Gestión de despachos y seguimiento de envíos</p>
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="p-2 rounded-md bg-amber-500/10">
-              <Clock className="h-5 w-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Listos para despacho</p>
-              <p className="text-2xl font-bold text-foreground">{readyOrders.length}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="p-2 rounded-md bg-green-500/10">
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Despachados</p>
-              <p className="text-2xl font-bold text-foreground">{dispatchedOrders.length}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="p-2 rounded-md bg-primary/10">
-              <Package className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Unidades totales listas</p>
-              <p className="text-2xl font-bold text-foreground">
-                {readyOrders.reduce((sum, o) => sum + o.quantity, 0)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <SummaryCard icon={<Clock className="h-5 w-5 text-amber-600" />} label="Listos para despacho" value={readyOrders.length} bgClass="bg-amber-500/10" />
+        <SummaryCard icon={<AlertTriangle className="h-5 w-5 text-orange-600" />} label="Pendientes (mayor)" value={pendingOrders.length} bgClass="bg-orange-500/10" />
+        <SummaryCard icon={<CheckCircle2 className="h-5 w-5 text-green-600" />} label="Despachados" value={dispatchedOrders.length} bgClass="bg-green-500/10" />
+        <SummaryCard icon={<Package className="h-5 w-5 text-primary" />} label="Unidades listas" value={readyOrders.reduce((s, o) => s + o.quantity, 0)} bgClass="bg-primary/10" />
       </div>
 
       <Tabs defaultValue="ready" className="space-y-4">
         <TabsList>
           <TabsTrigger value="ready" className="gap-1.5">
-            <Truck className="h-4 w-4" />
-            Listos para despacho
-            {readyOrders.length > 0 && (
-              <Badge variant="secondary" className="ml-1 text-xs">
-                {readyOrders.length}
-              </Badge>
-            )}
+            <Truck className="h-4 w-4" /> Listos para despacho
+            {readyOrders.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{readyOrders.length}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="pending" className="gap-1.5">
+            <AlertTriangle className="h-4 w-4" /> Pendientes
+            {pendingOrders.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{pendingOrders.length}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="dispatched" className="gap-1.5">
-            <CheckCircle2 className="h-4 w-4" />
-            Despachados
-            {dispatchedOrders.length > 0 && (
-              <Badge variant="secondary" className="ml-1 text-xs">
-                {dispatchedOrders.length}
-              </Badge>
-            )}
+            <CheckCircle2 className="h-4 w-4" /> Despachados
+            {dispatchedOrders.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{dispatchedOrders.length}</Badge>}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="ready">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Pedidos listos para despacho</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="text-lg">Pedidos listos para despacho</CardTitle></CardHeader>
             <CardContent>
               {readyOrders.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <Package className="h-12 w-12 mb-3 opacity-40" />
-                  <p className="font-medium">No hay pedidos listos para despacho</p>
-                  <p className="text-sm">
-                    Los pedidos aparecerán aquí cuando la producción se complete o se creen ventas al por menor.
-                  </p>
-                </div>
+                <EmptyState icon={<Package className="h-12 w-12 mb-3 opacity-40" />} title="No hay pedidos listos para despacho" subtitle="Los pedidos aparecerán aquí cuando estén listos y pagados." />
               ) : (
                 <Table>
                   <TableHeader>
@@ -130,37 +97,59 @@ const Logistica = () => {
                       <TableHead>Tipo</TableHead>
                       <TableHead>Producto</TableHead>
                       <TableHead className="text-right">Unidades</TableHead>
-                      <TableHead>Fecha listo</TableHead>
+                      <TableHead>Pago</TableHead>
                       <TableHead className="text-right">Acción</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {readyOrders.map((order) => (
                       <TableRow key={order.id}>
-                        <TableCell className="font-medium">{order.clientName}</TableCell>
-                        <TableCell>
-                          <Badge variant={order.brand === "magical" ? "default" : "secondary"}>
-                            {brandLabel(order.brand)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{saleLabel(order.saleType)}</Badge>
-                        </TableCell>
+                        <TableCell className="font-medium">{order.client_name}</TableCell>
+                        <TableCell><Badge variant={order.brand === "magical" ? "default" : "secondary"}>{brandLabel(order.brand)}</Badge></TableCell>
+                        <TableCell><Badge variant="outline">{saleLabel(order.sale_type)}</Badge></TableCell>
                         <TableCell>{order.product}</TableCell>
-                        <TableCell className="text-right font-medium">
-                          {order.quantity.toLocaleString()}
-                        </TableCell>
-                        <TableCell>{order.readyDate}</TableCell>
+                        <TableCell className="text-right font-medium">{order.quantity.toLocaleString()}</TableCell>
+                        <TableCell><PaymentBadge order={order} /></TableCell>
                         <TableCell className="text-right space-x-2">
-                          <ShippingLabelDialog clientName={order.clientName} />
-                          {!isReadOnly && (
-                            <DispatchConfirmDialog
-                              orderId={order.id}
-                              clientName={order.clientName}
-                              onConfirm={handleDispatch}
-                            />
-                          )}
+                          <ShippingLabelDialog clientName={order.client_name} />
+                          {canEdit && <DispatchDialog order={order} />}
                         </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="pending">
+          <Card>
+            <CardHeader><CardTitle className="text-lg">Pedidos al por mayor pendientes</CardTitle></CardHeader>
+            <CardContent>
+              {pendingOrders.length === 0 ? (
+                <EmptyState icon={<AlertTriangle className="h-12 w-12 mb-3 opacity-40" />} title="No hay pedidos pendientes" subtitle="Los pedidos al por mayor aparecerán aquí hasta que producción los apruebe y estén pagados." />
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Marca</TableHead>
+                      <TableHead>Producto</TableHead>
+                      <TableHead className="text-right">Unidades</TableHead>
+                      <TableHead>Estado producción</TableHead>
+                      <TableHead>Pago</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pendingOrders.map((order) => (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-medium">{order.client_name}</TableCell>
+                        <TableCell><Badge variant={order.brand === "magical" ? "default" : "secondary"}>{brandLabel(order.brand)}</Badge></TableCell>
+                        <TableCell>{order.product}</TableCell>
+                        <TableCell className="text-right font-medium">{order.quantity.toLocaleString()}</TableCell>
+                        <TableCell><ProductionStatusBadge status={order.production_status} /></TableCell>
+                        <TableCell><PaymentBadge order={order} /></TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -172,51 +161,37 @@ const Logistica = () => {
 
         <TabsContent value="dispatched">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Pedidos despachados</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="text-lg">Pedidos despachados</CardTitle></CardHeader>
             <CardContent>
               {dispatchedOrders.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <CheckCircle2 className="h-12 w-12 mb-3 opacity-40" />
-                  <p className="font-medium">No hay pedidos despachados aún</p>
-                  <p className="text-sm">
-                    Los pedidos despachados aparecerán en este historial.
-                  </p>
-                </div>
+                <EmptyState icon={<CheckCircle2 className="h-12 w-12 mb-3 opacity-40" />} title="No hay pedidos despachados aún" subtitle="Los pedidos despachados aparecerán en este historial." />
               ) : (
                 <Table>
                   <TableHeader>
-                     <TableRow>
-                       <TableHead>Cliente</TableHead>
-                       <TableHead>Marca</TableHead>
-                       <TableHead>Tipo</TableHead>
-                       <TableHead>Producto</TableHead>
-                       <TableHead className="text-right">Unidades</TableHead>
-                       <TableHead>Transportadora</TableHead>
-                       <TableHead>Guía</TableHead>
-                       <TableHead>Fecha despacho</TableHead>
-                     </TableRow>
+                    <TableRow>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Marca</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Producto</TableHead>
+                      <TableHead className="text-right">Unidades</TableHead>
+                      <TableHead>Transportadora</TableHead>
+                      <TableHead>Guía</TableHead>
+                      <TableHead>Notas</TableHead>
+                      <TableHead>Fecha despacho</TableHead>
+                    </TableRow>
                   </TableHeader>
                   <TableBody>
                     {dispatchedOrders.map((order) => (
                       <TableRow key={order.id}>
-                        <TableCell className="font-medium">{order.clientName}</TableCell>
-                        <TableCell>
-                          <Badge variant={order.brand === "magical" ? "default" : "secondary"}>
-                            {brandLabel(order.brand)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{saleLabel(order.saleType)}</Badge>
-                        </TableCell>
+                        <TableCell className="font-medium">{order.client_name}</TableCell>
+                        <TableCell><Badge variant={order.brand === "magical" ? "default" : "secondary"}>{brandLabel(order.brand)}</Badge></TableCell>
+                        <TableCell><Badge variant="outline">{saleLabel(order.sale_type)}</Badge></TableCell>
                         <TableCell>{order.product}</TableCell>
-                         <TableCell className="text-right font-medium">
-                           {order.quantity.toLocaleString()}
-                         </TableCell>
-                         <TableCell>{order.transportadora || "—"}</TableCell>
-                         <TableCell className="font-mono text-sm">{order.numeroGuia || "—"}</TableCell>
-                         <TableCell>{order.dispatchedAt}</TableCell>
+                        <TableCell className="text-right font-medium">{order.quantity.toLocaleString()}</TableCell>
+                        <TableCell>{order.transportadora || "—"}</TableCell>
+                        <TableCell className="font-mono text-sm">{order.numero_guia || "—"}</TableCell>
+                        <TableCell className="max-w-[200px] truncate text-sm">{order.dispatch_notes || "—"}</TableCell>
+                        <TableCell>{order.dispatched_at || "—"}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -229,5 +204,120 @@ const Logistica = () => {
     </div>
   );
 };
+
+/* Sub-components */
+
+function SummaryCard({ icon, label, value, bgClass }: { icon: React.ReactNode; label: string; value: number; bgClass: string }) {
+  return (
+    <Card>
+      <CardContent className="flex items-center gap-3 p-4">
+        <div className={`p-2 rounded-md ${bgClass}`}>{icon}</div>
+        <div>
+          <p className="text-sm text-muted-foreground">{label}</p>
+          <p className="text-2xl font-bold text-foreground">{value}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function EmptyState({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+      {icon}
+      <p className="font-medium">{title}</p>
+      <p className="text-sm">{subtitle}</p>
+    </div>
+  );
+}
+
+function PaymentBadge({ order }: { order: Order }) {
+  if (order.sale_type === "menor") {
+    if (order.payment_method === "pagado") return <Badge className="bg-green-600 hover:bg-green-700">Pagado</Badge>;
+    if (order.payment_method === "contra_entrega") return <Badge variant="outline">Contra entrega</Badge>;
+    return <Badge variant="outline">N/A</Badge>;
+  }
+  const paid = order.payment_complete || (order.total_amount && order.abono && Number(order.abono) >= Number(order.total_amount));
+  if (paid) return <Badge className="bg-green-600 hover:bg-green-700">Pago completo</Badge>;
+  const saldo = (Number(order.total_amount) || 0) - (Number(order.abono) || 0);
+  return <Badge variant="destructive">Saldo: ${saldo.toLocaleString("es-CO")}</Badge>;
+}
+
+function ProductionStatusBadge({ status }: { status: string }) {
+  const labels: Record<string, string> = {
+    pendiente: "Pendiente",
+    produccion_cuerpos: "Prod. Cuerpos",
+    estampacion: "Estampación",
+    dosificacion: "Dosificación",
+    sellado: "Sellado",
+    recorte: "Recorte",
+    empaque: "Empaque",
+    listo: "Listo",
+  };
+  return <Badge variant="outline">{labels[status] || status}</Badge>;
+}
+
+function DispatchDialog({ order }: { order: Order }) {
+  const [open, setOpen] = useState(false);
+  const [transportadora, setTransportadora] = useState("");
+  const [numeroGuia, setNumeroGuia] = useState("");
+  const [dispatchNotes, setDispatchNotes] = useState("");
+  const queryClient = useQueryClient();
+
+  const handleConfirm = async () => {
+    const { error } = await supabase.from("orders").update({
+      production_status: "despachado",
+      dispatched_at: new Date().toISOString().slice(0, 10),
+      transportadora: transportadora.trim() || null,
+      numero_guia: numeroGuia.trim() || null,
+      dispatch_notes: dispatchNotes.trim() || null,
+    }).eq("id", order.id);
+
+    if (error) {
+      toast.error("Error al despachar", { description: error.message });
+      return;
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["orders"] });
+    toast.success("Pedido despachado", { description: `Pedido de ${order.client_name} marcado como despachado.` });
+    setOpen(false);
+    setTransportadora("");
+    setNumeroGuia("");
+    setDispatchNotes("");
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm"><Truck className="h-4 w-4 mr-1" /> Despachar</Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Confirmar despacho</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          Pedido de <span className="font-semibold text-foreground">{order.client_name}</span> — {order.quantity} uds de {order.product}
+        </p>
+        <div className="space-y-4 pt-2">
+          <div className="space-y-1.5">
+            <Label>Transportadora</Label>
+            <Input value={transportadora} onChange={(e) => setTransportadora(e.target.value)} placeholder="Ej: Servientrega, Coordinadora, TCC" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Número de guía (opcional)</Label>
+            <Input value={numeroGuia} onChange={(e) => setNumeroGuia(e.target.value)} placeholder="Ej: 123456789" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Notas de despacho</Label>
+            <Textarea value={dispatchNotes} onChange={(e) => setDispatchNotes(e.target.value)} placeholder="Ej: Se envió por moto propia, entrega en punto..." />
+          </div>
+          <Button className="w-full" onClick={handleConfirm} disabled={!transportadora.trim() && !dispatchNotes.trim()}>
+            <Truck className="h-4 w-4 mr-1" /> Marcar como despachado
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default Logistica;

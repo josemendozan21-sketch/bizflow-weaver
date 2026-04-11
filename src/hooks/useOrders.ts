@@ -29,6 +29,13 @@ export interface Order {
   delivery_date: string | null;
   created_at: string;
   updated_at: string;
+  payment_method: string | null;
+  payment_proof_url: string | null;
+  payment_complete: boolean | null;
+  dispatched_at: string | null;
+  transportadora: string | null;
+  numero_guia: string | null;
+  dispatch_notes: string | null;
 }
 
 export const PRODUCTION_STATUS_LABELS: Record<string, string> = {
