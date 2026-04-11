@@ -631,6 +631,7 @@ export type Database = {
         | "estampacion"
         | "usuario_visual"
         | "disenador"
+        | "logistica"
       event_type: "feria" | "carrera" | "activacion"
       logo_request_status:
         | "pendiente_diseno"
@@ -775,6 +776,7 @@ export const Constants = {
         "estampacion",
         "usuario_visual",
         "disenador",
+        "logistica",
       ],
       event_type: ["feria", "carrera", "activacion"],
       logo_request_status: [
