@@ -14,7 +14,7 @@ import { useLogisticsStore } from "@/stores/logisticsStore";
 import { useInventoryStore } from "@/stores/inventoryStore";
 import { useInventory } from "@/hooks/useInventory";
 import { useAccountingStore } from "@/stores/accountingStore";
-import { useDeliveryStore } from "@/stores/deliveryStore";
+
 import { toast } from "sonner";
 import QuotationGenerator from "@/components/ventas/QuotationGenerator";
 import { MisPedidos } from "@/components/ventas/MisPedidos";
@@ -411,18 +411,6 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         observaciones: observaciones?.trim() || undefined,
       });
 
-      // Delivery calendar
-      if (fechaRequerida) {
-        useDeliveryStore.getState().addEntry({
-          clientName,
-          brand: "magical",
-          product: referencia,
-          quantity,
-          saleType: "mayor",
-          deliveryDate: fechaRequerida,
-          status: "en_produccion",
-        });
-      }
 
       // Insert order to DB
       let orderData: { id: string } | null = null;
@@ -805,19 +793,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       observaciones: observaciones?.trim() || undefined,
     });
 
-    // Create delivery calendar entry if fecha requerida is provided
     const fechaRequerida = fd.get("ss_fechaRequerida") as string;
-    if (fechaRequerida) {
-      useDeliveryStore.getState().addEntry({
-        clientName,
-        brand: "sweatspot",
-        product: referencia,
-        quantity,
-        saleType: "mayor",
-        deliveryDate: fechaRequerida,
-        status: "en_produccion",
-      });
-    }
 
     // Persist order to database FIRST
     const ssShortStages = ["estampacion", "colocacion_boquilla", "listo"];
