@@ -477,8 +477,9 @@ const Eventos = () => {
                                         {DELIVERY_STATUS_LABELS[entry.status]}
                                       </Badge>
                                     ) : (
-                                      <Select value={entry.status} onValueChange={(v) => updateDeliveryStatus(entry.id, v as DeliveryEntry["status"])}>
-                                        <SelectTrigger className="h-7 text-xs">
+                                      <Badge className={cn("text-xs", DELIVERY_STATUS_COLORS[entry.status])}>
+                                        {DELIVERY_STATUS_LABELS[entry.status]}
+                                      </Badge>
                                           <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
