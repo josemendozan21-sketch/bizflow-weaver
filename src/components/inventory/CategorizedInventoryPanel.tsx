@@ -48,6 +48,11 @@ const STATUS_CONFIG: Record<StockStatus, { label: string; variant: "default" | "
 
 const UNITS = ["unidades", "gramos", "kilos", "tarros"];
 
+const BRAND_DB_MAP: Record<InventoryBrand, string> = {
+  magical_warmers: "magical",
+  sweatspot: "sweatspot",
+};
+
 const GROUPED_CATEGORIES: InventoryCategory[] = ["cuerpos_referencias", "producto_terminado"];
 
 interface CategorizedInventoryPanelProps {
@@ -88,8 +93,10 @@ const CategorizedInventoryPanel = ({
     }
   }, [activeHighlights]);
 
+  const dbBrand = BRAND_DB_MAP[selectedBrand] || selectedBrand;
+
   const filteredItems = stockItems.filter(
-    (i) => i.brand === selectedBrand && i.category === selectedCategory
+    (i) => i.brand === dbBrand && i.category === selectedCategory
   );
 
   const handleAdd = async () => {
@@ -98,7 +105,7 @@ const CategorizedInventoryPanel = ({
       return;
     }
     const result = await addStockItem({
-      brand: selectedBrand,
+      brand: dbBrand,
       category: selectedCategory,
       name: newForm.name,
       available: Number(newForm.available),
