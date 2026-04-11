@@ -5,6 +5,7 @@ export interface QuotationData {
   brand: "magical" | "sweatspot";
   clientName: string;
   empresa: string;
+  cedulaNit: string;
   ciudad: string;
   fecha: string;
   quotationNumber: string;
@@ -15,6 +16,7 @@ export interface QuotationData {
   tiempoProduccion: string;
   condicionesPago: string;
   vigencia: string;
+  garantia: string;
 }
 
 const fmt = (n: number) =>
@@ -69,6 +71,7 @@ export function generateQuotationPDF(data: QuotationData) {
 
   const clientLines = [
     ["Cliente:", data.clientName],
+    ...(data.cedulaNit ? [["Cédula/NIT:", data.cedulaNit]] : []),
     ...(data.empresa ? [["Empresa:", data.empresa]] : []),
     ...(data.ciudad ? [["Ciudad:", data.ciudad]] : []),
   ];
@@ -179,6 +182,7 @@ export function generateQuotationPDF(data: QuotationData) {
     ["Tiempo de producción:", data.tiempoProduccion],
     ["Condiciones de pago:", data.condicionesPago],
     ["Vigencia de la cotización:", data.vigencia],
+    ["Garantía:", data.garantia],
   ];
 
   notes.forEach(([label, value]) => {
@@ -202,8 +206,8 @@ export function generateQuotationPDF(data: QuotationData) {
   doc.setTextColor(...medGray);
 
   const footerLines = [
-    "Bionovations SAS · NIT: 901.XXX.XXX-X",
-    "Dirección: Cra XX #XX-XX, Bogotá, Colombia",
+    "Bionovations SAS · NIT: 900793324-8",
+    "Calle 168 #21-73, Bogotá, Colombia",
     "Tel: (+57) XXX XXX XXXX · contacto@bionovations.com · www.bionovations.com",
   ];
 
