@@ -1,29 +1,21 @@
 
 
-## Plan: Sembrar datos de Cuerpos y Producto Terminado en la base de datos + corregir bug de filtrado
+## Plan: Limpiar todos los pedidos de prueba
 
-### Problema
-La base de datos solo tiene ítems con categoría `materia_prima`. Las categorías `cuerpos_referencias` y `producto_terminado` nunca fueron migradas del Zustand store a Supabase. Además, hay un bug en las líneas 144 y 311 del `CategorizedInventoryPanel` donde se filtra por `selectedBrand` (valor UI: `magical_warmers`) en vez de `dbBrand` (valor DB: `magical`), haciendo que los conteos de las pestañas y alertas sean siempre 0.
+Eliminar todos los registros de prueba de las tablas relacionadas con pedidos para empezar limpio.
 
-### Solución
+### Tablas a limpiar
 
-#### 1. Migración SQL para sembrar datos faltantes
-Crear una migración que inserte todos los ítems de `cuerpos_referencias` y `producto_terminado` para ambas marcas, usando `brand = 'magical'` y `brand = 'sweatspot'` (los valores reales de la DB). Incluye:
+1. **`production_orders`** — 12 registros (depende de orders, se borra primero)
+2. **`orders`** — 13 registros
+3. **`notifications`** — 5 registros (limpiar también para no tener notificaciones huérfanas)
 
-- **Magical Warmers - Cuerpos**: 18 ítems (9 Térmicos + 9 Fríos) con campo `product_type`
-- **Magical Warmers - Producto Terminado**: 18 ítems (9 Térmicos + 9 Fríos) con campo `product_type`
-- **Sweatspot - Producto Terminado**: 56 ítems con campos `color`, `logo`, `sweatspot_category`
+### Ejecucion
 
-Se usará `ON CONFLICT` o verificación previa para no duplicar si se ejecuta más de una vez.
+Se usara el insert tool para ejecutar `DELETE` en este orden:
+1. `DELETE FROM production_orders`
+2. `DELETE FROM orders`
+3. `DELETE FROM notifications`
 
-#### 2. Corregir bug de filtrado en CategorizedInventoryPanel
-En `src/components/inventory/CategorizedInventoryPanel.tsx`:
-- **Línea 144**: cambiar `i.brand === selectedBrand` por `i.brand === dbBrand`
-- **Línea 311**: cambiar `i.brand === selectedBrand` por `i.brand === dbBrand`
-
-Esto corrige los conteos en las pestañas y los badges de alertas.
-
-### Archivos a modificar
-- Nueva migración SQL (seed de ~92 ítems)
-- `src/components/inventory/CategorizedInventoryPanel.tsx` (2 líneas)
+No se tocan las tablas de inventario (`stock_items`, `body_stock`) ni usuarios.
 
