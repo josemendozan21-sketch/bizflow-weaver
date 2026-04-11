@@ -998,11 +998,17 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 /* ---- Generic form (retail / al por menor) ---- */
 
 function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: SaleType; onReset: () => void }) {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const brandLabel = brand === "sweatspot" ? "Sweatspot" : "Magical Warmers";
   const isMayor = saleType === "mayor";
+  const [paymentMethod, setPaymentMethod] = useState<"contra_entrega" | "pagado">("contra_entrega");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     const form = e.target as HTMLFormElement;
     const fd = new FormData(form);
     const clientName = (fd.get("nombre") as string)?.trim() || "";
@@ -1011,7 +1017,6 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
     const totalAmount = parseFloat(fd.get("precioTotal") as string) || 0;
 
     if (saleType === "menor") {
-      // Determine if key client data is missing → "Venta mostrador"
       const telefono = (fd.get("telefono") as string)?.trim() || "";
       const ciudad = (fd.get("ciudad") as string)?.trim() || "";
       const direccion = (fd.get("direccion") as string)?.trim() || "";
@@ -1022,29 +1027,54 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
       const discountResult = useInventoryStore.getState().discountFinishedProduct(referencia, quantity);
       if (!discountResult.success) {
         toast.error("Sin stock suficiente", { description: discountResult.message });
+        setIsSubmitting(false);
         return;
       }
 
-      // For Magical Warmers retail, also project gel consumption
       if (brand === "magical") {
         const gelResult = useInventoryStore.getState().discountGelForMagical(referencia, quantity);
         toast.info("Consumo de gel", { description: gelResult.message });
       }
 
-      // Retail: send immediately to logistics
-      useLogisticsStore.getState().addOrder({
-        clientName: displayName,
-        brand,
-        product: referencia,
-        quantity,
-        saleType: "menor",
-        readyDate: new Date().toISOString().slice(0, 10),
-        status: "listo",
-      });
+      // Upload payment proof if provided
+      let paymentProofUrl: string | null = null;
+      const paymentProofFile = fd.get("payment_proof") as File;
+      if (paymentProofFile && paymentProofFile.size > 0 && paymentMethod === "pagado") {
+        const ext = paymentProofFile.name.split(".").pop();
+        const path = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`;
+        const { error: uploadError } = await supabase.storage.from("payment-proofs").upload(path, paymentProofFile);
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from("payment-proofs").getPublicUrl(path);
+          paymentProofUrl = urlData.publicUrl;
+        }
+      }
 
-      const email = (fd.get("email") as string)?.trim() || undefined;
-      const cedula = (fd.get("cedula") as string)?.trim() || undefined;
-      const observaciones = (fd.get("notas") as string)?.trim() || undefined;
+      // Persist retail order to DB
+      try {
+        await supabase.from("orders").insert({
+          brand,
+          sale_type: "menor",
+          client_name: displayName,
+          client_nit: (fd.get("cedula") as string)?.trim() || null,
+          client_phone: telefono || null,
+          client_email: (fd.get("email") as string)?.trim() || null,
+          client_address: direccion || null,
+          client_city: ciudad || null,
+          product: referencia,
+          quantity,
+          total_amount: totalAmount,
+          advisor_id: user?.id || "",
+          advisor_name: user?.email || "Asesor",
+          production_status: "listo",
+          payment_method: paymentMethod,
+          payment_proof_url: paymentProofUrl,
+          payment_complete: paymentMethod === "pagado",
+          observations: (fd.get("notas") as string)?.trim() || null,
+        });
+        queryClient.invalidateQueries({ queryKey: ["orders"] });
+      } catch (err: any) {
+        console.error("Error saving retail order:", err);
+      }
 
       // Send to accounting
       useAccountingStore.getState().addOrder({
@@ -1056,11 +1086,11 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
         clientType: isVentaMostrador ? "Venta mostrador" : "Cliente empresa",
         totalAmount,
         hasRut: false,
-        email,
-        cedula,
+        email: (fd.get("email") as string)?.trim() || undefined,
+        cedula: (fd.get("cedula") as string)?.trim() || undefined,
         direccion: direccion || undefined,
         ciudad: ciudad || undefined,
-        observaciones,
+        observaciones: (fd.get("notas") as string)?.trim() || undefined,
       });
 
       toast.success("Pedido al por menor creado", {
@@ -1068,6 +1098,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
       });
     }
 
+    setIsSubmitting(false);
     onReset();
   };
 
