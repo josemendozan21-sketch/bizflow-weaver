@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { canAccessRoute } from "@/lib/rolePermissions";
+import { canAccessRoute, getAllowedRoutes } from "@/lib/rolePermissions";
 import Index from "./pages/Index";
 import Ventas from "./pages/Ventas";
 import Inventarios from "./pages/Inventarios";
@@ -22,11 +22,24 @@ import { ReactNode } from "react";
 
 const queryClient = new QueryClient();
 
+function getDefaultRoute(role: string | null): string {
+  if (!role) return "/";
+  const routes = getAllowedRoutes(role as any);
+  return routes[0] || "/";
+}
+
 function ProtectedRoute({ children, path }: { children: ReactNode; path: string }) {
   const { role, loading } = useAuth();
   if (loading) return null;
-  if (!canAccessRoute(role, path)) return <Navigate to="/" replace />;
+  if (!canAccessRoute(role, path)) return <Navigate to={getDefaultRoute(role)} replace />;
   return <>{children}</>;
+}
+
+function HomeRedirect() {
+  const { role, loading } = useAuth();
+  if (loading) return null;
+  if (role === "admin") return <Index />;
+  return <Navigate to={getDefaultRoute(role)} replace />;
 }
 
 function AuthGate({ children }: { children: ReactNode }) {
@@ -46,7 +59,7 @@ const App = () => (
           <AuthGate>
             <Routes>
               <Route element={<DashboardLayout />}>
-                <Route path="/" element={<Index />} />
+                <Route path="/" element={<HomeRedirect />} />
                 <Route path="/ventas" element={<ProtectedRoute path="/ventas"><Ventas /></ProtectedRoute>} />
                 <Route path="/inventarios" element={<ProtectedRoute path="/inventarios"><Inventarios /></ProtectedRoute>} />
                 <Route path="/diseno-logos" element={<ProtectedRoute path="/diseno-logos"><DisenoLogos /></ProtectedRoute>} />
