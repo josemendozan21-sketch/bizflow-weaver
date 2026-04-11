@@ -148,7 +148,7 @@ const Logistica = () => {
                         <TableCell><Badge variant={order.brand === "magical" ? "default" : "secondary"}>{brandLabel(order.brand)}</Badge></TableCell>
                         <TableCell>{order.product}</TableCell>
                         <TableCell className="text-right font-medium">{order.quantity.toLocaleString()}</TableCell>
-                        <TableCell><ProductionStatusBadge status={order.production_status} /></TableCell>
+                        <TableCell><ProductionStatusBadge status={order.production_status} order={order} /></TableCell>
                         <TableCell><PaymentBadge order={order} /></TableCell>
                       </TableRow>
                     ))}
@@ -243,7 +243,11 @@ function PaymentBadge({ order }: { order: Order }) {
   return <Badge variant="destructive">Saldo: ${saldo.toLocaleString("es-CO")}</Badge>;
 }
 
-function ProductionStatusBadge({ status }: { status: string }) {
+function ProductionStatusBadge({ status, order }: { status: string; order?: Order }) {
+  // If production is done but payment not confirmed by advisor
+  if (status === "listo" && order && !order.payment_complete) {
+    return <Badge variant="outline" className="border-amber-400 text-amber-700">Esperando pago del asesor</Badge>;
+  }
   const labels: Record<string, string> = {
     pendiente: "Pendiente",
     produccion_cuerpos: "Prod. Cuerpos",
