@@ -104,31 +104,40 @@ export function generateQuotationPDF(data: QuotationData) {
   autoTable(doc, {
     startY: y,
     margin: { left: margin, right: margin },
-    head: [["Producto", "Cantidad", "Precio Unitario", "Total"]],
-    body: data.products.map((p) => [
-      p.producto,
-      p.cantidad.toString(),
-      fmt(p.precioUnitario),
-      fmt(p.total),
-    ]),
+    head: [["Producto", "Cant.", "P. Unitario", "IVA", "P. con IVA", "Total"]],
+    body: data.products.map((p) => {
+      const ivaUnit = Math.round(p.precioUnitario * 0.19);
+      const priceWithIva = p.precioUnitario + ivaUnit;
+      const totalLine = priceWithIva * p.cantidad;
+      return [
+        p.producto,
+        p.cantidad.toString(),
+        fmt(p.precioUnitario),
+        fmt(ivaUnit),
+        fmt(priceWithIva),
+        fmt(totalLine),
+      ];
+    }),
     headStyles: {
       fillColor: brandColor,
       textColor: [255, 255, 255],
       fontStyle: "bold",
-      fontSize: 9,
+      fontSize: 8,
       halign: "left",
     },
     bodyStyles: {
-      fontSize: 9,
+      fontSize: 8,
       textColor: darkGray,
     },
     alternateRowStyles: {
       fillColor: lightBg,
     },
     columnStyles: {
-      1: { halign: "center", cellWidth: 25 },
-      2: { halign: "right", cellWidth: 35 },
-      3: { halign: "right", cellWidth: 35 },
+      1: { halign: "center", cellWidth: 18 },
+      2: { halign: "right", cellWidth: 28 },
+      3: { halign: "right", cellWidth: 25 },
+      4: { halign: "right", cellWidth: 28 },
+      5: { halign: "right", cellWidth: 30 },
     },
     theme: "grid",
     styles: {
