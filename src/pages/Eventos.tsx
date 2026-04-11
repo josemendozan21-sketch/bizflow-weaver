@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInventoryStore } from "@/stores/inventoryStore";
-import { useDeliveryStore, type DeliveryEntry } from "@/stores/deliveryStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import { CalendarIcon, Plus, Trash2, ChevronLeft, ChevronRight, MapPin, Package, AlertTriangle, CheckCircle, Truck, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -42,12 +41,29 @@ interface EventWithProducts extends EventRow {
   event_products: EventProductRow[];
 }
 
+export interface DeliveryEntry {
+  id: string;
+  clientName: string;
+  brand: "magical" | "sweatspot";
+  product: string;
+  quantity: number;
+  saleType: "mayor" | "menor";
+  deliveryDate: string;
+  status: "pendiente" | "en_produccion" | "listo" | "entregado";
+}
+
+const mapProductionStatus = (ps: string): DeliveryEntry["status"] => {
+  if (ps === "completado" || ps === "entregado") return "entregado";
+  if (ps === "listo") return "listo";
+  if (ps === "pendiente") return "pendiente";
+  return "en_produccion";
+};
+
 const Eventos = () => {
   const { user, role } = useAuth();
   const isReadOnly = role === "asesor_comercial";
   const { materialConfigs } = useInventoryStore();
-  const deliveryEntries = useDeliveryStore((s) => s.entries);
-  const updateDeliveryStatus = useDeliveryStore((s) => s.updateStatus);
+  const [deliveryEntries, setDeliveryEntries] = useState<DeliveryEntry[]>([]);
   const [events, setEvents] = useState<EventWithProducts[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentMonth, setCurrentMonth] = useState(new Date());
