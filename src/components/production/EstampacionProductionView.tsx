@@ -156,7 +156,7 @@ function EstampacionOrderCard({
   );
 
   const hasLogo = !!order.logo_file;
-  const logoApproved = !hasLogo || (matchingLogo && matchingLogo.status === "aprobado");
+  const logoApproved = !hasLogo || (matchingLogo && (matchingLogo.status === "aprobado" || matchingLogo.status === "finalizado"));
   const logoUrl = matchingLogo?.adjusted_logo_url || matchingLogo?.original_logo_url;
 
   return (
