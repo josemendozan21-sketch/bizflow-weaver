@@ -251,28 +251,6 @@ export default function QuotationGenerator() {
             <span className="text-foreground">Total</span>
             <span className="text-primary">{fmt(total)}</span>
           </div>
-
-          {/* Admin-only: overall cost & margin */}
-          {isAdmin && marginData && (
-            <div className="border-t border-border pt-2 mt-2 space-y-1">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground flex items-center gap-1">
-                  <DollarSignIcon className="h-3.5 w-3.5" /> Costo total interno
-                </span>
-                <span className="font-medium text-foreground">{fmt(marginData.totalCost)}</span>
-              </div>
-              {marginData.overallMargin !== null && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    <TrendingUp className="h-3.5 w-3.5" /> Margen general
-                  </span>
-                  <Badge variant={marginData.overallMargin >= 30 ? "default" : marginData.overallMargin >= 15 ? "secondary" : "destructive"}>
-                    {marginData.overallMargin.toFixed(1)}%
-                  </Badge>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Notes */}
