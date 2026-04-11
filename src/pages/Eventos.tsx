@@ -81,6 +81,27 @@ const Eventos = () => {
   const [formNotes, setFormNotes] = useState("");
   const [formProducts, setFormProducts] = useState<{ product_name: string; brand: string; quantity_needed: number }[]>([]);
 
+  const fetchDeliveries = async () => {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("id, client_name, brand, product, quantity, sale_type, delivery_date, production_status")
+      .not("delivery_date", "is", null);
+    if (!error && data) {
+      setDeliveryEntries(
+        data.map((o) => ({
+          id: o.id,
+          clientName: o.client_name,
+          brand: (o.brand === "magical" ? "magical" : "sweatspot") as "magical" | "sweatspot",
+          product: o.product,
+          quantity: o.quantity,
+          saleType: (o.sale_type === "mayor" ? "mayor" : "menor") as "mayor" | "menor",
+          deliveryDate: o.delivery_date!,
+          status: mapProductionStatus(o.production_status),
+        }))
+      );
+    }
+  };
+
   const fetchEvents = async () => {
     const { data, error } = await supabase
       .from("events")
@@ -96,6 +117,7 @@ const Eventos = () => {
 
   useEffect(() => {
     fetchEvents();
+    fetchDeliveries();
   }, []);
 
   const resetForm = () => {
