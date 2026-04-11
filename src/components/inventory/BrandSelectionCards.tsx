@@ -4,7 +4,8 @@ import {
   AlertCircle, Clock, Loader2, CheckCircle2, ChevronRight,
   Beaker, Box, Droplets, PackageCheck, Bell,
 } from "lucide-react";
-import { useInventoryStore, type InventoryBrand, type InventoryCategory } from "@/stores/inventoryStore";
+import { useInventory, getStockStatus, type SupabaseStockItem } from "@/hooks/useInventory";
+import type { InventoryBrand, InventoryCategory } from "@/stores/inventoryStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMemo } from "react";
 
@@ -32,7 +33,7 @@ const BrandSelectionCards = ({ selectedBrand, onSelectBrand, onNotificationClick
   const { role } = useAuth();
   const isAsesor = role === "asesor_comercial";
 
-  const { stockItems, getStockStatus, productionRequirements, materialConfigs } = useInventoryStore();
+  const { stockItems } = useInventory();
 
   const ASESOR_VISIBLE_CATEGORIES: InventoryCategory[] = ["cuerpos_referencias", "producto_terminado"];
 
@@ -41,7 +42,6 @@ const BrandSelectionCards = ({ selectedBrand, onSelectBrand, onNotificationClick
       const items = stockItems.filter((i) => i.brand === brand);
       const notifications: InventoryNotification[] = [];
 
-      // Materia prima alerts — hide for asesores
       if (!isAsesor) {
         const mpItems = items.filter((i) => i.category === "materia_prima");
         const mpCritical = mpItems.filter((i) => getStockStatus(i) === "critico");
@@ -82,7 +82,6 @@ const BrandSelectionCards = ({ selectedBrand, onSelectBrand, onNotificationClick
         });
       }
 
-      // Gel alerts — hide for asesores
       if (!isAsesor && brand === "magical_warmers") {
         const gelItem = items.find((i) => i.category === "materia_prima" && i.name.toLowerCase().includes("gel"));
         if (gelItem) {
@@ -90,7 +89,7 @@ const BrandSelectionCards = ({ selectedBrand, onSelectBrand, onNotificationClick
           if (status === "critico") {
             notifications.push({
               id: `${brand}-gel-crit`, type: "critico", icon: Droplets,
-              message: `Gel insuficiente: ${gelItem.available.toLocaleString("es-CO")} ${gelItem.unit} (mín: ${gelItem.minStock.toLocaleString("es-CO")})`,
+              message: `Gel insuficiente: ${gelItem.available.toLocaleString("es-CO")} ${gelItem.unit} (mín: ${gelItem.min_stock.toLocaleString("es-CO")})`,
               targetCategory: "materia_prima", targetItemNames: [gelItem.name],
             });
           } else if (status === "bajo") {
@@ -113,35 +112,19 @@ const BrandSelectionCards = ({ selectedBrand, onSelectBrand, onNotificationClick
         });
       }
 
-      // Production pending alerts — hide for asesores
-      if (!isAsesor) {
-        const brandKey = brand === "magical_warmers" ? "magical" : "sweatspot";
-        const pendingReqs = productionRequirements.filter((r) => r.brand === brandKey && r.status === "pendiente");
-        if (pendingReqs.length > 0) {
-          notifications.push({
-            id: `${brand}-prod-pending`, type: "pendiente", icon: Clock,
-            message: `${pendingReqs.length} pedido${pendingReqs.length > 1 ? "s" : ""} pendiente${pendingReqs.length > 1 ? "s" : ""} de producción`,
-            targetCategory: null, targetItemNames: [],
-          });
-        }
-      }
-
       return notifications;
     };
-  }, [stockItems, getStockStatus, productionRequirements, materialConfigs, isAsesor]);
+  }, [stockItems, isAsesor]);
 
   const getBrandStats = (brand: InventoryBrand) => {
     const allItems = stockItems.filter((i) => i.brand === brand);
     const items = isAsesor
-      ? allItems.filter((i) => ASESOR_VISIBLE_CATEGORIES.includes(i.category))
+      ? allItems.filter((i) => ASESOR_VISIBLE_CATEGORIES.includes(i.category as InventoryCategory))
       : allItems;
     const critical = items.filter((i) => getStockStatus(i) === "critico").length;
     const low = items.filter((i) => getStockStatus(i) === "bajo").length;
     const totalItems = items.length;
-    const brandKey = brand === "magical_warmers" ? "magical" : "sweatspot";
-    const pending = isAsesor ? 0 : productionRequirements.filter((r) => r.brand === brandKey && r.status === "pendiente").length;
-    const inProgress = isAsesor ? 0 : productionRequirements.filter((r) => r.brand === brandKey && r.status === "en_proceso").length;
-    return { critical, low, totalItems, pending, inProgress };
+    return { critical, low, totalItems, pending: 0, inProgress: 0 };
   };
 
   const typeStyles: Record<InventoryNotification["type"], { bg: string; text: string; dot: string }> = {
@@ -151,7 +134,6 @@ const BrandSelectionCards = ({ selectedBrand, onSelectBrand, onNotificationClick
     info: { bg: "bg-blue-500/10", text: "text-blue-700", dot: "bg-blue-500" },
   };
 
-  // Asesor: vista simplificada — solo dos botones de marca
   if (isAsesor) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -228,20 +210,6 @@ const BrandSelectionCards = ({ selectedBrand, onSelectBrand, onNotificationClick
                   <div>
                     <p className={`text-lg font-bold leading-none ${stats.low > 0 ? "text-yellow-600" : "text-muted-foreground"}`}>{stats.low}</p>
                     <p className="text-[11px] text-muted-foreground">Bajo stock</p>
-                  </div>
-                </div>
-                <div className={`flex items-center gap-2 rounded-lg p-2.5 ${stats.pending > 0 ? "bg-orange-500/10" : "bg-muted/50"}`}>
-                  <Clock className={`h-4 w-4 ${stats.pending > 0 ? "text-orange-600" : "text-muted-foreground"}`} />
-                  <div>
-                    <p className={`text-lg font-bold leading-none ${stats.pending > 0 ? "text-orange-600" : "text-muted-foreground"}`}>{stats.pending}</p>
-                    <p className="text-[11px] text-muted-foreground">Pendientes</p>
-                  </div>
-                </div>
-                <div className={`flex items-center gap-2 rounded-lg p-2.5 ${stats.inProgress > 0 ? "bg-blue-500/10" : "bg-muted/50"}`}>
-                  <Loader2 className={`h-4 w-4 ${stats.inProgress > 0 ? "text-blue-600" : "text-muted-foreground"}`} />
-                  <div>
-                    <p className={`text-lg font-bold leading-none ${stats.inProgress > 0 ? "text-blue-600" : "text-muted-foreground"}`}>{stats.inProgress}</p>
-                    <p className="text-[11px] text-muted-foreground">En curso</p>
                   </div>
                 </div>
               </div>

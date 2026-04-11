@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 const normalize = (s: string) =>
   s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
+export type StockStatus = "ok" | "bajo" | "critico";
+
 export interface SupabaseStockItem {
   id: string;
   name: string;
@@ -28,6 +30,13 @@ export interface SupabaseBodyStock {
   available: number;
   created_at: string;
   updated_at: string;
+}
+
+export function getStockStatus(item: SupabaseStockItem): StockStatus {
+  if (item.min_stock <= 0) return "ok";
+  if (item.available <= item.min_stock * 0.3) return "critico";
+  if (item.available <= item.min_stock) return "bajo";
+  return "ok";
 }
 
 export function useInventory() {
@@ -99,14 +108,12 @@ export function useInventory() {
 
   /**
    * Discount stock from stock_items by item name.
-   * Matches by ILIKE on name. Decrements `available`.
    */
   const discountStock = useCallback(
     async (
       itemName: string,
       amount: number
     ): Promise<{ success: boolean; message: string }> => {
-      // Always fetch fresh from DB to avoid stale state
       const { data: freshItems } = await supabase
         .from("stock_items")
         .select("*");
@@ -117,9 +124,6 @@ export function useInventory() {
       const item = searchPool.find(
         (s) => normalize(s.name).includes(normalizedName)
       );
-
-      console.log("discountStock - searching for:", itemName, "normalized:", normalizedName);
-      console.log("discountStock - matched item:", item);
 
       if (!item) {
         return { success: false, message: `Producto "${itemName}" no encontrado en inventario.` };
@@ -132,7 +136,6 @@ export function useInventory() {
         .eq("id", item.id);
 
       if (error) {
-        console.error("Error discounting stock:", error);
         return { success: false, message: `Error al actualizar inventario: ${error.message}` };
       }
 
@@ -154,7 +157,6 @@ export function useInventory() {
 
   /**
    * Reserve body stock from body_stock table.
-   * Checks available, discounts what's possible, returns result.
    */
   const reserveBodyStock = useCallback(
     async (
@@ -163,16 +165,12 @@ export function useInventory() {
       qty: number,
       options?: { clientName?: string; requestedBy?: string }
     ): Promise<{ available: boolean; discounted: number; message: string }> => {
-      console.log("reserveBodyStock called:", { brand, referencia, qty });
-
-      // Always fetch fresh from DB to avoid stale state
       const { data: freshBodyStock } = await supabase
         .from("body_stock")
         .select("*")
         .ilike("brand", brand);
 
       const stockToSearch = (freshBodyStock as unknown as SupabaseBodyStock[]) || bodyStock;
-      console.log("Fresh body stock from DB:", freshBodyStock);
 
       const normalizedRef = normalize(referencia);
       const normalizedBrand = normalize(brand);
@@ -185,10 +183,8 @@ export function useInventory() {
             normalizedRef.includes(normalize(b.referencia))
           )
       );
-      console.log("Matched item:", item);
 
       if (!item || item.available <= 0) {
-        // Auto-create supply order when no stock found
         if (options?.requestedBy) {
           await supabase.from("production_supply_orders").insert({
             brand,
@@ -217,7 +213,6 @@ export function useInventory() {
         .eq("id", item.id);
 
       if (error) {
-        console.error("Error reserving body stock:", error);
         return {
           available: false,
           discounted: 0,
@@ -225,7 +220,6 @@ export function useInventory() {
         };
       }
 
-      // If partial stock, also create supply order for remaining
       if (remaining > 0 && options?.requestedBy) {
         await supabase.from("production_supply_orders").insert({
           brand,
@@ -257,8 +251,6 @@ export function useInventory() {
 
   /**
    * Add or upsert stock into stock_items.
-   * If an item with the same name+category+brand exists, increments available.
-   * Otherwise inserts a new row.
    */
   const addStock = useCallback(
     async (
@@ -305,6 +297,82 @@ export function useInventory() {
     [stockItems]
   );
 
+  /**
+   * Add a new stock item (for CategorizedInventoryPanel).
+   */
+  const addStockItem = useCallback(
+    async (item: {
+      brand: string;
+      category: string;
+      name: string;
+      available: number;
+      unit: string;
+      min_stock: number;
+      product_type?: string | null;
+      color?: string | null;
+      logo?: string | null;
+      sweatspot_category?: string | null;
+    }): Promise<{ success: boolean; message: string }> => {
+      const { error } = await supabase.from("stock_items").insert({
+        name: item.name,
+        category: item.category,
+        brand: item.brand,
+        available: item.available,
+        unit: item.unit,
+        min_stock: item.min_stock,
+        product_type: item.product_type || null,
+        color: item.color || null,
+        logo: item.logo || null,
+        sweatspot_category: item.sweatspot_category || null,
+      } as any);
+
+      if (error) {
+        return { success: false, message: `Error al insertar: ${error.message}` };
+      }
+      return { success: true, message: `Se creó "${item.name}" exitosamente.` };
+    },
+    []
+  );
+
+  /**
+   * Update a stock item by ID.
+   */
+  const updateStockItem = useCallback(
+    async (
+      id: string,
+      updates: { available?: number; min_stock?: number }
+    ): Promise<{ success: boolean; message: string }> => {
+      const { error } = await supabase
+        .from("stock_items")
+        .update(updates as any)
+        .eq("id", id);
+
+      if (error) {
+        return { success: false, message: `Error al actualizar: ${error.message}` };
+      }
+      return { success: true, message: "Inventario actualizado." };
+    },
+    []
+  );
+
+  /**
+   * Delete a stock item by ID.
+   */
+  const deleteStockItem = useCallback(
+    async (id: string): Promise<{ success: boolean; message: string }> => {
+      const { error } = await supabase
+        .from("stock_items")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        return { success: false, message: `Error al eliminar: ${error.message}` };
+      }
+      return { success: true, message: "Ítem eliminado." };
+    },
+    []
+  );
+
   return {
     stockItems,
     bodyStock,
@@ -312,6 +380,10 @@ export function useInventory() {
     discountStock,
     reserveBodyStock,
     addStock,
+    addStockItem,
+    updateStockItem,
+    deleteStockItem,
+    getStockStatus,
     refetch: fetchAll,
   };
 }

@@ -18,9 +18,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Beaker, Box, PackageCheck, Layers, Plus, Pencil, Trash2, Check, X, AlertTriangle, AlertCircle, CheckCircle2, Flame, Snowflake,
 } from "lucide-react";
-import { useInventoryStore, type StockItem, type StockStatus, type InventoryCategory, type InventoryBrand } from "@/stores/inventoryStore";
+import { useInventory, getStockStatus, type SupabaseStockItem } from "@/hooks/useInventory";
+import type { InventoryCategory, InventoryBrand } from "@/stores/inventoryStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+
+type StockStatus = "ok" | "bajo" | "critico";
 
 const BRAND_OPTIONS: { value: InventoryBrand; label: string }[] = [
   { value: "sweatspot", label: "Sweatspot" },
@@ -58,7 +61,7 @@ const CategorizedInventoryPanel = ({
   initialCategory = "materia_prima",
   highlightItemNames = [],
 }: CategorizedInventoryPanelProps) => {
-  const { stockItems, addStockItem, updateStockItem, deleteStockItem, getStockStatus } = useInventoryStore();
+  const { stockItems, addStockItem, updateStockItem, deleteStockItem, isLoading } = useInventory();
   const { role } = useAuth();
   const isReadOnly = role === "asesor_comercial";
   const CATEGORIES = isReadOnly ? ASESOR_CATEGORIES : ALL_CATEGORIES;
@@ -89,33 +92,44 @@ const CategorizedInventoryPanel = ({
     (i) => i.brand === selectedBrand && i.category === selectedCategory
   );
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!newForm.name || !newForm.available || !newForm.minStock) {
       toast.error("Completa todos los campos");
       return;
     }
-    addStockItem({
+    const result = await addStockItem({
       brand: selectedBrand,
       category: selectedCategory,
       name: newForm.name,
       available: Number(newForm.available),
       unit: newForm.unit,
-      minStock: Number(newForm.minStock),
+      min_stock: Number(newForm.minStock),
     });
-    toast.success("Ítem agregado al inventario");
-    setNewForm({ name: "", available: "", unit: "unidades", minStock: "" });
-    setAddOpen(false);
+    if (result.success) {
+      toast.success("Ítem agregado al inventario");
+      setNewForm({ name: "", available: "", unit: "unidades", minStock: "" });
+      setAddOpen(false);
+    } else {
+      toast.error(result.message);
+    }
   };
 
-  const startEdit = (item: StockItem) => {
+  const startEdit = (item: SupabaseStockItem) => {
     setEditingId(item.id);
-    setEditForm({ available: String(item.available), minStock: String(item.minStock) });
+    setEditForm({ available: String(item.available), minStock: String(item.min_stock) });
   };
 
-  const saveEdit = (id: string) => {
-    updateStockItem(id, { available: Number(editForm.available), minStock: Number(editForm.minStock) });
-    setEditingId(null);
-    toast.success("Inventario actualizado");
+  const saveEdit = async (id: string) => {
+    const result = await updateStockItem(id, {
+      available: Number(editForm.available),
+      min_stock: Number(editForm.minStock),
+    });
+    if (result.success) {
+      setEditingId(null);
+      toast.success("Inventario actualizado");
+    } else {
+      toast.error(result.message);
+    }
   };
 
   const brandLabel = BRAND_OPTIONS.find((b) => b.value === selectedBrand)?.label ?? "";
@@ -128,7 +142,7 @@ const CategorizedInventoryPanel = ({
 
   const isGroupedCategory = GROUPED_CATEGORIES.includes(selectedCategory);
 
-  const renderItemRow = (item: StockItem, idx: number, allItems: StockItem[]) => {
+  const renderItemRow = (item: SupabaseStockItem, idx: number, allItems: SupabaseStockItem[]) => {
     const status = getStockStatus(item);
     const sc = STATUS_CONFIG[status];
     const StatusIcon = sc.icon;
@@ -170,7 +184,7 @@ const CategorizedInventoryPanel = ({
               className="h-7 w-24 ml-auto text-right" />
           ) : (
             <span>
-              <span>{item.minStock.toLocaleString("es-CO")}</span>
+              <span>{item.min_stock.toLocaleString("es-CO")}</span>
               <span className="text-muted-foreground ml-1 text-xs">{item.unit}</span>
             </span>
           )}
@@ -203,12 +217,12 @@ const CategorizedInventoryPanel = ({
     );
   };
 
-  const renderGroupedContent = (items: StockItem[]) => {
-    const termicos = items.filter((i) => i.productType === "Térmico");
-    const frios = items.filter((i) => i.productType === "Frío");
-    const otros = items.filter((i) => !i.productType);
+  const renderGroupedContent = (items: SupabaseStockItem[]) => {
+    const termicos = items.filter((i) => i.product_type === "Térmico");
+    const frios = items.filter((i) => i.product_type === "Frío");
+    const otros = items.filter((i) => !i.product_type);
 
-    const renderGroup = (groupItems: StockItem[], label: string, icon: React.ElementType) => {
+    const renderGroup = (groupItems: SupabaseStockItem[], label: string, icon: React.ElementType) => {
       const Icon = icon;
       if (groupItems.length === 0) return null;
       return (
@@ -245,7 +259,7 @@ const CategorizedInventoryPanel = ({
     );
   };
 
-  const renderFlatContent = (items: StockItem[]) => {
+  const renderFlatContent = (items: SupabaseStockItem[]) => {
     if (items.length === 0) return null;
     return (
       <Table>
@@ -356,7 +370,9 @@ const CategorizedInventoryPanel = ({
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {filteredItems.length === 0 ? (
+                  {isLoading ? (
+                    <p className="text-center text-muted-foreground py-8 text-sm">Cargando inventario…</p>
+                  ) : filteredItems.length === 0 ? (
                     <p className="text-center text-muted-foreground py-8 text-sm">
                       No hay ítems registrados en {CATEGORY_META[cat].label} para {brandLabel}.
                     </p>
