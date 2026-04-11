@@ -69,6 +69,10 @@ export default function QuotationGenerator() {
   const subtotal = products.reduce((sum, p) => sum + p.cantidad * p.precioUnitario, 0);
   const iva = Math.round(subtotal * IVA_RATE);
   const total = subtotal + iva;
+  // Per-line IVA helper
+  const lineIva = (price: number) => Math.round(price * IVA_RATE);
+  const linePriceWithIva = (price: number) => price + lineIva(price);
+  const lineTotal = (p: { cantidad: number; precioUnitario: number }) => linePriceWithIva(p.precioUnitario) * p.cantidad;
 
   const quotationNumber = `COT-${Date.now().toString(36).toUpperCase().slice(-6)}`;
 
@@ -184,12 +188,14 @@ export default function QuotationGenerator() {
               const unitCost = marginData?.lines[i]?.unitCost;
               return (
                 <div key={p.id}>
-                  <div className={`grid gap-2 items-end ${isAdmin ? "grid-cols-[1fr_80px_120px_120px_40px]" : "grid-cols-[1fr_80px_120px_120px_40px]"}`}>
+                  <div className="grid gap-2 items-end grid-cols-[1fr_70px_110px_90px_110px_110px_36px]">
                     {i === 0 && (
                       <>
                         <Label className="text-xs text-muted-foreground">Producto</Label>
                         <Label className="text-xs text-muted-foreground">Cant.</Label>
                         <Label className="text-xs text-muted-foreground">P. Unitario</Label>
+                        <Label className="text-xs text-muted-foreground">IVA</Label>
+                        <Label className="text-xs text-muted-foreground">P. con IVA</Label>
                         <Label className="text-xs text-muted-foreground">Total</Label>
                         <span />
                       </>
@@ -197,7 +203,9 @@ export default function QuotationGenerator() {
                     <Input value={p.producto} onChange={(e) => updateProduct(p.id, "producto", e.target.value)} placeholder="Nombre del producto" />
                     <Input type="number" min={1} value={p.cantidad} onChange={(e) => updateProduct(p.id, "cantidad", parseInt(e.target.value) || 0)} />
                     <Input type="number" min={0} value={p.precioUnitario} onChange={(e) => updateProduct(p.id, "precioUnitario", parseFloat(e.target.value) || 0)} />
-                    <span className="text-sm font-medium text-foreground self-center">{fmt(p.cantidad * p.precioUnitario)}</span>
+                    <span className="text-xs text-muted-foreground self-center">{fmt(lineIva(p.precioUnitario))}</span>
+                    <span className="text-xs font-medium text-foreground self-center">{fmt(linePriceWithIva(p.precioUnitario))}</span>
+                    <span className="text-sm font-medium text-foreground self-center">{fmt(lineTotal(p))}</span>
                     <Button type="button" variant="ghost" size="icon" className="h-9 w-9" onClick={() => removeProduct(p.id)} disabled={products.length <= 1}>
                       <Trash2 className="h-4 w-4 text-muted-foreground" />
                     </Button>
