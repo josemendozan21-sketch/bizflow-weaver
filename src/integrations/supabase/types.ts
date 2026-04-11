@@ -269,11 +269,17 @@ export type Database = {
           client_phone: string | null
           created_at: string
           delivery_date: string | null
+          dispatch_notes: string | null
+          dispatched_at: string | null
           gel_color: string | null
           id: string
           ink_color: string | null
           logo_url: string | null
+          numero_guia: string | null
           observations: string | null
+          payment_complete: boolean | null
+          payment_method: string | null
+          payment_proof_url: string | null
           personalization: string | null
           product: string
           production_status: string
@@ -281,6 +287,7 @@ export type Database = {
           sale_type: string
           silicone_color: string | null
           total_amount: number | null
+          transportadora: string | null
           unit_price: number | null
           updated_at: string
         }
@@ -297,11 +304,17 @@ export type Database = {
           client_phone?: string | null
           created_at?: string
           delivery_date?: string | null
+          dispatch_notes?: string | null
+          dispatched_at?: string | null
           gel_color?: string | null
           id?: string
           ink_color?: string | null
           logo_url?: string | null
+          numero_guia?: string | null
           observations?: string | null
+          payment_complete?: boolean | null
+          payment_method?: string | null
+          payment_proof_url?: string | null
           personalization?: string | null
           product: string
           production_status?: string
@@ -309,6 +322,7 @@ export type Database = {
           sale_type?: string
           silicone_color?: string | null
           total_amount?: number | null
+          transportadora?: string | null
           unit_price?: number | null
           updated_at?: string
         }
@@ -325,11 +339,17 @@ export type Database = {
           client_phone?: string | null
           created_at?: string
           delivery_date?: string | null
+          dispatch_notes?: string | null
+          dispatched_at?: string | null
           gel_color?: string | null
           id?: string
           ink_color?: string | null
           logo_url?: string | null
+          numero_guia?: string | null
           observations?: string | null
+          payment_complete?: boolean | null
+          payment_method?: string | null
+          payment_proof_url?: string | null
           personalization?: string | null
           product?: string
           production_status?: string
@@ -337,6 +357,7 @@ export type Database = {
           sale_type?: string
           silicone_color?: string | null
           total_amount?: number | null
+          transportadora?: string | null
           unit_price?: number | null
           updated_at?: string
         }

@@ -11,6 +11,7 @@ const ROLE_ROUTES: Record<AppRole, string[]> = {
   estampacion: ["/", "/diseno-logos", "/produccion"],
   usuario_visual: ["/", "/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/eventos"],
   disenador: ["/", "/diseno-logos"],
+  logistica: ["/", "/logistica"],
 };
 
 // Sections where the role can edit (create, update, delete)
@@ -22,6 +23,7 @@ const ROLE_EDIT_SECTIONS: Record<AppRole, string[]> = {
   estampacion: ["/produccion", "/diseno-logos"],
   usuario_visual: [],
   disenador: ["/diseno-logos"],
+  logistica: ["/logistica"],
 };
 
 export function canAccessRoute(role: AppRole | null, path: string): boolean {
@@ -48,6 +50,7 @@ export function getRoleLabel(role: AppRole): string {
     estampacion: "Estampación",
     usuario_visual: "Usuario Visual",
     disenador: "Diseñador",
+    logistica: "Logística",
   };
   return labels[role];
 }
