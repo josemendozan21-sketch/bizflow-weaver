@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, AlertTriangle, CheckCircle2, FileText, ShoppingCart, ClipboardList } from "lucide-react";
+import { ArrowLeft, AlertTriangle, CheckCircle2, FileText, ShoppingCart, ClipboardList, Plus, Trash2 } from "lucide-react";
 import { useLogisticsStore } from "@/stores/logisticsStore";
 import { useInventoryStore } from "@/stores/inventoryStore";
 import { useInventory } from "@/hooks/useInventory";
@@ -174,41 +174,92 @@ function OrderForm({ brand, saleType, onReset }: { brand: Brand; saleType: SaleT
 
 /* ---- Magical Warmers – Al por mayor ---- */
 
+const PREDEFINED_COLORS = [
+  "Azul", "Rosado", "Morado", "Negro", "Blanco", "Transparente",
+  "Aguamarina", "Azul claro", "Verde lima", "Verde militar",
+];
+
+interface OrderLine {
+  id: string;
+  product: string;
+  type: string;
+  gelColor: string;
+  gelCustom: string;
+  inkColor: string;
+  inkCustom: string;
+  units: string;
+  valorUnitario: string;
+  valorTotal: string;
+  autoCalc: boolean;
+}
+
+function createEmptyLine(): OrderLine {
+  return {
+    id: crypto.randomUUID(),
+    product: "",
+    type: "",
+    gelColor: "",
+    gelCustom: "",
+    inkColor: "",
+    inkCustom: "",
+    units: "",
+    valorUnitario: "",
+    valorTotal: "",
+    autoCalc: true,
+  };
+}
+
+function ColorSelect({
+  label,
+  value,
+  customValue,
+  onValueChange,
+  onCustomChange,
+}: {
+  label: string;
+  value: string;
+  customValue: string;
+  onValueChange: (v: string) => void;
+  onCustomChange: (v: string) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      <Select value={value} onValueChange={onValueChange}>
+        <SelectTrigger>
+          <SelectValue placeholder="Seleccionar color" />
+        </SelectTrigger>
+        <SelectContent>
+          {PREDEFINED_COLORS.map((c) => (
+            <SelectItem key={c} value={c}>{c}</SelectItem>
+          ))}
+          <SelectItem value="otro">Otro (escribir)</SelectItem>
+        </SelectContent>
+      </Select>
+      {value === "otro" && (
+        <Input
+          placeholder="Escriba el color..."
+          value={customValue}
+          onChange={(e) => onCustomChange(e.target.value)}
+          required
+        />
+      )}
+    </div>
+  );
+}
+
 function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [dobleTinta, setDobleTinta] = useState(false);
   const [escarcha, setEscarcha] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState("");
-  const [selectedType, setSelectedType] = useState("");
-  const [units, setUnits] = useState("");
-  const [valorUnitario, setValorUnitario] = useState("");
-  const [valorTotal, setValorTotal] = useState("");
-  const [autoCalc, setAutoCalc] = useState(true);
+  const [orderLines, setOrderLines] = useState<OrderLine[]>([createEmptyLine()]);
   const [abono, setAbono] = useState("");
   const [estadoPago, setEstadoPago] = useState<"abono_inicial" | "pago_total" | "pendiente">("abono_inicial");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const materialConfigs = useInventoryStore((s) => s.materialConfigs);
-  const zustandStockItems = useInventoryStore((s) => s.stockItems);
   const { reserveBodyStock: reserveBodyStockDB, discountStock: discountStockDB, stockItems: inventoryStockItems } = useInventory();
-
-  // Auto-calculate total
-  useEffect(() => {
-    if (!autoCalc) return;
-    const qty = parseInt(units, 10) || 0;
-    const unitP = parseFloat(valorUnitario) || 0;
-    if (qty > 0 && unitP > 0) {
-      setValorTotal(String(qty * unitP));
-    }
-  }, [units, valorUnitario, autoCalc]);
-
-  // Auto-fill abono when pago_total
-  useEffect(() => {
-    if (estadoPago === "pago_total") {
-      setAbono(valorTotal);
-    }
-  }, [estadoPago, valorTotal]);
 
   // Unique product names
   const productNames = useMemo(() => {
@@ -216,38 +267,51 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     return names.sort();
   }, [materialConfigs]);
 
-  // Types available for selected product
-  const availableTypes = useMemo(() => {
-    if (!selectedProduct) return [];
-    return materialConfigs
-      .filter((c) => c.productName === selectedProduct)
-      .map((c) => c.productType);
-  }, [materialConfigs, selectedProduct]);
+  // Grand total across all lines
+  const grandTotal = useMemo(() => {
+    return orderLines.reduce((sum, line) => sum + (parseFloat(line.valorTotal) || 0), 0);
+  }, [orderLines]);
 
-  // Matched config
-  const matchedConfig = useMemo(() => {
-    if (!selectedProduct || !selectedType) return null;
-    return materialConfigs.find(
-      (c) => c.productName === selectedProduct && c.productType === selectedType
-    ) || null;
-  }, [materialConfigs, selectedProduct, selectedType]);
+  // Auto-fill abono when pago_total
+  useEffect(() => {
+    if (estadoPago === "pago_total") {
+      setAbono(String(grandTotal));
+    }
+  }, [estadoPago, grandTotal]);
 
-  // Gel consumption calculation
-  const gelCalc = useMemo(() => {
-    const qty = parseInt(units, 10) || 0;
-    if (!matchedConfig || qty <= 0) return null;
-    const totalGrams = qty * matchedConfig.gramsPerUnit;
-    const totalKg = totalGrams / 1000;
-    const normalizeStr = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    const gelItem = inventoryStockItems.find((s) => s.category === "materia_prima" && normalizeStr(s.name).includes("gel"));
-    const available = gelItem?.available || 0;
-    const difference = available - totalGrams;
-    return { totalGrams, totalKg, available, difference, sufficient: difference >= 0, gramsPerUnit: matchedConfig.gramsPerUnit };
-  }, [matchedConfig, units, inventoryStockItems]);
+  const updateLine = (id: string, updates: Partial<OrderLine>) => {
+    setOrderLines((prev) =>
+      prev.map((line) => {
+        if (line.id !== id) return line;
+        const updated = { ...line, ...updates };
+        // Auto-calc total for this line
+        if (updated.autoCalc) {
+          const qty = parseInt(updated.units, 10) || 0;
+          const unitP = parseFloat(updated.valorUnitario) || 0;
+          if (qty > 0 && unitP > 0) {
+            updated.valorTotal = String(qty * unitP);
+          }
+        }
+        return updated;
+      })
+    );
+  };
 
-  const handleProductChange = (value: string) => {
-    setSelectedProduct(value);
-    setSelectedType("");
+  const addLine = () => setOrderLines((prev) => [...prev, createEmptyLine()]);
+  const removeLine = (id: string) => setOrderLines((prev) => prev.filter((l) => l.id !== id));
+
+  const getAvailableTypes = (productName: string) => {
+    if (!productName) return [];
+    return materialConfigs.filter((c) => c.productName === productName).map((c) => c.productType);
+  };
+
+  const getMatchedConfig = (productName: string, productType: string) => {
+    if (!productName || !productType) return null;
+    return materialConfigs.find((c) => c.productName === productName && c.productType === productType) || null;
+  };
+
+  const resolveColor = (selected: string, custom: string) => {
+    return selected === "otro" ? custom : selected;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -257,34 +321,44 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const form = e.target as HTMLFormElement;
     const fd = new FormData(form);
     const clientName = fd.get("mw_nombre") as string;
-    const quantity = parseInt(units, 10);
-    const inkColor = fd.get("mw_colorTinta") as string;
-    const gelColor = fd.get("mw_colorGel") as string;
-    const referencia = `${selectedProduct} (${selectedType})`;
     const rutFile = fd.get("mw_rut") as File;
-    const totalAmount = parseFloat(valorTotal) || 0;
-    const abonoAmount = estadoPago === "pago_total" ? totalAmount : (parseFloat(abono) || 0);
     const personalizacion = (fd.get("mw_personalizacion") as string) || "";
     const observaciones = (fd.get("mw_observaciones") as string) || "";
     const logoFile = fd.get("mw_logo") as File;
+    const fechaRequerida = fd.get("mw_fechaRequerida") as string;
 
-    if (!selectedProduct || !selectedType) {
-      toast.error("Producto requerido", { description: "Seleccione un producto y tipo." });
-      setIsSubmitting(false);
-      return;
+    // Validate all lines
+    for (const line of orderLines) {
+      if (!line.product || !line.type) {
+        toast.error("Producto requerido", { description: "Seleccione producto y tipo en todas las líneas." });
+        setIsSubmitting(false);
+        return;
+      }
+      const gelFinal = resolveColor(line.gelColor, line.gelCustom);
+      const inkFinal = resolveColor(line.inkColor, line.inkCustom);
+      if (!gelFinal) {
+        toast.error("Color de gel requerido", { description: "Seleccione un color de gel en todas las líneas." });
+        setIsSubmitting(false);
+        return;
+      }
+      if (!inkFinal) {
+        toast.error("Color de tinta requerido", { description: "Seleccione un color de tinta en todas las líneas." });
+        setIsSubmitting(false);
+        return;
+      }
     }
 
     if (!rutFile || !rutFile.name) {
-      toast.error("RUT requerido", {
-        description: "Para ventas al por mayor debe adjuntar el RUT de la empresa.",
-      });
+      toast.error("RUT requerido", { description: "Para ventas al por mayor debe adjuntar el RUT de la empresa." });
       setIsSubmitting(false);
       return;
     }
 
-    // Auto-create design request if logo was uploaded (do this BEFORE reset)
+    // Upload logo once if provided
     let logoUrl: string | null = null;
     if (logoFile && logoFile.size > 0 && user) {
+      const firstLine = orderLines[0];
+      const referencia = `${firstLine.product} (${firstLine.type})`;
       const result = await createLogoRequestFromOrder({
         brand: "Magical Warmers",
         clientName,
@@ -297,178 +371,155 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       });
       if (result.success) {
         toast.success("Diseño de logo", { description: result.message });
-        // Get the logo URL for the order record
-        const ext = logoFile.name.split(".").pop();
         logoUrl = "logo-uploaded";
       } else {
         toast.error("Diseño de logo", { description: result.message });
       }
     }
 
-    // Stock reservation moved to AFTER successful production_orders insert (see below)
+    const magicalStages = ["produccion_cuerpos", "estampacion", "dosificacion", "sellado", "recorte", "empaque", "listo"];
 
-    // Calculate gel consumption for Magical Warmers (persisted in Supabase)
-    const gelResult = await discountStockDB("gel", quantity * (matchedConfig?.gramsPerUnit || 60));
+    // Process each line as a separate order
+    for (const line of orderLines) {
+      const quantity = parseInt(line.units, 10) || 0;
+      const referencia = `${line.product} (${line.type})`;
+      const gelColor = resolveColor(line.gelColor, line.gelCustom);
+      const inkColor = resolveColor(line.inkColor, line.inkCustom);
+      const lineTotal = parseFloat(line.valorTotal) || 0;
+      const abonoAmount = estadoPago === "pago_total" ? lineTotal : (parseFloat(abono) || 0);
+      const matchedConfig = getMatchedConfig(line.product, line.type);
 
-    // Production order will be created after persisting to DB (see below)
+      // Discount gel
+      await discountStockDB("gel", quantity * (matchedConfig?.gramsPerUnit || 60));
 
-    // Send to accounting as "Cliente empresa"
-    useAccountingStore.getState().addOrder({
-      clientName,
-      brand: "magical",
-      product: referencia,
-      quantity,
-      saleType: "mayor",
-      clientType: "Cliente empresa",
-      totalAmount,
-      abono: abonoAmount,
-      paymentStatus: estadoPago,
-      canDispatch: estadoPago === "pago_total",
-      hasRut: true,
-      email: (fd.get("mw_email") as string)?.trim() || undefined,
-      direccion: (fd.get("mw_direccion") as string)?.trim() || undefined,
-      ciudad: (fd.get("mw_ciudad") as string)?.trim() || undefined,
-      observaciones: observaciones?.trim() || undefined,
-    });
-
-    // Create delivery calendar entry if fecha requerida is provided
-    const fechaRequerida = fd.get("mw_fechaRequerida") as string;
-    if (fechaRequerida) {
-      useDeliveryStore.getState().addEntry({
+      // Accounting store
+      useAccountingStore.getState().addOrder({
         clientName,
         brand: "magical",
         product: referencia,
         quantity,
         saleType: "mayor",
-        deliveryDate: fechaRequerida,
-        status: "en_produccion",
+        clientType: "Cliente empresa",
+        totalAmount: lineTotal,
+        abono: abonoAmount,
+        paymentStatus: estadoPago,
+        canDispatch: estadoPago === "pago_total",
+        hasRut: true,
+        email: (fd.get("mw_email") as string)?.trim() || undefined,
+        direccion: (fd.get("mw_direccion") as string)?.trim() || undefined,
+        ciudad: (fd.get("mw_ciudad") as string)?.trim() || undefined,
+        observaciones: observaciones?.trim() || undefined,
       });
-    }
 
-    // Persist order to database first, then reserve stock
-    const magicalStages = ["produccion_cuerpos", "estampacion", "dosificacion", "sellado", "recorte", "empaque", "listo"];
+      // Delivery calendar
+      if (fechaRequerida) {
+        useDeliveryStore.getState().addEntry({
+          clientName,
+          brand: "magical",
+          product: referencia,
+          quantity,
+          saleType: "mayor",
+          deliveryDate: fechaRequerida,
+          status: "en_produccion",
+        });
+      }
 
-    let orderData: { id: string } | null = null;
-    try {
-      const { data } = await supabase.from("orders").insert({
+      // Insert order to DB
+      let orderData: { id: string } | null = null;
+      try {
+        const { data } = await supabase.from("orders").insert({
+          brand: "magical",
+          sale_type: "mayor",
+          client_name: clientName,
+          client_nit: (fd.get("mw_cedulaNit") as string) || null,
+          client_phone: (fd.get("mw_contacto") as string) || null,
+          client_email: (fd.get("mw_email") as string) || null,
+          client_address: (fd.get("mw_direccion") as string) || null,
+          client_city: (fd.get("mw_ciudad") as string) || null,
+          product: referencia,
+          quantity,
+          unit_price: parseFloat(line.valorUnitario) || 0,
+          total_amount: lineTotal,
+          abono: abonoAmount,
+          ink_color: inkColor,
+          gel_color: gelColor,
+          logo_url: logoUrl,
+          observations: observaciones || null,
+          personalization: personalizacion || null,
+          advisor_id: user?.id || "",
+          advisor_name: user?.email || "Asesor",
+          production_status: "pendiente",
+          payment_complete: estadoPago === "pago_total",
+          delivery_date: fechaRequerida || null,
+        }).select("id").single();
+        orderData = data;
+      } catch (err: any) {
+        console.error("Error saving order:", err);
+        toast.error("Error al crear el pedido", { description: "No se pudo guardar. Intenta de nuevo." });
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!orderData) {
+        toast.error("Error al crear el pedido", { description: "No se recibió confirmación de la base de datos." });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Reserve body stock
+      const bodyResult = await reserveBodyStockDB("magical", referencia, quantity, {
+        clientName,
+        requestedBy: user?.id || undefined,
+      });
+
+      const needsCuerpos = !bodyResult.available || bodyResult.discounted < quantity;
+      const initialStage = needsCuerpos ? "produccion_cuerpos" : "estampacion";
+
+      await supabase.from("orders").update({ production_status: initialStage }).eq("id", orderData.id);
+
+      try {
+        await supabase.from("production_orders").insert({
+          order_id: orderData.id,
+          brand: "magical",
+          client_name: clientName,
+          quantity,
+          current_stage: initialStage,
+          stage_status: "pendiente",
+          workflow_type: "full",
+          stages: magicalStages,
+          gel_color: gelColor,
+          ink_color: inkColor,
+          logo_file: logoFile?.name || null,
+          needs_cuerpos: needsCuerpos,
+          has_stock: bodyResult.available,
+          molde: referencia,
+          observations: observaciones || null,
+          advisor_id: user?.id || null,
+        });
+      } catch (err: any) {
+        console.error("Error creating production order:", err);
+      }
+
+      await createOrderNotifications({
+        orderId: orderData.id,
         brand: "magical",
-        sale_type: "mayor",
-        client_name: clientName,
-        client_nit: (fd.get("mw_cedulaNit") as string) || null,
-        client_phone: (fd.get("mw_contacto") as string) || null,
-        client_email: (fd.get("mw_email") as string) || null,
-        client_address: (fd.get("mw_direccion") as string) || null,
-        client_city: (fd.get("mw_ciudad") as string) || null,
         product: referencia,
         quantity,
-        unit_price: parseFloat(valorUnitario) || 0,
-        total_amount: totalAmount,
-        abono: abonoAmount,
-        ink_color: inkColor,
-        gel_color: gelColor,
-        logo_url: logoUrl,
-        observations: observaciones || null,
-        personalization: personalizacion || null,
-        advisor_id: user?.id || "",
-        advisor_name: user?.email || "Asesor",
-        production_status: "pendiente",
-        payment_complete: estadoPago === "pago_total",
-        delivery_date: fechaRequerida || null,
-      }).select("id").single();
-      orderData = data;
-    } catch (err: any) {
-      console.error("Error saving order:", err);
-      toast.error("Error al crear el pedido", {
-        description: "No se pudo guardar el pedido ni enviar a producción. Intenta de nuevo o contacta soporte.",
+        clientName,
+        needsCuerpos,
+        shortage: needsCuerpos ? quantity - bodyResult.discounted : 0,
+        hasLogo: !!logoFile,
+        advisorId: user?.id || "",
       });
-      setIsSubmitting(false);
-      return;
     }
 
-    if (!orderData) {
-      toast.error("Error al crear el pedido", {
-        description: "No se recibió confirmación de la base de datos. Intenta de nuevo.",
-      });
-      setIsSubmitting(false);
-      return;
-    }
+    queryClient.invalidateQueries({ queryKey: ["production-orders"] });
+    queryClient.invalidateQueries({ queryKey: ["orders"] });
 
-    // Reserve body stock AFTER successful order creation
-    const bodyResult = await reserveBodyStockDB("magical", referencia, quantity, {
-      clientName,
-      requestedBy: user?.id || undefined,
+    const lineCount = orderLines.length;
+    toast.success(`${lineCount > 1 ? lineCount + " pedidos creados" : "Pedido creado"}`, {
+      description: `${clientName} — ${lineCount > 1 ? lineCount + " líneas" : orderLines[0].units + " uds de " + orderLines[0].product}. Enviado a Producción y Contabilidad.`,
     });
-
-    const needsCuerpos = !bodyResult.available || bodyResult.discounted < quantity;
-    const initialStage = needsCuerpos ? "produccion_cuerpos" : "estampacion";
-
-    // Update the order with the correct production_status now that we know
-    await supabase.from("orders")
-      .update({ production_status: initialStage })
-      .eq("id", orderData.id);
-
-    // Create production order
-    try {
-      await supabase.from("production_orders").insert({
-        order_id: orderData.id,
-        brand: "magical",
-        client_name: clientName,
-        quantity,
-        current_stage: initialStage,
-        stage_status: "pendiente",
-        workflow_type: "full",
-        stages: magicalStages,
-        gel_color: gelColor,
-        ink_color: inkColor,
-        logo_file: logoFile?.name || null,
-        needs_cuerpos: needsCuerpos,
-        has_stock: bodyResult.available,
-        molde: referencia,
-        observations: observaciones || null,
-        advisor_id: user?.id || null,
-      });
-      queryClient.invalidateQueries({ queryKey: ["production-orders"] });
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-    } catch (err: any) {
-      console.error("Error creating production order:", err);
-    }
-
-    // Send notifications to all roles
-    await createOrderNotifications({
-      orderId: orderData.id,
-      brand: "magical",
-      product: referencia,
-      quantity,
-      clientName,
-      needsCuerpos,
-      shortage: needsCuerpos ? quantity - bodyResult.discounted : 0,
-      hasLogo: !!logoFile,
-      advisorId: user?.id || "",
-    });
-
-    toast.success("Pedido al por mayor creado", {
-      description: `${clientName} — ${quantity} uds de ${referencia}. Enviado a Producción y Contabilidad.`,
-    });
-
-    const saldoFinal = estadoPago === "pago_total"
-      ? 0
-      : (parseFloat(valorTotal) || 0) - (parseFloat(abono) || 0);
-    if (saldoFinal > 0) {
-      toast.warning("Saldo pendiente registrado", {
-        description: `Falta $${saldoFinal.toLocaleString("es-CO")} para completar el pago. Contabilidad fue notificada.`,
-      });
-    }
-
-    // Inventory feedback
-    if (!bodyResult.available) {
-      toast.warning("Requerimiento de producción generado", { description: bodyResult.message });
-    } else if (bodyResult.discounted < quantity) {
-      toast.warning("Stock parcial de cuerpos", { description: bodyResult.message });
-    } else {
-      toast.info("Inventario actualizado", { description: bodyResult.message });
-    }
-
-    toast.info("Consumo de gel", { description: gelResult.message });
 
     onReset();
   };
@@ -496,56 +547,87 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           </fieldset>
 
           <fieldset className="space-y-4">
-            <legend className="text-sm font-semibold text-foreground mb-2">Información del pedido</legend>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label>Producto / Referencia</Label>
-                <Select value={selectedProduct} onValueChange={handleProductChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar producto" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {productNames.map((name) => (
-                      <SelectItem key={name} value={name}>{name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Tipo</Label>
-                <Select value={selectedType} onValueChange={setSelectedType} disabled={!selectedProduct}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableTypes.map((t) => (
-                      <SelectItem key={t} value={t}>{t}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Color de gel" name="mw_colorGel" required />
-              <Field label="Color de tinta" name="mw_colorTinta" required />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="mw_unidades">Unidades</Label>
-                <Input id="mw_unidades" name="mw_unidades" type="number" required value={units} onChange={(e) => setUnits(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="mw_valorUnitario">Valor unitario</Label>
-                <Input id="mw_valorUnitario" name="mw_valorUnitario" type="number" required value={valorUnitario} onChange={(e) => { setValorUnitario(e.target.value); setAutoCalc(true); }} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="mw_valorTotal">Valor total del pedido</Label>
-                <Input id="mw_valorTotal" name="mw_valorTotal" type="number" required value={valorTotal} onChange={(e) => { setValorTotal(e.target.value); setAutoCalc(false); }} />
-                {autoCalc && parseInt(units, 10) > 0 && parseFloat(valorUnitario) > 0 && (
-                  <p className="text-xs text-muted-foreground">Calculado automáticamente</p>
+            <legend className="text-sm font-semibold text-foreground mb-2">Productos del pedido</legend>
+            {orderLines.map((line, idx) => (
+              <div key={line.id} className="rounded-lg border border-border p-4 space-y-4 relative">
+                {orderLines.length > 1 && (
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-muted-foreground">Producto {idx + 1}</span>
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeLine(line.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
                 )}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label>Producto / Referencia</Label>
+                    <Select value={line.product} onValueChange={(v) => updateLine(line.id, { product: v, type: "" })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar producto" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {productNames.map((name) => (
+                          <SelectItem key={name} value={name}>{name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Tipo</Label>
+                    <Select value={line.type} onValueChange={(v) => updateLine(line.id, { type: v })} disabled={!line.product}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getAvailableTypes(line.product).map((t) => (
+                          <SelectItem key={t} value={t}>{t}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <ColorSelect
+                    label="Color de gel"
+                    value={line.gelColor}
+                    customValue={line.gelCustom}
+                    onValueChange={(v) => updateLine(line.id, { gelColor: v })}
+                    onCustomChange={(v) => updateLine(line.id, { gelCustom: v })}
+                  />
+                  <ColorSelect
+                    label="Color de tinta"
+                    value={line.inkColor}
+                    customValue={line.inkCustom}
+                    onValueChange={(v) => updateLine(line.id, { inkColor: v })}
+                    onCustomChange={(v) => updateLine(line.id, { inkCustom: v })}
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="space-y-1.5">
+                    <Label>Unidades</Label>
+                    <Input type="number" required value={line.units} onChange={(e) => updateLine(line.id, { units: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Valor unitario</Label>
+                    <Input type="number" required value={line.valorUnitario} onChange={(e) => updateLine(line.id, { valorUnitario: e.target.value, autoCalc: true })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Valor total línea</Label>
+                    <Input type="number" required value={line.valorTotal} onChange={(e) => updateLine(line.id, { valorTotal: e.target.value, autoCalc: false })} />
+                    {line.autoCalc && parseInt(line.units, 10) > 0 && parseFloat(line.valorUnitario) > 0 && (
+                      <p className="text-xs text-muted-foreground">Calculado automáticamente</p>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
+            ))}
+            <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={addLine}>
+              <Plus className="h-4 w-4" /> Agregar otro producto
+            </Button>
+          </fieldset>
+
+          <fieldset className="space-y-4">
+            <legend className="text-sm font-semibold text-foreground mb-2">Pago</legend>
             <div className="grid gap-4 sm:grid-cols-2">
               {estadoPago !== "pago_total" && (
                 <div className="space-y-1.5">
@@ -569,7 +651,6 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             </div>
             <Field label="Fecha requerida de entrega" name="mw_fechaRequerida" type="date" />
           </fieldset>
-
 
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Opciones adicionales</legend>
@@ -606,13 +687,13 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           </fieldset>
 
           <PaymentSummary
-            totalAmount={parseFloat(valorTotal) || 0}
-            abono={estadoPago === "pago_total" ? (parseFloat(valorTotal) || 0) : (parseFloat(abono) || 0)}
+            totalAmount={grandTotal}
+            abono={estadoPago === "pago_total" ? grandTotal : (parseFloat(abono) || 0)}
             estadoPago={estadoPago}
           />
 
           <div className="flex gap-3 pt-2">
-            <Button type="submit">Crear pedido</Button>
+            <Button type="submit" disabled={isSubmitting}>Crear pedido</Button>
             <Button type="button" variant="outline" onClick={onReset}>Cancelar</Button>
           </div>
         </form>
