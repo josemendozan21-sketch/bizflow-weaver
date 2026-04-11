@@ -373,6 +373,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         advisor_name: user?.email || "Asesor",
         production_status: "pendiente",
         payment_complete: estadoPago === "pago_total",
+        delivery_date: fechaRequerida || null,
       }).select("id").single();
       orderData = data;
     } catch (err: any) {
