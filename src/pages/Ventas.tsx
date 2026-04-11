@@ -1154,6 +1154,26 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
             </div>
           </fieldset>
 
+          {!isMayor && (
+            <fieldset className="space-y-4">
+              <legend className="text-sm font-semibold text-foreground mb-2">Método de pago</legend>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { value: "contra_entrega", label: "Contra entrega" },
+                  { value: "pagado", label: "Ya pagado" },
+                ] as const).map((opt) => (
+                  <label key={opt.value} className={`flex items-center gap-2 rounded-md border p-3 cursor-pointer transition-colors ${paymentMethod === opt.value ? "border-primary bg-primary/5" : "border-input hover:bg-accent"}`}>
+                    <input type="radio" name="payment_method_radio" value={opt.value} checked={paymentMethod === opt.value} onChange={() => setPaymentMethod(opt.value)} className="accent-primary h-4 w-4" />
+                    <span className="text-sm text-foreground">{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+              {paymentMethod === "pagado" && (
+                <FileField label="Adjuntar soporte de pago" name="payment_proof" />
+              )}
+            </fieldset>
+          )}
+
           <div className="space-y-1.5">
             <Label htmlFor="notas">Notas adicionales</Label>
             <Textarea id="notas" name="notas" placeholder="Observaciones del pedido..." />
