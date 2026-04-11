@@ -472,24 +472,9 @@ const Eventos = () => {
                                 <div>
                                   <span className="text-muted-foreground text-xs">Estado</span>
                                   <div className="mt-0.5">
-                                    {isReadOnly ? (
-                                      <Badge className={cn("text-xs", DELIVERY_STATUS_COLORS[entry.status])}>
-                                        {DELIVERY_STATUS_LABELS[entry.status]}
-                                      </Badge>
-                                    ) : (
-                                      <Badge className={cn("text-xs", DELIVERY_STATUS_COLORS[entry.status])}>
-                                        {DELIVERY_STATUS_LABELS[entry.status]}
-                                      </Badge>
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="pendiente">Pendiente</SelectItem>
-                                          <SelectItem value="en_produccion">En producción</SelectItem>
-                                          <SelectItem value="listo">Listo</SelectItem>
-                                          <SelectItem value="entregado">Entregado</SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                    )}
+                                    <Badge className={cn("text-xs", DELIVERY_STATUS_COLORS[entry.status])}>
+                                      {DELIVERY_STATUS_LABELS[entry.status]}
+                                    </Badge>
                                   </div>
                                 </div>
                               </div>
