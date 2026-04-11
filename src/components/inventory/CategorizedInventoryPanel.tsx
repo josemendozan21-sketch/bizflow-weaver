@@ -141,7 +141,7 @@ const CategorizedInventoryPanel = ({
 
   const brandLabel = BRAND_OPTIONS.find((b) => b.value === selectedBrand)?.label ?? "";
 
-  const brandItems = stockItems.filter((i) => i.brand === selectedBrand);
+  const brandItems = stockItems.filter((i) => i.brand === dbBrand);
   const totalCritical = brandItems.filter((i) => getStockStatus(i) === "critico").length;
   const totalLow = brandItems.filter((i) => getStockStatus(i) === "bajo").length;
 
@@ -308,7 +308,7 @@ const CategorizedInventoryPanel = ({
           {CATEGORIES.map((cat) => {
             const meta = CATEGORY_META[cat];
             const Icon = meta.icon;
-            const count = stockItems.filter((i) => i.brand === selectedBrand && i.category === cat).length;
+            const count = stockItems.filter((i) => i.brand === dbBrand && i.category === cat).length;
             return (
               <TabsTrigger key={cat} value={cat} className="gap-1.5 text-xs sm:text-sm">
                 <Icon className="h-4 w-4 hidden sm:block" />
