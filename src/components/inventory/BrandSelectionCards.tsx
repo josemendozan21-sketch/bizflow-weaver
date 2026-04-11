@@ -14,6 +14,11 @@ const BRANDS: { value: InventoryBrand; label: string; description: string }[] = 
   { value: "sweatspot", label: "Sweatspot", description: "Termos y accesorios deportivos" },
 ];
 
+const BRAND_DB_MAP: Record<InventoryBrand, string> = {
+  magical_warmers: "magical",
+  sweatspot: "sweatspot",
+};
+
 export interface InventoryNotification {
   id: string;
   type: "critico" | "bajo" | "pendiente" | "info";
@@ -39,7 +44,8 @@ const BrandSelectionCards = ({ selectedBrand, onSelectBrand, onNotificationClick
 
   const getBrandNotifications = useMemo(() => {
     return (brand: InventoryBrand): InventoryNotification[] => {
-      const items = stockItems.filter((i) => i.brand === brand);
+      const dbBrand = BRAND_DB_MAP[brand] || brand;
+      const items = stockItems.filter((i) => i.brand === dbBrand);
       const notifications: InventoryNotification[] = [];
 
       if (!isAsesor) {
@@ -117,7 +123,8 @@ const BrandSelectionCards = ({ selectedBrand, onSelectBrand, onNotificationClick
   }, [stockItems, isAsesor]);
 
   const getBrandStats = (brand: InventoryBrand) => {
-    const allItems = stockItems.filter((i) => i.brand === brand);
+    const dbBrand = BRAND_DB_MAP[brand] || brand;
+    const allItems = stockItems.filter((i) => i.brand === dbBrand);
     const items = isAsesor
       ? allItems.filter((i) => ASESOR_VISIBLE_CATEGORIES.includes(i.category as InventoryCategory))
       : allItems;
