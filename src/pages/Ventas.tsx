@@ -766,6 +766,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         advisor_id: user?.id || "",
         advisor_name: user?.email || "Asesor",
         production_status: "pendiente",
+        payment_complete: ssEstadoPago === "pago_total",
         delivery_date: fechaRequerida || null,
       }).select("id").single();
       orderData = data;
