@@ -1,22 +1,12 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { FileText, CheckCircle, Download, AlertCircle, Clock } from "lucide-react";
+import { Upload, Download, Clock, FileText, ExternalLink } from "lucide-react";
 import { useOrders, type Order } from "@/hooks/useOrders";
 import { supabase } from "@/integrations/supabase/client";
 import { exportOrdersToExcel } from "@/lib/exportSiigo";
@@ -24,7 +14,6 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import type { AccountingOrder } from "@/stores/accountingStore";
 
-/** Map a Supabase Order to the AccountingOrder shape used by the export util */
 function toAccountingOrder(o: Order): AccountingOrder {
   return {
     id: o.id,
@@ -54,82 +43,64 @@ function toAccountingOrder(o: Order): AccountingOrder {
   };
 }
 
-/** Determines if an order can be invoiced */
 function canInvoice(o: Order): boolean {
-  // Al por menor: solo si está pago
-  if (o.sale_type === "menor") {
-    return !!o.payment_complete;
-  }
-  // Al por mayor: se factura de inmediato si tiene RUT
-  if (o.sale_type === "mayor") {
-    return !!o.client_nit;
-  }
+  if (o.sale_type === "menor") return !!o.payment_complete;
+  if (o.sale_type === "mayor") return !!o.client_nit;
   return false;
 }
 
 function getBlockReason(o: Order): string | null {
-  if (o.sale_type === "menor" && !o.payment_complete) {
-    return "Pendiente de pago completo";
-  }
-  if (o.sale_type === "mayor" && !o.client_nit) {
-    return "Falta adjuntar RUT del cliente";
-  }
+  if (o.sale_type === "menor" && !o.payment_complete) return "Pendiente de pago completo";
+  if (o.sale_type === "mayor" && !o.client_nit) return "Falta adjuntar RUT del cliente";
   return null;
 }
 
-const InvoiceDialog = ({ order, onConfirm }: { order: Order; onConfirm: (id: string, data: { invoiceNumber: string; invoiceAmount: number; invoiceNotes?: string }) => void }) => {
-  const [open, setOpen] = useState(false);
-  const [invoiceNumber, setInvoiceNumber] = useState("");
-  const [invoiceAmount, setInvoiceAmount] = useState(order.total_amount?.toString() || "");
-  const [invoiceNotes, setInvoiceNotes] = useState("");
+const UploadInvoiceButton = ({ order, onUploaded }: { order: Order; onUploaded: () => void }) => {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
 
-  const handleConfirm = () => {
-    onConfirm(order.id, {
-      invoiceNumber,
-      invoiceAmount: parseFloat(invoiceAmount),
-      invoiceNotes,
-    });
-    setOpen(false);
-    setInvoiceNumber("");
-    setInvoiceAmount("");
-    setInvoiceNotes("");
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${order.id}_${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("invoice-files")
+        .upload(path, file);
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from("invoice-files").getPublicUrl(path);
+
+      const { error: updateError } = await supabase
+        .from("orders")
+        .update({
+          invoice_status: "facturado",
+          invoice_file_url: urlData.publicUrl,
+          invoice_date: new Date().toISOString().slice(0, 10),
+        })
+        .eq("id", order.id);
+      if (updateError) throw updateError;
+
+      toast.success("Factura adjuntada correctamente");
+      onUploaded();
+    } catch (err: any) {
+      toast.error("Error al subir factura", { description: err.message });
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" className="w-full">
-          <FileText className="h-4 w-4 mr-1" />
-          Facturar
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Registrar factura</DialogTitle>
-        </DialogHeader>
-        <p className="text-sm text-muted-foreground">
-          Cliente: <span className="font-semibold text-foreground">{order.client_name}</span>
-        </p>
-        <div className="space-y-4 pt-2">
-          <div className="space-y-1.5">
-            <Label>Número de factura</Label>
-            <Input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} placeholder="Ej: FAC-001" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Monto total ($)</Label>
-            <Input type="number" value={invoiceAmount} onChange={(e) => setInvoiceAmount(e.target.value)} placeholder="Ej: 150000" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Notas (opcional)</Label>
-            <Textarea value={invoiceNotes} onChange={(e) => setInvoiceNotes(e.target.value)} placeholder="Observaciones de facturación" rows={2} />
-          </div>
-          <Button className="w-full" onClick={handleConfirm} disabled={!invoiceNumber.trim() || !invoiceAmount.trim()}>
-            <CheckCircle className="h-4 w-4 mr-1" />
-            Marcar como facturado
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <>
+      <input ref={fileRef} type="file" accept=".xlsx,.xls,.pdf,.doc,.docx" className="hidden" onChange={handleFile} />
+      <Button size="sm" className="w-full" onClick={() => fileRef.current?.click()} disabled={uploading}>
+        <Upload className="h-4 w-4 mr-1" />
+        {uploading ? "Subiendo..." : "Adjuntar factura"}
+      </Button>
+    </>
   );
 };
 
@@ -186,26 +157,6 @@ const Contabilidad = () => {
   const pending = allOrders.filter((o) => o.invoice_status === "pendiente");
   const invoiced = allOrders.filter((o) => o.invoice_status === "facturado");
 
-  const handleMarkInvoiced = async (id: string, data: { invoiceNumber: string; invoiceAmount: number; invoiceNotes?: string }) => {
-    const { error } = await supabase
-      .from("orders")
-      .update({
-        invoice_status: "facturado",
-        invoice_number: data.invoiceNumber,
-        invoice_amount: data.invoiceAmount,
-        invoice_notes: data.invoiceNotes || "",
-        invoice_date: new Date().toISOString().slice(0, 10),
-      })
-      .eq("id", id);
-
-    if (error) {
-      toast.error("Error al facturar", { description: error.message });
-      return;
-    }
-    queryClient.invalidateQueries({ queryKey: ["orders"] });
-    toast.success("Pedido facturado correctamente");
-  };
-
   const toggleSelection = (id: string, set: Set<string>, setter: React.Dispatch<React.SetStateAction<Set<string>>>) => {
     const next = new Set(set);
     if (next.has(id)) next.delete(id); else next.add(id);
@@ -221,24 +172,20 @@ const Contabilidad = () => {
   };
 
   const handleExportSingle = (order: Order) => {
-    const acc = toAccountingOrder(order);
-    exportOrdersToExcel([acc], `siigo_${order.client_name.replace(/\s+/g, "_")}_${order.created_at?.slice(0, 10)}.xlsx`);
+    exportOrdersToExcel([toAccountingOrder(order)], `siigo_${order.client_name.replace(/\s+/g, "_")}_${order.created_at?.slice(0, 10)}.xlsx`);
     toast.success("Archivo exportado");
   };
 
   const handleExportSelected = (ids: Set<string>, label: string) => {
     const selected = allOrders.filter((o) => ids.has(o.id)).map(toAccountingOrder);
-    if (selected.length === 0) {
-      toast.error("Selecciona al menos un pedido para exportar.");
-      return;
-    }
+    if (selected.length === 0) { toast.error("Selecciona al menos un pedido."); return; }
     exportOrdersToExcel(selected, `siigo_${label}_${new Date().toISOString().slice(0, 10)}.xlsx`);
     toast.success(`${selected.length} pedido(s) exportados`);
   };
 
-  if (isLoading) {
-    return <div className="flex items-center justify-center py-20 text-muted-foreground">Cargando pedidos...</div>;
-  }
+  const refreshOrders = () => queryClient.invalidateQueries({ queryKey: ["orders"] });
+
+  if (isLoading) return <div className="flex items-center justify-center py-20 text-muted-foreground">Cargando pedidos...</div>;
 
   return (
     <div className="space-y-6">
@@ -306,7 +253,7 @@ const Contabilidad = () => {
                             <div className="flex gap-2">
                               {!isReadOnly && !blocked && (
                                 <div className="flex-1">
-                                  <InvoiceDialog order={order} onConfirm={handleMarkInvoiced} />
+                                  <UploadInvoiceButton order={order} onUploaded={refreshOrders} />
                                 </div>
                               )}
                               <Button size="sm" variant="outline" onClick={() => handleExportSingle(order)}>
@@ -347,12 +294,11 @@ const Contabilidad = () => {
                       <TableHead className="w-10"></TableHead>
                       <TableHead>Cliente</TableHead>
                       <TableHead>Tipo</TableHead>
-                      <TableHead>Factura</TableHead>
                       <TableHead>Monto</TableHead>
                       <TableHead>Fecha</TableHead>
                       <TableHead>Producto</TableHead>
                       <TableHead>Cant.</TableHead>
-                      <TableHead>Notas</TableHead>
+                      <TableHead>Factura</TableHead>
                       <TableHead className="w-10"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -366,14 +312,19 @@ const Contabilidad = () => {
                             {order.sale_type === "mayor" ? "Mayor" : "Menor"}
                           </Badge>
                         </TableCell>
-                        <TableCell className="font-mono">{order.invoice_number}</TableCell>
-                        <TableCell>${order.invoice_amount?.toLocaleString()}</TableCell>
+                        <TableCell>${order.total_amount?.toLocaleString() ?? "—"}</TableCell>
                         <TableCell>{order.invoice_date}</TableCell>
                         <TableCell>{order.product}</TableCell>
                         <TableCell>{order.quantity}</TableCell>
-                        <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">{order.invoice_notes}</TableCell>
                         <TableCell>
-                          <Button size="icon" variant="ghost" onClick={() => handleExportSingle(order)} title="Exportar pedido">
+                          {order.invoice_file_url ? (
+                            <a href={order.invoice_file_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1 text-sm">
+                              <FileText className="h-4 w-4" />Descargar
+                            </a>
+                          ) : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Button size="icon" variant="ghost" onClick={() => handleExportSingle(order)} title="Exportar SIIGO">
                             <Download className="h-4 w-4" />
                           </Button>
                         </TableCell>
