@@ -123,9 +123,9 @@ export default function QuotationGenerator() {
     <Card className="max-w-4xl">
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
-          <FileText className="h-5 w-5" /> Generar Cotización
+          <FileText className="h-5 w-5" /> Generar Propuesta Comercial
         </CardTitle>
-        <CardDescription>Cree una cotización profesional y expórtela como PDF</CardDescription>
+        <CardDescription>Cree una propuesta comercial profesional y expórtela como PDF</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Brand */}
@@ -142,7 +142,7 @@ export default function QuotationGenerator() {
 
         {/* Client info */}
         <fieldset className="space-y-4">
-          <legend className="text-sm font-semibold text-foreground mb-2">Información del cliente</legend>
+          <legend className="text-sm font-semibold text-foreground mb-2">Datos del cliente</legend>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Nombre del cliente *</Label>

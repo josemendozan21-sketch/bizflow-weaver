@@ -30,7 +30,7 @@ export function generateQuotationPDF(data: QuotationData) {
 
   // ── Colors ──
   const brandColor: [number, number, number] =
-    data.brand === "magical" ? [220, 38, 38] : [37, 99, 235]; // red / blue
+    data.brand === "magical" ? [45, 55, 72] : [30, 58, 82]; // slate / navy
   const darkGray: [number, number, number] = [31, 41, 55];
   const medGray: [number, number, number] = [107, 114, 128];
   const lightBg: [number, number, number] = [249, 250, 251];
@@ -53,7 +53,7 @@ export function generateQuotationPDF(data: QuotationData) {
 
   // Quotation number right-aligned
   doc.setFontSize(10);
-  doc.text(`Cotización ${data.quotationNumber}`, pageW - margin, 18, { align: "right" });
+  doc.text(`Propuesta Comercial ${data.quotationNumber}`, pageW - margin, 18, { align: "right" });
   doc.text(`Fecha: ${data.fecha}`, pageW - margin, 26, { align: "right" });
 
   y = 50;
@@ -62,7 +62,7 @@ export function generateQuotationPDF(data: QuotationData) {
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...darkGray);
-  doc.text("INFORMACIÓN DEL CLIENTE", margin, y);
+  doc.text("DATOS DEL CLIENTE", margin, y);
   y += 7;
 
   doc.setFontSize(9);
@@ -208,7 +208,7 @@ export function generateQuotationPDF(data: QuotationData) {
   const footerLines = [
     "Bionovations SAS · NIT: 900793324-8",
     "Calle 168 #21-73, Bogotá, Colombia",
-    "Tel: (+57) XXX XXX XXXX · contacto@bionovations.com · www.bionovations.com",
+    "Tel: (+57) 310 333 3967 · contabilidad.mw@magicalwarmers.com",
   ];
 
   footerLines.forEach((line, i) => {
