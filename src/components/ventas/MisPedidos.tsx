@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useOrders, PRODUCTION_STATUS_LABELS, PRODUCTION_STATUS_COLORS, type Order } from "@/hooks/useOrders";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, Package, Calendar, DollarSign, MapPin, Upload, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Loader2, Package, Calendar, DollarSign, MapPin, Upload, CheckCircle2, AlertTriangle, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
