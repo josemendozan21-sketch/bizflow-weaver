@@ -148,7 +148,7 @@ const Logistica = () => {
                         <TableCell><Badge variant={order.brand === "magical" ? "default" : "secondary"}>{brandLabel(order.brand)}</Badge></TableCell>
                         <TableCell>{order.product}</TableCell>
                         <TableCell className="text-right font-medium">{order.quantity.toLocaleString()}</TableCell>
-                        <TableCell><ProductionStatusBadge status={order.production_status} /></TableCell>
+                        <TableCell><ProductionStatusBadge status={order.production_status} order={order} /></TableCell>
                         <TableCell><PaymentBadge order={order} /></TableCell>
                       </TableRow>
                     ))}
