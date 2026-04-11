@@ -276,6 +276,7 @@ export type Database = {
           ink_color: string | null
           invoice_amount: number | null
           invoice_date: string | null
+          invoice_file_url: string | null
           invoice_notes: string | null
           invoice_number: string | null
           invoice_status: string
@@ -316,6 +317,7 @@ export type Database = {
           ink_color?: string | null
           invoice_amount?: number | null
           invoice_date?: string | null
+          invoice_file_url?: string | null
           invoice_notes?: string | null
           invoice_number?: string | null
           invoice_status?: string
@@ -356,6 +358,7 @@ export type Database = {
           ink_color?: string | null
           invoice_amount?: number | null
           invoice_date?: string | null
+          invoice_file_url?: string | null
           invoice_notes?: string | null
           invoice_number?: string | null
           invoice_status?: string
