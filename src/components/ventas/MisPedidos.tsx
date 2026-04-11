@@ -136,7 +136,21 @@ export function MisPedidos() {
                   </div>
                 )}
 
-                {/* Progress indicator */}
+                {/* Invoice file download */}
+                {order.invoice_file_url && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2 text-blue-800">
+                      <FileText className="h-4 w-4" />
+                      <span className="font-medium">Factura disponible</span>
+                    </div>
+                    <a href={order.invoice_file_url} target="_blank" rel="noopener noreferrer">
+                      <Button size="sm" variant="outline" className="h-7 text-xs">
+                        Descargar
+                      </Button>
+                    </a>
+                  </div>
+                )}
+
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-medium text-foreground">{friendlyLabel}</span>
