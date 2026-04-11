@@ -33,11 +33,13 @@ export default function QuotationGenerator() {
   const [brand, setBrand] = useState<"magical" | "sweatspot">("magical");
   const [clientName, setClientName] = useState("");
   const [empresa, setEmpresa] = useState("");
+  const [cedulaNit, setCedulaNit] = useState("");
   const [ciudad, setCiudad] = useState("");
   const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
-  const [tiempoProduccion, setTiempoProduccion] = useState("15 días hábiles");
-  const [condicionesPago, setCondicionesPago] = useState("50% anticipo, 50% contra entrega");
-  const [vigencia, setVigencia] = useState("30 días calendario");
+  const [tiempoProduccion, setTiempoProduccion] = useState("8 a 15 días hábiles según cantidad");
+  const [condicionesPago, setCondicionesPago] = useState("50% para iniciar, 50% una vez esté listo");
+  const [vigencia, setVigencia] = useState("15 días calendario");
+  const [garantia, setGarantia] = useState("4 meses por imperfecciones o defectos de fabricación");
   const [products, setProducts] = useState<ProductLine[]>([
     { id: crypto.randomUUID(), producto: "", cantidad: 1, precioUnitario: 0 },
   ]);
@@ -105,11 +107,11 @@ export default function QuotationGenerator() {
     }
 
     generateQuotationPDF({
-      brand, clientName, empresa, ciudad, fecha, quotationNumber,
+      brand, clientName, empresa, cedulaNit, ciudad, fecha, quotationNumber,
       products: products.map((p) => ({
         producto: p.producto, cantidad: p.cantidad, precioUnitario: p.precioUnitario, total: p.cantidad * p.precioUnitario,
       })),
-      subtotal, iva, total, tiempoProduccion, condicionesPago, vigencia,
+      subtotal, iva, total, tiempoProduccion, condicionesPago, vigencia, garantia,
     });
 
     toast.success("Cotización generada", { description: `${quotationNumber} exportada como PDF` });
@@ -149,6 +151,12 @@ export default function QuotationGenerator() {
             <div className="space-y-1.5">
               <Label>Empresa (si aplica)</Label>
               <Input value={empresa} onChange={(e) => setEmpresa(e.target.value)} />
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>Cédula / NIT</Label>
+              <Input value={cedulaNit} onChange={(e) => setCedulaNit(e.target.value)} placeholder="Ej: 900793324-8" />
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -262,7 +270,7 @@ export default function QuotationGenerator() {
         {/* Notes */}
         <fieldset className="space-y-4">
           <legend className="text-sm font-semibold text-foreground mb-2">Notas y condiciones</legend>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Tiempo de producción</Label>
               <Input value={tiempoProduccion} onChange={(e) => setTiempoProduccion(e.target.value)} />
@@ -274,6 +282,10 @@ export default function QuotationGenerator() {
             <div className="space-y-1.5">
               <Label>Vigencia de la cotización</Label>
               <Input value={vigencia} onChange={(e) => setVigencia(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Garantía</Label>
+              <Input value={garantia} onChange={(e) => setGarantia(e.target.value)} />
             </div>
           </div>
         </fieldset>
