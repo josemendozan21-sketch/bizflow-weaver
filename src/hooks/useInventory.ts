@@ -121,11 +121,18 @@ export function useInventory() {
       const searchPool = (freshItems as unknown as SupabaseStockItem[]) || stockItems;
       const normalizedName = normalize(itemName);
 
-      const item = searchPool.find(
-        (s) => normalize(s.name).includes(normalizedName)
+      // Try exact match first, then partial match (both directions)
+      let item = searchPool.find(
+        (s) => normalize(s.name) === normalizedName
       );
+      if (!item) {
+        item = searchPool.find(
+          (s) => normalize(s.name).includes(normalizedName) || normalizedName.includes(normalize(s.name))
+        );
+      }
 
       if (!item) {
+        console.warn(`[discountStock] No match for "${itemName}" among:`, searchPool.map(s => s.name));
         return { success: false, message: `Producto "${itemName}" no encontrado en inventario.` };
       }
 

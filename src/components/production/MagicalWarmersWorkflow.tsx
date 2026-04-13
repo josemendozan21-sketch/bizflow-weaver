@@ -6,6 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   CheckCircle2,
   Plus,
@@ -62,15 +71,66 @@ const PLASTICO_OPTIONS = [
   { value: "calor", label: "Calor", icon: Thermometer },
 ];
 
+/** Canonical product references for body production */
+const CANONICAL_REFERENCES = [
+  "Lumbar", "Shoulder", "Cervical", "Multiusos", "Pocket", "Handy",
+  "Muela", "Círculo 8 cm", "Círculo 12 cm",
+];
+
 export const MagicalWarmersWorkflow = () => {
   const { orders, bodyTasks, isLoading, updateStageStatus, advanceStage, addBodyTask, updateBodyTaskStatus } = useProductionOrders("magical");
   const { role } = useAuth();
   const [showBodyForm, setShowBodyForm] = useState(false);
 
+  // Confirmation dialog state for body tasks
+  const [confirmTask, setConfirmTask] = useState<BodyTask | null>(null);
+  const [confirmQty, setConfirmQty] = useState("");
+
+  // Confirmation dialog state for production orders in produccion_cuerpos stage
+  const [confirmOrder, setConfirmOrder] = useState<ProductionOrder | null>(null);
+  const [confirmOrderQty, setConfirmOrderQty] = useState("");
+
   const activeOrders = orders.filter((o) => o.current_stage !== "listo");
   const completedOrders = orders.filter((o) => o.current_stage === "listo");
   const activeBodyTasks = bodyTasks.filter((t) => t.status !== "finalizado");
   const completedBodyTasks = bodyTasks.filter((t) => t.status === "finalizado");
+
+  const handleFinishBodyTask = (task: BodyTask) => {
+    setConfirmTask(task);
+    setConfirmQty(String(task.unidades));
+  };
+
+  const handleConfirmBodyTask = () => {
+    if (!confirmTask) return;
+    const qty = parseInt(confirmQty, 10);
+    if (!qty || qty <= 0) {
+      toast.error("Ingrese una cantidad válida.");
+      return;
+    }
+    updateBodyTaskStatus.mutate({ taskId: confirmTask.id, status: "finalizado", actualQuantity: qty });
+    toast.success(`Producción de cuerpos finalizada. ${qty} unidades agregadas al inventario.`);
+    setConfirmTask(null);
+  };
+
+  const handleFinishOrder = (order: ProductionOrder) => {
+    if (order.current_stage === "produccion_cuerpos") {
+      setConfirmOrder(order);
+      setConfirmOrderQty(String(order.quantity));
+    } else {
+      advanceStage.mutate({ orderId: order.id });
+    }
+  };
+
+  const handleConfirmOrderAdvance = () => {
+    if (!confirmOrder) return;
+    const qty = parseInt(confirmOrderQty, 10);
+    if (!qty || qty <= 0) {
+      toast.error("Ingrese una cantidad válida.");
+      return;
+    }
+    advanceStage.mutate({ orderId: confirmOrder.id, confirmedQuantity: qty });
+    setConfirmOrder(null);
+  };
 
   if (isLoading) {
     return <div className="space-y-4">{[1,2,3].map(i => <Skeleton key={i} className="h-32 w-full" />)}</div>;
@@ -140,7 +200,7 @@ export const MagicalWarmersWorkflow = () => {
                   <div className="text-sm space-y-1">
                     <Row label="Tipo de plástico" value={task.tipo_plastico === "frio" ? "Frío" : "Calor"} />
                     <Row label="Referencia" value={task.referencia} />
-                    <Row label="Unidades" value={`${task.unidades}`} />
+                    <Row label="Unidades estimadas" value={`${task.unidades}`} />
                     <Row label="Fecha" value={new Date(task.created_at).toLocaleDateString()} />
                   </div>
                   <div className="flex gap-2 pt-1">
@@ -150,7 +210,7 @@ export const MagicalWarmersWorkflow = () => {
                       </Button>
                     )}
                     {task.status === "en_proceso" && (
-                      <Button size="sm" onClick={() => { updateBodyTaskStatus.mutate({ taskId: task.id, status: "finalizado" }); toast.success("Producción de cuerpos finalizada."); }}>
+                      <Button size="sm" onClick={() => handleFinishBodyTask(task)}>
                         <CheckCircle2 className="h-3 w-3 mr-1" /> Finalizar proceso
                       </Button>
                     )}
@@ -198,7 +258,7 @@ export const MagicalWarmersWorkflow = () => {
             order={order}
             role={role}
             onStart={() => updateStageStatus.mutate({ orderId: order.id, status: "en_proceso" })}
-            onFinish={() => advanceStage.mutate(order.id)}
+            onFinish={() => handleFinishOrder(order)}
           />
         ))}
       </div>
@@ -226,6 +286,82 @@ export const MagicalWarmersWorkflow = () => {
           </div>
         </>
       )}
+
+      {/* Confirmation Dialog - Body Task */}
+      <Dialog open={!!confirmTask} onOpenChange={(open) => { if (!open) setConfirmTask(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar cantidad producida</DialogTitle>
+            <DialogDescription>
+              Confirme la cantidad real de cuerpos producidos antes de actualizar el inventario.
+            </DialogDescription>
+          </DialogHeader>
+          {confirmTask && (
+            <div className="space-y-4">
+              <div className="rounded-md border p-3 text-sm space-y-1">
+                <Row label="Referencia" value={confirmTask.referencia} />
+                <Row label="Tipo" value={confirmTask.tipo_plastico === "frio" ? "Frío" : "Calor"} />
+                <Row label="Cantidad estimada" value={`${confirmTask.unidades} unidades`} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-qty">Cantidad real producida *</Label>
+                <Input
+                  id="confirm-qty"
+                  type="number"
+                  min="1"
+                  value={confirmQty}
+                  onChange={(e) => setConfirmQty(e.target.value)}
+                  placeholder="Ingrese la cantidad real"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmTask(null)}>Cancelar</Button>
+            <Button onClick={handleConfirmBodyTask}>
+              <CheckCircle2 className="h-4 w-4 mr-1" /> Confirmar y finalizar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation Dialog - Production Order (produccion_cuerpos stage) */}
+      <Dialog open={!!confirmOrder} onOpenChange={(open) => { if (!open) setConfirmOrder(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar cantidad producida</DialogTitle>
+            <DialogDescription>
+              Confirme la cantidad real de cuerpos producidos para la orden de {confirmOrder?.client_name}.
+            </DialogDescription>
+          </DialogHeader>
+          {confirmOrder && (
+            <div className="space-y-4">
+              <div className="rounded-md border p-3 text-sm space-y-1">
+                <Row label="Cliente" value={confirmOrder.client_name} />
+                <Row label="Molde" value={confirmOrder.molde || "-"} />
+                <Row label="Cantidad estimada" value={`${confirmOrder.quantity} unidades`} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-order-qty">Cantidad real producida *</Label>
+                <Input
+                  id="confirm-order-qty"
+                  type="number"
+                  min="1"
+                  value={confirmOrderQty}
+                  onChange={(e) => setConfirmOrderQty(e.target.value)}
+                  placeholder="Ingrese la cantidad real"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmOrder(null)}>Cancelar</Button>
+            <Button onClick={handleConfirmOrderAdvance}>
+              <CheckCircle2 className="h-4 w-4 mr-1" /> Confirmar y avanzar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
@@ -257,7 +393,7 @@ function OrderCard({ order, role, onStart, onFinish }: { order: ProductionOrder;
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex items-center gap-1">
-          {stages.filter((s) => order.needs_cuerpos || s !== "produccion_cuerpos").map((stage, idx) => {
+          {stages.filter((s) => order.needs_cuerpos || s !== "produccion_cuerpos").map((stage) => {
             const stageIdx = stages.indexOf(stage);
             const isCurrent = stage === order.current_stage;
             const isDone = stageIdx < currentIdx || order.current_stage === "listo";
@@ -329,7 +465,7 @@ function BodyProductionForm({ onClose, onSubmit }: { onClose: () => void; onSubm
   const [tipoPlastico, setTipoPlastico] = useState<string | null>(null);
   const [referencia, setReferencia] = useState("");
   const [unidades, setUnidades] = useState("");
-  const canSubmit = tipoPlastico && referencia.trim() && unidades && parseInt(unidades) > 0;
+  const canSubmit = tipoPlastico && referencia && unidades && parseInt(unidades) > 0;
 
   return (
     <Card>
@@ -354,7 +490,16 @@ function BodyProductionForm({ onClose, onSubmit }: { onClose: () => void; onSubm
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Referencia *</Label>
-            <Input placeholder="Ej: Muela, Lumbar, Antifaz..." value={referencia} onChange={(e) => setReferencia(e.target.value)} />
+            <Select value={referencia} onValueChange={setReferencia}>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar referencia" />
+              </SelectTrigger>
+              <SelectContent>
+                {CANONICAL_REFERENCES.map((ref) => (
+                  <SelectItem key={ref} value={ref}>{ref}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label>Unidades a producir *</Label>
@@ -363,7 +508,7 @@ function BodyProductionForm({ onClose, onSubmit }: { onClose: () => void; onSubm
         </div>
         <div className="flex gap-2 pt-2">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => { if (canSubmit && tipoPlastico) onSubmit({ tipoPlastico, referencia: referencia.trim(), unidades: parseInt(unidades) }); }} disabled={!canSubmit}>
+          <Button onClick={() => { if (canSubmit && tipoPlastico) onSubmit({ tipoPlastico, referencia, unidades: parseInt(unidades) }); }} disabled={!canSubmit}>
             <Plus className="h-4 w-4 mr-1" /> Crear tarea
           </Button>
         </div>

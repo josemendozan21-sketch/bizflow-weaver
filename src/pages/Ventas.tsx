@@ -390,7 +390,12 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       const matchedConfig = getMatchedConfig(line.product, line.type);
 
       // Discount gel
-      await discountStockDB("gel", quantity * (matchedConfig?.gramsPerUnit || 60));
+      const gelResult = await discountStockDB("gel", quantity * (matchedConfig?.gramsPerUnit || 60));
+      if (gelResult.success) {
+        console.log("[Ventas] Gel discount:", gelResult.message);
+      } else {
+        toast.warning("Inventario de gel", { description: gelResult.message });
+      }
 
       // Accounting store
       useAccountingStore.getState().addOrder({

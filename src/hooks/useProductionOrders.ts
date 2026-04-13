@@ -126,7 +126,7 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
   });
 
   const advanceStage = useMutation({
-    mutationFn: async (orderId: string) => {
+    mutationFn: async ({ orderId, confirmedQuantity }: { orderId: string; confirmedQuantity?: number }) => {
       // Get fresh order data
       const { data: order, error: fetchErr } = await supabase
         .from("production_orders")
@@ -142,7 +142,7 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
 
       // If current stage is produccion_cuerpos, add produced quantity to body_stock
       if (po.current_stage === "produccion_cuerpos" && po.molde) {
-        // Try to increment existing body_stock
+        const qtyToAdd = confirmedQuantity ?? po.quantity;
         const { data: existing } = await supabase
           .from("body_stock")
           .select("*")
@@ -153,12 +153,12 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
         if (existing) {
           await supabase
             .from("body_stock")
-            .update({ available: existing.available + po.quantity })
+            .update({ available: existing.available + qtyToAdd })
             .eq("id", existing.id);
         } else {
           await supabase
             .from("body_stock")
-            .insert({ brand: po.brand, referencia: po.molde, available: po.quantity });
+            .insert({ brand: po.brand, referencia: po.molde, available: qtyToAdd });
         }
       }
 
@@ -246,14 +246,48 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
   });
 
   const updateBodyTaskStatus = useMutation({
-    mutationFn: async ({ taskId, status }: { taskId: string; status: string }) => {
+    mutationFn: async ({ taskId, status, actualQuantity }: { taskId: string; status: string; actualQuantity?: number }) => {
       const updates = status === "finalizado"
         ? { status, completed_at: new Date().toISOString() }
         : { status };
       const { error } = await supabase.from("body_production_tasks").update(updates).eq("id", taskId);
       if (error) throw error;
+
+      // When finalizing, upsert body_stock with the actual quantity produced
+      if (status === "finalizado" && actualQuantity !== undefined && actualQuantity > 0) {
+        // Get the task to know referencia and tipo_plastico
+        const { data: task } = await supabase
+          .from("body_production_tasks")
+          .select("*")
+          .eq("id", taskId)
+          .single();
+
+        if (task) {
+          const refName = task.referencia;
+          const { data: existing } = await supabase
+            .from("body_stock")
+            .select("*")
+            .eq("brand", "magical")
+            .ilike("referencia", refName)
+            .maybeSingle();
+
+          if (existing) {
+            await supabase
+              .from("body_stock")
+              .update({ available: existing.available + actualQuantity })
+              .eq("id", existing.id);
+          } else {
+            await supabase
+              .from("body_stock")
+              .insert({ brand: "magical", referencia: refName, available: actualQuantity });
+          }
+        }
+      }
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["body_production_tasks"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["body_production_tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["production_orders"] });
+    },
   });
 
   return {

@@ -129,7 +129,7 @@ export const EstampacionProductionView = () => {
             order={order}
             logoRequests={logoRequests}
             onStart={() => updateStageStatus.mutate({ orderId: order.id, status: "en_proceso" })}
-            onFinish={() => advanceStage.mutate(order.id)}
+            onFinish={() => advanceStage.mutate({ orderId: order.id })}
           />
         ))}
       </div>
