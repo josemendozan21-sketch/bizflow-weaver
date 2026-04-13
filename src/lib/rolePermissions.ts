@@ -6,12 +6,12 @@ type AppRole = Database["public"]["Enums"]["app_role"];
 const ROLE_ROUTES: Record<AppRole, string[]> = {
   admin: ["/", "/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/admin-usuarios", "/costos", "/eventos"],
   asesor_comercial: ["/ventas", "/inventarios", "/diseno-logos", "/logistica", "/contabilidad", "/eventos"],
-  produccion: ["/produccion", "/inventarios"],
-  contabilidad: ["/contabilidad"],
-  estampacion: ["/diseno-logos", "/produccion"],
+  produccion: ["/produccion", "/inventarios", "/eventos"],
+  contabilidad: ["/contabilidad", "/eventos"],
+  estampacion: ["/diseno-logos", "/produccion", "/eventos"],
   usuario_visual: ["/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/eventos"],
-  disenador: ["/diseno-logos"],
-  logistica: ["/logistica"],
+  disenador: ["/diseno-logos", "/eventos"],
+  logistica: ["/logistica", "/eventos"],
 };
 
 // Sections where the role can edit (create, update, delete)
