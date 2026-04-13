@@ -217,6 +217,10 @@ const Contabilidad = () => {
           <TabsTrigger value="facturados">Facturados ({invoiced.length})</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="dashboard">
+          <AccountingDashboard orders={allOrders} />
+        </TabsContent>
+
         <TabsContent value="pendientes">
           {pending.length === 0 ? (
             <Card><CardContent className="pt-6"><p className="text-muted-foreground text-center py-8">No hay pedidos pendientes por facturar.</p></CardContent></Card>
