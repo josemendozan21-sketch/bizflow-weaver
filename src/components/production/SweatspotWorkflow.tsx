@@ -98,7 +98,7 @@ export const SweatspotWorkflow = () => {
             order={order}
             role={role}
             onStart={() => updateStageStatus.mutate({ orderId: order.id, status: "en_proceso" })}
-            onFinish={() => advanceStage.mutate(order.id)}
+            onFinish={() => advanceStage.mutate({ orderId: order.id })}
           />
         ))}
       </div>
