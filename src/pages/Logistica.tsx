@@ -252,6 +252,13 @@ function EmptyState({ icon, title, subtitle }: { icon: React.ReactNode; title: s
   );
 }
 
+function AgingBadge({ days }: { days: number }) {
+  if (days <= 3) return <Badge variant="outline" className="border-green-400 text-green-700">{days}d</Badge>;
+  if (days <= 7) return <Badge variant="outline" className="border-amber-400 text-amber-700">{days}d</Badge>;
+  if (days <= 14) return <Badge variant="outline" className="border-orange-400 text-orange-700">{days}d</Badge>;
+  return <Badge variant="destructive">{days}d</Badge>;
+}
+
 function PaymentBadge({ order }: { order: Order }) {
   if (order.sale_type === "menor") {
     if (order.payment_method === "pagado") return <Badge className="bg-green-600 hover:bg-green-700">Pagado</Badge>;
