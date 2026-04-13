@@ -210,16 +210,18 @@ const Contabilidad = () => {
         </Card>
       </div>
 
-      <Tabs defaultValue="dashboard">
+      <Tabs defaultValue={isReadOnly ? "pendientes" : "dashboard"}>
         <TabsList>
-          <TabsTrigger value="dashboard"><BarChart3 className="h-4 w-4 mr-1" />Dashboard</TabsTrigger>
+          {!isReadOnly && <TabsTrigger value="dashboard"><BarChart3 className="h-4 w-4 mr-1" />Dashboard</TabsTrigger>}
           <TabsTrigger value="pendientes">Pendientes ({pending.length})</TabsTrigger>
           <TabsTrigger value="facturados">Facturados ({invoiced.length})</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="dashboard">
-          <AccountingDashboard orders={allOrders} />
-        </TabsContent>
+        {!isReadOnly && (
+          <TabsContent value="dashboard">
+            <AccountingDashboard orders={allOrders} />
+          </TabsContent>
+        )}
 
         <TabsContent value="pendientes">
           {pending.length === 0 ? (
