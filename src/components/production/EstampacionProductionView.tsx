@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
@@ -80,66 +80,77 @@ export const EstampacionProductionView = () => {
     return <div className="space-y-4">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-32 w-full" />)}</div>;
   }
 
+  const coldStock = bodyStock.filter((item) =>
+    item.referencia.toLowerCase().includes("frio") || item.referencia.toLowerCase().includes("frío")
+  );
+  const thermalStock = bodyStock.filter((item) =>
+    item.referencia.toLowerCase().includes("termico") || item.referencia.toLowerCase().includes("térmico")
+  );
+
   return (
-    <div className="space-y-6">
-      {/* Body Stock Panel */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Info className="h-4 w-4 text-primary" />
-            Cuerpos disponibles
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {bodyStock.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No hay registros de cuerpos.</p>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-              {bodyStock.map((item) => {
-                const color =
-                  item.available > 10
-                    ? "text-green-600 bg-green-50 border-green-200"
-                    : item.available > 0
-                    ? "text-yellow-600 bg-yellow-50 border-yellow-200"
-                    : "text-red-600 bg-red-50 border-red-200";
-                return (
-                  <div key={item.id} className={`rounded-md border p-2 text-xs ${color}`}>
-                    <span className="font-medium">{item.referencia}</span>
-                    <span className="block font-bold text-sm">{item.available} uds</span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+    <Tabs defaultValue="ordenes" className="space-y-4">
+      <TabsList className="grid w-full grid-cols-3">
+        <TabsTrigger value="ordenes">Órdenes ({estampacionOrders.length})</TabsTrigger>
+        <TabsTrigger value="frios">Productos Fríos ({coldStock.length})</TabsTrigger>
+        <TabsTrigger value="termicos">Productos Térmicos ({thermalStock.length})</TabsTrigger>
+      </TabsList>
 
-      <Separator />
+      <TabsContent value="ordenes" className="space-y-4">
+        {estampacionOrders.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">
+            No hay órdenes en etapa de estampación actualmente.
+          </p>
+        ) : (
+          <div className="grid gap-4">
+            {estampacionOrders.map((order) => (
+              <EstampacionOrderCard
+                key={order.id}
+                order={order}
+                logoRequests={logoRequests}
+                onStart={() => updateStageStatus.mutate({ orderId: order.id, status: "en_proceso" })}
+                onFinish={() => advanceStage.mutate({ orderId: order.id })}
+              />
+            ))}
+          </div>
+        )}
+      </TabsContent>
 
-      <h3 className="text-sm font-semibold text-foreground">
-        Órdenes en estampación ({estampacionOrders.length})
-      </h3>
+      <TabsContent value="frios">
+        <BodyStockGrid items={coldStock} title="Productos Fríos" />
+      </TabsContent>
 
-      {estampacionOrders.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-8">
-          No hay órdenes en etapa de estampación actualmente.
-        </p>
-      )}
-
-      <div className="grid gap-4">
-        {estampacionOrders.map((order) => (
-          <EstampacionOrderCard
-            key={order.id}
-            order={order}
-            logoRequests={logoRequests}
-            onStart={() => updateStageStatus.mutate({ orderId: order.id, status: "en_proceso" })}
-            onFinish={() => advanceStage.mutate({ orderId: order.id })}
-          />
-        ))}
-      </div>
-    </div>
+      <TabsContent value="termicos">
+        <BodyStockGrid items={thermalStock} title="Productos Térmicos" />
+      </TabsContent>
+    </Tabs>
   );
 };
+
+function BodyStockGrid({ items, title }: { items: BodyStockItem[]; title: string }) {
+  if (items.length === 0) {
+    return <p className="text-sm text-muted-foreground text-center py-8">No hay {title.toLowerCase()} registrados.</p>;
+  }
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+      {items.map((item) => {
+        const color =
+          item.available > 10
+            ? "text-green-600 bg-green-50 border-green-200"
+            : item.available > 0
+            ? "text-yellow-600 bg-yellow-50 border-yellow-200"
+            : "text-red-600 bg-red-50 border-red-200";
+        return (
+          <Card key={item.id} className={`${color} border`}>
+            <CardContent className="p-3">
+              <p className="font-medium text-sm">{item.referencia}</p>
+              <p className="font-bold text-lg">{item.available} uds</p>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
 
 function EstampacionOrderCard({
   order,
