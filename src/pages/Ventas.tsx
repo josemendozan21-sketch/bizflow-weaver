@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, AlertTriangle, CheckCircle2, FileText, ShoppingCart, ClipboardList, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, AlertTriangle, CheckCircle2, FileText, ShoppingCart, ClipboardList, Plus, Trash2, BarChart3 } from "lucide-react";
 import { useLogisticsStore } from "@/stores/logisticsStore";
 import { useInventoryStore } from "@/stores/inventoryStore";
 import { useInventory } from "@/hooks/useInventory";
@@ -18,6 +18,7 @@ import { useAccountingStore } from "@/stores/accountingStore";
 import { toast } from "sonner";
 import QuotationGenerator from "@/components/ventas/QuotationGenerator";
 import { MisPedidos } from "@/components/ventas/MisPedidos";
+import { AdvisorSummary } from "@/components/ventas/AdvisorSummary";
 import { createLogoRequestFromOrder } from "@/lib/createLogoRequestFromOrder";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -75,6 +76,9 @@ const Ventas = () => {
           <TabsTrigger value="cotizaciones" className="gap-1.5">
             <FileText className="h-4 w-4" /> Cotizaciones
           </TabsTrigger>
+          <TabsTrigger value="resumen" className="gap-1.5">
+            <BarChart3 className="h-4 w-4" /> Resumen
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pedidos" className="space-y-6 mt-4">
@@ -118,6 +122,10 @@ const Ventas = () => {
 
         <TabsContent value="cotizaciones" className="mt-4">
           <QuotationGenerator />
+        </TabsContent>
+
+        <TabsContent value="resumen" className="mt-4">
+          <AdvisorSummary />
         </TabsContent>
       </Tabs>
     </div>
