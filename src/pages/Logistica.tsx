@@ -21,8 +21,10 @@ import ShippingLabelDialog from "@/components/logistics/ShippingLabelDialog";
 
 const Logistica = () => {
   const { role } = useAuth();
+  const isLogisticsOrAdmin = role === "logistica" || role === "admin";
   const canEdit = canEditSection(role, "/logistica");
   const { data: allOrders = [] } = useOrders();
+  const queryClient = useQueryClient();
   const queryClient = useQueryClient();
 
   // Ready for dispatch: retail orders with status "listo" OR wholesale orders that are production-complete AND fully paid
@@ -127,7 +129,7 @@ const Logistica = () => {
 
         <TabsContent value="pending">
           <Card>
-            <CardHeader><CardTitle className="text-lg">Pedidos al por mayor pendientes</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-lg">Pedidos recién montados — Pendientes de despacho</CardTitle></CardHeader>
             <CardContent>
               {pendingOrders.length === 0 ? (
                 <EmptyState icon={<AlertTriangle className="h-12 w-12 mb-3 opacity-40" />} title="No hay pedidos pendientes" subtitle="Los pedidos al por mayor aparecerán aquí hasta que producción los apruebe y estén pagados." />
@@ -139,21 +141,39 @@ const Logistica = () => {
                       <TableHead>Marca</TableHead>
                       <TableHead>Producto</TableHead>
                       <TableHead className="text-right">Unidades</TableHead>
+                      <TableHead>Fecha creación</TableHead>
+                      <TableHead>Fecha entrega est.</TableHead>
+                      <TableHead>Antigüedad</TableHead>
                       <TableHead>Estado producción</TableHead>
                       <TableHead>Pago</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pendingOrders.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell className="font-medium">{order.client_name}</TableCell>
-                        <TableCell><Badge variant={order.brand === "magical" ? "default" : "secondary"}>{brandLabel(order.brand)}</Badge></TableCell>
-                        <TableCell>{order.product}</TableCell>
-                        <TableCell className="text-right font-medium">{order.quantity.toLocaleString()}</TableCell>
-                        <TableCell><ProductionStatusBadge status={order.production_status} order={order} /></TableCell>
-                        <TableCell><PaymentBadge order={order} /></TableCell>
-                      </TableRow>
-                    ))}
+                    {pendingOrders.map((order) => {
+                      const createdDate = new Date(order.created_at);
+                      const aging = differenceInDays(new Date(), createdDate);
+                      const paid = order.payment_complete || (order.total_amount && order.abono && Number(order.abono) >= Number(order.total_amount));
+                      return (
+                        <TableRow key={order.id} className={paid ? "" : "opacity-60"}>
+                          <TableCell className="font-medium">{order.client_name}</TableCell>
+                          <TableCell><Badge variant={order.brand === "magical" ? "default" : "secondary"}>{brandLabel(order.brand)}</Badge></TableCell>
+                          <TableCell>{order.product}</TableCell>
+                          <TableCell className="text-right font-medium">{order.quantity.toLocaleString()}</TableCell>
+                          <TableCell className="text-sm">{format(createdDate, "dd MMM yyyy", { locale: es })}</TableCell>
+                          <TableCell className="text-sm">
+                            {order.delivery_date ? (
+                              <span className="flex items-center gap-1">
+                                <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
+                                {format(new Date(order.delivery_date), "dd MMM yyyy", { locale: es })}
+                              </span>
+                            ) : <span className="text-muted-foreground">—</span>}
+                          </TableCell>
+                          <TableCell><AgingBadge days={aging} /></TableCell>
+                          <TableCell><ProductionStatusBadge status={order.production_status} order={order} /></TableCell>
+                          <TableCell><PaymentBadge order={order} /></TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}
