@@ -28,6 +28,14 @@ export interface ProductionOrder {
   created_at: string;
   updated_at: string;
   completed_at: string | null;
+  // Stamping approval fields
+  stamp_size_photo_url: string | null;
+  stamp_size_status: string;
+  stamp_size_approved_at: string | null;
+  stamp_inkgel_photo_url: string | null;
+  stamp_inkgel_status: string;
+  stamp_inkgel_approved_at: string | null;
+  stamp_advisor_feedback: string | null;
 }
 
 export interface BodyTask {
