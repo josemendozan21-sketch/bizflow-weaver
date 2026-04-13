@@ -1,42 +1,38 @@
 
 
-## Plan: Selectores de color con opción personalizada + Multi-pedido en Magical Warmers
+## Plan: Fix inventory discount on order creation + Confirm quantity before finalizing body production
 
-### Cambios en `src/pages/Ventas.tsx`
+### Problems identified
 
-**1. Reemplazar campos de texto de Color de gel y Color de tinta por Select con opción "Otro"**
+1. **Inventory not discounting on order creation**: When an advisor creates a wholesale order, `reserveBodyStockDB` is called and it does discount from `body_stock`. However, the `discountStockDB("gel", ...)` call searches `stock_items` by a partial name match for "gel" — this may not match properly if the DB item is named "Mezcla Gel" or similar. Need to verify and fix the matching logic so gel and other materials are actually discounted.
 
-Los colores predefinidos serán:
-- Azul, Rosado, Morado, Negro, Blanco, Transparente, Aguamarina, Azul claro, Verde lima, Verde militar
+2. **Product names inconsistency ("Shoulder" → "Hombro")**: No translation exists in the codebase — all product names use "Shoulder", "Lumbar", etc. consistently in both the Zustand store and the database. The issue is likely from manual data entry. The fix is to ensure all product selectors across roles pull from the same canonical list (the `materialConfigs` or `stock_items` table) and never allow free-text entry where a dropdown should be used.
 
-Cada selector (gel y tinta) tendrá las opciones anteriores + "Otro (escribir)". Al seleccionar "Otro", aparece un Input de texto libre debajo.
+3. **Body production tasks: no quantity confirmation before finalizing**: Currently, clicking "Finalizar proceso" on a body task immediately marks it as `finalizado` without confirming the actual quantity produced. Need to add an intermediate step (dialog) to input the real quantity before updating `body_stock`.
 
-Se usarán estados controlados (`gelColor`/`gelCustom`, `inkColor`/`inkCustom`) en vez de leer del FormData directo.
+---
 
-**2. Agregar soporte para múltiples líneas de pedido**
+### Changes
 
-Un cliente puede pedir varios moldes con diferentes colores. Se agregará:
-- Un array de estado `orderLines[]` donde cada línea tiene: producto, tipo, unidades, color gel, color tinta, valor unitario
-- Botón "Agregar otro producto" que añade una línea nueva
-- Botón de eliminar por línea (si hay más de una)
-- El total se calcula sumando todas las líneas
-- Al crear el pedido, se itera sobre las líneas creando un `order` y `production_order` por cada una (mismo cliente, mismos datos generales)
+#### 1. Fix inventory discount during order creation (`src/hooks/useInventory.ts` + `src/pages/Ventas.tsx`)
+- Review and fix the `discountStock` function's name matching to ensure "gel" matches the actual DB item name (e.g., "Mezcla Gel").
+- Verify that `reserveBodyStock` properly matches the product reference format `"Shoulder (Frío)"` against `body_stock` entries like `"Shoulder (Frio)"` (accent differences).
+- Add console logging or toast feedback when discount succeeds/fails so the advisor knows what happened.
 
-**3. Estructura de cada línea de pedido**
+#### 2. Standardize product names across all roles
+- Ensure the product dropdown in the sales form, production views, and events all use the same canonical names from `materialConfigs` (which already has "Shoulder", not "Hombro").
+- In `BodyProductionForm` (inside `MagicalWarmersWorkflow.tsx`), replace the free-text reference input with a dropdown of known product names from `materialConfigs` or `body_stock`, so operators can't accidentally type translated names.
 
-Cada línea contendrá:
-- Producto/Referencia (Select existente)
-- Tipo (Select existente)
-- Color de gel (Select + campo personalizado)
-- Color de tinta (Select + campo personalizado)
-- Unidades
-- Valor unitario
-- Valor total (auto-calculado por línea)
+#### 3. Add quantity confirmation dialog for body production tasks (`src/components/production/MagicalWarmersWorkflow.tsx` + `src/hooks/useProductionOrders.ts`)
+- Add a confirmation dialog that appears when "Finalizar proceso" is clicked on a body task (status `en_proceso`).
+- The dialog shows the original estimated quantity and an editable input for the actual quantity produced.
+- Modify `updateBodyTaskStatus` mutation in `useProductionOrders.ts` to accept an optional `actualQuantity` parameter.
+- When `status === "finalizado"` and `actualQuantity` is provided, upsert `body_stock` with the confirmed quantity (increment existing stock or create new entry).
+- Similarly, modify `advanceStage` to accept `confirmedQuantity` for orders in `produccion_cuerpos` stage, and use that value instead of `po.quantity` when updating `body_stock`.
 
-**4. Lógica de envío**
-
-Al hacer submit, se recorren todas las líneas y se crea un pedido independiente por cada una (ya que cada línea puede tener molde y colores distintos, y el sistema de producción los maneja individualmente). Los datos del cliente, abono, estado de pago y archivos se comparten entre todas las líneas.
-
-### Archivos a modificar
-- `src/pages/Ventas.tsx` — componente `MagicalMayorForm`
+### Files to modify
+- `src/hooks/useInventory.ts` — Fix name matching in `discountStock`
+- `src/hooks/useProductionOrders.ts` — Add `actualQuantity` param to `updateBodyTaskStatus`, add body_stock upsert; add `confirmedQuantity` to `advanceStage`
+- `src/components/production/MagicalWarmersWorkflow.tsx` — Add confirmation dialog for body tasks and production orders in cuerpos stage; replace free-text reference input with dropdown
+- `src/pages/Ventas.tsx` — Ensure discount feedback is visible to the advisor
 
