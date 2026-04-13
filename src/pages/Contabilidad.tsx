@@ -6,7 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Upload, Download, Clock, FileText, ExternalLink } from "lucide-react";
+import { Upload, Download, Clock, FileText, ExternalLink, BarChart3 } from "lucide-react";
+import AccountingDashboard from "@/components/contabilidad/AccountingDashboard";
 import { useOrders, type Order } from "@/hooks/useOrders";
 import { supabase } from "@/integrations/supabase/client";
 import { exportOrdersToExcel } from "@/lib/exportSiigo";
@@ -209,11 +210,16 @@ const Contabilidad = () => {
         </Card>
       </div>
 
-      <Tabs defaultValue="pendientes">
+      <Tabs defaultValue="dashboard">
         <TabsList>
-          <TabsTrigger value="pendientes">Pendientes por facturar ({pending.length})</TabsTrigger>
+          <TabsTrigger value="dashboard"><BarChart3 className="h-4 w-4 mr-1" />Dashboard</TabsTrigger>
+          <TabsTrigger value="pendientes">Pendientes ({pending.length})</TabsTrigger>
           <TabsTrigger value="facturados">Facturados ({invoiced.length})</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="dashboard">
+          <AccountingDashboard orders={allOrders} />
+        </TabsContent>
 
         <TabsContent value="pendientes">
           {pending.length === 0 ? (
