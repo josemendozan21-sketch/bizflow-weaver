@@ -13,8 +13,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { canEditSection } from "@/lib/rolePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { Package, Truck, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
+import { Package, Truck, CheckCircle2, Clock, AlertTriangle, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
+import { differenceInDays, format } from "date-fns";
+import { es } from "date-fns/locale";
 import ShippingLabelDialog from "@/components/logistics/ShippingLabelDialog";
 
 const Logistica = () => {
