@@ -13,6 +13,7 @@ import { Loader2, Package, Calendar, DollarSign, MapPin, Upload, CheckCircle2, A
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
+import { StampingApprovals } from "./StampingApprovals";
 
 const STAGE_ORDER = [
   "pendiente",
@@ -88,6 +89,9 @@ export function MisPedidos() {
 
   return (
     <div className="space-y-4">
+      {/* Stamping approval requests */}
+      <StampingApprovals />
+
       <p className="text-sm text-muted-foreground">{orders.length} pedido(s) registrado(s)</p>
       <div className="grid gap-4 md:grid-cols-2">
         {sortedOrders.map((order) => {

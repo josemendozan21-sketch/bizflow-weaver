@@ -1,10 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   CheckCircle2,
   Play,
@@ -12,10 +15,14 @@ import {
   AlertTriangle,
   Download,
   Info,
+  Upload,
+  Camera,
+  Loader2,
 } from "lucide-react";
 import { useProductionOrders, type ProductionOrder } from "@/hooks/useProductionOrders";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 interface BodyStockItem {
   id: string;
@@ -41,10 +48,8 @@ const STATUS_BADGE: Record<string, { label: string; variant: "secondary" | "defa
 export const EstampacionProductionView = () => {
   const { orders: allOrders, isLoading, updateStageStatus, advanceStage } = useProductionOrders();
 
-  // Only show orders in estampacion stage
   const estampacionOrders = allOrders.filter((o) => o.current_stage === "estampacion");
 
-  // Fetch body_stock for read-only panel
   const bodyStockQuery = useQuery({
     queryKey: ["body_stock_estampacion"],
     queryFn: async () => {
@@ -57,7 +62,6 @@ export const EstampacionProductionView = () => {
     },
   });
 
-  // Fetch logo_requests to check approval status
   const logoRequestsQuery = useQuery({
     queryKey: ["logo_requests_for_estampacion"],
     queryFn: async () => {
@@ -150,7 +154,6 @@ function EstampacionOrderCard({
 }) {
   const badge = STATUS_BADGE[order.stage_status] || STATUS_BADGE.pendiente;
 
-  // Find matching logo_request by client_name and check approval
   const matchingLogo = logoRequests.find(
     (lr) => lr.client_name.toLowerCase() === order.client_name.toLowerCase()
   );
@@ -158,6 +161,29 @@ function EstampacionOrderCard({
   const hasLogo = !!order.logo_file;
   const logoApproved = !hasLogo || (matchingLogo && (matchingLogo.status === "aprobado" || matchingLogo.status === "finalizado"));
   const logoUrl = matchingLogo?.adjusted_logo_url || matchingLogo?.original_logo_url;
+
+  // Stamping approval status
+  const sizeStatus = order.stamp_size_status || "pendiente";
+  const inkgelStatus = order.stamp_inkgel_status || "pendiente";
+
+  // Determine the current stamping step
+  const canStartProcess = logoApproved || !hasLogo;
+  const isInProcess = order.stage_status === "en_proceso";
+
+  // Step 1: Size approval needed
+  const needsSizeUpload = isInProcess && sizeStatus === "pendiente" && !order.stamp_size_photo_url;
+  const sizeWaitingApproval = isInProcess && sizeStatus === "pendiente" && !!order.stamp_size_photo_url;
+  const sizeApproved = sizeStatus === "aprobado";
+  const sizeRejected = sizeStatus === "rechazado";
+
+  // Step 2: Ink/gel approval needed (only after size is approved)
+  const needsInkgelUpload = isInProcess && sizeApproved && inkgelStatus === "pendiente" && !order.stamp_inkgel_photo_url;
+  const inkgelWaitingApproval = isInProcess && sizeApproved && inkgelStatus === "pendiente" && !!order.stamp_inkgel_photo_url;
+  const inkgelApproved = inkgelStatus === "aprobado";
+  const inkgelRejected = inkgelStatus === "rechazado";
+
+  // Can finalize only when both approvals are done
+  const canFinalize = isInProcess && sizeApproved && inkgelApproved;
 
   return (
     <Card>
@@ -191,11 +217,7 @@ function EstampacionOrderCard({
         {logoUrl && (
           <div className="rounded-md border p-3 space-y-2">
             <p className="text-xs font-medium text-muted-foreground">Logo</p>
-            <img
-              src={logoUrl}
-              alt="Logo del cliente"
-              className="max-h-24 rounded border object-contain"
-            />
+            <img src={logoUrl} alt="Logo del cliente" className="max-h-24 rounded border object-contain" />
             <a href={logoUrl} download target="_blank" rel="noopener noreferrer">
               <Button size="sm" variant="outline" className="mt-1">
                 <Download className="h-3 w-3 mr-1" /> Descargar logo
@@ -214,6 +236,47 @@ function EstampacionOrderCard({
           </Alert>
         )}
 
+        {/* Advisor feedback if rejected */}
+        {order.stamp_advisor_feedback && (sizeRejected || inkgelRejected) && (
+          <Alert className="border-amber-300 bg-amber-50 text-amber-800">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription className="text-xs">
+              Retroalimentación del asesor: {order.stamp_advisor_feedback}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Stamping approval steps (visible when in process) */}
+        {isInProcess && (
+          <div className="space-y-3">
+            {/* Step 1: Size approval */}
+            <StampApprovalStep
+              orderId={order.id}
+              step="size"
+              label="Paso 1: Aprobación de tamaño de logo"
+              status={sizeStatus}
+              photoUrl={order.stamp_size_photo_url}
+              needsUpload={needsSizeUpload || sizeRejected}
+              waitingApproval={sizeWaitingApproval}
+              approved={sizeApproved}
+            />
+
+            {/* Step 2: Ink/gel approval (only shown after size approved) */}
+            {sizeApproved && (
+              <StampApprovalStep
+                orderId={order.id}
+                step="inkgel"
+                label="Paso 2: Aprobación de tinta y gel"
+                status={inkgelStatus}
+                photoUrl={order.stamp_inkgel_photo_url}
+                needsUpload={needsInkgelUpload || inkgelRejected}
+                waitingApproval={inkgelWaitingApproval}
+                approved={inkgelApproved}
+              />
+            )}
+          </div>
+        )}
+
         <div className="flex gap-2 pt-1">
           {order.stage_status === "pendiente" && (
             <Button
@@ -225,14 +288,151 @@ function EstampacionOrderCard({
               <Play className="h-3 w-3 mr-1" /> Iniciar proceso
             </Button>
           )}
-          {order.stage_status === "en_proceso" && (
+          {canFinalize && (
             <Button size="sm" onClick={onFinish}>
-              <CheckCircle2 className="h-3 w-3 mr-1" /> Finalizar proceso
+              <CheckCircle2 className="h-3 w-3 mr-1" /> Finalizar estampación
             </Button>
           )}
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function StampApprovalStep({
+  orderId,
+  step,
+  label,
+  status,
+  photoUrl,
+  needsUpload,
+  waitingApproval,
+  approved,
+}: {
+  orderId: string;
+  step: "size" | "inkgel";
+  label: string;
+  status: string;
+  photoUrl: string | null;
+  needsUpload: boolean;
+  waitingApproval: boolean;
+  approved: boolean;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  const statusColors: Record<string, string> = {
+    pendiente: "bg-yellow-100 text-yellow-800 border-yellow-200",
+    aprobado: "bg-green-100 text-green-800 border-green-200",
+    rechazado: "bg-red-100 text-red-800 border-red-200",
+  };
+
+  const statusLabels: Record<string, string> = {
+    pendiente: photoUrl ? "Esperando aprobación" : "Pendiente",
+    aprobado: "Aprobado ✓",
+    rechazado: "Rechazado — Subir nueva foto",
+  };
+
+  const handleUpload = async () => {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${orderId}/${step}_${Date.now()}.${ext}`;
+      const { error: uploadErr } = await supabase.storage
+        .from("stamping-photos")
+        .upload(path, file, { upsert: true });
+      if (uploadErr) throw uploadErr;
+
+      const { data: urlData } = supabase.storage
+        .from("stamping-photos")
+        .getPublicUrl(path);
+
+      const column = step === "size" ? "stamp_size_photo_url" : "stamp_inkgel_photo_url";
+      const statusCol = step === "size" ? "stamp_size_status" : "stamp_inkgel_status";
+
+      const { error } = await supabase
+        .from("production_orders")
+        .update({ [column]: urlData.publicUrl, [statusCol]: "pendiente", stamp_advisor_feedback: null } as any)
+        .eq("id", orderId);
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ["production_orders"] });
+      toast.success("Foto subida", { description: "El asesor recibirá la solicitud de aprobación." });
+      setDialogOpen(false);
+      setFile(null);
+    } catch (err: any) {
+      toast.error("Error al subir foto", { description: err.message });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className={`rounded-lg border p-3 space-y-2 ${statusColors[status] || statusColors.pendiente}`}>
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold">{label}</p>
+        <Badge variant="outline" className="text-[10px]">
+          {statusLabels[status] || status}
+        </Badge>
+      </div>
+
+      {/* Show uploaded photo */}
+      {photoUrl && (
+        <img src={photoUrl} alt={`Foto ${step}`} className="max-h-32 rounded border object-contain" />
+      )}
+
+      {/* Upload button */}
+      {needsUpload && (
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" variant="outline" className="gap-1">
+              <Camera className="h-3 w-3" /> Subir fotografía
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>{label}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                {step === "size"
+                  ? "Suba una fotografía de la prueba de tamaño del logo para que el asesor la apruebe."
+                  : "Suba una fotografía de la prueba de tinta y gel para que el asesor la apruebe."}
+              </p>
+              <div className="space-y-1.5">
+                <Label>Fotografía *</Label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setFile(e.target.files?.[0] || null)}
+                />
+              </div>
+              <Button
+                className="w-full"
+                onClick={handleUpload}
+                disabled={uploading || !file}
+              >
+                {uploading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
+                Subir y enviar para aprobación
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {waitingApproval && (
+        <p className="text-[10px] italic">Esperando aprobación del asesor...</p>
+      )}
+
+      {approved && (
+        <div className="flex items-center gap-1 text-green-700 text-xs">
+          <CheckCircle2 className="h-3 w-3" /> Aprobado por el asesor
+        </div>
+      )}
+    </div>
   );
 }
 
