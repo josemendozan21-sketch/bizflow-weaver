@@ -6,7 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Upload, Download, Clock, FileText, ExternalLink } from "lucide-react";
+import { Upload, Download, Clock, FileText, ExternalLink, BarChart3 } from "lucide-react";
+import AccountingDashboard from "@/components/contabilidad/AccountingDashboard";
 import { useOrders, type Order } from "@/hooks/useOrders";
 import { supabase } from "@/integrations/supabase/client";
 import { exportOrdersToExcel } from "@/lib/exportSiigo";
