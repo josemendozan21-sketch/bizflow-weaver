@@ -210,9 +210,10 @@ const Contabilidad = () => {
         </Card>
       </div>
 
-      <Tabs defaultValue="pendientes">
+      <Tabs defaultValue="dashboard">
         <TabsList>
-          <TabsTrigger value="pendientes">Pendientes por facturar ({pending.length})</TabsTrigger>
+          <TabsTrigger value="dashboard"><BarChart3 className="h-4 w-4 mr-1" />Dashboard</TabsTrigger>
+          <TabsTrigger value="pendientes">Pendientes ({pending.length})</TabsTrigger>
           <TabsTrigger value="facturados">Facturados ({invoiced.length})</TabsTrigger>
         </TabsList>
 
