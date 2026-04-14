@@ -95,15 +95,27 @@ export const SweatspotWorkflow = () => {
       )}
 
       <div className="grid gap-4">
-        {activeOrders.map((order) => (
-          <OrderCard
-            key={order.id}
-            order={order}
-            role={role}
-            onStart={() => updateStageStatus.mutate({ orderId: order.id, status: "en_proceso" })}
-            onFinish={() => advanceStage.mutate({ orderId: order.id })}
-          />
-        ))}
+        {activeOrders.map((order) => {
+          const stages = order.stages;
+          const currentIdx = stages.indexOf(order.current_stage);
+          const lastActionableIdx = stages.length - 2;
+          const isLastStage = currentIdx >= lastActionableIdx;
+          return (
+            <OrderCard
+              key={order.id}
+              order={order}
+              role={role}
+              onStart={() => updateStageStatus.mutate({ orderId: order.id, status: "en_proceso" })}
+              onFinish={() => {
+                if (isLastStage) {
+                  setCompletionOrder(order);
+                } else {
+                  advanceStage.mutate({ orderId: order.id });
+                }
+              }}
+            />
+          );
+        })}
       </div>
 
       {completedOrders.length > 0 && (
