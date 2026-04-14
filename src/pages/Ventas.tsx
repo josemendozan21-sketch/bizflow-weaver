@@ -24,6 +24,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { createOrderNotifications } from "@/hooks/useNotifications";
+import SmartPasteField, { type ParsedOrderData } from "@/components/ventas/SmartPasteField";
 type Brand = "sweatspot" | "magical";
 type SaleType = "mayor" | "menor";
 
