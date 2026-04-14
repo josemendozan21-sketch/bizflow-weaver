@@ -1076,6 +1076,20 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
   const isMayor = saleType === "mayor";
   const [paymentMethod, setPaymentMethod] = useState<"contra_entrega" | "pagado">("contra_entrega");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedRef, setSelectedRef] = useState("");
+  const { stockItems } = useInventory();
+
+  // Build predefined references from finished products in DB
+  const finishedRefs = useMemo(() => {
+    const dbBrand = brand === "magical" ? "magical" : "sweatspot";
+    const items = stockItems.filter(
+      (s) => s.brand === dbBrand && s.category === "producto_terminado"
+    );
+    const refs = items.map((s) =>
+      s.product_type ? `${s.name} (${s.product_type})` : s.name
+    );
+    return [...new Set(refs)].sort();
+  }, [stockItems, brand]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
