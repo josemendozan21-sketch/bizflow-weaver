@@ -1413,7 +1413,10 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Valores</legend>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Precio de venta total" name="precioTotal" type="number" required />
+              <div className="space-y-1.5">
+                <Label htmlFor="precioTotal">Precio de venta total</Label>
+                <Input id="precioTotal" name="precioTotal" type="number" required value={retailPrice} onChange={(e) => setRetailPrice(e.target.value)} />
+              </div>
               {isMayor && <Field label="Abono inicial (50%)" name="abono" type="number" />}
             </div>
           </fieldset>
