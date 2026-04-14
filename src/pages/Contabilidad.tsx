@@ -157,6 +157,9 @@ const Contabilidad = () => {
   const [selectedPending, setSelectedPending] = useState<Set<string>>(new Set());
   const [selectedInvoiced, setSelectedInvoiced] = useState<Set<string>>(new Set());
 
+  // Realtime popup alerts for new orders
+  useAccountingAlerts();
+
   const pending = allOrders.filter((o) => o.invoice_status === "pendiente");
   const invoiced = allOrders.filter((o) => o.invoice_status === "facturado");
 
