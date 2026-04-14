@@ -1102,7 +1102,11 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
     const referencia = fd.get("referencia") as string;
     const totalAmount = parseFloat(fd.get("precioTotal") as string) || 0;
 
-    if (saleType === "menor") {
+    if (!referencia) {
+      toast.error("Producto requerido", { description: "Seleccione un producto de la lista." });
+      setIsSubmitting(false);
+      return;
+    }
       const telefono = (fd.get("telefono") as string)?.trim() || "";
       const ciudad = (fd.get("ciudad") as string)?.trim() || "";
       const direccion = (fd.get("direccion") as string)?.trim() || "";
