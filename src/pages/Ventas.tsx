@@ -1257,7 +1257,8 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
     const clientName = (fd.get("nombre") as string)?.trim() || "";
     const quantity = parseInt(fd.get("cantidad") as string, 10);
     const referencia = fd.get("referencia") as string;
-    const totalAmount = parseFloat(fd.get("precioTotal") as string) || 0;
+    const totalAmount = parseFloat(retailPrice) || 0;
+    const shippingAmount = parseFloat(shippingCost) || 0;
 
     if (!referencia) {
       toast.error("Producto requerido", { description: "Seleccione un producto de la lista." });
