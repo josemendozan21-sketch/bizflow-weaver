@@ -1046,6 +1046,44 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
+          <SmartPasteField
+            brand="sweatspot"
+            onDataParsed={(data) => {
+              const form = document.querySelectorAll("form")[0] as HTMLFormElement;
+              if (!form) return;
+              const setInput = (name: string, value: string | undefined | null) => {
+                const el = form.querySelector(`[name="${name}"]`) as HTMLInputElement;
+                if (el && value) { el.value = value; el.dispatchEvent(new Event("input", { bubbles: true })); }
+              };
+              setInput("ss_nombre", data.cliente?.nombre);
+              setInput("ss_cedulaNit", data.cliente?.cedula_nit);
+              setInput("ss_contacto", data.cliente?.telefono);
+              setInput("ss_email", data.cliente?.email);
+              setInput("ss_direccion", data.cliente?.direccion);
+              setInput("ss_ciudad", data.cliente?.ciudad);
+              setInput("ss_colorSilicona", data.color_silicona);
+              setInput("ss_colorTinta", data.productos?.[0]?.color_tinta);
+              setInput("ss_referencia", data.referencia);
+
+              if (data.productos?.[0]?.unidades) setSsUnits(String(data.productos[0].unidades));
+              if (data.productos?.[0]?.valor_unitario) setSsValorUnitario(String(data.productos[0].valor_unitario));
+              if (data.productos?.[0]?.valor_total) {
+                setSsValorTotal(String(data.productos[0].valor_total));
+                setSsAutoCalc(false);
+              }
+              if (data.abono) setSsAbono(String(data.abono));
+              if (data.es_recompra) setSsIsRecompra(true);
+              if (data.observaciones) {
+                const obs = form.querySelector('[name="ss_observaciones"]') as HTMLTextAreaElement;
+                if (obs) obs.value = data.observaciones;
+              }
+              if (data.personalizacion) {
+                const pers = form.querySelector('[name="ss_personalizacion"]') as HTMLTextAreaElement;
+                if (pers) pers.value = data.personalizacion;
+              }
+            }}
+          />
+
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Información del cliente</legend>
             <div className="grid gap-4 sm:grid-cols-2">
