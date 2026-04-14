@@ -6,13 +6,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Upload, Download, Clock, FileText, ExternalLink, BarChart3 } from "lucide-react";
+import { Upload, Download, Clock, FileText, ExternalLink, BarChart3, Wallet } from "lucide-react";
 import AccountingDashboard from "@/components/contabilidad/AccountingDashboard";
+import CajaMenor from "@/components/contabilidad/CajaMenor";
 import { useOrders, type Order } from "@/hooks/useOrders";
 import { supabase } from "@/integrations/supabase/client";
 import { exportOrdersToExcel } from "@/lib/exportSiigo";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAccountingAlerts } from "@/hooks/useAccountingAlerts";
 import type { AccountingOrder } from "@/stores/accountingStore";
 
 function toAccountingOrder(o: Order): AccountingOrder {
@@ -155,6 +157,9 @@ const Contabilidad = () => {
   const [selectedPending, setSelectedPending] = useState<Set<string>>(new Set());
   const [selectedInvoiced, setSelectedInvoiced] = useState<Set<string>>(new Set());
 
+  // Realtime popup alerts for new orders
+  useAccountingAlerts();
+
   const pending = allOrders.filter((o) => o.invoice_status === "pendiente");
   const invoiced = allOrders.filter((o) => o.invoice_status === "facturado");
 
@@ -215,6 +220,7 @@ const Contabilidad = () => {
           {!isReadOnly && <TabsTrigger value="dashboard"><BarChart3 className="h-4 w-4 mr-1" />Dashboard</TabsTrigger>}
           <TabsTrigger value="pendientes">Pendientes ({pending.length})</TabsTrigger>
           <TabsTrigger value="facturados">Facturados ({invoiced.length})</TabsTrigger>
+          {!isReadOnly && <TabsTrigger value="caja_menor"><Wallet className="h-4 w-4 mr-1" />Caja menor</TabsTrigger>}
         </TabsList>
 
         {!isReadOnly && (
@@ -344,6 +350,12 @@ const Contabilidad = () => {
             </Card>
           )}
         </TabsContent>
+
+        {!isReadOnly && (
+          <TabsContent value="caja_menor">
+            <CajaMenor />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
