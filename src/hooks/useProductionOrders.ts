@@ -138,7 +138,7 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
   });
 
   const advanceStage = useMutation({
-    mutationFn: async ({ orderId, confirmedQuantity }: { orderId: string; confirmedQuantity?: number }) => {
+    mutationFn: async ({ orderId, confirmedQuantity, completionData }: { orderId: string; confirmedQuantity?: number; completionData?: { photoUrl: string; packagerName: string; finalCount: number } }) => {
       // Get fresh order data
       const { data: order, error: fetchErr } = await supabase
         .from("production_orders")
