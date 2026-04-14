@@ -220,6 +220,7 @@ const Contabilidad = () => {
           {!isReadOnly && <TabsTrigger value="dashboard"><BarChart3 className="h-4 w-4 mr-1" />Dashboard</TabsTrigger>}
           <TabsTrigger value="pendientes">Pendientes ({pending.length})</TabsTrigger>
           <TabsTrigger value="facturados">Facturados ({invoiced.length})</TabsTrigger>
+          {!isReadOnly && <TabsTrigger value="caja_menor"><Wallet className="h-4 w-4 mr-1" />Caja menor</TabsTrigger>}
         </TabsList>
 
         {!isReadOnly && (
