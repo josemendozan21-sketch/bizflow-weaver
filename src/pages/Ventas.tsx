@@ -1232,6 +1232,8 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
   const [paymentMethod, setPaymentMethod] = useState<"contra_entrega" | "pagado">("contra_entrega");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedRef, setSelectedRef] = useState("");
+  const [shippingCost, setShippingCost] = useState("");
+  const [retailPrice, setRetailPrice] = useState("");
   const { stockItems } = useInventory();
 
   // Build predefined references from finished products in DB
@@ -1255,7 +1257,8 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
     const clientName = (fd.get("nombre") as string)?.trim() || "";
     const quantity = parseInt(fd.get("cantidad") as string, 10);
     const referencia = fd.get("referencia") as string;
-    const totalAmount = parseFloat(fd.get("precioTotal") as string) || 0;
+    const totalAmount = parseFloat(retailPrice) || 0;
+    const shippingAmount = parseFloat(shippingCost) || 0;
 
     if (!referencia) {
       toast.error("Producto requerido", { description: "Seleccione un producto de la lista." });
@@ -1286,7 +1289,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
       // Upload payment proof if provided
       let paymentProofUrl: string | null = null;
       const paymentProofFile = fd.get("payment_proof") as File;
-      if (paymentProofFile && paymentProofFile.size > 0 && paymentMethod === "pagado") {
+      if (paymentProofFile && paymentProofFile.size > 0) {
         const ext = paymentProofFile.name.split(".").pop();
         const path = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`;
         const { error: uploadError } = await supabase.storage.from("payment-proofs").upload(path, paymentProofFile);
@@ -1317,7 +1320,8 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
           payment_proof_url: paymentProofUrl,
           payment_complete: paymentMethod === "pagado",
           observations: (fd.get("notas") as string)?.trim() || null,
-        });
+          shipping_cost: shippingAmount,
+        } as any);
         queryClient.invalidateQueries({ queryKey: ["orders"] });
       } catch (err: any) {
         console.error("Error saving retail order:", err);
@@ -1398,7 +1402,6 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
                 <input type="hidden" name="referencia" value={selectedRef} />
               </div>
               <Field label="Cantidad" name="cantidad" type="number" required />
-              <Field label="Cantidad" name="cantidad" type="number" required />
             </div>
             {isMayor && (
               <div className="grid gap-4 sm:grid-cols-2">
@@ -1411,14 +1414,17 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Valores</legend>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Precio de venta total" name="precioTotal" type="number" required />
+              <div className="space-y-1.5">
+                <Label htmlFor="precioTotal">Precio de venta total</Label>
+                <Input id="precioTotal" name="precioTotal" type="number" required value={retailPrice} onChange={(e) => setRetailPrice(e.target.value)} />
+              </div>
               {isMayor && <Field label="Abono inicial (50%)" name="abono" type="number" />}
             </div>
           </fieldset>
 
           {!isMayor && (
             <fieldset className="space-y-4">
-              <legend className="text-sm font-semibold text-foreground mb-2">Método de pago</legend>
+              <legend className="text-sm font-semibold text-foreground mb-2">Método de pago y envío</legend>
               <div className="grid grid-cols-2 gap-2">
                 {([
                   { value: "contra_entrega", label: "Contra entrega" },
@@ -1430,9 +1436,23 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
                   </label>
                 ))}
               </div>
-              {paymentMethod === "pagado" && (
-                <FileField label="Adjuntar soporte de pago" name="payment_proof" />
+
+              <div className="space-y-1.5">
+                <Label htmlFor="shipping_cost">Costo de envío / transporte</Label>
+                <Input id="shipping_cost" name="shipping_cost" type="number" placeholder="0" value={shippingCost} onChange={(e) => setShippingCost(e.target.value)} />
+              </div>
+
+              {paymentMethod === "contra_entrega" && (
+                <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
+                  <h4 className="text-sm font-semibold text-foreground">Valor a cobrar contra entrega</h4>
+                  <p className="text-2xl font-bold text-foreground">
+                    ${((parseFloat(retailPrice) || 0) + (parseFloat(shippingCost) || 0)).toLocaleString("es-CO")}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Incluye precio del producto + costo de envío</p>
+                </div>
               )}
+
+              <FileField label="Adjuntar soporte de pago (si aplica)" name="payment_proof" />
             </fieldset>
           )}
 
