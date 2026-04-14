@@ -91,6 +91,9 @@ export const MagicalWarmersWorkflow = () => {
   const [confirmOrder, setConfirmOrder] = useState<ProductionOrder | null>(null);
   const [confirmOrderQty, setConfirmOrderQty] = useState("");
 
+  // Completion dialog state for finishing empaque (last stage before listo)
+  const [completionOrder, setCompletionOrder] = useState<ProductionOrder | null>(null);
+
   const activeOrders = orders.filter((o) => o.current_stage !== "listo");
   const completedOrders = orders.filter((o) => o.current_stage === "listo");
   const activeBodyTasks = bodyTasks.filter((t) => t.status !== "finalizado");
