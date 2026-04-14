@@ -797,9 +797,21 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       return;
     }
 
-    // Auto-create design request if logo was uploaded (do this BEFORE reset)
+    // Upload initial payment proof if provided
+    let ssPaymentProofUrl: string | null = null;
+    if (ssPaymentProofFile && ssPaymentProofFile.size > 0) {
+      const ext = ssPaymentProofFile.name.split(".").pop();
+      const path = `initial_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.${ext}`;
+      const { error: uploadErr } = await supabase.storage.from("payment-proofs").upload(path, ssPaymentProofFile);
+      if (!uploadErr) {
+        const { data: urlData } = supabase.storage.from("payment-proofs").getPublicUrl(path);
+        ssPaymentProofUrl = urlData.publicUrl;
+      }
+    }
+
+    // Auto-create design request if logo was uploaded (skip for recompra)
     let logoUrl: string | null = null;
-    if (logoFile && logoFile.size > 0 && user) {
+    if (logoFile && logoFile.size > 0 && user && !ssIsRecompra) {
       const result = await createLogoRequestFromOrder({
         brand: "Sweatspot",
         clientName,
@@ -816,6 +828,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       } else {
         toast.error("Diseño de logo", { description: result.message });
       }
+    } else if (logoFile && logoFile.size > 0 && ssIsRecompra) {
+      logoUrl = "recompra-logo";
     }
 
     // Determine logo type for production workflow
