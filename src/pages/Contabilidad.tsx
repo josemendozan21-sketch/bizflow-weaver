@@ -139,7 +139,28 @@ const OrderCard = ({ order, actionSlot }: { order: Order; actionSlot?: React.Rea
           {order.client_nit && <div><span className="text-muted-foreground">{isMayor ? "RUT" : "Cédula"}: </span><span className="font-medium">{order.client_nit}</span></div>}
           {order.client_address && <div className="col-span-2"><span className="text-muted-foreground">Dirección: </span><span className="font-medium">{order.client_address}</span></div>}
           {order.client_city && <div><span className="text-muted-foreground">Ciudad: </span><span className="font-medium">{order.client_city}</span></div>}
+          {(order as any).is_recompra && (
+            <div className="col-span-2">
+              <Badge variant="outline" className="border-primary text-primary">🔄 Recompra</Badge>
+            </div>
+          )}
         </div>
+
+        {/* Payment proof from initial payment */}
+        {order.payment_proof_url && (
+          <div className="rounded-md border border-primary/20 bg-primary/5 p-2 flex items-center justify-between text-sm">
+            <div className="flex items-center gap-2 text-primary">
+              <FileText className="h-4 w-4" />
+              <span className="font-medium">Soporte de pago adjunto</span>
+            </div>
+            <a href={order.payment_proof_url} target="_blank" rel="noopener noreferrer">
+              <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
+                <ExternalLink className="h-3 w-3" /> Ver soporte
+              </Button>
+            </a>
+          </div>
+        )}
+
         {order.observations && (
           <p className="text-sm text-muted-foreground border-t pt-2">{order.observations}</p>
         )}
