@@ -60,6 +60,26 @@ function getFriendlyStageLabel(status: string, order: Order): string {
 export function MisPedidos() {
   const { data: orders = [], isLoading } = useOrders();
 
+  // Fetch production orders to get finished product photos
+  const { data: productionOrders = [] } = useQuery({
+    queryKey: ["production_orders_for_advisor"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("production_orders")
+        .select("order_id, finished_photo_url, packager_name, final_count")
+        .not("finished_photo_url", "is", null);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  // Map order_id -> completion info
+  const completionMap = new Map(
+    productionOrders
+      .filter((po) => po.order_id)
+      .map((po) => [po.order_id, { photoUrl: po.finished_photo_url, packagerName: po.packager_name, finalCount: po.final_count }])
+  );
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
