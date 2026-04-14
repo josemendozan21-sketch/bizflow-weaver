@@ -7,12 +7,16 @@ import ProductionBrandSelector, { type ProductionBrand } from "@/components/prod
 import { MagicalWarmersWorkflow } from "@/components/production/MagicalWarmersWorkflow";
 import { SweatspotWorkflow } from "@/components/production/SweatspotWorkflow";
 import { EstampacionProductionView } from "@/components/production/EstampacionProductionView";
+import { useProductionAlerts } from "@/hooks/useProductionAlerts";
 
 const Produccion = () => {
   const { role } = useAuth();
   const isReadOnly = role === "asesor_comercial" || role === "usuario_visual";
   const isEstampacion = role === "estampacion";
   const [selectedBrand, setSelectedBrand] = useState<ProductionBrand | null>(null);
+
+  // Show toast popups when new production orders arrive
+  useProductionAlerts();
 
   // Estampacion role sees a dedicated view
   if (isEstampacion) {
