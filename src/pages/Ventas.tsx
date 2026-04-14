@@ -261,10 +261,12 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const queryClient = useQueryClient();
   const [dobleTinta, setDobleTinta] = useState(false);
   const [escarcha, setEscarcha] = useState(false);
+  const [isRecompra, setIsRecompra] = useState(false);
   const [orderLines, setOrderLines] = useState<OrderLine[]>([createEmptyLine()]);
   const [abono, setAbono] = useState("");
   const [estadoPago, setEstadoPago] = useState<"abono_inicial" | "pago_total" | "pendiente">("abono_inicial");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
 
   const materialConfigs = useInventoryStore((s) => s.materialConfigs);
   const { reserveBodyStock: reserveBodyStockDB, discountStock: discountStockDB, stockItems: inventoryStockItems } = useInventory();
@@ -362,9 +364,21 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       return;
     }
 
-    // Upload logo once if provided
+    // Upload initial payment proof if provided
+    let paymentProofUrl: string | null = null;
+    if (paymentProofFile && paymentProofFile.size > 0) {
+      const ext = paymentProofFile.name.split(".").pop();
+      const path = `initial_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.${ext}`;
+      const { error: uploadErr } = await supabase.storage.from("payment-proofs").upload(path, paymentProofFile);
+      if (!uploadErr) {
+        const { data: urlData } = supabase.storage.from("payment-proofs").getPublicUrl(path);
+        paymentProofUrl = urlData.publicUrl;
+      }
+    }
+
+    // Upload logo once if provided (skip design request for recompra)
     let logoUrl: string | null = null;
-    if (logoFile && logoFile.size > 0 && user) {
+    if (logoFile && logoFile.size > 0 && user && !isRecompra) {
       const firstLine = orderLines[0];
       const referencia = `${firstLine.product} (${firstLine.type})`;
       const result = await createLogoRequestFromOrder({
@@ -383,6 +397,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       } else {
         toast.error("Diseño de logo", { description: result.message });
       }
+    } else if (logoFile && logoFile.size > 0 && isRecompra) {
+      logoUrl = "recompra-logo";
     }
 
     const magicalStages = ["produccion_cuerpos", "estampacion", "dosificacion", "sellado", "recorte", "empaque", "listo"];
@@ -450,6 +466,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           advisor_id: user?.id || "",
           advisor_name: user?.email || "Asesor",
           production_status: "pendiente",
+          is_recompra: isRecompra,
+          payment_proof_url: paymentProofUrl,
           payment_complete: estadoPago === "pago_total",
           delivery_date: fechaRequerida || null,
         }).select("id").single();
