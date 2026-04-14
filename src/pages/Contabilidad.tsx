@@ -350,6 +350,12 @@ const Contabilidad = () => {
             </Card>
           )}
         </TabsContent>
+
+        {!isReadOnly && (
+          <TabsContent value="caja_menor">
+            <CajaMenor />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
