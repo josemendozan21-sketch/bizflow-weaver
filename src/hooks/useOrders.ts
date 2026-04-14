@@ -43,6 +43,7 @@ export interface Order {
   invoice_status: string;
   invoice_file_url: string | null;
   is_recompra: boolean;
+  shipping_cost: number | null;
 }
 
 export const PRODUCTION_STATUS_LABELS: Record<string, string> = {
