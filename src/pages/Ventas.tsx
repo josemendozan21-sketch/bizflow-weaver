@@ -552,6 +552,54 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
+          <SmartPasteField
+            brand="magical"
+            onDataParsed={(data) => {
+              // Fill client fields
+              const form = document.querySelector("form") as HTMLFormElement;
+              if (!form) return;
+              const setInput = (name: string, value: string | undefined | null) => {
+                const el = form.querySelector(`[name="${name}"]`) as HTMLInputElement;
+                if (el && value) { el.value = value; el.dispatchEvent(new Event("input", { bubbles: true })); }
+              };
+              setInput("mw_nombre", data.cliente?.nombre);
+              setInput("mw_cedulaNit", data.cliente?.cedula_nit);
+              setInput("mw_contacto", data.cliente?.telefono);
+              setInput("mw_email", data.cliente?.email);
+              setInput("mw_direccion", data.cliente?.direccion);
+              setInput("mw_ciudad", data.cliente?.ciudad);
+
+              // Fill product lines
+              if (data.productos && data.productos.length > 0) {
+                const newLines = data.productos.map((p) => ({
+                  id: crypto.randomUUID(),
+                  product: p.producto || "",
+                  type: p.tipo || "",
+                  gelColor: p.color_gel || "",
+                  gelCustom: "",
+                  inkColor: p.color_tinta || "",
+                  inkCustom: "",
+                  units: String(p.unidades || ""),
+                  valorUnitario: String(p.valor_unitario || ""),
+                  valorTotal: String(p.valor_total || ""),
+                  autoCalc: !p.valor_total,
+                }));
+                setOrderLines(newLines);
+              }
+
+              if (data.abono) setAbono(String(data.abono));
+              if (data.es_recompra) setIsRecompra(true);
+              if (data.observaciones) {
+                const obs = form.querySelector('[name="mw_observaciones"]') as HTMLTextAreaElement;
+                if (obs) obs.value = data.observaciones;
+              }
+              if (data.personalizacion) {
+                const pers = form.querySelector('[name="mw_personalizacion"]') as HTMLTextAreaElement;
+                if (pers) pers.value = data.personalizacion;
+              }
+            }}
+          />
+
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Información del cliente</legend>
             <div className="grid gap-4 sm:grid-cols-2">
