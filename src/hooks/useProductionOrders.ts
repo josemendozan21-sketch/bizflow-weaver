@@ -28,6 +28,10 @@ export interface ProductionOrder {
   created_at: string;
   updated_at: string;
   completed_at: string | null;
+  // Completion fields
+  finished_photo_url: string | null;
+  packager_name: string | null;
+  final_count: number | null;
   // Stamping approval fields
   stamp_size_photo_url: string | null;
   stamp_size_status: string;
@@ -134,7 +138,7 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
   });
 
   const advanceStage = useMutation({
-    mutationFn: async ({ orderId, confirmedQuantity }: { orderId: string; confirmedQuantity?: number }) => {
+    mutationFn: async ({ orderId, confirmedQuantity, completionData }: { orderId: string; confirmedQuantity?: number; completionData?: { photoUrl: string; packagerName: string; finalCount: number } }) => {
       // Get fresh order data
       const { data: order, error: fetchErr } = await supabase
         .from("production_orders")
@@ -175,9 +179,14 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
         const { error } = await supabase
           .from("production_orders")
           .update({
-            current_stage: "listo",
-            stage_status: "finalizado",
+            current_stage: "listo" as string,
+            stage_status: "finalizado" as string,
             completed_at: new Date().toISOString(),
+            ...(completionData ? {
+              finished_photo_url: completionData.photoUrl,
+              packager_name: completionData.packagerName,
+              final_count: completionData.finalCount,
+            } : {}),
           })
           .eq("id", orderId);
         if (error) throw error;

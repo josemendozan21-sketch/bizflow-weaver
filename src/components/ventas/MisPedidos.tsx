@@ -8,8 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useOrders, PRODUCTION_STATUS_LABELS, PRODUCTION_STATUS_COLORS, type Order } from "@/hooks/useOrders";
 import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, Package, Calendar, DollarSign, MapPin, Upload, CheckCircle2, AlertTriangle, FileText } from "lucide-react";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { Loader2, Package, Calendar, DollarSign, MapPin, Upload, CheckCircle2, AlertTriangle, FileText, Camera, User } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
@@ -59,6 +59,26 @@ function getFriendlyStageLabel(status: string, order: Order): string {
 
 export function MisPedidos() {
   const { data: orders = [], isLoading } = useOrders();
+
+  // Fetch production orders to get finished product photos
+  const { data: productionOrders = [] } = useQuery({
+    queryKey: ["production_orders_for_advisor"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("production_orders")
+        .select("order_id, finished_photo_url, packager_name, final_count")
+        .not("finished_photo_url", "is", null);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  // Map order_id -> completion info
+  const completionMap = new Map(
+    productionOrders
+      .filter((po) => po.order_id)
+      .map((po) => [po.order_id, { photoUrl: po.finished_photo_url, packagerName: po.packager_name, finalCount: po.final_count }])
+  );
 
   if (isLoading) {
     return (
@@ -154,6 +174,38 @@ export function MisPedidos() {
                     </a>
                   </div>
                 )}
+
+                {/* Finished product photo and info */}
+                {completionMap.has(order.id) && (() => {
+                  const info = completionMap.get(order.id)!;
+                  return (
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                        <Camera className="h-4 w-4 text-primary" />
+                        Producto finalizado
+                      </div>
+                      {info.photoUrl && (
+                        <a href={info.photoUrl} target="_blank" rel="noopener noreferrer">
+                          <img src={info.photoUrl} alt="Producto finalizado" className="rounded-md max-h-48 w-full object-cover cursor-pointer hover:opacity-90 transition-opacity" />
+                        </a>
+                      )}
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        {info.packagerName && (
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <User className="h-3 w-3" />
+                            Empacó: <span className="font-medium text-foreground">{info.packagerName}</span>
+                          </div>
+                        )}
+                        {info.finalCount && (
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <Package className="h-3 w-3" />
+                            Conteo: <span className="font-medium text-foreground">{info.finalCount} uds</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">

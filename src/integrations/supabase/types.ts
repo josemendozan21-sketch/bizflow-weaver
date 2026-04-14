@@ -422,6 +422,8 @@ export type Database = {
           completed_at: string | null
           created_at: string
           current_stage: string
+          final_count: number | null
+          finished_photo_url: string | null
           gel_color: string | null
           has_stock: boolean | null
           id: string
@@ -432,6 +434,7 @@ export type Database = {
           needs_cuerpos: boolean | null
           observations: string | null
           order_id: string | null
+          packager_name: string | null
           quantity: number
           silicone_color: string | null
           stage_status: string
@@ -454,6 +457,8 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           current_stage?: string
+          final_count?: number | null
+          finished_photo_url?: string | null
           gel_color?: string | null
           has_stock?: boolean | null
           id?: string
@@ -464,6 +469,7 @@ export type Database = {
           needs_cuerpos?: boolean | null
           observations?: string | null
           order_id?: string | null
+          packager_name?: string | null
           quantity?: number
           silicone_color?: string | null
           stage_status?: string
@@ -486,6 +492,8 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           current_stage?: string
+          final_count?: number | null
+          finished_photo_url?: string | null
           gel_color?: string | null
           has_stock?: boolean | null
           id?: string
@@ -496,6 +504,7 @@ export type Database = {
           needs_cuerpos?: boolean | null
           observations?: string | null
           order_id?: string | null
+          packager_name?: string | null
           quantity?: number
           silicone_color?: string | null
           stage_status?: string
