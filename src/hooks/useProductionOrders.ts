@@ -28,6 +28,10 @@ export interface ProductionOrder {
   created_at: string;
   updated_at: string;
   completed_at: string | null;
+  // Completion fields
+  finished_photo_url: string | null;
+  packager_name: string | null;
+  final_count: number | null;
   // Stamping approval fields
   stamp_size_photo_url: string | null;
   stamp_size_status: string;
