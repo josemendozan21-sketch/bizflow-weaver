@@ -1402,7 +1402,6 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
                 <input type="hidden" name="referencia" value={selectedRef} />
               </div>
               <Field label="Cantidad" name="cantidad" type="number" required />
-              <Field label="Cantidad" name="cantidad" type="number" required />
             </div>
             {isMayor && (
               <div className="grid gap-4 sm:grid-cols-2">
