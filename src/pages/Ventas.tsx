@@ -748,6 +748,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const [ssAbono, setSsAbono] = useState("");
   const [ssEstadoPago, setSsEstadoPago] = useState<"abono_inicial" | "pago_total" | "pendiente">("abono_inicial");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [ssIsRecompra, setSsIsRecompra] = useState(false);
+  const [ssPaymentProofFile, setSsPaymentProofFile] = useState<File | null>(null);
   const tamanos = ["150 ml", "250 ml", "250 ml juguetón", "500 ml"] as const;
 
   // Auto-calculate total
