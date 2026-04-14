@@ -141,6 +141,20 @@ export const SweatspotWorkflow = () => {
           </div>
         </>
       )}
+
+      <CompletionDialog
+        open={!!completionOrder}
+        onClose={() => setCompletionOrder(null)}
+        order={completionOrder}
+        onConfirm={(data) => {
+          if (!completionOrder) return;
+          advanceStage.mutate({
+            orderId: completionOrder.id,
+            completionData: data,
+          });
+          setCompletionOrder(null);
+        }}
+      />
     </div>
   );
 };
