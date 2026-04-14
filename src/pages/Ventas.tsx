@@ -1232,6 +1232,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
   const [paymentMethod, setPaymentMethod] = useState<"contra_entrega" | "pagado">("contra_entrega");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedRef, setSelectedRef] = useState("");
+  const [shippingCost, setShippingCost] = useState("");
   const { stockItems } = useInventory();
 
   // Build predefined references from finished products in DB
