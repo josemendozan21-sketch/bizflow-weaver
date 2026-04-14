@@ -1107,6 +1107,8 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
       setIsSubmitting(false);
       return;
     }
+
+    if (saleType === "menor") {
       const telefono = (fd.get("telefono") as string)?.trim() || "";
       const ciudad = (fd.get("ciudad") as string)?.trim() || "";
       const direccion = (fd.get("direccion") as string)?.trim() || "";
