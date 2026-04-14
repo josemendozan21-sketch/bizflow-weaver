@@ -175,6 +175,38 @@ export function MisPedidos() {
                   </div>
                 )}
 
+                {/* Finished product photo and info */}
+                {completionMap.has(order.id) && (() => {
+                  const info = completionMap.get(order.id)!;
+                  return (
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                        <Camera className="h-4 w-4 text-primary" />
+                        Producto finalizado
+                      </div>
+                      {info.photoUrl && (
+                        <a href={info.photoUrl} target="_blank" rel="noopener noreferrer">
+                          <img src={info.photoUrl} alt="Producto finalizado" className="rounded-md max-h-48 w-full object-cover cursor-pointer hover:opacity-90 transition-opacity" />
+                        </a>
+                      )}
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        {info.packagerName && (
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <User className="h-3 w-3" />
+                            Empacó: <span className="font-medium text-foreground">{info.packagerName}</span>
+                          </div>
+                        )}
+                        {info.finalCount && (
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <Package className="h-3 w-3" />
+                            Conteo: <span className="font-medium text-foreground">{info.finalCount} uds</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-medium text-foreground">{friendlyLabel}</span>
