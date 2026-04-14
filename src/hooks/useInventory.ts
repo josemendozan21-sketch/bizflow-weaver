@@ -136,7 +136,7 @@ export function useInventory() {
         return { success: false, message: `Producto "${itemName}" no encontrado en inventario.` };
       }
 
-      const newAvailable = Math.max(0, item.available - amount);
+      const newAvailable = item.available - amount;
       const { error } = await supabase
         .from("stock_items")
         .update({ available: newAvailable } as any)
@@ -210,9 +210,9 @@ export function useInventory() {
         };
       }
 
-      const toDiscount = Math.min(item.available, qty);
-      const remaining = qty - toDiscount;
-      const newAvailable = item.available - toDiscount;
+      const toDiscount = qty;
+      const remaining = 0;
+      const newAvailable = item.available - qty;
 
       const { error } = await supabase
         .from("body_stock")
