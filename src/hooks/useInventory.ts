@@ -191,7 +191,7 @@ export function useInventory() {
           )
       );
 
-      if (!item || item.available <= 0) {
+      if (!item) {
         if (options?.requestedBy) {
           await supabase.from("production_supply_orders").insert({
             brand,
