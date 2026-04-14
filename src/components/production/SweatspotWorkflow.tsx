@@ -51,6 +51,7 @@ const STATUS_BADGE: Record<string, { label: string; variant: "secondary" | "defa
 export const SweatspotWorkflow = () => {
   const { orders, isLoading, updateStageStatus, advanceStage } = useProductionOrders("sweatspot");
   const { role } = useAuth();
+  const [completionOrder, setCompletionOrder] = useState<ProductionOrder | null>(null);
 
   const activeOrders = orders.filter((o) => o.current_stage !== "listo");
   const completedOrders = orders.filter((o) => o.current_stage === "listo");
