@@ -176,13 +176,19 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
 
       if (currentIdx >= lastActionableIdx) {
         // Complete the order
+        const updateData: Record<string, any> = {
+          current_stage: "listo",
+          stage_status: "finalizado",
+          completed_at: new Date().toISOString(),
+        };
+        if (completionData) {
+          updateData.finished_photo_url = completionData.photoUrl;
+          updateData.packager_name = completionData.packagerName;
+          updateData.final_count = completionData.finalCount;
+        }
         const { error } = await supabase
           .from("production_orders")
-          .update({
-            current_stage: "listo",
-            stage_status: "finalizado",
-            completed_at: new Date().toISOString(),
-          })
+          .update(updateData)
           .eq("id", orderId);
         if (error) throw error;
 
