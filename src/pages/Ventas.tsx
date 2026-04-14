@@ -261,10 +261,12 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const queryClient = useQueryClient();
   const [dobleTinta, setDobleTinta] = useState(false);
   const [escarcha, setEscarcha] = useState(false);
+  const [isRecompra, setIsRecompra] = useState(false);
   const [orderLines, setOrderLines] = useState<OrderLine[]>([createEmptyLine()]);
   const [abono, setAbono] = useState("");
   const [estadoPago, setEstadoPago] = useState<"abono_inicial" | "pago_total" | "pendiente">("abono_inicial");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
 
   const materialConfigs = useInventoryStore((s) => s.materialConfigs);
   const { reserveBodyStock: reserveBodyStockDB, discountStock: discountStockDB, stockItems: inventoryStockItems } = useInventory();
@@ -362,9 +364,21 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       return;
     }
 
-    // Upload logo once if provided
+    // Upload initial payment proof if provided
+    let paymentProofUrl: string | null = null;
+    if (paymentProofFile && paymentProofFile.size > 0) {
+      const ext = paymentProofFile.name.split(".").pop();
+      const path = `initial_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.${ext}`;
+      const { error: uploadErr } = await supabase.storage.from("payment-proofs").upload(path, paymentProofFile);
+      if (!uploadErr) {
+        const { data: urlData } = supabase.storage.from("payment-proofs").getPublicUrl(path);
+        paymentProofUrl = urlData.publicUrl;
+      }
+    }
+
+    // Upload logo once if provided (skip design request for recompra)
     let logoUrl: string | null = null;
-    if (logoFile && logoFile.size > 0 && user) {
+    if (logoFile && logoFile.size > 0 && user && !isRecompra) {
       const firstLine = orderLines[0];
       const referencia = `${firstLine.product} (${firstLine.type})`;
       const result = await createLogoRequestFromOrder({
@@ -383,6 +397,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       } else {
         toast.error("Diseño de logo", { description: result.message });
       }
+    } else if (logoFile && logoFile.size > 0 && isRecompra) {
+      logoUrl = "recompra-logo";
     }
 
     const magicalStages = ["produccion_cuerpos", "estampacion", "dosificacion", "sellado", "recorte", "empaque", "listo"];
@@ -450,6 +466,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           advisor_id: user?.id || "",
           advisor_name: user?.email || "Asesor",
           production_status: "pendiente",
+          is_recompra: isRecompra,
+          payment_proof_url: paymentProofUrl,
           payment_complete: estadoPago === "pago_total",
           delivery_date: fechaRequerida || null,
         }).select("id").single();
@@ -650,12 +668,21 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 </Select>
               </div>
             </div>
+            <div className="space-y-1.5">
+              <Label>Soporte de pago inicial</Label>
+              <Input type="file" accept="image/*,.pdf" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary" />
+              <p className="text-xs text-muted-foreground">Adjunte el comprobante del abono inicial para revisión en contabilidad</p>
+            </div>
             <Field label="Fecha requerida de entrega" name="mw_fechaRequerida" type="date" />
           </fieldset>
 
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Opciones adicionales</legend>
-            <div className="grid gap-6 sm:grid-cols-2">
+            <div className="grid gap-6 sm:grid-cols-3">
+              <div className="flex items-center justify-between rounded-md border border-input p-3">
+                <Label htmlFor="mw_recompra" className="cursor-pointer">Recompra</Label>
+                <Switch id="mw_recompra" checked={isRecompra} onCheckedChange={setIsRecompra} />
+              </div>
               <div className="flex items-center justify-between rounded-md border border-input p-3">
                 <Label htmlFor="mw_dobleTinta" className="cursor-pointer">Doble tinta</Label>
                 <Switch id="mw_dobleTinta" checked={dobleTinta} onCheckedChange={setDobleTinta} />
@@ -665,6 +692,11 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 <Switch id="mw_escarcha" checked={escarcha} onCheckedChange={setEscarcha} />
               </div>
             </div>
+            {isRecompra && (
+              <p className="text-xs text-muted-foreground bg-muted/50 rounded-md p-2">
+                ✓ Recompra: El logo ya existe, no se generará solicitud de diseño automática.
+              </p>
+            )}
           </fieldset>
 
           <fieldset className="space-y-4">
@@ -716,6 +748,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const [ssAbono, setSsAbono] = useState("");
   const [ssEstadoPago, setSsEstadoPago] = useState<"abono_inicial" | "pago_total" | "pendiente">("abono_inicial");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [ssIsRecompra, setSsIsRecompra] = useState(false);
+  const [ssPaymentProofFile, setSsPaymentProofFile] = useState<File | null>(null);
   const tamanos = ["150 ml", "250 ml", "250 ml juguetón", "500 ml"] as const;
 
   // Auto-calculate total
@@ -763,9 +797,21 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       return;
     }
 
-    // Auto-create design request if logo was uploaded (do this BEFORE reset)
+    // Upload initial payment proof if provided
+    let ssPaymentProofUrl: string | null = null;
+    if (ssPaymentProofFile && ssPaymentProofFile.size > 0) {
+      const ext = ssPaymentProofFile.name.split(".").pop();
+      const path = `initial_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.${ext}`;
+      const { error: uploadErr } = await supabase.storage.from("payment-proofs").upload(path, ssPaymentProofFile);
+      if (!uploadErr) {
+        const { data: urlData } = supabase.storage.from("payment-proofs").getPublicUrl(path);
+        ssPaymentProofUrl = urlData.publicUrl;
+      }
+    }
+
+    // Auto-create design request if logo was uploaded (skip for recompra)
     let logoUrl: string | null = null;
-    if (logoFile && logoFile.size > 0 && user) {
+    if (logoFile && logoFile.size > 0 && user && !ssIsRecompra) {
       const result = await createLogoRequestFromOrder({
         brand: "Sweatspot",
         clientName,
@@ -782,6 +828,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       } else {
         toast.error("Diseño de logo", { description: result.message });
       }
+    } else if (logoFile && logoFile.size > 0 && ssIsRecompra) {
+      logoUrl = "recompra-logo";
     }
 
     // Determine logo type for production workflow
@@ -836,6 +884,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         advisor_id: user?.id || "",
         advisor_name: user?.email || "Asesor",
         production_status: "pendiente",
+        is_recompra: ssIsRecompra,
+        payment_proof_url: ssPaymentProofUrl,
         payment_complete: ssEstadoPago === "pago_total",
         delivery_date: fechaRequerida || null,
       }).select("id").single();
@@ -1028,7 +1078,25 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                 </Select>
               </div>
             </div>
+            <div className="space-y-1.5">
+              <Label>Soporte de pago inicial</Label>
+              <Input type="file" accept="image/*,.pdf" onChange={(e) => setSsPaymentProofFile(e.target.files?.[0] || null)} className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary" />
+              <p className="text-xs text-muted-foreground">Adjunte el comprobante del abono inicial para revisión en contabilidad</p>
+            </div>
             <Field label="Fecha requerida de entrega" name="ss_fechaRequerida" type="date" />
+          </fieldset>
+
+          <fieldset className="space-y-4">
+            <legend className="text-sm font-semibold text-foreground mb-2">Opciones adicionales</legend>
+            <div className="flex items-center justify-between rounded-md border border-input p-3 max-w-xs">
+              <Label htmlFor="ss_recompra" className="cursor-pointer">Recompra</Label>
+              <Switch id="ss_recompra" checked={ssIsRecompra} onCheckedChange={setSsIsRecompra} />
+            </div>
+            {ssIsRecompra && (
+              <p className="text-xs text-muted-foreground bg-muted/50 rounded-md p-2">
+                ✓ Recompra: El logo ya existe, no se generará solicitud de diseño automática.
+              </p>
+            )}
           </fieldset>
 
           <fieldset className="space-y-4">
