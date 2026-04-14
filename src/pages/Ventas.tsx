@@ -1445,7 +1445,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
                 <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
                   <h4 className="text-sm font-semibold text-foreground">Valor a cobrar contra entrega</h4>
                   <p className="text-2xl font-bold text-foreground">
-                    ${((parseFloat((document.querySelector('[name="precioTotal"]') as HTMLInputElement)?.value || "0")) + (parseFloat(shippingCost) || 0)).toLocaleString("es-CO")}
+                    ${((parseFloat(retailPrice) || 0) + (parseFloat(shippingCost) || 0)).toLocaleString("es-CO")}
                   </p>
                   <p className="text-xs text-muted-foreground">Incluye precio del producto + costo de envío</p>
                 </div>
