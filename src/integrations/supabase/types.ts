@@ -381,6 +381,74 @@ export type Database = {
         }
         Relationships: []
       }
+      petty_cash_expenses: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          fund_id: string
+          id: string
+          proof_url: string | null
+          recorded_by: string
+          recorded_by_name: string
+          requested_by: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description: string
+          fund_id: string
+          id?: string
+          proof_url?: string | null
+          recorded_by: string
+          recorded_by_name: string
+          requested_by: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          fund_id?: string
+          id?: string
+          proof_url?: string | null
+          recorded_by?: string
+          recorded_by_name?: string
+          requested_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "petty_cash_expenses_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: false
+            referencedRelation: "petty_cash_funds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      petty_cash_funds: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          notes: string | null
+          set_by: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          set_by: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          set_by?: string
+        }
+        Relationships: []
+      }
       product_costs: {
         Row: {
           brand: string
