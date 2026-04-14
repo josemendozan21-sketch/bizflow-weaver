@@ -280,6 +280,7 @@ export type Database = {
           invoice_notes: string | null
           invoice_number: string | null
           invoice_status: string
+          is_recompra: boolean
           logo_url: string | null
           numero_guia: string | null
           observations: string | null
@@ -321,6 +322,7 @@ export type Database = {
           invoice_notes?: string | null
           invoice_number?: string | null
           invoice_status?: string
+          is_recompra?: boolean
           logo_url?: string | null
           numero_guia?: string | null
           observations?: string | null
@@ -362,6 +364,7 @@ export type Database = {
           invoice_notes?: string | null
           invoice_number?: string | null
           invoice_status?: string
+          is_recompra?: boolean
           logo_url?: string | null
           numero_guia?: string | null
           observations?: string | null
