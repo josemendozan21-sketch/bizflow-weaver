@@ -121,7 +121,15 @@ export const MagicalWarmersWorkflow = () => {
       setConfirmOrder(order);
       setConfirmOrderQty(String(order.quantity));
     } else {
-      advanceStage.mutate({ orderId: order.id });
+      // Check if this is the last actionable stage (before "listo")
+      const stages = order.stages;
+      const currentIdx = stages.indexOf(order.current_stage);
+      const lastActionableIdx = stages.length - 2;
+      if (currentIdx >= lastActionableIdx) {
+        setCompletionOrder(order);
+      } else {
+        advanceStage.mutate({ orderId: order.id });
+      }
     }
   };
 
