@@ -1419,7 +1419,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
 
           {!isMayor && (
             <fieldset className="space-y-4">
-              <legend className="text-sm font-semibold text-foreground mb-2">Método de pago</legend>
+              <legend className="text-sm font-semibold text-foreground mb-2">Método de pago y envío</legend>
               <div className="grid grid-cols-2 gap-2">
                 {([
                   { value: "contra_entrega", label: "Contra entrega" },
@@ -1431,9 +1431,23 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
                   </label>
                 ))}
               </div>
-              {paymentMethod === "pagado" && (
-                <FileField label="Adjuntar soporte de pago" name="payment_proof" />
+
+              <div className="space-y-1.5">
+                <Label htmlFor="shipping_cost">Costo de envío / transporte</Label>
+                <Input id="shipping_cost" name="shipping_cost" type="number" placeholder="0" value={shippingCost} onChange={(e) => setShippingCost(e.target.value)} />
+              </div>
+
+              {paymentMethod === "contra_entrega" && (
+                <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
+                  <h4 className="text-sm font-semibold text-foreground">Valor a cobrar contra entrega</h4>
+                  <p className="text-2xl font-bold text-foreground">
+                    ${((parseFloat((document.querySelector('[name="precioTotal"]') as HTMLInputElement)?.value || "0")) + (parseFloat(shippingCost) || 0)).toLocaleString("es-CO")}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Incluye precio del producto + costo de envío</p>
+                </div>
               )}
+
+              <FileField label="Adjuntar soporte de pago (si aplica)" name="payment_proof" />
             </fieldset>
           )}
 
