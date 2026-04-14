@@ -668,12 +668,21 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 </Select>
               </div>
             </div>
+            <div className="space-y-1.5">
+              <Label>Soporte de pago inicial</Label>
+              <Input type="file" accept="image/*,.pdf" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary" />
+              <p className="text-xs text-muted-foreground">Adjunte el comprobante del abono inicial para revisión en contabilidad</p>
+            </div>
             <Field label="Fecha requerida de entrega" name="mw_fechaRequerida" type="date" />
           </fieldset>
 
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Opciones adicionales</legend>
-            <div className="grid gap-6 sm:grid-cols-2">
+            <div className="grid gap-6 sm:grid-cols-3">
+              <div className="flex items-center justify-between rounded-md border border-input p-3">
+                <Label htmlFor="mw_recompra" className="cursor-pointer">Recompra</Label>
+                <Switch id="mw_recompra" checked={isRecompra} onCheckedChange={setIsRecompra} />
+              </div>
               <div className="flex items-center justify-between rounded-md border border-input p-3">
                 <Label htmlFor="mw_dobleTinta" className="cursor-pointer">Doble tinta</Label>
                 <Switch id="mw_dobleTinta" checked={dobleTinta} onCheckedChange={setDobleTinta} />
@@ -683,6 +692,11 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 <Switch id="mw_escarcha" checked={escarcha} onCheckedChange={setEscarcha} />
               </div>
             </div>
+            {isRecompra && (
+              <p className="text-xs text-muted-foreground bg-muted/50 rounded-md p-2">
+                ✓ Recompra: El logo ya existe, no se generará solicitud de diseño automática.
+              </p>
+            )}
           </fieldset>
 
           <fieldset className="space-y-4">
