@@ -1320,7 +1320,8 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
           payment_proof_url: paymentProofUrl,
           payment_complete: paymentMethod === "pagado",
           observations: (fd.get("notas") as string)?.trim() || null,
-        });
+          shipping_cost: shippingAmount,
+        } as any);
         queryClient.invalidateQueries({ queryKey: ["orders"] });
       } catch (err: any) {
         console.error("Error saving retail order:", err);
