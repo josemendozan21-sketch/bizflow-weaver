@@ -227,6 +227,29 @@ export function useInventory() {
         };
       }
 
+      // Also discount from stock_items (cuerpos_referencias) to keep UI in sync
+      const refBase = referencia.replace(/\s*\(.*?\)\s*$/, "").trim();
+      const normalizedRefBase = normalize(refBase);
+      const { data: stockItemsForBrand } = await supabase
+        .from("stock_items")
+        .select("*")
+        .eq("brand", brand)
+        .eq("category", "cuerpos_referencias");
+
+      if (stockItemsForBrand) {
+        const matchingStockItem = (stockItemsForBrand as unknown as SupabaseStockItem[]).find(
+          (si) => normalize(si.name) === normalizedRefBase ||
+                  normalize(si.name).includes(normalizedRefBase) ||
+                  normalizedRefBase.includes(normalize(si.name))
+        );
+        if (matchingStockItem) {
+          await supabase
+            .from("stock_items")
+            .update({ available: matchingStockItem.available - qty } as any)
+            .eq("id", matchingStockItem.id);
+        }
+      }
+
       if (remaining > 0 && options?.requestedBy) {
         await supabase.from("production_supply_orders").insert({
           brand,
