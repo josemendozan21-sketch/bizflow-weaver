@@ -1076,6 +1076,20 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
   const isMayor = saleType === "mayor";
   const [paymentMethod, setPaymentMethod] = useState<"contra_entrega" | "pagado">("contra_entrega");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedRef, setSelectedRef] = useState("");
+  const { stockItems } = useInventory();
+
+  // Build predefined references from finished products in DB
+  const finishedRefs = useMemo(() => {
+    const dbBrand = brand === "magical" ? "magical" : "sweatspot";
+    const items = stockItems.filter(
+      (s) => s.brand === dbBrand && s.category === "producto_terminado"
+    );
+    const refs = items.map((s) =>
+      s.product_type ? `${s.name} (${s.product_type})` : s.name
+    );
+    return [...new Set(refs)].sort();
+  }, [stockItems, brand]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1087,6 +1101,12 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
     const quantity = parseInt(fd.get("cantidad") as string, 10);
     const referencia = fd.get("referencia") as string;
     const totalAmount = parseFloat(fd.get("precioTotal") as string) || 0;
+
+    if (!referencia) {
+      toast.error("Producto requerido", { description: "Seleccione un producto de la lista." });
+      setIsSubmitting(false);
+      return;
+    }
 
     if (saleType === "menor") {
       const telefono = (fd.get("telefono") as string)?.trim() || "";
@@ -1207,7 +1227,22 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Detalles del producto</legend>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Referencia / Producto" name="referencia" required />
+              <div className="space-y-1.5">
+                <Label>Referencia / Producto</Label>
+                <Select value={selectedRef} onValueChange={setSelectedRef}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar producto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {finishedRefs.map((ref) => (
+                      <SelectItem key={ref} value={ref}>{ref}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {/* Hidden input for form data */}
+                <input type="hidden" name="referencia" value={selectedRef} />
+              </div>
+              <Field label="Cantidad" name="cantidad" type="number" required />
               <Field label="Cantidad" name="cantidad" type="number" required />
             </div>
             {isMayor && (
