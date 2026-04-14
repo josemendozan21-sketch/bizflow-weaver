@@ -1233,6 +1233,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedRef, setSelectedRef] = useState("");
   const [shippingCost, setShippingCost] = useState("");
+  const [retailPrice, setRetailPrice] = useState("");
   const { stockItems } = useInventory();
 
   // Build predefined references from finished products in DB
