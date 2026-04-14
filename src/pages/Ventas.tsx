@@ -1221,7 +1221,22 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Detalles del producto</legend>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Referencia / Producto" name="referencia" required />
+              <div className="space-y-1.5">
+                <Label>Referencia / Producto</Label>
+                <Select value={selectedRef} onValueChange={setSelectedRef}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar producto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {finishedRefs.map((ref) => (
+                      <SelectItem key={ref} value={ref}>{ref}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {/* Hidden input for form data */}
+                <input type="hidden" name="referencia" value={selectedRef} />
+              </div>
+              <Field label="Cantidad" name="cantidad" type="number" required />
               <Field label="Cantidad" name="cantidad" type="number" required />
             </div>
             {isMayor && (
