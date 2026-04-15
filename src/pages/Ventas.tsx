@@ -1273,10 +1273,46 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
       const isVentaMostrador = !clientName || !telefono || !ciudad || !direccion;
       const displayName = isVentaMostrador ? (clientName || "Venta mostrador") : clientName;
 
-      // Retail: discount from finished products
-      const discountResult = useInventoryStore.getState().discountFinishedProduct(referencia, quantity);
-      if (!discountResult.success) {
-        toast.error("Sin stock suficiente", { description: discountResult.message });
+      // Retail: discount from finished products in Supabase
+      // referencia may be "Lumbar (Térmico)" — split into name + product_type
+      let refName = referencia;
+      let refType: string | null = null;
+      const typeMatch = referencia.match(/^(.+?)\s*\((.+?)\)$/);
+      if (typeMatch) {
+        refName = typeMatch[1].trim();
+        refType = typeMatch[2].trim();
+      }
+
+      const dbBrand = brand === "magical" ? "magical" : "sweatspot";
+      let query = supabase
+        .from("stock_items")
+        .select("*")
+        .eq("brand", dbBrand)
+        .eq("category", "producto_terminado")
+        .ilike("name", refName);
+      if (refType) {
+        query = query.eq("product_type", refType);
+      }
+      const { data: matchedItems } = await query.limit(1);
+      const matchedItem = matchedItems?.[0];
+
+      if (!matchedItem) {
+        toast.error("Sin stock suficiente", { description: `Producto terminado "${referencia}" no encontrado en inventario.` });
+        setIsSubmitting(false);
+        return;
+      }
+      if (matchedItem.available < quantity) {
+        toast.error("Sin stock suficiente", { description: `Stock insuficiente de "${referencia}". Disponible: ${matchedItem.available}, requerido: ${quantity}.` });
+        setIsSubmitting(false);
+        return;
+      }
+      const newAvailable = matchedItem.available - quantity;
+      const { error: stockError } = await supabase
+        .from("stock_items")
+        .update({ available: newAvailable })
+        .eq("id", matchedItem.id);
+      if (stockError) {
+        toast.error("Error de inventario", { description: stockError.message });
         setIsSubmitting(false);
         return;
       }
@@ -1345,7 +1381,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
       });
 
       toast.success("Pedido al por menor creado", {
-        description: `${displayName} — ${quantity} uds. Inventario actualizado. ${discountResult.message}`,
+        description: `${displayName} — ${quantity} uds. Inventario actualizado. Nuevo stock de "${refName}": ${newAvailable}.`,
       });
     }
 
