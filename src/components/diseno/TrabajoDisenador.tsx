@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LogoRequest, LogoRequestStatus, useUpdateLogoRequest, uploadLogoFile } from "@/hooks/useLogoRequests";
 import { StatusBadge } from "./StatusBadge";
-import { Upload, Loader2, MessageSquare, Info, Save, Check, RotateCcw } from "lucide-react";
+import { Upload, Loader2, MessageSquare, Info, Save, Check, RotateCcw, Download } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
@@ -179,7 +179,20 @@ function DesignerCard({ request: req }: { request: LogoRequest }) {
         {/* Logos side by side */}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <p className="text-xs font-medium text-muted-foreground">Logo original</p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-muted-foreground">Logo original</p>
+              {isDesigner && (
+                <a
+                  href={req.original_logo_url}
+                  download
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary hover:underline flex items-center gap-1"
+                >
+                  <Download className="h-3 w-3" /> Descargar
+                </a>
+              )}
+            </div>
             <div className="border rounded-lg p-2 bg-muted/20 flex items-center justify-center min-h-[80px]">
               <img src={req.original_logo_url} alt="Original" className="max-h-20 object-contain" />
             </div>
