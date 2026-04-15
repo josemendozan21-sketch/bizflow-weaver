@@ -32,7 +32,7 @@ const EmptyMessage = () => (
 
 export default function AsesorInventoryView() {
   const [selectedBrand, setSelectedBrand] = useState<InventoryBrand | null>(null);
-  const { bodyStock, stockItems, isLoading } = useInventory();
+  const { bodyStock, stockItems, isLoading, updateStockItem } = useInventory();
 
   const magicalBodies = bodyStock.filter((b) => b.brand.toLowerCase() === "magical");
   const magicalFinished = stockItems.filter((s) => s.brand.toLowerCase() === "magical" && s.category === "producto_terminado");
