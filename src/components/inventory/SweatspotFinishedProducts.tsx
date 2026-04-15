@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/table";
 import { Check, X, Pencil, AlertTriangle, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useInventoryStore, type StockItem, type StockStatus, type SweatspotProductCategory } from "@/stores/inventoryStore";
+import { useInventory } from "@/hooks/useInventory";
 import { toast } from "sonner";
 
 const FILTER_OPTIONS: { value: SweatspotProductCategory | "todos"; label: string }[] = [
