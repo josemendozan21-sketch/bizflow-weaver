@@ -133,13 +133,20 @@ const Logistica = () => {
 
         <TabsContent value="ready">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
               <CardTitle className="text-lg">Pedidos listos para despacho</CardTitle>
-              {readyOrders.length > 0 && (
-                <Button variant="outline" size="sm" onClick={() => exportOrdersToCSV(readyOrders, brandLabel, saleLabel)}>
-                  <Download className="h-4 w-4 mr-2" /> Descargar info
-                </Button>
-              )}
+              <div className="flex gap-2">
+                {selectedIds.size > 0 && (
+                  <Button variant="outline" size="sm" onClick={() => generateLabelsForOrders(readyOrders.filter(o => selectedIds.has(o.id)))}>
+                    <FileImage className="h-4 w-4 mr-2" /> Descargar rótulos ({selectedIds.size})
+                  </Button>
+                )}
+                {readyOrders.length > 0 && (
+                  <Button variant="outline" size="sm" onClick={() => exportOrdersToCSV(readyOrders, brandLabel, saleLabel)}>
+                    <Download className="h-4 w-4 mr-2" /> Descargar info
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {readyOrders.length === 0 ? (
@@ -148,6 +155,18 @@ const Logistica = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-10">
+                        <Checkbox
+                          checked={readyOrders.length > 0 && readyOrders.every(o => selectedIds.has(o.id))}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedIds(new Set(readyOrders.map(o => o.id)));
+                            } else {
+                              setSelectedIds(new Set());
+                            }
+                          }}
+                        />
+                      </TableHead>
                       <TableHead>Cliente</TableHead>
                       <TableHead>Marca</TableHead>
                       <TableHead>Tipo</TableHead>
@@ -159,7 +178,18 @@ const Logistica = () => {
                   </TableHeader>
                   <TableBody>
                     {readyOrders.map((order) => (
-                      <TableRow key={order.id}>
+                      <TableRow key={order.id} className={selectedIds.has(order.id) ? "bg-muted/50" : ""}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedIds.has(order.id)}
+                            onCheckedChange={(checked) => {
+                              const next = new Set(selectedIds);
+                              if (checked) next.add(order.id);
+                              else next.delete(order.id);
+                              setSelectedIds(next);
+                            }}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">{order.client_name}</TableCell>
                         <TableCell><Badge variant={order.brand === "magical" ? "default" : "secondary"}>{brandLabel(order.brand)}</Badge></TableCell>
                         <TableCell><Badge variant="outline">{saleLabel(order.sale_type)}</Badge></TableCell>
