@@ -126,7 +126,15 @@ const SweatspotFinishedProducts = () => {
                           <TableCell className="font-medium">{item.name}</TableCell>
                           <TableCell>{item.color || "—"}</TableCell>
                           <TableCell>
-                            <Badge variant={item.logo === "Sweatspot" ? "default" : "outline"} className="text-xs">
+                            <Badge
+                              variant={item.logo === "Sweatspot" ? "default" : "outline"}
+                              className="text-xs cursor-pointer hover:opacity-80"
+                              onClick={() => {
+                                const newLogo = item.logo === "Sweatspot" ? null : "Sweatspot";
+                                updateStockItem(item.id, { logo: newLogo } as any);
+                                toast.success(`Logo cambiado a "${newLogo || "Sin logo"}"`);
+                              }}
+                            >
                               {item.logo || "Sin logo"}
                             </Badge>
                           </TableCell>
