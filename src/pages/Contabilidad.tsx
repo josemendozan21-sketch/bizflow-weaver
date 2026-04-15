@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Upload, Download, Clock, FileText, ExternalLink, BarChart3, Wallet } from "lucide-react";
+import { Upload, Download, Clock, FileText, ExternalLink, BarChart3, Wallet, Trash2 } from "lucide-react";
 import AccountingDashboard from "@/components/contabilidad/AccountingDashboard";
 import CajaMenor from "@/components/contabilidad/CajaMenor";
 import { useOrders, type Order } from "@/hooks/useOrders";
