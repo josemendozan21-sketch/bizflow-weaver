@@ -1230,6 +1230,26 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
 /* ---- Generic form (retail / al por menor) ---- */
 
+interface RetailProductLine {
+  id: string;
+  selectedRef: string;
+  cantidad: string;
+  retailPrice: string;
+  colorProducto: string;
+  isGift: boolean;
+}
+
+function createEmptyRetailLine(isGift = false): RetailProductLine {
+  return {
+    id: crypto.randomUUID(),
+    selectedRef: "",
+    cantidad: "1",
+    retailPrice: isGift ? "0" : "",
+    colorProducto: "",
+    isGift,
+  };
+}
+
 function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: SaleType; onReset: () => void }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -1237,10 +1257,11 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
   const isMayor = saleType === "mayor";
   const [paymentMethod, setPaymentMethod] = useState<"contra_entrega" | "pagado">("contra_entrega");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedRef, setSelectedRef] = useState("");
   const [shippingCost, setShippingCost] = useState("");
-  const [retailPrice, setRetailPrice] = useState("");
   const { stockItems } = useInventory();
+
+  // Multi-product lines
+  const [productLines, setProductLines] = useState<RetailProductLine[]>([createEmptyRetailLine()]);
 
   // Controlled fields for SmartPaste
   const [nombre, setNombre] = useState("");
@@ -1250,9 +1271,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
   const [ciudad, setCiudad] = useState("");
   const [departamento, setDepartamento] = useState("");
   const [direccion, setDireccion] = useState("");
-  const [cantidad, setCantidad] = useState("");
   const [notas, setNotas] = useState("");
-  const [colorProducto, setColorProducto] = useState("");
 
   const handleSmartPaste = (data: ParsedOrderData) => {
     if (data.cliente?.nombre) setNombre(data.cliente.nombre);
@@ -1264,14 +1283,30 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
     if (data.observaciones) setNotas(data.observaciones);
     if (data.productos?.[0]) {
       const p = data.productos[0];
-      if (p.unidades) setCantidad(String(p.unidades));
-      if (p.valor_total) setRetailPrice(String(p.valor_total));
-      // Try to match product reference
-      if (p.producto) {
-        const match = finishedRefs.find((r) => r.toLowerCase().includes(p.producto!.toLowerCase()));
-        if (match) setSelectedRef(match);
+      const firstLine = productLines[0];
+      if (firstLine) {
+        const updates: Partial<RetailProductLine> = {};
+        if (p.unidades) updates.cantidad = String(p.unidades);
+        if (p.valor_total) updates.retailPrice = String(p.valor_total);
+        if (p.producto) {
+          const match = finishedRefs.find((r) => r.toLowerCase().includes(p.producto!.toLowerCase()));
+          if (match) updates.selectedRef = match;
+        }
+        updateProductLine(firstLine.id, updates);
       }
     }
+  };
+
+  const updateProductLine = (id: string, updates: Partial<RetailProductLine>) => {
+    setProductLines((prev) =>
+      prev.map((line) => (line.id === id ? { ...line, ...updates } : line))
+    );
+  };
+
+  const addProductLine = () => setProductLines((prev) => [...prev, createEmptyRetailLine()]);
+  const addGiftLine = () => setProductLines((prev) => [...prev, createEmptyRetailLine(true)]);
+  const removeProductLine = (id: string) => {
+    setProductLines((prev) => prev.length > 1 ? prev.filter((l) => l.id !== id) : prev);
   };
 
   // Build predefined references from finished products in DB
@@ -1286,70 +1321,38 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
     return [...new Set(refs)].sort();
   }, [stockItems, brand]);
 
+  // Grand total across all non-gift lines
+  const grandTotal = useMemo(() => {
+    return productLines.reduce((sum, line) => {
+      if (line.isGift) return sum;
+      return sum + (parseFloat(line.retailPrice) || 0);
+    }, 0);
+  }, [productLines]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
     setIsSubmitting(true);
     const form = e.target as HTMLFormElement;
     const fd = new FormData(form);
-    const clientName = (fd.get("nombre") as string)?.trim() || "";
-    const quantity = parseInt(fd.get("cantidad") as string, 10);
-    const referencia = fd.get("referencia") as string;
-    const totalAmount = parseFloat(retailPrice) || 0;
+    const clientName = nombre.trim();
     const shippingAmount = parseFloat(shippingCost) || 0;
 
-    if (!referencia) {
-      toast.error("Producto requerido", { description: "Seleccione un producto de la lista." });
-      setIsSubmitting(false);
-      return;
+    // Validate all lines have product selected
+    for (const line of productLines) {
+      if (!line.selectedRef) {
+        toast.error("Producto requerido", { description: "Seleccione un producto en todas las líneas." });
+        setIsSubmitting(false);
+        return;
+      }
     }
 
     if (saleType === "menor") {
-      const telefono = (fd.get("telefono") as string)?.trim() || "";
-      const ciudad = (fd.get("ciudad") as string)?.trim() || "";
-      const direccion = (fd.get("direccion") as string)?.trim() || "";
-      const isVentaMostrador = !clientName || !telefono || !ciudad || !direccion;
+      const tel = telefono.trim();
+      const ciu = ciudad.trim();
+      const dir = direccion.trim();
+      const isVentaMostrador = !clientName || !tel || !ciu || !dir;
       const displayName = isVentaMostrador ? (clientName || "Venta mostrador") : clientName;
-
-      // Retail: try to discount from finished products in Supabase (allow order even without stock)
-      let refName = referencia;
-      let refType: string | null = null;
-      const typeMatch = referencia.match(/^(.+?)\s*\((.+?)\)$/);
-      if (typeMatch) {
-        refName = typeMatch[1].trim();
-        refType = typeMatch[2].trim();
-      }
-
-      const dbBrand = brand === "magical" ? "magical" : "sweatspot";
-      let query = supabase
-        .from("stock_items")
-        .select("*")
-        .eq("brand", dbBrand)
-        .eq("category", "producto_terminado")
-        .ilike("name", refName);
-      if (refType) {
-        query = query.eq("product_type", refType);
-      }
-      const { data: matchedItems } = await query.limit(1);
-      const matchedItem = matchedItems?.[0];
-
-      if (matchedItem) {
-        const newAvailable = matchedItem.available - quantity;
-        await supabase
-          .from("stock_items")
-          .update({ available: newAvailable })
-          .eq("id", matchedItem.id);
-        if (newAvailable < 0) {
-          toast.warning("Stock negativo", { description: `"${referencia}" quedó con stock negativo (${newAvailable}). Reabastecer.` });
-        }
-      } else {
-        toast.warning("Sin registro de inventario", { description: `"${referencia}" no encontrado en inventario. El pedido se creará de todas formas.` });
-      }
-
-      if (brand === "magical") {
-        const gelResult = useInventoryStore.getState().discountGelForMagical(referencia, quantity);
-        toast.info("Consumo de gel", { description: gelResult.message });
-      }
 
       // Upload payment proof if provided
       let paymentProofUrl: string | null = null;
@@ -1364,54 +1367,115 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
         }
       }
 
-      // Persist retail order to DB
-      try {
-        await supabase.from("orders").insert({
+      // Process each product line as a separate order
+      for (const line of productLines) {
+        const referencia = line.selectedRef;
+        const quantity = parseInt(line.cantidad, 10) || 1;
+        const totalAmount = line.isGift ? 0 : (parseFloat(line.retailPrice) || 0);
+
+        // Discount stock
+        let refName = referencia;
+        let refType: string | null = null;
+        const typeMatch = referencia.match(/^(.+?)\s*\((.+?)\)$/);
+        if (typeMatch) {
+          refName = typeMatch[1].trim();
+          refType = typeMatch[2].trim();
+        }
+
+        const dbBrand = brand === "magical" ? "magical" : "sweatspot";
+        let query = supabase
+          .from("stock_items")
+          .select("*")
+          .eq("brand", dbBrand)
+          .eq("category", "producto_terminado")
+          .ilike("name", refName);
+        if (refType) {
+          query = query.eq("product_type", refType);
+        }
+        const { data: matchedItems } = await query.limit(1);
+        const matchedItem = matchedItems?.[0];
+
+        if (matchedItem) {
+          const newAvailable = matchedItem.available - quantity;
+          await supabase
+            .from("stock_items")
+            .update({ available: newAvailable })
+            .eq("id", matchedItem.id);
+          if (newAvailable < 0) {
+            toast.warning("Stock negativo", { description: `"${referencia}" quedó con stock negativo (${newAvailable}). Reabastecer.` });
+          }
+        } else {
+          toast.warning("Sin registro de inventario", { description: `"${referencia}" no encontrado en inventario.` });
+        }
+
+        if (brand === "magical") {
+          const gelResult = useInventoryStore.getState().discountGelForMagical(referencia, quantity);
+          toast.info("Consumo de gel", { description: gelResult.message });
+        }
+
+        // Build observations for this line
+        const lineObs = [
+          notas.trim(),
+          line.isGift ? "🎁 OBSEQUIO" : "",
+        ].filter(Boolean).join(" | ");
+
+        // Persist order to DB
+        try {
+          await supabase.from("orders").insert({
+            brand,
+            sale_type: "menor",
+            client_name: displayName,
+            client_nit: cedula.trim() || null,
+            client_phone: tel || null,
+            client_email: email.trim() || null,
+            client_address: dir || null,
+            client_city: ciu || null,
+            product: referencia,
+            quantity,
+            total_amount: totalAmount,
+            advisor_id: user?.id || "",
+            advisor_name: user?.email || "Asesor",
+            production_status: "listo",
+            payment_method: line.isGift ? "obsequio" : paymentMethod,
+            payment_proof_url: paymentProofUrl,
+            payment_complete: line.isGift || paymentMethod === "pagado",
+            observations: lineObs || null,
+            shipping_cost: line.isGift ? 0 : shippingAmount,
+            silicone_color: brand === "sweatspot" && line.colorProducto ? line.colorProducto : null,
+          } as any);
+        } catch (err: any) {
+          console.error("Error saving retail order:", err);
+        }
+
+        // Send to accounting
+        useAccountingStore.getState().addOrder({
+          clientName: displayName,
           brand,
-          sale_type: "menor",
-          client_name: displayName,
-          client_nit: (fd.get("cedula") as string)?.trim() || null,
-          client_phone: telefono || null,
-          client_email: (fd.get("email") as string)?.trim() || null,
-          client_address: direccion || null,
-          client_city: ciudad || null,
           product: referencia,
           quantity,
-          total_amount: totalAmount,
-          advisor_id: user?.id || "",
-          advisor_name: user?.email || "Asesor",
-          production_status: "listo",
-          payment_method: paymentMethod,
-          payment_proof_url: paymentProofUrl,
-          payment_complete: paymentMethod === "pagado",
-          observations: (fd.get("notas") as string)?.trim() || null,
-          shipping_cost: shippingAmount,
-          silicone_color: brand === "sweatspot" && colorProducto ? colorProducto : null,
-        } as any);
-        queryClient.invalidateQueries({ queryKey: ["orders"] });
-      } catch (err: any) {
-        console.error("Error saving retail order:", err);
+          saleType: "menor",
+          clientType: isVentaMostrador ? "Venta mostrador" : "Cliente empresa",
+          totalAmount,
+          hasRut: false,
+          email: email.trim() || undefined,
+          cedula: cedula.trim() || undefined,
+          direccion: dir || undefined,
+          ciudad: ciu || undefined,
+          observaciones: lineObs || undefined,
+        });
       }
 
-      // Send to accounting
-      useAccountingStore.getState().addOrder({
-        clientName: displayName,
-        brand,
-        product: referencia,
-        quantity,
-        saleType: "menor",
-        clientType: isVentaMostrador ? "Venta mostrador" : "Cliente empresa",
-        totalAmount,
-        hasRut: false,
-        email: (fd.get("email") as string)?.trim() || undefined,
-        cedula: (fd.get("cedula") as string)?.trim() || undefined,
-        direccion: direccion || undefined,
-        ciudad: ciudad || undefined,
-        observaciones: (fd.get("notas") as string)?.trim() || undefined,
-      });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+
+      const giftCount = productLines.filter((l) => l.isGift).length;
+      const productCount = productLines.filter((l) => !l.isGift).length;
+      const summary = [
+        `${productCount} producto(s)`,
+        giftCount > 0 ? `${giftCount} obsequio(s)` : "",
+      ].filter(Boolean).join(" + ");
 
       toast.success("Pedido al por menor creado", {
-        description: `${displayName} — ${quantity} uds. de "${refName}".`,
+        description: `${displayName} — ${summary}`,
       });
     }
 
@@ -1468,49 +1532,64 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
           </fieldset>
 
           <fieldset className="space-y-4">
-            <legend className="text-sm font-semibold text-foreground mb-2">Detalles del producto</legend>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label>Referencia / Producto</Label>
-                <Select value={selectedRef} onValueChange={setSelectedRef}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar producto" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {finishedRefs.map((ref) => (
-                      <SelectItem key={ref} value={ref}>{ref}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <input type="hidden" name="referencia" value={selectedRef} />
+            <legend className="text-sm font-semibold text-foreground mb-2">Productos</legend>
+            {productLines.map((line, idx) => (
+              <div key={line.id} className={`rounded-lg border p-4 space-y-3 ${line.isGift ? "border-amber-300 bg-amber-50/50" : "border-border"}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-foreground">
+                      {line.isGift ? "🎁 Obsequio" : `Producto ${idx + 1}`}
+                    </span>
+                    {line.isGift && (
+                      <Badge variant="outline" className="border-amber-400 text-amber-700 text-xs">Gratis</Badge>
+                    )}
+                  </div>
+                  {productLines.length > 1 && (
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeProductLine(line.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  )}
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label>Referencia / Producto</Label>
+                    <Select value={line.selectedRef} onValueChange={(v) => updateProductLine(line.id, { selectedRef: v })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar producto" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {finishedRefs.map((ref) => (
+                          <SelectItem key={ref} value={ref}>{ref}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Cantidad</Label>
+                    <Input type="number" min="1" required value={line.cantidad} onChange={(e) => updateProductLine(line.id, { cantidad: e.target.value })} />
+                  </div>
+                </div>
+                {!line.isGift && (
+                  <div className="space-y-1.5">
+                    <Label>Precio de venta</Label>
+                    <Input type="number" required value={line.retailPrice} onChange={(e) => updateProductLine(line.id, { retailPrice: e.target.value })} />
+                  </div>
+                )}
+                {brand === "sweatspot" && (
+                  <div className="space-y-1.5">
+                    <Label>Color del producto</Label>
+                    <Input placeholder="Ej: Negro, Blanco, Rosado..." value={line.colorProducto} onChange={(e) => updateProductLine(line.id, { colorProducto: e.target.value })} />
+                  </div>
+                )}
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="cantidad">Cantidad</Label>
-                <Input id="cantidad" name="cantidad" type="number" required value={cantidad} onChange={(e) => setCantidad(e.target.value)} />
-              </div>
-            </div>
-            {isMayor && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Color de gel" name="colorGel" required />
-                <Field label="Color de tinta" name="colorTinta" required />
-              </div>
-            )}
-            {!isMayor && brand === "sweatspot" && (
-              <div className="space-y-1.5">
-                <Label htmlFor="colorProducto">Color del producto</Label>
-                <Input id="colorProducto" name="colorProducto" placeholder="Ej: Negro, Blanco, Rosado..." value={colorProducto} onChange={(e) => setColorProducto(e.target.value)} />
-              </div>
-            )}
-          </fieldset>
-
-          <fieldset className="space-y-4">
-            <legend className="text-sm font-semibold text-foreground mb-2">Valores</legend>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="precioTotal">Precio de venta total</Label>
-                <Input id="precioTotal" name="precioTotal" type="number" required value={retailPrice} onChange={(e) => setRetailPrice(e.target.value)} />
-              </div>
-              {isMayor && <Field label="Abono inicial (50%)" name="abono" type="number" />}
+            ))}
+            <div className="flex gap-2 flex-wrap">
+              <Button type="button" variant="outline" size="sm" onClick={addProductLine} className="gap-1.5">
+                <Plus className="h-4 w-4" /> Agregar otro producto
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={addGiftLine} className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50">
+                🎁 Adicionar obsequio
+              </Button>
             </div>
           </fieldset>
 
@@ -1538,7 +1617,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
                 <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
                   <h4 className="text-sm font-semibold text-foreground">Valor a cobrar contra entrega</h4>
                   <p className="text-2xl font-bold text-foreground">
-                    ${((parseFloat(retailPrice) || 0) + (parseFloat(shippingCost) || 0)).toLocaleString("es-CO")}
+                    ${(grandTotal + (parseFloat(shippingCost) || 0)).toLocaleString("es-CO")}
                   </p>
                   <p className="text-xs text-muted-foreground">Incluye precio del producto + costo de envío</p>
                 </div>
@@ -1554,7 +1633,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Button type="submit">Crear pedido</Button>
+            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Creando..." : "Crear pedido"}</Button>
             <Button type="button" variant="outline" onClick={onReset}>Cancelar</Button>
           </div>
         </form>
