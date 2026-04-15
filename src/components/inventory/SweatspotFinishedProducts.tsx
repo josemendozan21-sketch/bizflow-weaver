@@ -131,9 +131,10 @@ const SweatspotFinishedProducts = () => {
                             <Badge
                               variant={item.logo === "Sweatspot" ? "default" : "outline"}
                               className="text-xs cursor-pointer hover:opacity-80"
-                              onClick={() => {
+                              onClick={async () => {
                                 const newLogo = item.logo === "Sweatspot" ? null : "Sweatspot";
                                 updateStockItem(item.id, { logo: newLogo } as any);
+                                await updateStockItemDb(item.id, { logo: newLogo });
                                 toast.success(`Logo cambiado a "${newLogo || "Sin logo"}"`);
                               }}
                             >
