@@ -41,6 +41,27 @@ interface EventWithProducts extends EventRow {
   event_products: EventProductRow[];
 }
 
+// Advisor color palette for calendar entries
+const ADVISOR_COLORS: Record<string, { bg: string; text: string }> = {};
+const COLOR_PALETTE = [
+  { bg: "bg-rose-100", text: "text-rose-800" },
+  { bg: "bg-sky-100", text: "text-sky-800" },
+  { bg: "bg-amber-100", text: "text-amber-800" },
+  { bg: "bg-emerald-100", text: "text-emerald-800" },
+  { bg: "bg-violet-100", text: "text-violet-800" },
+  { bg: "bg-teal-100", text: "text-teal-800" },
+  { bg: "bg-fuchsia-100", text: "text-fuchsia-800" },
+  { bg: "bg-lime-100", text: "text-lime-800" },
+];
+let colorIndex = 0;
+const getAdvisorColor = (advisorName: string) => {
+  if (!ADVISOR_COLORS[advisorName]) {
+    ADVISOR_COLORS[advisorName] = COLOR_PALETTE[colorIndex % COLOR_PALETTE.length];
+    colorIndex++;
+  }
+  return ADVISOR_COLORS[advisorName];
+};
+
 export interface DeliveryEntry {
   id: string;
   clientName: string;
@@ -50,6 +71,7 @@ export interface DeliveryEntry {
   saleType: "mayor" | "menor";
   deliveryDate: string;
   status: "pendiente" | "en_produccion" | "listo" | "entregado";
+  advisorName: string;
 }
 
 const mapProductionStatus = (ps: string): DeliveryEntry["status"] => {
