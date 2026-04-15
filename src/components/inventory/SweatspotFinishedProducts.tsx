@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/table";
 import { Check, X, Pencil, AlertTriangle, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useInventoryStore, type StockItem, type StockStatus, type SweatspotProductCategory } from "@/stores/inventoryStore";
+import { useInventory } from "@/hooks/useInventory";
 import { toast } from "sonner";
 
 const FILTER_OPTIONS: { value: SweatspotProductCategory | "todos"; label: string }[] = [
@@ -27,6 +28,7 @@ const STATUS_CONFIG: Record<StockStatus, { label: string; variant: "default" | "
 
 const SweatspotFinishedProducts = () => {
   const { stockItems, updateStockItem, getStockStatus } = useInventoryStore();
+  const { updateStockItem: updateStockItemDb } = useInventory();
   const [activeFilter, setActiveFilter] = useState<SweatspotProductCategory | "todos">("todos");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ available: "", minStock: "" });
@@ -126,7 +128,16 @@ const SweatspotFinishedProducts = () => {
                           <TableCell className="font-medium">{item.name}</TableCell>
                           <TableCell>{item.color || "—"}</TableCell>
                           <TableCell>
-                            <Badge variant={item.logo === "Sweatspot" ? "default" : "outline"} className="text-xs">
+                            <Badge
+                              variant={item.logo === "Sweatspot" ? "default" : "outline"}
+                              className="text-xs cursor-pointer hover:opacity-80"
+                              onClick={async () => {
+                                const newLogo = item.logo === "Sweatspot" ? null : "Sweatspot";
+                                updateStockItem(item.id, { logo: newLogo } as any);
+                                await updateStockItemDb(item.id, { logo: newLogo });
+                                toast.success(`Logo cambiado a "${newLogo || "Sin logo"}"`);
+                              }}
+                            >
                               {item.logo || "Sin logo"}
                             </Badge>
                           </TableCell>

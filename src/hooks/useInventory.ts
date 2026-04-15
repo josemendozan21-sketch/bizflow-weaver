@@ -370,7 +370,7 @@ export function useInventory() {
   const updateStockItem = useCallback(
     async (
       id: string,
-      updates: { available?: number; min_stock?: number }
+      updates: { available?: number; min_stock?: number; logo?: string | null }
     ): Promise<{ success: boolean; message: string }> => {
       const { error } = await supabase
         .from("stock_items")
