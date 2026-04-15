@@ -13,12 +13,55 @@ import { useAuth } from "@/contexts/AuthContext";
 import { canEditSection } from "@/lib/rolePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { Package, Truck, CheckCircle2, Clock, AlertTriangle, CalendarDays, Paperclip, FileCheck } from "lucide-react";
+import { Package, Truck, CheckCircle2, Clock, AlertTriangle, CalendarDays, Paperclip, FileCheck, Download } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { differenceInDays, format } from "date-fns";
 import { es } from "date-fns/locale";
 import ShippingLabelDialog from "@/components/logistics/ShippingLabelDialog";
+
+function exportOrdersToCSV(orders: Order[], brandLabel: (b: string) => string, saleLabel: (t: string) => string) {
+  const headers = ["Cliente", "Cédula/NIT", "Teléfono", "Email", "Ciudad", "Dirección", "Marca", "Tipo", "Producto", "Unidades", "Método de pago", "Valor total", "Abono", "Saldo pendiente", "Costo envío", "Observaciones"];
+  const rows = orders.map((o) => {
+    const total = Number(o.total_amount) || 0;
+    const abono = Number(o.abono) || 0;
+    const saldo = total - abono;
+    const shippingCost = Number(o.shipping_cost) || 0;
+    let metodo = "N/A";
+    if (o.sale_type === "menor") {
+      metodo = o.payment_method === "contra_entrega" ? `Contra entrega ($${(saldo + shippingCost).toLocaleString("es-CO")})` : o.payment_method === "pagado" ? "Pagado" : "N/A";
+    } else {
+      metodo = saldo <= 0 ? "Pago completo" : `Saldo: $${saldo.toLocaleString("es-CO")}`;
+    }
+    return [
+      o.client_name,
+      o.client_nit || "—",
+      o.client_phone || "—",
+      o.client_email || "—",
+      o.client_city || "—",
+      o.client_address || "—",
+      brandLabel(o.brand),
+      saleLabel(o.sale_type),
+      o.product,
+      o.quantity,
+      metodo,
+      total ? `$${total.toLocaleString("es-CO")}` : "—",
+      abono ? `$${abono.toLocaleString("es-CO")}` : "—",
+      saldo > 0 ? `$${saldo.toLocaleString("es-CO")}` : "$0",
+      shippingCost ? `$${shippingCost.toLocaleString("es-CO")}` : "—",
+      o.observations || "—",
+    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(",");
+  });
+  const csv = "\uFEFF" + [headers.join(","), ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `despachos_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast.success("Archivo descargado");
+}
 
 const Logistica = () => {
   const { role } = useAuth();
@@ -88,7 +131,14 @@ const Logistica = () => {
 
         <TabsContent value="ready">
           <Card>
-            <CardHeader><CardTitle className="text-lg">Pedidos listos para despacho</CardTitle></CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg">Pedidos listos para despacho</CardTitle>
+              {readyOrders.length > 0 && (
+                <Button variant="outline" size="sm" onClick={() => exportOrdersToCSV(readyOrders, brandLabel, saleLabel)}>
+                  <Download className="h-4 w-4 mr-2" /> Descargar info
+                </Button>
+              )}
+            </CardHeader>
             <CardContent>
               {readyOrders.length === 0 ? (
                 <EmptyState icon={<Package className="h-12 w-12 mb-3 opacity-40" />} title="No hay pedidos listos para despacho" subtitle="Los pedidos aparecerán aquí cuando estén listos y pagados." />
