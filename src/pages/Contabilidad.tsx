@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Upload, Download, Clock, FileText, ExternalLink, BarChart3, Wallet } from "lucide-react";
+import { Upload, Download, Clock, FileText, ExternalLink, BarChart3, Wallet, Trash2 } from "lucide-react";
 import AccountingDashboard from "@/components/contabilidad/AccountingDashboard";
 import CajaMenor from "@/components/contabilidad/CajaMenor";
 import { useOrders, type Order } from "@/hooks/useOrders";
@@ -212,6 +212,37 @@ const Contabilidad = () => {
 
   const refreshOrders = () => queryClient.invalidateQueries({ queryKey: ["orders"] });
 
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!confirm("¿Estás seguro de que deseas eliminar este pedido? Esta acción no se puede deshacer.")) return;
+    try {
+      // Delete related production orders first
+      await supabase.from("production_orders").delete().eq("order_id", orderId);
+      await supabase.from("logo_requests").delete().eq("id", orderId);
+      const { error } = await supabase.from("orders").delete().eq("id", orderId);
+      if (error) throw error;
+      toast.success("Pedido eliminado");
+      refreshOrders();
+    } catch (err: any) {
+      toast.error("Error al eliminar", { description: err.message });
+    }
+  };
+
+  const handleDeleteSelected = async (ids: Set<string>, setter: React.Dispatch<React.SetStateAction<Set<string>>>) => {
+    if (!confirm(`¿Eliminar ${ids.size} pedido(s)? Esta acción no se puede deshacer.`)) return;
+    try {
+      for (const id of ids) {
+        await supabase.from("production_orders").delete().eq("order_id", id);
+      }
+      const { error } = await supabase.from("orders").delete().in("id", Array.from(ids));
+      if (error) throw error;
+      toast.success(`${ids.size} pedido(s) eliminados`);
+      setter(new Set());
+      refreshOrders();
+    } catch (err: any) {
+      toast.error("Error al eliminar", { description: err.message });
+    }
+  };
+
   if (isLoading) return <div className="flex items-center justify-center py-20 text-muted-foreground">Cargando pedidos...</div>;
 
   return (
@@ -261,9 +292,16 @@ const Contabilidad = () => {
                   <span className="text-sm text-muted-foreground">{selectedPending.size > 0 ? `${selectedPending.size} seleccionado(s)` : "Seleccionar todos"}</span>
                 </div>
                 {selectedPending.size > 0 && (
-                  <Button size="sm" variant="outline" onClick={() => handleExportSelected(selectedPending, "pendientes")}>
-                    <Download className="h-4 w-4 mr-1" />Exportar selección ({selectedPending.size})
-                  </Button>
+                  <>
+                    <Button size="sm" variant="outline" onClick={() => handleExportSelected(selectedPending, "pendientes")}>
+                      <Download className="h-4 w-4 mr-1" />Exportar selección ({selectedPending.size})
+                    </Button>
+                    {role === "admin" && (
+                      <Button size="sm" variant="destructive" onClick={() => handleDeleteSelected(selectedPending, setSelectedPending)}>
+                        <Trash2 className="h-4 w-4 mr-1" />Eliminar selección ({selectedPending.size})
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -294,6 +332,11 @@ const Contabilidad = () => {
                               <Button size="sm" variant="outline" onClick={() => handleExportSingle(order)}>
                                 <Download className="h-4 w-4" />
                               </Button>
+                              {role === "admin" && (
+                                <Button size="sm" variant="destructive" onClick={() => handleDeleteOrder(order.id)} title="Eliminar pedido">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
                             </div>
                           </div>
                         }
@@ -318,9 +361,16 @@ const Contabilidad = () => {
                     <span className="text-sm text-muted-foreground">{selectedInvoiced.size > 0 ? `${selectedInvoiced.size} seleccionado(s)` : "Seleccionar todos"}</span>
                   </div>
                   {selectedInvoiced.size > 0 && (
-                    <Button size="sm" variant="outline" onClick={() => handleExportSelected(selectedInvoiced, "facturados")}>
-                      <Download className="h-4 w-4 mr-1" />Exportar selección ({selectedInvoiced.size})
-                    </Button>
+                    <>
+                      <Button size="sm" variant="outline" onClick={() => handleExportSelected(selectedInvoiced, "facturados")}>
+                        <Download className="h-4 w-4 mr-1" />Exportar selección ({selectedInvoiced.size})
+                      </Button>
+                      {role === "admin" && (
+                        <Button size="sm" variant="destructive" onClick={() => handleDeleteSelected(selectedInvoiced, setSelectedInvoiced)}>
+                          <Trash2 className="h-4 w-4 mr-1" />Eliminar selección ({selectedInvoiced.size})
+                        </Button>
+                      )}
+                    </>
                   )}
                 </div>
                 <Table>
@@ -359,9 +409,16 @@ const Contabilidad = () => {
                           ) : "—"}
                         </TableCell>
                         <TableCell>
-                          <Button size="icon" variant="ghost" onClick={() => handleExportSingle(order)} title="Exportar SIIGO">
-                            <Download className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button size="icon" variant="ghost" onClick={() => handleExportSingle(order)} title="Exportar SIIGO">
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            {role === "admin" && (
+                              <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => handleDeleteOrder(order.id)} title="Eliminar pedido">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
