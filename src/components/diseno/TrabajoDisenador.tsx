@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LogoRequest, LogoRequestStatus, useUpdateLogoRequest, uploadLogoFile } from "@/hooks/useLogoRequests";
 import { StatusBadge } from "./StatusBadge";
-import { Upload, Loader2, MessageSquare, Info, Save, Check, RotateCcw, Download } from "lucide-react";
+import { Upload, Loader2, MessageSquare, Info, Save, Check, RotateCcw, Download, FileText } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
@@ -71,10 +71,16 @@ function DesignerCard({ request: req }: { request: LogoRequest }) {
     const file = e.target.files?.[0];
     if (!file) return;
     setAdjustedFile(file);
-    const reader = new FileReader();
-    reader.onload = (ev) => setAdjustedPreview(ev.target?.result as string);
-    reader.readAsDataURL(file);
+    if (file.type === "application/pdf") {
+      setAdjustedPreview("pdf:" + file.name);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (ev) => setAdjustedPreview(ev.target?.result as string);
+      reader.readAsDataURL(file);
+    }
   };
+
+  const isPdfPreview = (url: string | null) => url?.startsWith("pdf:") || url?.toLowerCase().endsWith(".pdf");
 
   const handleSave = async () => {
     setUploading(true);
@@ -201,10 +207,17 @@ function DesignerCard({ request: req }: { request: LogoRequest }) {
             <p className="text-xs font-medium text-muted-foreground">Logo ajustado</p>
             {isDesigner ? (
               <>
-                <input ref={fileRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+                <input ref={fileRef} type="file" accept="image/*,application/pdf" onChange={handleFileChange} className="hidden" />
                 {adjustedPreview ? (
                   <div className="border rounded-lg p-2 bg-muted/20 flex items-center justify-center min-h-[80px] cursor-pointer" onClick={() => fileRef.current?.click()}>
-                    <img src={adjustedPreview} alt="Ajustado" className="max-h-20 object-contain" />
+                    {isPdfPreview(adjustedPreview) ? (
+                      <div className="flex flex-col items-center gap-1">
+                        <FileText className="h-8 w-8 text-destructive" />
+                        <p className="text-xs text-muted-foreground">{adjustedPreview.startsWith("pdf:") ? adjustedPreview.slice(4) : "PDF"}</p>
+                      </div>
+                    ) : (
+                      <img src={adjustedPreview} alt="Ajustado" className="max-h-20 object-contain" />
+                    )}
                   </div>
                 ) : (
                   <div
@@ -212,14 +225,21 @@ function DesignerCard({ request: req }: { request: LogoRequest }) {
                     className="border-2 border-dashed rounded-lg p-3 text-center cursor-pointer hover:border-primary/50 transition-colors min-h-[80px] flex flex-col items-center justify-center"
                   >
                     <Upload className="h-5 w-5 text-muted-foreground mb-1" />
-                    <p className="text-xs text-muted-foreground">Subir diseño ajustado</p>
+                    <p className="text-xs text-muted-foreground">Subir diseño ajustado (imagen o PDF)</p>
                   </div>
                 )}
               </>
             ) : (
               <div className="border rounded-lg p-2 bg-muted/20 flex items-center justify-center min-h-[80px]">
                 {adjustedPreview ? (
-                  <img src={adjustedPreview} alt="Ajustado" className="max-h-20 object-contain" />
+                  isPdfPreview(adjustedPreview) ? (
+                    <a href={adjustedPreview} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1 hover:opacity-80">
+                      <FileText className="h-8 w-8 text-destructive" />
+                      <p className="text-xs text-primary hover:underline">Ver PDF</p>
+                    </a>
+                  ) : (
+                    <img src={adjustedPreview} alt="Ajustado" className="max-h-20 object-contain" />
+                  )
                 ) : (
                   <p className="text-xs text-muted-foreground text-center px-2">El diseñador está trabajando en este logo.</p>
                 )}
