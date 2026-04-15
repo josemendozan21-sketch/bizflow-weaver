@@ -212,6 +212,37 @@ const Contabilidad = () => {
 
   const refreshOrders = () => queryClient.invalidateQueries({ queryKey: ["orders"] });
 
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!confirm("¿Estás seguro de que deseas eliminar este pedido? Esta acción no se puede deshacer.")) return;
+    try {
+      // Delete related production orders first
+      await supabase.from("production_orders").delete().eq("order_id", orderId);
+      await supabase.from("logo_requests").delete().eq("id", orderId);
+      const { error } = await supabase.from("orders").delete().eq("id", orderId);
+      if (error) throw error;
+      toast.success("Pedido eliminado");
+      refreshOrders();
+    } catch (err: any) {
+      toast.error("Error al eliminar", { description: err.message });
+    }
+  };
+
+  const handleDeleteSelected = async (ids: Set<string>, setter: React.Dispatch<React.SetStateAction<Set<string>>>) => {
+    if (!confirm(`¿Eliminar ${ids.size} pedido(s)? Esta acción no se puede deshacer.`)) return;
+    try {
+      for (const id of ids) {
+        await supabase.from("production_orders").delete().eq("order_id", id);
+      }
+      const { error } = await supabase.from("orders").delete().in("id", Array.from(ids));
+      if (error) throw error;
+      toast.success(`${ids.size} pedido(s) eliminados`);
+      setter(new Set());
+      refreshOrders();
+    } catch (err: any) {
+      toast.error("Error al eliminar", { description: err.message });
+    }
+  };
+
   if (isLoading) return <div className="flex items-center justify-center py-20 text-muted-foreground">Cargando pedidos...</div>;
 
   return (
