@@ -88,7 +88,14 @@ const Logistica = () => {
 
         <TabsContent value="ready">
           <Card>
-            <CardHeader><CardTitle className="text-lg">Pedidos listos para despacho</CardTitle></CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg">Pedidos listos para despacho</CardTitle>
+              {readyOrders.length > 0 && (
+                <Button variant="outline" size="sm" onClick={() => exportOrdersToCSV(readyOrders, brandLabel, saleLabel)}>
+                  <Download className="h-4 w-4 mr-2" /> Descargar info
+                </Button>
+              )}
+            </CardHeader>
             <CardContent>
               {readyOrders.length === 0 ? (
                 <EmptyState icon={<Package className="h-12 w-12 mb-3 opacity-40" />} title="No hay pedidos listos para despacho" subtitle="Los pedidos aparecerán aquí cuando estén listos y pagados." />
