@@ -70,6 +70,7 @@ const Logistica = () => {
   const canEdit = canEditSection(role, "/logistica");
   const { data: allOrders = [] } = useOrders();
   const queryClient = useQueryClient();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Ready for dispatch: retail orders with status "listo" OR wholesale orders that are production-complete AND fully paid
   const readyOrders = allOrders.filter((o) => {
