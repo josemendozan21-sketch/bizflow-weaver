@@ -125,6 +125,11 @@ const SweatspotFinishedProducts = () => {
                         >
                           <TableCell className="font-medium">{item.name}</TableCell>
                           <TableCell>{item.color || "—"}</TableCell>
+                          <TableCell>
+                            <Badge variant={item.logo === "Sweatspot" ? "default" : "outline"} className="text-xs">
+                              {item.logo || "Sin logo"}
+                            </Badge>
+                          </TableCell>
                           <TableCell className="text-right">
                             {isEditing ? (
                               <Input type="number" min={0} value={editForm.available}
