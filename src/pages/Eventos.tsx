@@ -104,13 +104,10 @@ const Eventos = () => {
   const [formProducts, setFormProducts] = useState<{ product_name: string; brand: string; quantity_needed: number }[]>([]);
 
   const fetchDeliveries = async () => {
-    const { data, error } = await supabase
-      .from("orders")
-      .select("id, client_name, brand, product, quantity, sale_type, delivery_date, production_status")
-      .not("delivery_date", "is", null);
+    const { data, error } = await supabase.rpc("get_all_deliveries");
     if (!error && data) {
       setDeliveryEntries(
-        data.map((o) => ({
+        (data as any[]).map((o) => ({
           id: o.id,
           clientName: o.client_name,
           brand: (o.brand === "magical" ? "magical" : "sweatspot") as "magical" | "sweatspot",
@@ -119,6 +116,7 @@ const Eventos = () => {
           saleType: (o.sale_type === "mayor" ? "mayor" : "menor") as "mayor" | "menor",
           deliveryDate: o.delivery_date!,
           status: mapProductionStatus(o.production_status),
+          advisorName: o.advisor_name || "Sin asesor",
         }))
       );
     }
