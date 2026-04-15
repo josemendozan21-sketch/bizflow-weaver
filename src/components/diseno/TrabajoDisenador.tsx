@@ -201,7 +201,7 @@ function DesignerCard({ request: req }: { request: LogoRequest }) {
             <p className="text-xs font-medium text-muted-foreground">Logo ajustado</p>
             {isDesigner ? (
               <>
-                <input ref={fileRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+                <input ref={fileRef} type="file" accept="image/*,application/pdf" onChange={handleFileChange} className="hidden" />
                 {adjustedPreview ? (
                   <div className="border rounded-lg p-2 bg-muted/20 flex items-center justify-center min-h-[80px] cursor-pointer" onClick={() => fileRef.current?.click()}>
                     <img src={adjustedPreview} alt="Ajustado" className="max-h-20 object-contain" />
