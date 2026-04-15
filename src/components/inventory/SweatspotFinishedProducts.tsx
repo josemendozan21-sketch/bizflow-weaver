@@ -27,8 +27,9 @@ const STATUS_CONFIG: Record<StockStatus, { label: string; variant: "default" | "
 };
 
 const SweatspotFinishedProducts = () => {
-  const { stockItems, updateStockItem: updateLocal, getStockStatus } = useInventoryStore();
-  const { updateStockItem: updateDb } = useInventory();
+  const { stockItems, updateStockItem, getStockStatus } = useInventoryStore();
+  const { updateStockItem: updateStockItemDb } = useInventory();
+  const [activeFilter, setActiveFilter] = useState<SweatspotProductCategory | "todos">("todos");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ available: "", minStock: "" });
 
