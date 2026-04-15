@@ -753,6 +753,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_all_deliveries: {
+        Args: never
+        Returns: {
+          advisor_name: string
+          brand: string
+          client_name: string
+          delivery_date: string
+          id: string
+          product: string
+          production_status: string
+          quantity: number
+          sale_type: string
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
