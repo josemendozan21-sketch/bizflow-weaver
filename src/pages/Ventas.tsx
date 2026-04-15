@@ -1273,8 +1273,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
       const isVentaMostrador = !clientName || !telefono || !ciudad || !direccion;
       const displayName = isVentaMostrador ? (clientName || "Venta mostrador") : clientName;
 
-      // Retail: discount from finished products in Supabase
-      // referencia may be "Lumbar (Térmico)" — split into name + product_type
+      // Retail: try to discount from finished products in Supabase (allow order even without stock)
       let refName = referencia;
       let refType: string | null = null;
       const typeMatch = referencia.match(/^(.+?)\s*\((.+?)\)$/);
@@ -1296,25 +1295,17 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
       const { data: matchedItems } = await query.limit(1);
       const matchedItem = matchedItems?.[0];
 
-      if (!matchedItem) {
-        toast.error("Sin stock suficiente", { description: `Producto terminado "${referencia}" no encontrado en inventario.` });
-        setIsSubmitting(false);
-        return;
-      }
-      if (matchedItem.available < quantity) {
-        toast.error("Sin stock suficiente", { description: `Stock insuficiente de "${referencia}". Disponible: ${matchedItem.available}, requerido: ${quantity}.` });
-        setIsSubmitting(false);
-        return;
-      }
-      const newAvailable = matchedItem.available - quantity;
-      const { error: stockError } = await supabase
-        .from("stock_items")
-        .update({ available: newAvailable })
-        .eq("id", matchedItem.id);
-      if (stockError) {
-        toast.error("Error de inventario", { description: stockError.message });
-        setIsSubmitting(false);
-        return;
+      if (matchedItem) {
+        const newAvailable = matchedItem.available - quantity;
+        await supabase
+          .from("stock_items")
+          .update({ available: newAvailable })
+          .eq("id", matchedItem.id);
+        if (newAvailable < 0) {
+          toast.warning("Stock negativo", { description: `"${referencia}" quedó con stock negativo (${newAvailable}). Reabastecer.` });
+        }
+      } else {
+        toast.warning("Sin registro de inventario", { description: `"${referencia}" no encontrado en inventario. El pedido se creará de todas formas.` });
       }
 
       if (brand === "magical") {
