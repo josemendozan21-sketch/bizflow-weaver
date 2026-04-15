@@ -71,10 +71,16 @@ function DesignerCard({ request: req }: { request: LogoRequest }) {
     const file = e.target.files?.[0];
     if (!file) return;
     setAdjustedFile(file);
-    const reader = new FileReader();
-    reader.onload = (ev) => setAdjustedPreview(ev.target?.result as string);
-    reader.readAsDataURL(file);
+    if (file.type === "application/pdf") {
+      setAdjustedPreview("pdf:" + file.name);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (ev) => setAdjustedPreview(ev.target?.result as string);
+      reader.readAsDataURL(file);
+    }
   };
+
+  const isPdfPreview = (url: string | null) => url?.startsWith("pdf:") || url?.toLowerCase().endsWith(".pdf");
 
   const handleSave = async () => {
     setUploading(true);
