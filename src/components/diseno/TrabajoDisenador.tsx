@@ -212,13 +212,12 @@ function DesignerCard({ request: req }: { request: LogoRequest }) {
                   <div className="border rounded-lg p-2 bg-muted/20 flex items-center justify-center min-h-[80px] cursor-pointer" onClick={() => fileRef.current?.click()}>
                     {isPdfPreview(adjustedPreview) ? (
                       <div className="flex flex-col items-center gap-1">
-                        <FileText className="h-8 w-8 text-red-500" />
+                        <FileText className="h-8 w-8 text-destructive" />
                         <p className="text-xs text-muted-foreground">{adjustedPreview.startsWith("pdf:") ? adjustedPreview.slice(4) : "PDF"}</p>
                       </div>
                     ) : (
                       <img src={adjustedPreview} alt="Ajustado" className="max-h-20 object-contain" />
                     )}
-                  </div>
                   </div>
                 ) : (
                   <div
@@ -226,14 +225,21 @@ function DesignerCard({ request: req }: { request: LogoRequest }) {
                     className="border-2 border-dashed rounded-lg p-3 text-center cursor-pointer hover:border-primary/50 transition-colors min-h-[80px] flex flex-col items-center justify-center"
                   >
                     <Upload className="h-5 w-5 text-muted-foreground mb-1" />
-                    <p className="text-xs text-muted-foreground">Subir diseño ajustado</p>
+                    <p className="text-xs text-muted-foreground">Subir diseño ajustado (imagen o PDF)</p>
                   </div>
                 )}
               </>
             ) : (
               <div className="border rounded-lg p-2 bg-muted/20 flex items-center justify-center min-h-[80px]">
                 {adjustedPreview ? (
-                  <img src={adjustedPreview} alt="Ajustado" className="max-h-20 object-contain" />
+                  isPdfPreview(adjustedPreview) ? (
+                    <a href={adjustedPreview} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1 hover:opacity-80">
+                      <FileText className="h-8 w-8 text-destructive" />
+                      <p className="text-xs text-primary hover:underline">Ver PDF</p>
+                    </a>
+                  ) : (
+                    <img src={adjustedPreview} alt="Ajustado" className="max-h-20 object-contain" />
+                  )
                 ) : (
                   <p className="text-xs text-muted-foreground text-center px-2">El diseñador está trabajando en este logo.</p>
                 )}
