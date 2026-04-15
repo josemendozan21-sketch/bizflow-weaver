@@ -1236,6 +1236,37 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
   const [retailPrice, setRetailPrice] = useState("");
   const { stockItems } = useInventory();
 
+  // Controlled fields for SmartPaste
+  const [nombre, setNombre] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [cedula, setCedula] = useState("");
+  const [email, setEmail] = useState("");
+  const [ciudad, setCiudad] = useState("");
+  const [departamento, setDepartamento] = useState("");
+  const [direccion, setDireccion] = useState("");
+  const [cantidad, setCantidad] = useState("");
+  const [notas, setNotas] = useState("");
+
+  const handleSmartPaste = (data: ParsedOrderData) => {
+    if (data.cliente?.nombre) setNombre(data.cliente.nombre);
+    if (data.cliente?.telefono) setTelefono(data.cliente.telefono);
+    if (data.cliente?.cedula_nit) setCedula(data.cliente.cedula_nit);
+    if (data.cliente?.email) setEmail(data.cliente.email);
+    if (data.cliente?.ciudad) setCiudad(data.cliente.ciudad);
+    if (data.cliente?.direccion) setDireccion(data.cliente.direccion);
+    if (data.observaciones) setNotas(data.observaciones);
+    if (data.productos?.[0]) {
+      const p = data.productos[0];
+      if (p.unidades) setCantidad(String(p.unidades));
+      if (p.valor_total) setRetailPrice(String(p.valor_total));
+      // Try to match product reference
+      if (p.producto) {
+        const match = finishedRefs.find((r) => r.toLowerCase().includes(p.producto!.toLowerCase()));
+        if (match) setSelectedRef(match);
+      }
+    }
+  };
+
   // Build predefined references from finished products in DB
   const finishedRefs = useMemo(() => {
     const dbBrand = brand === "magical" ? "magical" : "sweatspot";
