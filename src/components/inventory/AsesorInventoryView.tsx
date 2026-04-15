@@ -151,6 +151,7 @@ export default function AsesorInventoryView() {
                         <TableRow>
                           <TableHead>Producto</TableHead>
                           <TableHead>Color</TableHead>
+                          <TableHead>Logo</TableHead>
                           <TableHead className="text-right">Disponible</TableHead>
                           <TableHead>Unidad</TableHead>
                           <TableHead>Estado</TableHead>
@@ -161,6 +162,11 @@ export default function AsesorInventoryView() {
                           <TableRow key={item.id}>
                             <TableCell className="font-medium">{item.name}</TableCell>
                             <TableCell>{item.color || "—"}</TableCell>
+                            <TableCell>
+                              <Badge variant={item.logo === "Sweatspot" ? "default" : "outline"} className="text-xs">
+                                {item.logo || "Sin logo"}
+                              </Badge>
+                            </TableCell>
                             <TableCell className="text-right">{item.available}</TableCell>
                             <TableCell>{item.unit}</TableCell>
                             <TableCell><StockIndicator available={item.available} /></TableCell>
