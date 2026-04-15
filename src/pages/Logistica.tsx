@@ -290,21 +290,59 @@ function ProductionStatusBadge({ status, order }: { status: string; order?: Orde
   return <Badge variant="outline">{labels[status] || status}</Badge>;
 }
 
+const TRANSPORTADORAS = [
+  { value: "coordinadora", label: "Coordinadora" },
+  { value: "servientrega", label: "Servientrega" },
+  { value: "interrapidisimo", label: "Inter Rapidísimo" },
+  { value: "envia", label: "Envía" },
+  { value: "bogoexpress", label: "Bogoexpress" },
+];
+
 function DispatchDialog({ order }: { order: Order }) {
   const [open, setOpen] = useState(false);
   const [transportadora, setTransportadora] = useState("");
   const [numeroGuia, setNumeroGuia] = useState("");
   const [dispatchNotes, setDispatchNotes] = useState("");
+  const [guiaFile, setGuiaFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const queryClient = useQueryClient();
 
+  const isBogoexpress = transportadora === "bogoexpress";
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setGuiaFile(file);
+  };
+
   const handleConfirm = async () => {
+    setUploading(true);
+    let guiaFileUrl: string | null = null;
+
+    // Upload guide file if provided
+    if (guiaFile) {
+      const ext = guiaFile.name.split(".").pop();
+      const path = `guias/${order.id}_${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("invoice-files")
+        .upload(path, guiaFile);
+      if (uploadError) {
+        toast.error("Error subiendo guía", { description: uploadError.message });
+        setUploading(false);
+        return;
+      }
+      const { data: urlData } = supabase.storage.from("invoice-files").getPublicUrl(path);
+      guiaFileUrl = urlData.publicUrl;
+    }
+
     const { error } = await supabase.from("orders").update({
       production_status: "despachado",
       dispatched_at: new Date().toISOString().slice(0, 10),
-      transportadora: transportadora.trim() || null,
-      numero_guia: numeroGuia.trim() || null,
-      dispatch_notes: dispatchNotes.trim() || null,
+      transportadora: TRANSPORTADORAS.find(t => t.value === transportadora)?.label || transportadora || null,
+      numero_guia: isBogoexpress ? "N/A - Bogoexpress" : (numeroGuia.trim() || null),
+      dispatch_notes: [dispatchNotes.trim(), guiaFileUrl ? `Guía adjunta: ${guiaFileUrl}` : ""].filter(Boolean).join(" | ") || null,
     }).eq("id", order.id);
+
+    setUploading(false);
 
     if (error) {
       toast.error("Error al despachar", { description: error.message });
@@ -317,7 +355,10 @@ function DispatchDialog({ order }: { order: Order }) {
     setTransportadora("");
     setNumeroGuia("");
     setDispatchNotes("");
+    setGuiaFile(null);
   };
+
+  const canSubmit = transportadora && (isBogoexpress || numeroGuia.trim() || dispatchNotes.trim());
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -334,18 +375,50 @@ function DispatchDialog({ order }: { order: Order }) {
         <div className="space-y-4 pt-2">
           <div className="space-y-1.5">
             <Label>Transportadora</Label>
-            <Input value={transportadora} onChange={(e) => setTransportadora(e.target.value)} placeholder="Ej: Servientrega, Coordinadora, TCC" />
+            <Select value={transportadora} onValueChange={setTransportadora}>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar transportadora" />
+              </SelectTrigger>
+              <SelectContent>
+                {TRANSPORTADORAS.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+
+          {isBogoexpress ? (
+            <p className="text-sm text-muted-foreground bg-muted rounded-md px-3 py-2">
+              Bogoexpress no genera número de guía. Se registrará automáticamente.
+            </p>
+          ) : (
+            <div className="space-y-1.5">
+              <Label>Número de guía</Label>
+              <Input value={numeroGuia} onChange={(e) => setNumeroGuia(e.target.value)} placeholder="Ej: 123456789" />
+            </div>
+          )}
+
           <div className="space-y-1.5">
-            <Label>Número de guía (opcional)</Label>
-            <Input value={numeroGuia} onChange={(e) => setNumeroGuia(e.target.value)} placeholder="Ej: 123456789" />
+            <Label>Adjuntar guía (PDF / imagen)</Label>
+            <div className="flex items-center gap-2">
+              <Input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={handleFileChange} className="text-sm" />
+            </div>
+            {guiaFile && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <FileCheck className="h-3.5 w-3.5 text-green-600" />
+                {guiaFile.name}
+              </p>
+            )}
           </div>
+
           <div className="space-y-1.5">
             <Label>Notas de despacho</Label>
             <Textarea value={dispatchNotes} onChange={(e) => setDispatchNotes(e.target.value)} placeholder="Ej: Se envió por moto propia, entrega en punto..." />
           </div>
-          <Button className="w-full" onClick={handleConfirm} disabled={!transportadora.trim() && !dispatchNotes.trim()}>
-            <Truck className="h-4 w-4 mr-1" /> Marcar como despachado
+
+          <Button className="w-full" onClick={handleConfirm} disabled={!canSubmit || uploading}>
+            <Truck className="h-4 w-4 mr-1" />
+            {uploading ? "Subiendo..." : "Marcar como despachado"}
           </Button>
         </div>
       </DialogContent>
