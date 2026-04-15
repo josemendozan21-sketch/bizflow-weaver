@@ -1425,44 +1425,39 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
 
            <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Datos del cliente</legend>
-            {!isMayor && (
-              <p className="text-xs text-muted-foreground">Si faltan datos del cliente, se clasificará como "Venta mostrador".</p>
-            )}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="nombre">Nombre completo</Label>
-                <Input id="nombre" name="nombre" required={isMayor} value={nombre} onChange={(e) => setNombre(e.target.value)} />
+                <Input id="nombre" name="nombre" required value={nombre} onChange={(e) => setNombre(e.target.value)} />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="telefono">Teléfono</Label>
-                <Input id="telefono" name="telefono" type="tel" required={isMayor} value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+                <Input id="telefono" name="telefono" type="tel" required value={telefono} onChange={(e) => setTelefono(e.target.value)} />
               </div>
             </div>
-            {!isMayor && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="cedula">Cédula</Label>
-                  <Input id="cedula" name="cedula" value={cedula} onChange={(e) => setCedula(e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="email">Correo electrónico</Label>
-                  <Input id="email" name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-                </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="cedula">Cédula o NIT</Label>
+                <Input id="cedula" name="cedula" required value={cedula} onChange={(e) => setCedula(e.target.value)} />
               </div>
-            )}
+              <div className="space-y-1.5">
+                <Label htmlFor="email">Correo electrónico</Label>
+                <Input id="email" name="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+              </div>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="ciudad">Ciudad</Label>
-                <Input id="ciudad" name="ciudad" required={isMayor} value={ciudad} onChange={(e) => setCiudad(e.target.value)} />
+                <Input id="ciudad" name="ciudad" required value={ciudad} onChange={(e) => setCiudad(e.target.value)} />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="departamento">Departamento</Label>
-                <Input id="departamento" name="departamento" required={isMayor} value={departamento} onChange={(e) => setDepartamento(e.target.value)} />
+                <Input id="departamento" name="departamento" required value={departamento} onChange={(e) => setDepartamento(e.target.value)} />
               </div>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="direccion">Dirección de envío</Label>
-              <Input id="direccion" name="direccion" required={isMayor} value={direccion} onChange={(e) => setDireccion(e.target.value)} />
+              <Input id="direccion" name="direccion" required value={direccion} onChange={(e) => setDireccion(e.target.value)} />
             </div>
           </fieldset>
 
