@@ -1372,7 +1372,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
       });
 
       toast.success("Pedido al por menor creado", {
-        description: `${displayName} — ${quantity} uds. Inventario actualizado. Nuevo stock de "${refName}": ${newAvailable}.`,
+        description: `${displayName} — ${quantity} uds. de "${refName}".`,
       });
     }
 
