@@ -1553,7 +1553,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label>Referencia / Producto</Label>
-                    <Select value={line.selectedRef} onValueChange={(v) => updateProductLine(line.id, { selectedRef: v })}>
+                    <Select value={line.selectedRef || undefined} onValueChange={(v) => updateProductLine(line.id, { selectedRef: v })}>
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar producto" />
                       </SelectTrigger>
