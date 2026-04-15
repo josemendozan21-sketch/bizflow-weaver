@@ -292,9 +292,16 @@ const Contabilidad = () => {
                   <span className="text-sm text-muted-foreground">{selectedPending.size > 0 ? `${selectedPending.size} seleccionado(s)` : "Seleccionar todos"}</span>
                 </div>
                 {selectedPending.size > 0 && (
-                  <Button size="sm" variant="outline" onClick={() => handleExportSelected(selectedPending, "pendientes")}>
-                    <Download className="h-4 w-4 mr-1" />Exportar selección ({selectedPending.size})
-                  </Button>
+                  <>
+                    <Button size="sm" variant="outline" onClick={() => handleExportSelected(selectedPending, "pendientes")}>
+                      <Download className="h-4 w-4 mr-1" />Exportar selección ({selectedPending.size})
+                    </Button>
+                    {role === "admin" && (
+                      <Button size="sm" variant="destructive" onClick={() => handleDeleteSelected(selectedPending, setSelectedPending)}>
+                        <Trash2 className="h-4 w-4 mr-1" />Eliminar selección ({selectedPending.size})
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -325,6 +332,11 @@ const Contabilidad = () => {
                               <Button size="sm" variant="outline" onClick={() => handleExportSingle(order)}>
                                 <Download className="h-4 w-4" />
                               </Button>
+                              {role === "admin" && (
+                                <Button size="sm" variant="destructive" onClick={() => handleDeleteOrder(order.id)} title="Eliminar pedido">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
                             </div>
                           </div>
                         }
@@ -390,9 +402,16 @@ const Contabilidad = () => {
                           ) : "—"}
                         </TableCell>
                         <TableCell>
-                          <Button size="icon" variant="ghost" onClick={() => handleExportSingle(order)} title="Exportar SIIGO">
-                            <Download className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button size="icon" variant="ghost" onClick={() => handleExportSingle(order)} title="Exportar SIIGO">
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            {role === "admin" && (
+                              <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => handleDeleteOrder(order.id)} title="Eliminar pedido">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
