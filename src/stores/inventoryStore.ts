@@ -84,6 +84,7 @@ const INITIAL_CONFIGS: MaterialConfig[] = [
   { id: "16", productName: "Círculo 8 cm", productType: "Térmico", gramsPerUnit: 35, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
   { id: "17", productName: "Círculo 12 cm", productType: "Frío", gramsPerUnit: 125, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
   { id: "18", productName: "Círculo 12 cm", productType: "Térmico", gramsPerUnit: 125, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "19", productName: "Máscara", productType: "Frío", gramsPerUnit: 200, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
 ];
 
 const INITIAL_GEL_STOCK: GelStock[] = [
