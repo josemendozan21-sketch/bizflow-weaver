@@ -608,10 +608,13 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Número de contacto" name="mw_contacto" type="tel" required />
-              <Field label="Correo electrónico" name="mw_email" type="email" />
+              <Field label="Correo electrónico" name="mw_email" type="email" required />
             </div>
-            <Field label="Dirección del cliente" name="mw_direccion" required />
-            <Field label="Ciudad" name="mw_ciudad" required />
+            <Field label="Dirección de envío" name="mw_direccion" required />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Ciudad" name="mw_ciudad" required />
+              <Field label="Departamento" name="mw_departamento" required />
+            </div>
           </fieldset>
 
           <fieldset className="space-y-4">
@@ -1092,10 +1095,13 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Número de contacto" name="ss_contacto" type="tel" required />
-              <Field label="Correo electrónico" name="ss_email" type="email" />
+              <Field label="Correo electrónico" name="ss_email" type="email" required />
             </div>
-            <Field label="Dirección del cliente" name="ss_direccion" required />
-            <Field label="Ciudad" name="ss_ciudad" required />
+            <Field label="Dirección de envío" name="ss_direccion" required />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Ciudad" name="ss_ciudad" required />
+              <Field label="Departamento" name="ss_departamento" required />
+            </div>
           </fieldset>
 
           <fieldset className="space-y-4">
