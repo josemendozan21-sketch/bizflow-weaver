@@ -41,6 +41,27 @@ interface EventWithProducts extends EventRow {
   event_products: EventProductRow[];
 }
 
+// Advisor color palette for calendar entries
+const ADVISOR_COLORS: Record<string, { bg: string; text: string }> = {};
+const COLOR_PALETTE = [
+  { bg: "bg-rose-100", text: "text-rose-800" },
+  { bg: "bg-sky-100", text: "text-sky-800" },
+  { bg: "bg-amber-100", text: "text-amber-800" },
+  { bg: "bg-emerald-100", text: "text-emerald-800" },
+  { bg: "bg-violet-100", text: "text-violet-800" },
+  { bg: "bg-teal-100", text: "text-teal-800" },
+  { bg: "bg-fuchsia-100", text: "text-fuchsia-800" },
+  { bg: "bg-lime-100", text: "text-lime-800" },
+];
+let colorIndex = 0;
+const getAdvisorColor = (advisorName: string) => {
+  if (!ADVISOR_COLORS[advisorName]) {
+    ADVISOR_COLORS[advisorName] = COLOR_PALETTE[colorIndex % COLOR_PALETTE.length];
+    colorIndex++;
+  }
+  return ADVISOR_COLORS[advisorName];
+};
+
 export interface DeliveryEntry {
   id: string;
   clientName: string;
@@ -50,6 +71,7 @@ export interface DeliveryEntry {
   saleType: "mayor" | "menor";
   deliveryDate: string;
   status: "pendiente" | "en_produccion" | "listo" | "entregado";
+  advisorName: string;
 }
 
 const mapProductionStatus = (ps: string): DeliveryEntry["status"] => {
@@ -82,13 +104,10 @@ const Eventos = () => {
   const [formProducts, setFormProducts] = useState<{ product_name: string; brand: string; quantity_needed: number }[]>([]);
 
   const fetchDeliveries = async () => {
-    const { data, error } = await supabase
-      .from("orders")
-      .select("id, client_name, brand, product, quantity, sale_type, delivery_date, production_status")
-      .not("delivery_date", "is", null);
+    const { data, error } = await supabase.rpc("get_all_deliveries");
     if (!error && data) {
       setDeliveryEntries(
-        data.map((o) => ({
+        (data as any[]).map((o) => ({
           id: o.id,
           clientName: o.client_name,
           brand: (o.brand === "magical" ? "magical" : "sweatspot") as "magical" | "sweatspot",
@@ -97,6 +116,7 @@ const Eventos = () => {
           saleType: (o.sale_type === "mayor" ? "mayor" : "menor") as "mayor" | "menor",
           deliveryDate: o.delivery_date!,
           status: mapProductionStatus(o.production_status),
+          advisorName: o.advisor_name || "Sin asesor",
         }))
       );
     }
@@ -408,15 +428,18 @@ const Eventos = () => {
                             {ev.name}
                           </button>
                         ))}
-                        {dayDeliveries.slice(0, 2).map((del) => (
-                          <button
-                            key={del.id}
-                            onClick={() => { setSelectedDayDeliveries(dayDeliveries); setDeliveryDetailOpen(true); }}
-                            className="w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded truncate bg-orange-100 text-orange-800"
-                          >
-                            🚚 {del.clientName}
-                          </button>
-                        ))}
+                        {dayDeliveries.slice(0, 2).map((del) => {
+                          const ac = getAdvisorColor(del.advisorName);
+                          return (
+                            <button
+                              key={del.id}
+                              onClick={() => { setSelectedDayDeliveries(dayDeliveries); setDeliveryDetailOpen(true); }}
+                              className={cn("w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded truncate", ac.bg, ac.text)}
+                            >
+                              🚚 {del.clientName}
+                            </button>
+                          );
+                        })}
                         {(dayEvents.length + dayDeliveries.length) > 4 && (
                           <span className="text-[10px] text-muted-foreground pl-1">+{(dayEvents.length + dayDeliveries.length) - 4} más</span>
                         )}
@@ -425,6 +448,21 @@ const Eventos = () => {
                   );
                 })}
               </div>
+              {/* Advisor color legend */}
+              {deliveryEntries.length > 0 && (
+                <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                  <span className="font-medium">Asesores:</span>
+                  {[...new Set(deliveryEntries.map((d) => d.advisorName))].map((name) => {
+                    const ac = getAdvisorColor(name);
+                    return (
+                      <span key={name} className="flex items-center gap-1">
+                        <span className={cn("inline-block w-2.5 h-2.5 rounded-full", ac.bg)} />
+                        {name}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -454,9 +492,18 @@ const Eventos = () => {
                           <Badge variant="outline">{entries.length} entrega(s)</Badge>
                         </div>
                         <div className="ml-6 space-y-2">
-                          {entries.map((entry) => (
+                          {entries.map((entry) => {
+                            const ac = getAdvisorColor(entry.advisorName);
+                            return (
                             <div key={entry.id} className="flex items-center justify-between rounded-lg border border-border p-3">
-                              <div className="flex-1 grid grid-cols-4 gap-4 text-sm">
+                              <div className="flex-1 grid grid-cols-5 gap-4 text-sm">
+                                <div>
+                                  <span className="text-muted-foreground text-xs">Asesor</span>
+                                  <p className="font-medium text-foreground flex items-center gap-1.5">
+                                    <span className={cn("inline-block w-2.5 h-2.5 rounded-full shrink-0", ac.bg)} />
+                                    {entry.advisorName}
+                                  </p>
+                                </div>
                                 <div>
                                   <span className="text-muted-foreground text-xs">Cliente</span>
                                   <p className="font-medium text-foreground">{entry.clientName}</p>
@@ -482,7 +529,8 @@ const Eventos = () => {
                                 {entry.brand === "magical" ? "Magical" : "Sweatspot"}
                               </Badge>
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     );
@@ -642,13 +690,22 @@ const Eventos = () => {
                 </DialogTitle>
               </DialogHeader>
               <div className="space-y-3">
-                {selectedDayDeliveries.map((entry) => (
-                  <div key={entry.id} className="rounded-lg border border-border p-3 space-y-2">
+                {selectedDayDeliveries.map((entry) => {
+                  const ac = getAdvisorColor(entry.advisorName);
+                  return (
+                  <div key={entry.id} className={cn("rounded-lg border p-3 space-y-2", `border-l-4`)} style={{ borderLeftColor: `var(--${ac.bg.replace("bg-", "")}, currentColor)` }}>
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-foreground">{entry.clientName}</span>
+                      <div className="flex items-center gap-2">
+                        <span className={cn("inline-block w-3 h-3 rounded-full shrink-0", ac.bg)} />
+                        <span className="font-semibold text-foreground">{entry.clientName}</span>
+                      </div>
                       <Badge className={cn(DELIVERY_STATUS_COLORS[entry.status])}>{DELIVERY_STATUS_LABELS[entry.status]}</Badge>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Asesor: </span>
+                        <span className="text-foreground font-medium">{entry.advisorName}</span>
+                      </div>
                       <div>
                         <span className="text-muted-foreground">Producto: </span>
                         <span className="text-foreground">{entry.product}</span>
@@ -661,13 +718,10 @@ const Eventos = () => {
                         <span className="text-muted-foreground">Marca: </span>
                         <span className="text-foreground">{entry.brand === "magical" ? "Magical Warmers" : "Sweatspot"}</span>
                       </div>
-                      <div>
-                        <span className="text-muted-foreground">Tipo: </span>
-                        <span className="text-foreground">{entry.saleType === "mayor" ? "Al por mayor" : "Al por menor"}</span>
-                      </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </>
           )}
