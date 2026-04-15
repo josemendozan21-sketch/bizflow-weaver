@@ -477,9 +477,18 @@ const Eventos = () => {
                           <Badge variant="outline">{entries.length} entrega(s)</Badge>
                         </div>
                         <div className="ml-6 space-y-2">
-                          {entries.map((entry) => (
+                          {entries.map((entry) => {
+                            const ac = getAdvisorColor(entry.advisorName);
+                            return (
                             <div key={entry.id} className="flex items-center justify-between rounded-lg border border-border p-3">
-                              <div className="flex-1 grid grid-cols-4 gap-4 text-sm">
+                              <div className="flex-1 grid grid-cols-5 gap-4 text-sm">
+                                <div>
+                                  <span className="text-muted-foreground text-xs">Asesor</span>
+                                  <p className="font-medium text-foreground flex items-center gap-1.5">
+                                    <span className={cn("inline-block w-2.5 h-2.5 rounded-full shrink-0", ac.bg)} />
+                                    {entry.advisorName}
+                                  </p>
+                                </div>
                                 <div>
                                   <span className="text-muted-foreground text-xs">Cliente</span>
                                   <p className="font-medium text-foreground">{entry.clientName}</p>
@@ -505,7 +514,8 @@ const Eventos = () => {
                                 {entry.brand === "magical" ? "Magical" : "Sweatspot"}
                               </Badge>
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     );
