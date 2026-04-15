@@ -64,6 +64,64 @@ function exportOrdersToCSV(orders: Order[], brandLabel: (b: string) => string, s
   toast.success("Archivo descargado");
 }
 
+function generateLabelsForOrders(orders: Order[]) {
+  if (orders.length === 0) return;
+  const labelsHtml = orders.map((o) => {
+    const total = Number(o.total_amount) || 0;
+    const abono = Number(o.abono) || 0;
+    const saldo = total - abono;
+    const shippingCost = Number(o.shipping_cost) || 0;
+    let pagoInfo = "";
+    if (o.sale_type === "menor") {
+      if (o.payment_method === "contra_entrega") {
+        pagoInfo = `CONTRA ENTREGA: $${(saldo + shippingCost).toLocaleString("es-CO")}`;
+      } else {
+        pagoInfo = "PAGADO";
+      }
+    } else {
+      pagoInfo = saldo <= 0 ? "PAGO COMPLETO" : `SALDO: $${saldo.toLocaleString("es-CO")}`;
+    }
+    return `
+      <div class="label">
+        <div class="header">Rótulo de Envío</div>
+        <div class="row"><span class="lbl">Destinatario:</span> <span class="val">${o.client_name}</span></div>
+        <div class="row"><span class="lbl">Cédula/NIT:</span> <span class="val">${o.client_nit || "—"}</span></div>
+        <div class="row"><span class="lbl">Ciudad:</span> <span class="val">${o.client_city || "—"}</span></div>
+        <div class="row"><span class="lbl">Dirección:</span> <span class="val">${o.client_address || "—"}</span></div>
+        <div class="row"><span class="lbl">Celular:</span> <span class="val">${o.client_phone || "—"}</span></div>
+        <div class="divider"></div>
+        <div class="row"><span class="lbl">Producto:</span> <span class="val">${o.product}</span></div>
+        <div class="row"><span class="lbl">Unidades:</span> <span class="val">${o.quantity}</span></div>
+        <div class="row pago"><span class="lbl">Pago:</span> <span class="val">${pagoInfo}</span></div>
+        ${o.observations ? `<div class="row obs"><span class="lbl">Obs:</span> <span class="val">${o.observations}</span></div>` : ""}
+      </div>
+    `;
+  }).join("");
+
+  const printWindow = window.open("", "_blank", "width=600,height=800");
+  if (!printWindow) return;
+  printWindow.document.write(`<!DOCTYPE html><html><head><title>Rótulos de envío</title>
+  <style>
+    @page { size: 10cm 10cm; margin: 0; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; }
+    .label { width: 10cm; height: 10cm; border: 2px solid #000; padding: 8mm; page-break-after: always; display: flex; flex-direction: column; justify-content: center; }
+    .label:last-child { page-break-after: auto; }
+    .header { text-align: center; font-size: 13px; font-weight: bold; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 6px; letter-spacing: 1px; }
+    .row { font-size: 11px; margin-bottom: 3px; line-height: 1.3; }
+    .lbl { font-weight: bold; text-transform: uppercase; color: #333; }
+    .val { font-weight: 600; }
+    .divider { border-top: 1px dashed #999; margin: 4px 0; }
+    .pago { font-size: 12px; font-weight: bold; margin-top: 2px; }
+    .obs { font-size: 10px; font-style: italic; color: #555; }
+    @media print { body { margin: 0; } }
+  </style></head><body>${labelsHtml}
+  <script>window.onload=()=>{window.print();}</script>
+  </body></html>`);
+  printWindow.document.close();
+  toast.success("Rótulos generados", { description: `${orders.length} rótulo(s) listo(s) para imprimir/guardar como PDF.` });
+}
+
 const Logistica = () => {
   const { role } = useAuth();
   const isLogisticsOrAdmin = role === "logistica" || role === "admin";
