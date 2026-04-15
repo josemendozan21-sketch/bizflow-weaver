@@ -428,15 +428,18 @@ const Eventos = () => {
                             {ev.name}
                           </button>
                         ))}
-                        {dayDeliveries.slice(0, 2).map((del) => (
-                          <button
-                            key={del.id}
-                            onClick={() => { setSelectedDayDeliveries(dayDeliveries); setDeliveryDetailOpen(true); }}
-                            className="w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded truncate bg-orange-100 text-orange-800"
-                          >
-                            🚚 {del.clientName}
-                          </button>
-                        ))}
+                        {dayDeliveries.slice(0, 2).map((del) => {
+                          const ac = getAdvisorColor(del.advisorName);
+                          return (
+                            <button
+                              key={del.id}
+                              onClick={() => { setSelectedDayDeliveries(dayDeliveries); setDeliveryDetailOpen(true); }}
+                              className={cn("w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded truncate", ac.bg, ac.text)}
+                            >
+                              🚚 {del.clientName}
+                            </button>
+                          );
+                        })}
                         {(dayEvents.length + dayDeliveries.length) > 4 && (
                           <span className="text-[10px] text-muted-foreground pl-1">+{(dayEvents.length + dayDeliveries.length) - 4} más</span>
                         )}
