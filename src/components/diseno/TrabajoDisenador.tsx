@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LogoRequest, LogoRequestStatus, useUpdateLogoRequest, uploadLogoFile } from "@/hooks/useLogoRequests";
 import { StatusBadge } from "./StatusBadge";
-import { Upload, Loader2, MessageSquare, Info, Save, Check, RotateCcw, Download } from "lucide-react";
+import { Upload, Loader2, MessageSquare, Info, Save, Check, RotateCcw, Download, FileText } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
