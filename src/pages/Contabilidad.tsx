@@ -361,9 +361,16 @@ const Contabilidad = () => {
                     <span className="text-sm text-muted-foreground">{selectedInvoiced.size > 0 ? `${selectedInvoiced.size} seleccionado(s)` : "Seleccionar todos"}</span>
                   </div>
                   {selectedInvoiced.size > 0 && (
-                    <Button size="sm" variant="outline" onClick={() => handleExportSelected(selectedInvoiced, "facturados")}>
-                      <Download className="h-4 w-4 mr-1" />Exportar selección ({selectedInvoiced.size})
-                    </Button>
+                    <>
+                      <Button size="sm" variant="outline" onClick={() => handleExportSelected(selectedInvoiced, "facturados")}>
+                        <Download className="h-4 w-4 mr-1" />Exportar selección ({selectedInvoiced.size})
+                      </Button>
+                      {role === "admin" && (
+                        <Button size="sm" variant="destructive" onClick={() => handleDeleteSelected(selectedInvoiced, setSelectedInvoiced)}>
+                          <Trash2 className="h-4 w-4 mr-1" />Eliminar selección ({selectedInvoiced.size})
+                        </Button>
+                      )}
+                    </>
                   )}
                 </div>
                 <Table>
