@@ -1246,6 +1246,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
   const [direccion, setDireccion] = useState("");
   const [cantidad, setCantidad] = useState("");
   const [notas, setNotas] = useState("");
+  const [colorProducto, setColorProducto] = useState("");
 
   const handleSmartPaste = (data: ParsedOrderData) => {
     if (data.cliente?.nombre) setNombre(data.cliente.nombre);
@@ -1379,6 +1380,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
           payment_complete: paymentMethod === "pagado",
           observations: (fd.get("notas") as string)?.trim() || null,
           shipping_cost: shippingAmount,
+          silicone_color: brand === "sweatspot" && colorProducto ? colorProducto : null,
         } as any);
         queryClient.invalidateQueries({ queryKey: ["orders"] });
       } catch (err: any) {
@@ -1490,6 +1492,12 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Color de gel" name="colorGel" required />
                 <Field label="Color de tinta" name="colorTinta" required />
+              </div>
+            )}
+            {!isMayor && brand === "sweatspot" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="colorProducto">Color del producto</Label>
+                <Input id="colorProducto" name="colorProducto" placeholder="Ej: Negro, Blanco, Rosado..." value={colorProducto} onChange={(e) => setColorProducto(e.target.value)} />
               </div>
             )}
           </fieldset>
