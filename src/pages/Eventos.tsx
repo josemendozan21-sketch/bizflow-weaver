@@ -675,13 +675,22 @@ const Eventos = () => {
                 </DialogTitle>
               </DialogHeader>
               <div className="space-y-3">
-                {selectedDayDeliveries.map((entry) => (
-                  <div key={entry.id} className="rounded-lg border border-border p-3 space-y-2">
+                {selectedDayDeliveries.map((entry) => {
+                  const ac = getAdvisorColor(entry.advisorName);
+                  return (
+                  <div key={entry.id} className={cn("rounded-lg border p-3 space-y-2", `border-l-4`)} style={{ borderLeftColor: `var(--${ac.bg.replace("bg-", "")}, currentColor)` }}>
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-foreground">{entry.clientName}</span>
+                      <div className="flex items-center gap-2">
+                        <span className={cn("inline-block w-3 h-3 rounded-full shrink-0", ac.bg)} />
+                        <span className="font-semibold text-foreground">{entry.clientName}</span>
+                      </div>
                       <Badge className={cn(DELIVERY_STATUS_COLORS[entry.status])}>{DELIVERY_STATUS_LABELS[entry.status]}</Badge>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Asesor: </span>
+                        <span className="text-foreground font-medium">{entry.advisorName}</span>
+                      </div>
                       <div>
                         <span className="text-muted-foreground">Producto: </span>
                         <span className="text-foreground">{entry.product}</span>
@@ -694,13 +703,10 @@ const Eventos = () => {
                         <span className="text-muted-foreground">Marca: </span>
                         <span className="text-foreground">{entry.brand === "magical" ? "Magical Warmers" : "Sweatspot"}</span>
                       </div>
-                      <div>
-                        <span className="text-muted-foreground">Tipo: </span>
-                        <span className="text-foreground">{entry.saleType === "mayor" ? "Al por mayor" : "Al por menor"}</span>
-                      </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </>
           )}
