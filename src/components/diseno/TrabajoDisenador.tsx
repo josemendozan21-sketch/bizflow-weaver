@@ -210,7 +210,15 @@ function DesignerCard({ request: req }: { request: LogoRequest }) {
                 <input ref={fileRef} type="file" accept="image/*,application/pdf" onChange={handleFileChange} className="hidden" />
                 {adjustedPreview ? (
                   <div className="border rounded-lg p-2 bg-muted/20 flex items-center justify-center min-h-[80px] cursor-pointer" onClick={() => fileRef.current?.click()}>
-                    <img src={adjustedPreview} alt="Ajustado" className="max-h-20 object-contain" />
+                    {isPdfPreview(adjustedPreview) ? (
+                      <div className="flex flex-col items-center gap-1">
+                        <FileText className="h-8 w-8 text-red-500" />
+                        <p className="text-xs text-muted-foreground">{adjustedPreview.startsWith("pdf:") ? adjustedPreview.slice(4) : "PDF"}</p>
+                      </div>
+                    ) : (
+                      <img src={adjustedPreview} alt="Ajustado" className="max-h-20 object-contain" />
+                    )}
+                  </div>
                   </div>
                 ) : (
                   <div
