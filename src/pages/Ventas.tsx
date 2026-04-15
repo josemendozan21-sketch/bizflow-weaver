@@ -1419,26 +1419,49 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-5">
+          <SmartPasteField brand={brand} onDataParsed={handleSmartPaste} />
+
            <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Datos del cliente</legend>
             {!isMayor && (
               <p className="text-xs text-muted-foreground">Si faltan datos del cliente, se clasificará como "Venta mostrador".</p>
             )}
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Nombre completo" name="nombre" required={isMayor} />
-              <Field label="Teléfono" name="telefono" type="tel" required={isMayor} />
+              <div className="space-y-1.5">
+                <Label htmlFor="nombre">Nombre completo</Label>
+                <Input id="nombre" name="nombre" required={isMayor} value={nombre} onChange={(e) => setNombre(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="telefono">Teléfono</Label>
+                <Input id="telefono" name="telefono" type="tel" required={isMayor} value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+              </div>
             </div>
             {!isMayor && (
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Cédula" name="cedula" />
-                <Field label="Correo electrónico" name="email" type="email" />
+                <div className="space-y-1.5">
+                  <Label htmlFor="cedula">Cédula</Label>
+                  <Input id="cedula" name="cedula" value={cedula} onChange={(e) => setCedula(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="email">Correo electrónico</Label>
+                  <Input id="email" name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                </div>
               </div>
             )}
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Ciudad" name="ciudad" required={isMayor} />
-              <Field label="Departamento" name="departamento" required={isMayor} />
+              <div className="space-y-1.5">
+                <Label htmlFor="ciudad">Ciudad</Label>
+                <Input id="ciudad" name="ciudad" required={isMayor} value={ciudad} onChange={(e) => setCiudad(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="departamento">Departamento</Label>
+                <Input id="departamento" name="departamento" required={isMayor} value={departamento} onChange={(e) => setDepartamento(e.target.value)} />
+              </div>
             </div>
-            <Field label="Dirección de envío" name="direccion" required={isMayor} />
+            <div className="space-y-1.5">
+              <Label htmlFor="direccion">Dirección de envío</Label>
+              <Input id="direccion" name="direccion" required={isMayor} value={direccion} onChange={(e) => setDireccion(e.target.value)} />
+            </div>
           </fieldset>
 
           <fieldset className="space-y-4">
@@ -1456,10 +1479,12 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
                     ))}
                   </SelectContent>
                 </Select>
-                {/* Hidden input for form data */}
                 <input type="hidden" name="referencia" value={selectedRef} />
               </div>
-              <Field label="Cantidad" name="cantidad" type="number" required />
+              <div className="space-y-1.5">
+                <Label htmlFor="cantidad">Cantidad</Label>
+                <Input id="cantidad" name="cantidad" type="number" required value={cantidad} onChange={(e) => setCantidad(e.target.value)} />
+              </div>
             </div>
             {isMayor && (
               <div className="grid gap-4 sm:grid-cols-2">
@@ -1516,7 +1541,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
 
           <div className="space-y-1.5">
             <Label htmlFor="notas">Notas adicionales</Label>
-            <Textarea id="notas" name="notas" placeholder="Observaciones del pedido..." />
+            <Textarea id="notas" name="notas" placeholder="Observaciones del pedido..." value={notas} onChange={(e) => setNotas(e.target.value)} />
           </div>
 
           <div className="flex gap-3 pt-2">
