@@ -101,6 +101,7 @@ const SweatspotFinishedProducts = () => {
                     <TableRow>
                       <TableHead>Producto</TableHead>
                       <TableHead>Color</TableHead>
+                      <TableHead>Logo</TableHead>
                       <TableHead className="text-right">Disponible</TableHead>
                       <TableHead className="text-right">Mínimo</TableHead>
                       <TableHead className="text-center">Estado</TableHead>
