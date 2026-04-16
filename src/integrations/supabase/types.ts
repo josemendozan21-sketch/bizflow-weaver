@@ -261,64 +261,85 @@ export type Database = {
       }
       ferias: {
         Row: {
+          advertising_cost: number | null
           assigned_staff: string[] | null
           city: string
           created_at: string
           created_by: string | null
+          employees_cost: number | null
           end_date: string
+          food_cost: number | null
           id: string
           lodging_cost: number | null
           materials_needed: string[] | null
+          merchandise_cost: number | null
           name: string
           notes: string | null
           other_costs: number | null
+          setup_date: string | null
+          shipping_cost: number | null
           stand_cost: number | null
           stand_number: string | null
           stand_size: string | null
           start_date: string
           status: string
+          tickets_cost: number | null
           transport_cost: number | null
           updated_at: string
           venue: string | null
         }
         Insert: {
+          advertising_cost?: number | null
           assigned_staff?: string[] | null
           city: string
           created_at?: string
           created_by?: string | null
+          employees_cost?: number | null
           end_date: string
+          food_cost?: number | null
           id?: string
           lodging_cost?: number | null
           materials_needed?: string[] | null
+          merchandise_cost?: number | null
           name: string
           notes?: string | null
           other_costs?: number | null
+          setup_date?: string | null
+          shipping_cost?: number | null
           stand_cost?: number | null
           stand_number?: string | null
           stand_size?: string | null
           start_date: string
           status?: string
+          tickets_cost?: number | null
           transport_cost?: number | null
           updated_at?: string
           venue?: string | null
         }
         Update: {
+          advertising_cost?: number | null
           assigned_staff?: string[] | null
           city?: string
           created_at?: string
           created_by?: string | null
+          employees_cost?: number | null
           end_date?: string
+          food_cost?: number | null
           id?: string
           lodging_cost?: number | null
           materials_needed?: string[] | null
+          merchandise_cost?: number | null
           name?: string
           notes?: string | null
           other_costs?: number | null
+          setup_date?: string | null
+          shipping_cost?: number | null
           stand_cost?: number | null
           stand_number?: string | null
           stand_size?: string | null
           start_date?: string
           status?: string
+          tickets_cost?: number | null
           transport_cost?: number | null
           updated_at?: string
           venue?: string | null
