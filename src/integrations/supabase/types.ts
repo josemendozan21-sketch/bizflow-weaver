@@ -259,6 +259,62 @@ export type Database = {
           },
         ]
       }
+      feria_staff: {
+        Row: {
+          arl_document_url: string | null
+          arl_provider: string | null
+          arl_valid_until: string | null
+          created_at: string
+          document_id: string | null
+          emergency_contact: string | null
+          feria_id: string
+          full_name: string
+          id: string
+          notes: string | null
+          phone: string | null
+          role: string | null
+          updated_at: string
+        }
+        Insert: {
+          arl_document_url?: string | null
+          arl_provider?: string | null
+          arl_valid_until?: string | null
+          created_at?: string
+          document_id?: string | null
+          emergency_contact?: string | null
+          feria_id: string
+          full_name: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          role?: string | null
+          updated_at?: string
+        }
+        Update: {
+          arl_document_url?: string | null
+          arl_provider?: string | null
+          arl_valid_until?: string | null
+          created_at?: string
+          document_id?: string | null
+          emergency_contact?: string | null
+          feria_id?: string
+          full_name?: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          role?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feria_staff_feria_id_fkey"
+            columns: ["feria_id"]
+            isOneToOne: false
+            referencedRelation: "ferias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ferias: {
         Row: {
           advertising_cost: number | null
