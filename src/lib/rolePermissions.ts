@@ -4,26 +4,26 @@ type AppRole = Database["public"]["Enums"]["app_role"];
 
 // Define which routes each role can access
 const ROLE_ROUTES: Record<AppRole, string[]> = {
-  admin: ["/", "/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/admin-usuarios", "/costos", "/eventos"],
-  asesor_comercial: ["/ventas", "/inventarios", "/diseno-logos", "/logistica", "/contabilidad", "/eventos"],
-  produccion: ["/produccion", "/inventarios", "/eventos"],
-  contabilidad: ["/contabilidad", "/eventos"],
-  estampacion: ["/diseno-logos", "/produccion", "/eventos"],
-  usuario_visual: ["/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/eventos"],
-  disenador: ["/diseno-logos", "/eventos"],
-  logistica: ["/logistica", "/eventos"],
+  admin: ["/", "/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/admin-usuarios", "/costos", "/eventos", "/ferias"],
+  asesor_comercial: ["/ventas", "/inventarios", "/diseno-logos", "/logistica", "/contabilidad", "/eventos", "/ferias"],
+  produccion: ["/produccion", "/inventarios", "/eventos", "/ferias"],
+  contabilidad: ["/contabilidad", "/eventos", "/ferias"],
+  estampacion: ["/diseno-logos", "/produccion", "/eventos", "/ferias"],
+  usuario_visual: ["/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/eventos", "/ferias"],
+  disenador: ["/diseno-logos", "/eventos", "/ferias"],
+  logistica: ["/logistica", "/eventos", "/ferias"],
 };
 
 // Sections where the role can edit (create, update, delete)
 const ROLE_EDIT_SECTIONS: Record<AppRole, string[]> = {
-  admin: ["/", "/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/admin-usuarios", "/costos", "/eventos"],
+  admin: ["/", "/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/admin-usuarios", "/costos", "/eventos", "/ferias"],
   asesor_comercial: ["/ventas", "/diseno-logos"],
   produccion: ["/produccion", "/inventarios"],
-  contabilidad: [],
+  contabilidad: ["/ferias"],
   estampacion: ["/produccion", "/diseno-logos"],
   usuario_visual: [],
   disenador: ["/diseno-logos"],
-  logistica: ["/logistica"],
+  logistica: ["/logistica", "/ferias"],
 };
 
 export function canAccessRoute(role: AppRole | null, path: string): boolean {
