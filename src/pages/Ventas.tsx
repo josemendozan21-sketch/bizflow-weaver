@@ -465,7 +465,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           ink_color: inkColor,
           gel_color: gelColor,
           logo_url: logoUrl,
-          observations: observaciones || null,
+          observations: [observaciones, line.isGift ? "🎁 OBSEQUIO" : ""].filter(Boolean).join(" | ") || null,
           personalization: personalizacion || null,
           advisor_id: user?.id || "",
           advisor_name: user?.email || "Asesor",
