@@ -3,10 +3,12 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, MapPin, Calendar, Package, Hammer } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Package, Hammer, Users } from "lucide-react";
 import { type Feria, useFeriaSales, calcFeriaTotalCost } from "@/hooks/useFerias";
 import { FeriaInventoryTab } from "./FeriaInventoryTab";
 import { FeriaSalesTab } from "./FeriaSalesTab";
+import { FeriaStaffTab } from "./FeriaStaffTab";
+import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -32,6 +34,9 @@ const COST_BREAKDOWN: Array<{ key: keyof Feria; label: string }> = [
 
 export function FeriaDetail({ feria, onBack }: { feria: Feria; onBack: () => void }) {
   const { data: sales = [] } = useFeriaSales(feria.id);
+  const { role } = useAuth();
+  const canSeeFinancials = role === "admin" || role === "contabilidad";
+  const canManageStaff = role === "admin" || role === "contabilidad" || role === "logistica";
 
   const totalCosts = calcFeriaTotalCost(feria);
   const totalRevenue = useMemo(() => sales.reduce((s, x) => s + Number(x.total_amount), 0), [sales]);
@@ -53,7 +58,7 @@ export function FeriaDetail({ feria, onBack }: { feria: Feria; onBack: () => voi
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className={`grid grid-cols-2 gap-3 ${canSeeFinancials ? "md:grid-cols-4" : "md:grid-cols-2"}`}>
         <Card className="p-4">
           <div className="flex items-center gap-2 text-muted-foreground text-xs"><Calendar className="h-3 w-3" />Fechas</div>
           <p className="text-sm font-medium mt-1">{format(new Date(feria.start_date), "dd MMM", { locale: es })} – {format(new Date(feria.end_date), "dd MMM yyyy", { locale: es })}</p>
@@ -63,29 +68,38 @@ export function FeriaDetail({ feria, onBack }: { feria: Feria; onBack: () => voi
             </p>
           )}
         </Card>
+        {canSeeFinancials && (
+          <>
+            <Card className="p-4">
+              <div className="text-xs text-muted-foreground">Costo Total</div>
+              <p className="text-lg font-semibold text-destructive">${totalCosts.toLocaleString()}</p>
+            </Card>
+            <Card className="p-4">
+              <div className="text-xs text-muted-foreground">Ingreso Total</div>
+              <p className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">${totalRevenue.toLocaleString()}</p>
+            </Card>
+            <Card className="p-4">
+              <div className="text-xs text-muted-foreground">Utilidad</div>
+              <p className={`text-lg font-semibold ${profit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>
+                ${profit.toLocaleString()}
+              </p>
+              {totalRevenue > 0 && <p className="text-xs text-muted-foreground">{margin.toFixed(1)}% margen</p>}
+            </Card>
+          </>
+        )}
         <Card className="p-4">
-          <div className="text-xs text-muted-foreground">Costo Total</div>
-          <p className="text-lg font-semibold text-destructive">${totalCosts.toLocaleString()}</p>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs text-muted-foreground">Ingreso Total</div>
-          <p className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">${totalRevenue.toLocaleString()}</p>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs text-muted-foreground">Utilidad</div>
-          <p className={`text-lg font-semibold ${profit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>
-            ${profit.toLocaleString()}
-          </p>
-          {totalRevenue > 0 && <p className="text-xs text-muted-foreground">{margin.toFixed(1)}% margen</p>}
+          <div className="text-xs text-muted-foreground">Estado</div>
+          <p className="text-sm font-medium mt-1 capitalize">{feria.status.replace("_", " ")}</p>
         </Card>
       </div>
 
       <Tabs defaultValue="info">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="info">Información</TabsTrigger>
-          <TabsTrigger value="costos">Desglose de costos</TabsTrigger>
+          {canSeeFinancials && <TabsTrigger value="costos">Desglose de costos</TabsTrigger>}
+          <TabsTrigger value="personal"><Users className="mr-2 h-4 w-4" />Personal</TabsTrigger>
           <TabsTrigger value="inventario"><Package className="mr-2 h-4 w-4" />Inventario asignado</TabsTrigger>
-          <TabsTrigger value="ventas">Ventas</TabsTrigger>
+          {canSeeFinancials && <TabsTrigger value="ventas">Ventas</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="info" className="space-y-3">
@@ -111,39 +125,42 @@ export function FeriaDetail({ feria, onBack }: { feria: Feria; onBack: () => voi
           </Card>
         </TabsContent>
 
-        <TabsContent value="costos">
-          <Card className="p-4">
-            <h3 className="font-semibold mb-3">Desglose de costos</h3>
-            <div className="space-y-2">
-              {COST_BREAKDOWN.map((c) => {
-                const value = Number(feria[c.key] || 0);
-                return (
-                  <div key={c.key as string} className="flex justify-between py-2 border-b last:border-0">
-                    <span className="text-sm">{c.label}</span>
-                    <span className="text-sm font-medium">${value.toLocaleString()}</span>
-                  </div>
-                );
-              })}
-              <div className="flex justify-between pt-3 border-t-2 font-bold">
-                <span>Costo Total</span>
-                <span className="text-destructive">${totalCosts.toLocaleString()}</span>
+        {canSeeFinancials && (
+          <TabsContent value="costos">
+            <Card className="p-4">
+              <h3 className="font-semibold mb-3">Desglose de costos</h3>
+              <div className="space-y-2">
+                {COST_BREAKDOWN.map((c) => {
+                  const value = Number(feria[c.key] || 0);
+                  return (
+                    <div key={c.key as string} className="flex justify-between py-2 border-b last:border-0">
+                      <span className="text-sm">{c.label}</span>
+                      <span className="text-sm font-medium">${value.toLocaleString()}</span>
+                    </div>
+                  );
+                })}
+                <div className="flex justify-between pt-3 border-t-2 font-bold">
+                  <span>Costo Total</span>
+                  <span className="text-destructive">${totalCosts.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between font-bold">
+                  <span>Ingreso Total</span>
+                  <span className="text-emerald-600 dark:text-emerald-400">${totalRevenue.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between pt-2 border-t font-bold text-lg bg-emerald-500/10 px-3 py-2 rounded">
+                  <span>Utilidad</span>
+                  <span className={profit >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-destructive"}>
+                    ${profit.toLocaleString()}
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between font-bold">
-                <span>Ingreso Total</span>
-                <span className="text-emerald-600 dark:text-emerald-400">${totalRevenue.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between pt-2 border-t font-bold text-lg bg-emerald-500/10 px-3 py-2 rounded">
-                <span>Utilidad</span>
-                <span className={profit >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-destructive"}>
-                  ${profit.toLocaleString()}
-                </span>
-              </div>
-            </div>
-          </Card>
-        </TabsContent>
+            </Card>
+          </TabsContent>
+        )}
 
+        <TabsContent value="personal"><FeriaStaffTab feriaId={feria.id} canManage={canManageStaff} /></TabsContent>
         <TabsContent value="inventario"><FeriaInventoryTab feriaId={feria.id} /></TabsContent>
-        <TabsContent value="ventas"><FeriaSalesTab feriaId={feria.id} /></TabsContent>
+        {canSeeFinancials && <TabsContent value="ventas"><FeriaSalesTab feriaId={feria.id} /></TabsContent>}
       </Tabs>
     </div>
   );
