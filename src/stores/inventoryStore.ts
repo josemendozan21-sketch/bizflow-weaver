@@ -89,6 +89,8 @@ const INITIAL_CONFIGS: MaterialConfig[] = [
   { id: "20b", productName: "Gafas pequeñas", productType: "Térmico", gramsPerUnit: 50, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
   { id: "21", productName: "Gafas grandes", productType: "Frío", gramsPerUnit: 50, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
   { id: "21b", productName: "Gafas grandes", productType: "Térmico", gramsPerUnit: 50, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "22", productName: "Gorro", productType: "Frío", gramsPerUnit: 600, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "22b", productName: "Gorro", productType: "Térmico", gramsPerUnit: 600, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
 ];
 
 const INITIAL_GEL_STOCK: GelStock[] = [
@@ -129,6 +131,7 @@ const INITIAL_STOCK_ITEMS: StockItem[] = [
   { id: "si-mw-cr-t-7", brand: "magical_warmers", category: "cuerpos_referencias", name: "Muela", available: 23, unit: "unidades", minStock: 20, productType: "Térmico" },
   { id: "si-mw-cr-t-8", brand: "magical_warmers", category: "cuerpos_referencias", name: "Círculo 8 cm", available: 13, unit: "unidades", minStock: 10, productType: "Térmico" },
   { id: "si-mw-cr-t-9", brand: "magical_warmers", category: "cuerpos_referencias", name: "Círculo 12 cm", available: 13, unit: "unidades", minStock: 10, productType: "Térmico" },
+  { id: "si-mw-cr-t-10", brand: "magical_warmers", category: "cuerpos_referencias", name: "Gorro", available: 0, unit: "unidades", minStock: 10, productType: "Térmico" },
   // Magical Warmers - Cuerpos (Fríos)
   { id: "si-mw-cr-f-1", brand: "magical_warmers", category: "cuerpos_referencias", name: "Lumbar", available: 13, unit: "unidades", minStock: 10, productType: "Frío" },
   { id: "si-mw-cr-f-2", brand: "magical_warmers", category: "cuerpos_referencias", name: "Shoulder", available: 13, unit: "unidades", minStock: 10, productType: "Frío" },
@@ -139,6 +142,7 @@ const INITIAL_STOCK_ITEMS: StockItem[] = [
   { id: "si-mw-cr-f-7", brand: "magical_warmers", category: "cuerpos_referencias", name: "Muela", available: 23, unit: "unidades", minStock: 20, productType: "Frío" },
   { id: "si-mw-cr-f-8", brand: "magical_warmers", category: "cuerpos_referencias", name: "Círculo 8 cm", available: 13, unit: "unidades", minStock: 10, productType: "Frío" },
   { id: "si-mw-cr-f-9", brand: "magical_warmers", category: "cuerpos_referencias", name: "Círculo 12 cm", available: 13, unit: "unidades", minStock: 10, productType: "Frío" },
+  { id: "si-mw-cr-f-10", brand: "magical_warmers", category: "cuerpos_referencias", name: "Gorro", available: 0, unit: "unidades", minStock: 10, productType: "Frío" },
   // Magical Warmers - Producto Terminado (Térmicos)
   { id: "si-mw-pt-t-1", brand: "magical_warmers", category: "producto_terminado", name: "Lumbar", available: 8, unit: "unidades", minStock: 5, productType: "Térmico" },
   { id: "si-mw-pt-t-2", brand: "magical_warmers", category: "producto_terminado", name: "Shoulder", available: 8, unit: "unidades", minStock: 5, productType: "Térmico" },
@@ -149,6 +153,7 @@ const INITIAL_STOCK_ITEMS: StockItem[] = [
   { id: "si-mw-pt-t-7", brand: "magical_warmers", category: "producto_terminado", name: "Muela", available: 13, unit: "unidades", minStock: 10, productType: "Térmico" },
   { id: "si-mw-pt-t-8", brand: "magical_warmers", category: "producto_terminado", name: "Círculo 8 cm", available: 8, unit: "unidades", minStock: 5, productType: "Térmico" },
   { id: "si-mw-pt-t-9", brand: "magical_warmers", category: "producto_terminado", name: "Círculo 12 cm", available: 8, unit: "unidades", minStock: 5, productType: "Térmico" },
+  { id: "si-mw-pt-t-10", brand: "magical_warmers", category: "producto_terminado", name: "Gorro", available: 0, unit: "unidades", minStock: 5, productType: "Térmico" },
   // Magical Warmers - Producto Terminado (Fríos)
   { id: "si-mw-pt-f-1", brand: "magical_warmers", category: "producto_terminado", name: "Lumbar", available: 8, unit: "unidades", minStock: 5, productType: "Frío" },
   { id: "si-mw-pt-f-2", brand: "magical_warmers", category: "producto_terminado", name: "Shoulder", available: 8, unit: "unidades", minStock: 5, productType: "Frío" },
@@ -159,6 +164,7 @@ const INITIAL_STOCK_ITEMS: StockItem[] = [
   { id: "si-mw-pt-f-7", brand: "magical_warmers", category: "producto_terminado", name: "Muela", available: 13, unit: "unidades", minStock: 10, productType: "Frío" },
   { id: "si-mw-pt-f-8", brand: "magical_warmers", category: "producto_terminado", name: "Círculo 8 cm", available: 8, unit: "unidades", minStock: 5, productType: "Frío" },
   { id: "si-mw-pt-f-9", brand: "magical_warmers", category: "producto_terminado", name: "Círculo 12 cm", available: 8, unit: "unidades", minStock: 5, productType: "Frío" },
+  { id: "si-mw-pt-f-10", brand: "magical_warmers", category: "producto_terminado", name: "Gorro", available: 0, unit: "unidades", minStock: 5, productType: "Frío" },
   // Sweatspot - Producto Terminado - Sin logo - Termos 150
   { id: "si-ss-pt-1", brand: "sweatspot", category: "producto_terminado", name: "Termo 150 ML", color: "Rosado", logo: "Sin logo", sweatspotCategory: "termos_150", available: 4, unit: "unidades", minStock: 43 },
   { id: "si-ss-pt-2", brand: "sweatspot", category: "producto_terminado", name: "Termo 150 ML", color: "Azul", logo: "Sin logo", sweatspotCategory: "termos_150", available: 4, unit: "unidades", minStock: 4 },
