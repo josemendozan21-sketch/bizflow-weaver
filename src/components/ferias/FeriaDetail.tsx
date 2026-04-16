@@ -34,6 +34,9 @@ const COST_BREAKDOWN: Array<{ key: keyof Feria; label: string }> = [
 
 export function FeriaDetail({ feria, onBack }: { feria: Feria; onBack: () => void }) {
   const { data: sales = [] } = useFeriaSales(feria.id);
+  const { role } = useAuth();
+  const canSeeFinancials = role === "admin" || role === "contabilidad";
+  const canManageStaff = role === "admin" || role === "contabilidad" || role === "logistica";
 
   const totalCosts = calcFeriaTotalCost(feria);
   const totalRevenue = useMemo(() => sales.reduce((s, x) => s + Number(x.total_amount), 0), [sales]);
