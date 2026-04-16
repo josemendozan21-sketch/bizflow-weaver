@@ -85,6 +85,8 @@ const INITIAL_CONFIGS: MaterialConfig[] = [
   { id: "17", productName: "Círculo 12 cm", productType: "Frío", gramsPerUnit: 125, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
   { id: "18", productName: "Círculo 12 cm", productType: "Térmico", gramsPerUnit: 125, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
   { id: "19", productName: "Máscara", productType: "Frío", gramsPerUnit: 200, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "20", productName: "Gafas pequeñas", productType: "Frío", gramsPerUnit: 50, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "21", productName: "Gafas grandes", productType: "Frío", gramsPerUnit: 50, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
 ];
 
 const INITIAL_GEL_STOCK: GelStock[] = [
