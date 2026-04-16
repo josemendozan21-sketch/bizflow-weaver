@@ -50,10 +50,27 @@ export function CreateFeriaDialog() {
     stand_cost: "0", shipping_cost: "0", tickets_cost: "0", advertising_cost: "0",
     merchandise_cost: "0", employees_cost: "0", lodging_cost: "0", transport_cost: "0",
     food_cost: "0", other_costs: "0",
-    materials_needed: "", status: "planificada", notes: "",
+    materials_needed: [] as string[], status: "planificada", notes: "",
   });
+  const [customMaterial, setCustomMaterial] = useState("");
 
   const totalCosts = COST_FIELDS.reduce((s, f) => s + (parseFloat(form[f.key]) || 0), 0);
+
+  const toggleMaterial = (m: string) => {
+    setForm((p: any) => ({
+      ...p,
+      materials_needed: p.materials_needed.includes(m)
+        ? p.materials_needed.filter((x: string) => x !== m)
+        : [...p.materials_needed, m],
+    }));
+  };
+
+  const addCustomMaterial = () => {
+    const v = customMaterial.trim();
+    if (!v || form.materials_needed.includes(v)) return;
+    setForm({ ...form, materials_needed: [...form.materials_needed, v] });
+    setCustomMaterial("");
+  };
 
   const handleSubmit = async () => {
     if (!form.name || !form.city || !form.start_date || !form.end_date) return;
