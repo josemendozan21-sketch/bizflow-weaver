@@ -140,7 +140,42 @@ export function CreateFeriaDialog() {
             </div>
           </div>
 
-          <div><Label>Materiales necesarios (separados por comas)</Label><Input value={form.materials_needed} onChange={(e) => setForm({ ...form, materials_needed: e.target.value })} placeholder="Carpa, mesa, displays" /></div>
+          <div className="border rounded-lg p-3 bg-muted/30">
+            <h4 className="font-semibold mb-3 text-sm">Materiales necesarios</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {PREDEFINED_MATERIALS.map((m) => {
+                const checked = form.materials_needed.includes(m);
+                return (
+                  <label key={m} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-background/60 rounded px-2 py-1">
+                    <Checkbox checked={checked} onCheckedChange={() => toggleMaterial(m)} />
+                    <span>{m}</span>
+                  </label>
+                );
+              })}
+            </div>
+            <div className="flex gap-2 mt-3">
+              <Input
+                value={customMaterial}
+                onChange={(e) => setCustomMaterial(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomMaterial(); } }}
+                placeholder="Agregar otro material..."
+                className="text-sm"
+              />
+              <Button type="button" variant="outline" size="sm" onClick={addCustomMaterial}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            {form.materials_needed.filter((m: string) => !PREDEFINED_MATERIALS.includes(m)).length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {form.materials_needed.filter((m: string) => !PREDEFINED_MATERIALS.includes(m)).map((m: string) => (
+                  <span key={m} className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                    {m}
+                    <button type="button" onClick={() => toggleMaterial(m)}><X className="h-3 w-3" /></button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
           <div>
             <Label>Estado</Label>
             <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
