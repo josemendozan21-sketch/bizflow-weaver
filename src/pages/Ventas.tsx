@@ -200,9 +200,10 @@ interface OrderLine {
   valorUnitario: string;
   valorTotal: string;
   autoCalc: boolean;
+  isGift: boolean;
 }
 
-function createEmptyLine(): OrderLine {
+function createEmptyLine(isGift = false): OrderLine {
   return {
     id: crypto.randomUUID(),
     product: "",
@@ -211,10 +212,11 @@ function createEmptyLine(): OrderLine {
     gelCustom: "",
     inkColor: "",
     inkCustom: "",
-    units: "",
-    valorUnitario: "",
-    valorTotal: "",
+    units: isGift ? "1" : "",
+    valorUnitario: isGift ? "0" : "",
+    valorTotal: isGift ? "0" : "",
     autoCalc: true,
+    isGift,
   };
 }
 
@@ -309,6 +311,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   };
 
   const addLine = () => setOrderLines((prev) => [...prev, createEmptyLine()]);
+  const addGiftLine = () => setOrderLines((prev) => [...prev, createEmptyLine(true)]);
   const removeLine = (id: string) => setOrderLines((prev) => prev.filter((l) => l.id !== id));
 
   const getAvailableTypes = (productName: string) => {
