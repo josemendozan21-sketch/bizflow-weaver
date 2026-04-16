@@ -624,15 +624,22 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Productos del pedido</legend>
             {orderLines.map((line, idx) => (
-              <div key={line.id} className="rounded-lg border border-border p-4 space-y-4 relative">
-                {orderLines.length > 1 && (
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-muted-foreground">Producto {idx + 1}</span>
+              <div key={line.id} className={`rounded-lg border p-4 space-y-4 relative ${line.isGift ? "border-amber-300 bg-amber-50/50" : "border-border"}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      {line.isGift ? "🎁 Obsequio" : `Producto ${idx + 1}`}
+                    </span>
+                    {line.isGift && (
+                      <Badge variant="outline" className="border-amber-400 text-amber-700 text-xs">Gratis</Badge>
+                    )}
+                  </div>
+                  {orderLines.length > 1 && (
                     <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeLine(line.id)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
-                  </div>
-                )}
+                  )}
+                </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label>Producto / Referencia</Label>
@@ -677,6 +684,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                     onCustomChange={(v) => updateLine(line.id, { inkCustom: v })}
                   />
                 </div>
+                {!line.isGift && (
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="space-y-1.5">
                     <Label>Unidades</Label>
@@ -694,10 +702,25 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                     )}
                   </div>
                 </div>
+                )}
+                {line.isGift && (
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="space-y-1.5">
+                    <Label>Unidades</Label>
+                    <Input type="number" required value={line.units} onChange={(e) => updateLine(line.id, { units: e.target.value })} />
+                  </div>
+                </div>
+                )}
               </div>
             ))}
-            <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={addLine}>
-              <Plus className="h-4 w-4" /> Agregar otro producto
+            <div className="flex gap-2 flex-wrap">
+              <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={addLine}>
+                <Plus className="h-4 w-4" /> Agregar otro producto
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={addGiftLine} className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50">
+                🎁 Adicionar obsequio
+              </Button>
+            </div>
             </Button>
           </fieldset>
 
