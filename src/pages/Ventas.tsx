@@ -362,11 +362,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       }
     }
 
-    if (!rutFile || !rutFile.name) {
-      toast.error("RUT requerido", { description: "Para ventas al por mayor debe adjuntar el RUT de la empresa." });
-      setIsSubmitting(false);
-      return;
-    }
+    // RUT es opcional en ventas al por mayor
 
     // Upload initial payment proof if provided
     let paymentProofUrl: string | null = null;
@@ -437,7 +433,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         abono: abonoAmount,
         paymentStatus: estadoPago,
         canDispatch: estadoPago === "pago_total",
-        hasRut: true,
+        hasRut: !!(rutFile && rutFile.name),
         email: (fd.get("mw_email") as string)?.trim() || undefined,
         direccion: (fd.get("mw_direccion") as string)?.trim() || undefined,
         ciudad: (fd.get("mw_ciudad") as string)?.trim() || undefined,
@@ -786,7 +782,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             <legend className="text-sm font-semibold text-foreground mb-2">Archivos adjuntos</legend>
             <div className="grid gap-4 sm:grid-cols-2">
               <FileField label="Adjuntar logo" name="mw_logo" />
-              <FileField label="Adjuntar RUT de la empresa" name="mw_rut" />
+              <FileField label="Adjuntar RUT de la empresa (opcional)" name="mw_rut" />
             </div>
           </fieldset>
 
@@ -914,13 +910,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       }
     }
 
-    if (!rutFile || !rutFile.name) {
-      toast.error("RUT requerido", {
-        description: "Para ventas al por mayor debe adjuntar el RUT de la empresa.",
-      });
-      setIsSubmitting(false);
-      return;
-    }
+    // RUT es opcional en ventas al por mayor
 
     // Upload initial payment proof if provided
     let ssPaymentProofUrl: string | null = null;
@@ -984,7 +974,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         abono: abonoAmount,
         paymentStatus: ssEstadoPago,
         canDispatch: ssEstadoPago === "pago_total",
-        hasRut: true,
+        hasRut: !!(rutFile && rutFile.name),
         email: (fd.get("ss_email") as string)?.trim() || undefined,
         direccion: (fd.get("ss_direccion") as string)?.trim() || undefined,
         ciudad: (fd.get("ss_ciudad") as string)?.trim() || undefined,
@@ -1298,7 +1288,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
             <legend className="text-sm font-semibold text-foreground mb-2">Archivos adjuntos</legend>
             <div className="grid gap-4 sm:grid-cols-2">
               <FileField label="Adjuntar logo" name="ss_logo" />
-              <FileField label="Adjuntar RUT de la empresa" name="ss_rut" />
+              <FileField label="Adjuntar RUT de la empresa (opcional)" name="ss_rut" />
             </div>
           </fieldset>
 
