@@ -3,10 +3,12 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, MapPin, Calendar, Package, Hammer } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Package, Hammer, Users } from "lucide-react";
 import { type Feria, useFeriaSales, calcFeriaTotalCost } from "@/hooks/useFerias";
 import { FeriaInventoryTab } from "./FeriaInventoryTab";
 import { FeriaSalesTab } from "./FeriaSalesTab";
+import { FeriaStaffTab } from "./FeriaStaffTab";
+import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
