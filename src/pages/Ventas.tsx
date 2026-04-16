@@ -200,9 +200,10 @@ interface OrderLine {
   valorUnitario: string;
   valorTotal: string;
   autoCalc: boolean;
+  isGift: boolean;
 }
 
-function createEmptyLine(): OrderLine {
+function createEmptyLine(isGift = false): OrderLine {
   return {
     id: crypto.randomUUID(),
     product: "",
@@ -211,10 +212,11 @@ function createEmptyLine(): OrderLine {
     gelCustom: "",
     inkColor: "",
     inkCustom: "",
-    units: "",
-    valorUnitario: "",
-    valorTotal: "",
+    units: isGift ? "1" : "",
+    valorUnitario: isGift ? "0" : "",
+    valorTotal: isGift ? "0" : "",
     autoCalc: true,
+    isGift,
   };
 }
 
@@ -280,7 +282,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
   // Grand total across all lines
   const grandTotal = useMemo(() => {
-    return orderLines.reduce((sum, line) => sum + (parseFloat(line.valorTotal) || 0), 0);
+    return orderLines.reduce((sum, line) => line.isGift ? sum : sum + (parseFloat(line.valorTotal) || 0), 0);
   }, [orderLines]);
 
   // Auto-fill abono when pago_total
@@ -309,6 +311,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   };
 
   const addLine = () => setOrderLines((prev) => [...prev, createEmptyLine()]);
+  const addGiftLine = () => setOrderLines((prev) => [...prev, createEmptyLine(true)]);
   const removeLine = (id: string) => setOrderLines((prev) => prev.filter((l) => l.id !== id));
 
   const getAvailableTypes = (productName: string) => {
@@ -410,8 +413,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       const referencia = `${line.product} (${line.type})`;
       const gelColor = resolveColor(line.gelColor, line.gelCustom);
       const inkColor = resolveColor(line.inkColor, line.inkCustom);
-      const lineTotal = parseFloat(line.valorTotal) || 0;
-      const abonoAmount = estadoPago === "pago_total" ? lineTotal : (parseFloat(abono) || 0);
+      const lineTotal = line.isGift ? 0 : (parseFloat(line.valorTotal) || 0);
+      const abonoAmount = line.isGift ? 0 : (estadoPago === "pago_total" ? lineTotal : (parseFloat(abono) || 0));
       const matchedConfig = getMatchedConfig(line.product, line.type);
 
       // Discount gel
@@ -462,7 +465,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           ink_color: inkColor,
           gel_color: gelColor,
           logo_url: logoUrl,
-          observations: observaciones || null,
+          observations: [observaciones, line.isGift ? "🎁 OBSEQUIO" : ""].filter(Boolean).join(" | ") || null,
           personalization: personalizacion || null,
           advisor_id: user?.id || "",
           advisor_name: user?.email || "Asesor",
@@ -536,9 +539,14 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     queryClient.invalidateQueries({ queryKey: ["production-orders"] });
     queryClient.invalidateQueries({ queryKey: ["orders"] });
 
-    const lineCount = orderLines.length;
-    toast.success(`${lineCount > 1 ? lineCount + " pedidos creados" : "Pedido creado"}`, {
-      description: `${clientName} — ${lineCount > 1 ? lineCount + " líneas" : orderLines[0].units + " uds de " + orderLines[0].product}. Enviado a Producción y Contabilidad.`,
+    const giftCount = orderLines.filter((l) => l.isGift).length;
+    const productCount = orderLines.filter((l) => !l.isGift).length;
+    const summary = [
+      `${productCount} producto(s)`,
+      giftCount > 0 ? `${giftCount} obsequio(s)` : "",
+    ].filter(Boolean).join(" + ");
+    toast.success("Pedido creado", {
+      description: `${clientName} — ${summary}. Enviado a Producción y Contabilidad.`,
     });
 
     onReset();
@@ -583,6 +591,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                   valorUnitario: String(p.valor_unitario || ""),
                   valorTotal: String(p.valor_total || ""),
                   autoCalc: !p.valor_total,
+                  isGift: false,
                 }));
                 setOrderLines(newLines);
               }
@@ -620,15 +629,22 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Productos del pedido</legend>
             {orderLines.map((line, idx) => (
-              <div key={line.id} className="rounded-lg border border-border p-4 space-y-4 relative">
-                {orderLines.length > 1 && (
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-muted-foreground">Producto {idx + 1}</span>
+              <div key={line.id} className={`rounded-lg border p-4 space-y-4 relative ${line.isGift ? "border-amber-300 bg-amber-50/50" : "border-border"}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      {line.isGift ? "🎁 Obsequio" : `Producto ${idx + 1}`}
+                    </span>
+                    {line.isGift && (
+                      <Badge variant="outline" className="border-amber-400 text-amber-700 text-xs">Gratis</Badge>
+                    )}
+                  </div>
+                  {orderLines.length > 1 && (
                     <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeLine(line.id)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
-                  </div>
-                )}
+                  )}
+                </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label>Producto / Referencia</Label>
@@ -673,6 +689,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                     onCustomChange={(v) => updateLine(line.id, { inkCustom: v })}
                   />
                 </div>
+                {!line.isGift && (
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="space-y-1.5">
                     <Label>Unidades</Label>
@@ -690,11 +707,25 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                     )}
                   </div>
                 </div>
+                )}
+                {line.isGift && (
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="space-y-1.5">
+                    <Label>Unidades</Label>
+                    <Input type="number" required value={line.units} onChange={(e) => updateLine(line.id, { units: e.target.value })} />
+                  </div>
+                </div>
+                )}
               </div>
             ))}
-            <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={addLine}>
-              <Plus className="h-4 w-4" /> Agregar otro producto
-            </Button>
+            <div className="flex gap-2 flex-wrap">
+              <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={addLine}>
+                <Plus className="h-4 w-4" /> Agregar otro producto
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={addGiftLine} className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50">
+                🎁 Adicionar obsequio
+              </Button>
+            </div>
           </fieldset>
 
           <fieldset className="space-y-4">
