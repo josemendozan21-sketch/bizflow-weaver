@@ -539,9 +539,14 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     queryClient.invalidateQueries({ queryKey: ["production-orders"] });
     queryClient.invalidateQueries({ queryKey: ["orders"] });
 
-    const lineCount = orderLines.length;
-    toast.success(`${lineCount > 1 ? lineCount + " pedidos creados" : "Pedido creado"}`, {
-      description: `${clientName} — ${lineCount > 1 ? lineCount + " líneas" : orderLines[0].units + " uds de " + orderLines[0].product}. Enviado a Producción y Contabilidad.`,
+    const giftCount = orderLines.filter((l) => l.isGift).length;
+    const productCount = orderLines.filter((l) => !l.isGift).length;
+    const summary = [
+      `${productCount} producto(s)`,
+      giftCount > 0 ? `${giftCount} obsequio(s)` : "",
+    ].filter(Boolean).join(" + ");
+    toast.success("Pedido creado", {
+      description: `${clientName} — ${summary}. Enviado a Producción y Contabilidad.`,
     });
 
     onReset();
