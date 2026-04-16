@@ -125,39 +125,42 @@ export function FeriaDetail({ feria, onBack }: { feria: Feria; onBack: () => voi
           </Card>
         </TabsContent>
 
-        <TabsContent value="costos">
-          <Card className="p-4">
-            <h3 className="font-semibold mb-3">Desglose de costos</h3>
-            <div className="space-y-2">
-              {COST_BREAKDOWN.map((c) => {
-                const value = Number(feria[c.key] || 0);
-                return (
-                  <div key={c.key as string} className="flex justify-between py-2 border-b last:border-0">
-                    <span className="text-sm">{c.label}</span>
-                    <span className="text-sm font-medium">${value.toLocaleString()}</span>
-                  </div>
-                );
-              })}
-              <div className="flex justify-between pt-3 border-t-2 font-bold">
-                <span>Costo Total</span>
-                <span className="text-destructive">${totalCosts.toLocaleString()}</span>
+        {canSeeFinancials && (
+          <TabsContent value="costos">
+            <Card className="p-4">
+              <h3 className="font-semibold mb-3">Desglose de costos</h3>
+              <div className="space-y-2">
+                {COST_BREAKDOWN.map((c) => {
+                  const value = Number(feria[c.key] || 0);
+                  return (
+                    <div key={c.key as string} className="flex justify-between py-2 border-b last:border-0">
+                      <span className="text-sm">{c.label}</span>
+                      <span className="text-sm font-medium">${value.toLocaleString()}</span>
+                    </div>
+                  );
+                })}
+                <div className="flex justify-between pt-3 border-t-2 font-bold">
+                  <span>Costo Total</span>
+                  <span className="text-destructive">${totalCosts.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between font-bold">
+                  <span>Ingreso Total</span>
+                  <span className="text-emerald-600 dark:text-emerald-400">${totalRevenue.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between pt-2 border-t font-bold text-lg bg-emerald-500/10 px-3 py-2 rounded">
+                  <span>Utilidad</span>
+                  <span className={profit >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-destructive"}>
+                    ${profit.toLocaleString()}
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between font-bold">
-                <span>Ingreso Total</span>
-                <span className="text-emerald-600 dark:text-emerald-400">${totalRevenue.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between pt-2 border-t font-bold text-lg bg-emerald-500/10 px-3 py-2 rounded">
-                <span>Utilidad</span>
-                <span className={profit >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-destructive"}>
-                  ${profit.toLocaleString()}
-                </span>
-              </div>
-            </div>
-          </Card>
-        </TabsContent>
+            </Card>
+          </TabsContent>
+        )}
 
+        <TabsContent value="personal"><FeriaStaffTab feriaId={feria.id} canManage={canManageStaff} /></TabsContent>
         <TabsContent value="inventario"><FeriaInventoryTab feriaId={feria.id} /></TabsContent>
-        <TabsContent value="ventas"><FeriaSalesTab feriaId={feria.id} /></TabsContent>
+        {canSeeFinancials && <TabsContent value="ventas"><FeriaSalesTab feriaId={feria.id} /></TabsContent>}
       </Tabs>
     </div>
   );
