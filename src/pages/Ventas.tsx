@@ -413,8 +413,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       const referencia = `${line.product} (${line.type})`;
       const gelColor = resolveColor(line.gelColor, line.gelCustom);
       const inkColor = resolveColor(line.inkColor, line.inkCustom);
-      const lineTotal = parseFloat(line.valorTotal) || 0;
-      const abonoAmount = estadoPago === "pago_total" ? lineTotal : (parseFloat(abono) || 0);
+      const lineTotal = line.isGift ? 0 : (parseFloat(line.valorTotal) || 0);
+      const abonoAmount = line.isGift ? 0 : (estadoPago === "pago_total" ? lineTotal : (parseFloat(abono) || 0));
       const matchedConfig = getMatchedConfig(line.product, line.type);
 
       // Discount gel
