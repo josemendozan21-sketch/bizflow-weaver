@@ -5,8 +5,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, X } from "lucide-react";
 import { useCreateFeria } from "@/hooks/useFerias";
+
+const PREDEFINED_MATERIALS = [
+  "Malla exhibición",
+  "Rack para banners",
+  "Banners",
+  "Mesa",
+  "Sillas",
+  "Ganchos",
+  "Tijeras",
+  "Cintas",
+  "Tablas para anotar",
+  "Datáfonos",
+  "Carpa",
+  "Displays",
+  "Iluminación",
+  "Extensiones eléctricas",
+  "Bolsas de empaque",
+  "Etiquetas de precio",
+];
 
 const COST_FIELDS: Array<{ key: string; label: string }> = [
   { key: "stand_cost", label: "Costo Feria" },
