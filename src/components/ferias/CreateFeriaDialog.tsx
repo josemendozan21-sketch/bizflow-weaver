@@ -94,7 +94,7 @@ export function CreateFeriaDialog() {
       food_cost: parseFloat(form.food_cost) || 0,
       other_costs: parseFloat(form.other_costs) || 0,
       assigned_staff: null,
-      materials_needed: form.materials_needed ? form.materials_needed.split(",").map((s: string) => s.trim()).filter(Boolean) : null,
+      materials_needed: form.materials_needed.length > 0 ? form.materials_needed : null,
       status: form.status,
       notes: form.notes || null,
     });
