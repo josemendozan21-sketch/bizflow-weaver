@@ -789,14 +789,39 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
 /* ---- Sweatspot – Al por mayor ---- */
 
+interface SweatspotOrderLine {
+  id: string;
+  referencia: string;
+  tamano: "150 ml" | "250 ml" | "250 ml juguetón" | "500 ml" | "";
+  tipoLogo: "Impresión full" | "Impresión básica" | "";
+  colorSilicona: string;
+  colorTinta: string;
+  units: string;
+  valorUnitario: string;
+  valorTotal: string;
+  autoCalc: boolean;
+}
+
+function createEmptySSLine(): SweatspotOrderLine {
+  return {
+    id: crypto.randomUUID(),
+    referencia: "",
+    tamano: "",
+    tipoLogo: "",
+    colorSilicona: "",
+    colorTinta: "",
+    units: "",
+    valorUnitario: "",
+    valorTotal: "",
+    autoCalc: true,
+  };
+}
+
 function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { reserveBodyStock: reserveBodyStockDB } = useInventory();
-  const [ssUnits, setSsUnits] = useState("");
-  const [ssValorUnitario, setSsValorUnitario] = useState("");
-  const [ssValorTotal, setSsValorTotal] = useState("");
-  const [ssAutoCalc, setSsAutoCalc] = useState(true);
+  const [ssLines, setSsLines] = useState<SweatspotOrderLine[]>([createEmptySSLine()]);
   const [ssAbono, setSsAbono] = useState("");
   const [ssEstadoPago, setSsEstadoPago] = useState<"abono_inicial" | "pago_total" | "pendiente">("abono_inicial");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -804,22 +829,37 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const [ssPaymentProofFile, setSsPaymentProofFile] = useState<File | null>(null);
   const tamanos = ["150 ml", "250 ml", "250 ml juguetón", "500 ml"] as const;
 
-  // Auto-calculate total
-  useEffect(() => {
-    if (!ssAutoCalc) return;
-    const qty = parseInt(ssUnits, 10) || 0;
-    const unitP = parseFloat(ssValorUnitario) || 0;
-    if (qty > 0 && unitP > 0) {
-      setSsValorTotal(String(qty * unitP));
-    }
-  }, [ssUnits, ssValorUnitario, ssAutoCalc]);
+  // Grand total across all lines
+  const grandTotal = useMemo(() => {
+    return ssLines.reduce((sum, line) => sum + (parseFloat(line.valorTotal) || 0), 0);
+  }, [ssLines]);
 
   // Auto-fill abono when pago_total
   useEffect(() => {
     if (ssEstadoPago === "pago_total") {
-      setSsAbono(ssValorTotal);
+      setSsAbono(String(grandTotal));
     }
-  }, [ssEstadoPago, ssValorTotal]);
+  }, [ssEstadoPago, grandTotal]);
+
+  const updateSSLine = (id: string, updates: Partial<SweatspotOrderLine>) => {
+    setSsLines((prev) =>
+      prev.map((line) => {
+        if (line.id !== id) return line;
+        const updated = { ...line, ...updates };
+        if (updated.autoCalc) {
+          const qty = parseInt(updated.units, 10) || 0;
+          const unitP = parseFloat(updated.valorUnitario) || 0;
+          if (qty > 0 && unitP > 0) {
+            updated.valorTotal = String(qty * unitP);
+          }
+        }
+        return updated;
+      })
+    );
+  };
+
+  const addSSLine = () => setSsLines((prev) => [...prev, createEmptySSLine()]);
+  const removeSSLine = (id: string) => setSsLines((prev) => prev.filter((l) => l.id !== id));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -828,18 +868,20 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     const form = e.target as HTMLFormElement;
     const fd = new FormData(form);
     const clientName = fd.get("ss_nombre") as string;
-    const quantity = parseInt(ssUnits, 10);
-    const inkColor = fd.get("ss_colorTinta") as string;
-    const thermoSize = fd.get("ss_tamano") as "150 ml" | "250 ml" | "250 ml juguetón" | "500 ml";
-    const siliconeColor = fd.get("ss_colorSilicona") as string;
-    const referencia = fd.get("ss_referencia") as string;
-    const tipoLogo = fd.get("ss_tipoLogo") as string;
     const rutFile = fd.get("ss_rut") as File;
-    const totalAmount = parseFloat(ssValorTotal) || 0;
-    const abonoAmount = ssEstadoPago === "pago_total" ? totalAmount : (parseFloat(ssAbono) || 0);
     const personalizacion = (fd.get("ss_personalizacion") as string) || "";
     const observaciones = (fd.get("ss_observaciones") as string) || "";
     const logoFile = fd.get("ss_logo") as File;
+    const fechaRequerida = fd.get("ss_fechaRequerida") as string;
+
+    // Validate all lines
+    for (const line of ssLines) {
+      if (!line.referencia || !line.tamano || !line.tipoLogo || !line.colorSilicona || !line.colorTinta || !line.units) {
+        toast.error("Datos incompletos", { description: "Complete todos los campos en cada producto." });
+        setIsSubmitting(false);
+        return;
+      }
+    }
 
     if (!rutFile || !rutFile.name) {
       toast.error("RUT requerido", {
@@ -861,13 +903,14 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       }
     }
 
-    // Auto-create design request if logo was uploaded (skip for recompra)
+    // Auto-create design request once if logo was uploaded (skip for recompra)
     let logoUrl: string | null = null;
     if (logoFile && logoFile.size > 0 && user && !ssIsRecompra) {
+      const firstRef = ssLines[0].referencia;
       const result = await createLogoRequestFromOrder({
         brand: "Sweatspot",
         clientName,
-        product: referencia,
+        product: firstRef,
         advisorId: user.id,
         advisorName: user.email || "Asesor",
         logoFile,
@@ -884,158 +927,153 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       logoUrl = "recompra-logo";
     }
 
-    // Determine logo type for production workflow
-    const logoType = tipoLogo === "Impresión básica" ? "impresion_basica" as const : "impresion_full" as const;
-
-    // Production order will be created after persisting to DB (see below)
-    useAccountingStore.getState().addOrder({
-      clientName,
-      brand: "sweatspot",
-      product: referencia,
-      quantity,
-      saleType: "mayor",
-      clientType: "Cliente empresa",
-      totalAmount,
-      abono: abonoAmount,
-      paymentStatus: ssEstadoPago,
-      canDispatch: ssEstadoPago === "pago_total",
-      hasRut: true,
-      email: (fd.get("ss_email") as string)?.trim() || undefined,
-      direccion: (fd.get("ss_direccion") as string)?.trim() || undefined,
-      ciudad: (fd.get("ss_ciudad") as string)?.trim() || undefined,
-      observaciones: observaciones?.trim() || undefined,
-    });
-
-    const fechaRequerida = fd.get("ss_fechaRequerida") as string;
-
-    // Persist order to database FIRST
     const ssShortStages = ["estampacion", "colocacion_boquilla", "listo"];
     const ssFullStages = ["estampacion", "produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"];
 
-    let orderData: { id: string } | null = null;
-    try {
-      const { data } = await supabase.from("orders").insert({
+    // Process each line as a separate order
+    for (const line of ssLines) {
+      const quantity = parseInt(line.units, 10) || 0;
+      const referencia = line.referencia;
+      const inkColor = line.colorTinta;
+      const siliconeColor = line.colorSilicona;
+      const thermoSize = line.tamano as "150 ml" | "250 ml" | "250 ml juguetón" | "500 ml";
+      const tipoLogo = line.tipoLogo;
+      const lineTotal = parseFloat(line.valorTotal) || 0;
+      const abonoAmount = ssEstadoPago === "pago_total" ? lineTotal : (parseFloat(ssAbono) || 0);
+      const logoType = tipoLogo === "Impresión básica" ? "impresion_basica" as const : "impresion_full" as const;
+
+      useAccountingStore.getState().addOrder({
+        clientName,
         brand: "sweatspot",
-        sale_type: "mayor",
-        client_name: clientName,
-        client_nit: (fd.get("ss_cedulaNit") as string) || null,
-        client_phone: (fd.get("ss_contacto") as string) || null,
-        client_email: (fd.get("ss_email") as string) || null,
-        client_address: (fd.get("ss_direccion") as string) || null,
-        client_city: (fd.get("ss_ciudad") as string) || null,
         product: referencia,
         quantity,
-        unit_price: parseFloat(ssValorUnitario) || 0,
-        total_amount: totalAmount,
+        saleType: "mayor",
+        clientType: "Cliente empresa",
+        totalAmount: lineTotal,
         abono: abonoAmount,
-        ink_color: inkColor,
-        silicone_color: siliconeColor,
-        logo_url: logoUrl,
-        observations: observaciones || null,
-        personalization: personalizacion || null,
-        advisor_id: user?.id || "",
-        advisor_name: user?.email || "Asesor",
-        production_status: "pendiente",
-        is_recompra: ssIsRecompra,
-        payment_proof_url: ssPaymentProofUrl,
-        payment_complete: ssEstadoPago === "pago_total",
-        delivery_date: fechaRequerida || null,
-      }).select("id").single();
-      orderData = data;
-    } catch (err: any) {
-      console.error("Error saving order:", err);
-      toast.error("Error al crear el pedido", {
-        description: "No se pudo guardar el pedido ni enviar a producción. Intenta de nuevo o contacta soporte.",
+        paymentStatus: ssEstadoPago,
+        canDispatch: ssEstadoPago === "pago_total",
+        hasRut: true,
+        email: (fd.get("ss_email") as string)?.trim() || undefined,
+        direccion: (fd.get("ss_direccion") as string)?.trim() || undefined,
+        ciudad: (fd.get("ss_ciudad") as string)?.trim() || undefined,
+        observaciones: observaciones?.trim() || undefined,
       });
-      setIsSubmitting(false);
-      return;
-    }
 
-    if (!orderData) {
-      toast.error("Error al crear el pedido", {
-        description: "No se recibió confirmación de la base de datos. Intenta de nuevo.",
+      let orderData: { id: string } | null = null;
+      try {
+        const { data } = await supabase.from("orders").insert({
+          brand: "sweatspot",
+          sale_type: "mayor",
+          client_name: clientName,
+          client_nit: (fd.get("ss_cedulaNit") as string) || null,
+          client_phone: (fd.get("ss_contacto") as string) || null,
+          client_email: (fd.get("ss_email") as string) || null,
+          client_address: (fd.get("ss_direccion") as string) || null,
+          client_city: (fd.get("ss_ciudad") as string) || null,
+          product: referencia,
+          quantity,
+          unit_price: parseFloat(line.valorUnitario) || 0,
+          total_amount: lineTotal,
+          abono: abonoAmount,
+          ink_color: inkColor,
+          silicone_color: siliconeColor,
+          logo_url: logoUrl,
+          observations: observaciones || null,
+          personalization: personalizacion || null,
+          advisor_id: user?.id || "",
+          advisor_name: user?.email || "Asesor",
+          production_status: "pendiente",
+          is_recompra: ssIsRecompra,
+          payment_proof_url: ssPaymentProofUrl,
+          payment_complete: ssEstadoPago === "pago_total",
+          delivery_date: fechaRequerida || null,
+        }).select("id").single();
+        orderData = data;
+      } catch (err: any) {
+        console.error("Error saving order:", err);
+        toast.error("Error al crear el pedido", {
+          description: "No se pudo guardar el pedido. Intenta de nuevo.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!orderData) {
+        toast.error("Error al crear el pedido", {
+          description: "No se recibió confirmación de la base de datos.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      const bodyResult = await reserveBodyStockDB("sweatspot", referencia, quantity, {
+        clientName,
+        requestedBy: user?.id || undefined,
       });
-      setIsSubmitting(false);
-      return;
-    }
+      const needsCuerpos = !bodyResult.available || bodyResult.discounted < quantity;
+      const hasStock = bodyResult.available && bodyResult.discounted >= quantity;
 
-    // Reserve body stock AFTER successful order creation
-    const bodyResult = await reserveBodyStockDB("sweatspot", referencia, quantity, {
-      clientName,
-      requestedBy: user?.id || undefined,
-    });
-    const needsCuerpos = !bodyResult.available || bodyResult.discounted < quantity;
-    const hasStock = bodyResult.available && bodyResult.discounted >= quantity;
+      const workflowType = (logoType === "impresion_basica" && hasStock) ? "short" : "full";
+      const ssStages = workflowType === "short" ? ssShortStages : ssFullStages;
+      const initialStage = needsCuerpos ? "produccion_cuerpos" : "estampacion";
 
-    const workflowType = (logoType === "impresion_basica" && hasStock) ? "short" : "full";
-    const ssStages = workflowType === "short" ? ssShortStages : ssFullStages;
-    const initialStage = needsCuerpos ? "produccion_cuerpos" : "estampacion";
+      await supabase.from("orders")
+        .update({ production_status: initialStage })
+        .eq("id", orderData.id);
 
-    // Update the order with the correct production_status
-    await supabase.from("orders")
-      .update({ production_status: initialStage })
-      .eq("id", orderData.id);
+      try {
+        await supabase.from("production_orders").insert({
+          order_id: orderData.id,
+          brand: "sweatspot",
+          client_name: clientName,
+          quantity,
+          current_stage: initialStage,
+          stage_status: "pendiente",
+          workflow_type: workflowType,
+          stages: ssStages,
+          ink_color: inkColor,
+          thermo_size: thermoSize,
+          silicone_color: siliconeColor,
+          logo_type: logoType,
+          logo_file: logoFile?.name || null,
+          has_stock: hasStock,
+          needs_cuerpos: !hasStock,
+          observations: observaciones || null,
+          advisor_id: user?.id || null,
+        });
+      } catch (err: any) {
+        console.error("Error creating production order:", err);
+      }
 
-    // Create production order
-    try {
-      await supabase.from("production_orders").insert({
-        order_id: orderData.id,
+      await createOrderNotifications({
+        orderId: orderData.id,
         brand: "sweatspot",
-        client_name: clientName,
+        product: referencia,
         quantity,
-        current_stage: initialStage,
-        stage_status: "pendiente",
-        workflow_type: workflowType,
-        stages: ssStages,
-        ink_color: inkColor,
-        thermo_size: thermoSize,
-        silicone_color: siliconeColor,
-        logo_type: logoType,
-        logo_file: logoFile?.name || null,
-        has_stock: hasStock,
-        needs_cuerpos: !hasStock,
-        observations: observaciones || null,
-        advisor_id: user?.id || null,
+        clientName,
+        needsCuerpos,
+        shortage: needsCuerpos ? quantity - bodyResult.discounted : 0,
+        hasLogo: !!logoFile,
+        advisorId: user?.id || "",
       });
-      queryClient.invalidateQueries({ queryKey: ["production-orders"] });
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-    } catch (err: any) {
-      console.error("Error creating production order:", err);
     }
 
-    // Send notifications to all roles
-    await createOrderNotifications({
-      orderId: orderData.id,
-      brand: "sweatspot",
-      product: referencia,
-      quantity,
-      clientName,
-      needsCuerpos,
-      shortage: needsCuerpos ? quantity - bodyResult.discounted : 0,
-      hasLogo: !!logoFile,
-      advisorId: user?.id || "",
-    });
+    queryClient.invalidateQueries({ queryKey: ["production-orders"] });
+    queryClient.invalidateQueries({ queryKey: ["orders"] });
 
-    toast.success("Pedido al por mayor creado", {
-      description: `${clientName} — ${quantity} uds (${tipoLogo}). Enviado a Producción y Contabilidad.`,
+    const lineCount = ssLines.length;
+    toast.success(`${lineCount > 1 ? lineCount + " pedidos creados" : "Pedido al por mayor creado"}`, {
+      description: `${clientName} — ${lineCount > 1 ? lineCount + " líneas" : ssLines[0].units + " uds"}. Enviado a Producción y Contabilidad.`,
     });
 
     const saldoFinal = ssEstadoPago === "pago_total"
       ? 0
-      : (parseFloat(ssValorTotal) || 0) - (parseFloat(ssAbono) || 0);
+      : grandTotal - (parseFloat(ssAbono) || 0);
     if (saldoFinal > 0) {
       toast.warning("Saldo pendiente registrado", {
         description: `Falta $${saldoFinal.toLocaleString("es-CO")} para completar el pago. Contabilidad fue notificada.`,
       });
-    }
-
-    // Inventory feedback
-    if (!bodyResult.available) {
-      toast.warning("Requerimiento de producción generado", { description: bodyResult.message });
-    } else if (bodyResult.discounted < quantity) {
-      toast.warning("Stock parcial de cuerpos", { description: bodyResult.message });
-    } else {
-      toast.info("Inventario actualizado", { description: bodyResult.message });
     }
 
     onReset();
@@ -1064,16 +1102,24 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
               setInput("ss_email", data.cliente?.email);
               setInput("ss_direccion", data.cliente?.direccion);
               setInput("ss_ciudad", data.cliente?.ciudad);
-              setInput("ss_colorSilicona", data.color_silicona);
-              setInput("ss_colorTinta", data.productos?.[0]?.color_tinta);
-              setInput("ss_referencia", data.referencia);
 
-              if (data.productos?.[0]?.unidades) setSsUnits(String(data.productos[0].unidades));
-              if (data.productos?.[0]?.valor_unitario) setSsValorUnitario(String(data.productos[0].valor_unitario));
-              if (data.productos?.[0]?.valor_total) {
-                setSsValorTotal(String(data.productos[0].valor_total));
-                setSsAutoCalc(false);
+              // Fill product lines
+              if (data.productos && data.productos.length > 0) {
+                const newLines: SweatspotOrderLine[] = data.productos.map((p: any) => ({
+                  id: crypto.randomUUID(),
+                  referencia: data.referencia || p.producto || "",
+                  tamano: "",
+                  tipoLogo: "",
+                  colorSilicona: data.color_silicona || "",
+                  colorTinta: p.color_tinta || "",
+                  units: String(p.unidades || ""),
+                  valorUnitario: String(p.valor_unitario || ""),
+                  valorTotal: String(p.valor_total || ""),
+                  autoCalc: !p.valor_total,
+                }));
+                setSsLines(newLines);
               }
+
               if (data.abono) setSsAbono(String(data.abono));
               if (data.es_recompra) setSsIsRecompra(true);
               if (data.observaciones) {
@@ -1105,51 +1151,76 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
           </fieldset>
 
           <fieldset className="space-y-4">
-            <legend className="text-sm font-semibold text-foreground mb-2">Información del pedido</legend>
-            <Field label="Referencia o molde" name="ss_referencia" required />
-            <div className="space-y-1.5">
-              <Label>Tamaño</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {tamanos.map((t) => (
-                  <label key={t} className="flex items-center gap-2 rounded-md border border-input p-3 cursor-pointer hover:bg-accent transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                    <input type="radio" name="ss_tamano" value={t} required className="accent-primary h-4 w-4" />
-                    <span className="text-sm text-foreground">{t}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Tipo de logo</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {["Impresión full", "Impresión básica"].map((tipo) => (
-                  <label key={tipo} className="flex items-center gap-2 rounded-md border border-input p-3 cursor-pointer hover:bg-accent transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                    <input type="radio" name="ss_tipoLogo" value={tipo} required className="accent-primary h-4 w-4" />
-                    <span className="text-sm text-foreground">{tipo}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Color de silicona" name="ss_colorSilicona" required />
-              <Field label="Color de tinta" name="ss_colorTinta" required />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="ss_unidades">Unidades</Label>
-                <Input id="ss_unidades" name="ss_unidades" type="number" required value={ssUnits} onChange={(e) => setSsUnits(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="ss_valorUnitario">Valor unitario</Label>
-                <Input id="ss_valorUnitario" name="ss_valorUnitario" type="number" required value={ssValorUnitario} onChange={(e) => { setSsValorUnitario(e.target.value); setSsAutoCalc(true); }} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="ss_valorTotal">Valor total del pedido</Label>
-                <Input id="ss_valorTotal" name="ss_valorTotal" type="number" required value={ssValorTotal} onChange={(e) => { setSsValorTotal(e.target.value); setSsAutoCalc(false); }} />
-                {ssAutoCalc && parseInt(ssUnits, 10) > 0 && parseFloat(ssValorUnitario) > 0 && (
-                  <p className="text-xs text-muted-foreground">Calculado automáticamente</p>
+            <legend className="text-sm font-semibold text-foreground mb-2">Productos del pedido</legend>
+            {ssLines.map((line, idx) => (
+              <div key={line.id} className="rounded-lg border border-border p-4 space-y-4 relative">
+                {ssLines.length > 1 && (
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-muted-foreground">Producto {idx + 1}</span>
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeSSLine(line.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
                 )}
+                <div className="space-y-1.5">
+                  <Label>Referencia o molde</Label>
+                  <Input value={line.referencia} onChange={(e) => updateSSLine(line.id, { referencia: e.target.value })} required />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Tamaño</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {tamanos.map((t) => (
+                      <label key={t} className="flex items-center gap-2 rounded-md border border-input p-3 cursor-pointer hover:bg-accent transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                        <input type="radio" name={`ss_tamano_${line.id}`} value={t} checked={line.tamano === t} onChange={() => updateSSLine(line.id, { tamano: t })} className="accent-primary h-4 w-4" />
+                        <span className="text-sm text-foreground">{t}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Tipo de logo</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(["Impresión full", "Impresión básica"] as const).map((tipo) => (
+                      <label key={tipo} className="flex items-center gap-2 rounded-md border border-input p-3 cursor-pointer hover:bg-accent transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                        <input type="radio" name={`ss_tipoLogo_${line.id}`} value={tipo} checked={line.tipoLogo === tipo} onChange={() => updateSSLine(line.id, { tipoLogo: tipo })} className="accent-primary h-4 w-4" />
+                        <span className="text-sm text-foreground">{tipo}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label>Color de silicona</Label>
+                    <Input value={line.colorSilicona} onChange={(e) => updateSSLine(line.id, { colorSilicona: e.target.value })} required />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Color de tinta</Label>
+                    <Input value={line.colorTinta} onChange={(e) => updateSSLine(line.id, { colorTinta: e.target.value })} required />
+                  </div>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="space-y-1.5">
+                    <Label>Unidades</Label>
+                    <Input type="number" value={line.units} onChange={(e) => updateSSLine(line.id, { units: e.target.value })} required />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Valor unitario</Label>
+                    <Input type="number" value={line.valorUnitario} onChange={(e) => updateSSLine(line.id, { valorUnitario: e.target.value, autoCalc: true })} required />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Valor total</Label>
+                    <Input type="number" value={line.valorTotal} onChange={(e) => updateSSLine(line.id, { valorTotal: e.target.value, autoCalc: false })} required />
+                  </div>
+                </div>
               </div>
-            </div>
+            ))}
+            <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={addSSLine}>
+              <Plus className="h-4 w-4" /> Agregar otro producto
+            </Button>
+          </fieldset>
+
+          <fieldset className="space-y-4">
+            <legend className="text-sm font-semibold text-foreground mb-2">Pago</legend>
             <div className="grid gap-4 sm:grid-cols-2">
               {ssEstadoPago !== "pago_total" && (
                 <div className="space-y-1.5">
@@ -1213,13 +1284,13 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
           </fieldset>
 
           <PaymentSummary
-            totalAmount={parseFloat(ssValorTotal) || 0}
-            abono={ssEstadoPago === "pago_total" ? (parseFloat(ssValorTotal) || 0) : (parseFloat(ssAbono) || 0)}
+            totalAmount={grandTotal}
+            abono={ssEstadoPago === "pago_total" ? grandTotal : (parseFloat(ssAbono) || 0)}
             estadoPago={ssEstadoPago}
           />
 
           <div className="flex gap-3 pt-2">
-            <Button type="submit">Crear pedido</Button>
+            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Creando..." : "Crear pedido"}</Button>
             <Button type="button" variant="outline" onClick={onReset}>Cancelar</Button>
           </div>
         </form>
