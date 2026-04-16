@@ -5,8 +5,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, X } from "lucide-react";
 import { useCreateFeria } from "@/hooks/useFerias";
+
+const PREDEFINED_MATERIALS = [
+  "Malla exhibición",
+  "Rack para banners",
+  "Banners",
+  "Mesa",
+  "Sillas",
+  "Ganchos",
+  "Tijeras",
+  "Cintas",
+  "Tablas para anotar",
+  "Datáfonos",
+  "Carpa",
+  "Displays",
+  "Iluminación",
+  "Extensiones eléctricas",
+  "Bolsas de empaque",
+  "Etiquetas de precio",
+];
 
 const COST_FIELDS: Array<{ key: string; label: string }> = [
   { key: "stand_cost", label: "Costo Feria" },
@@ -30,10 +50,27 @@ export function CreateFeriaDialog() {
     stand_cost: "0", shipping_cost: "0", tickets_cost: "0", advertising_cost: "0",
     merchandise_cost: "0", employees_cost: "0", lodging_cost: "0", transport_cost: "0",
     food_cost: "0", other_costs: "0",
-    materials_needed: "", status: "planificada", notes: "",
+    materials_needed: [] as string[], status: "planificada", notes: "",
   });
+  const [customMaterial, setCustomMaterial] = useState("");
 
   const totalCosts = COST_FIELDS.reduce((s, f) => s + (parseFloat(form[f.key]) || 0), 0);
+
+  const toggleMaterial = (m: string) => {
+    setForm((p: any) => ({
+      ...p,
+      materials_needed: p.materials_needed.includes(m)
+        ? p.materials_needed.filter((x: string) => x !== m)
+        : [...p.materials_needed, m],
+    }));
+  };
+
+  const addCustomMaterial = () => {
+    const v = customMaterial.trim();
+    if (!v || form.materials_needed.includes(v)) return;
+    setForm({ ...form, materials_needed: [...form.materials_needed, v] });
+    setCustomMaterial("");
+  };
 
   const handleSubmit = async () => {
     if (!form.name || !form.city || !form.start_date || !form.end_date) return;
@@ -57,7 +94,7 @@ export function CreateFeriaDialog() {
       food_cost: parseFloat(form.food_cost) || 0,
       other_costs: parseFloat(form.other_costs) || 0,
       assigned_staff: null,
-      materials_needed: form.materials_needed ? form.materials_needed.split(",").map((s: string) => s.trim()).filter(Boolean) : null,
+      materials_needed: form.materials_needed.length > 0 ? form.materials_needed : null,
       status: form.status,
       notes: form.notes || null,
     });
@@ -103,7 +140,42 @@ export function CreateFeriaDialog() {
             </div>
           </div>
 
-          <div><Label>Materiales necesarios (separados por comas)</Label><Input value={form.materials_needed} onChange={(e) => setForm({ ...form, materials_needed: e.target.value })} placeholder="Carpa, mesa, displays" /></div>
+          <div className="border rounded-lg p-3 bg-muted/30">
+            <h4 className="font-semibold mb-3 text-sm">Materiales necesarios</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {PREDEFINED_MATERIALS.map((m) => {
+                const checked = form.materials_needed.includes(m);
+                return (
+                  <label key={m} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-background/60 rounded px-2 py-1">
+                    <Checkbox checked={checked} onCheckedChange={() => toggleMaterial(m)} />
+                    <span>{m}</span>
+                  </label>
+                );
+              })}
+            </div>
+            <div className="flex gap-2 mt-3">
+              <Input
+                value={customMaterial}
+                onChange={(e) => setCustomMaterial(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomMaterial(); } }}
+                placeholder="Agregar otro material..."
+                className="text-sm"
+              />
+              <Button type="button" variant="outline" size="sm" onClick={addCustomMaterial}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            {form.materials_needed.filter((m: string) => !PREDEFINED_MATERIALS.includes(m)).length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {form.materials_needed.filter((m: string) => !PREDEFINED_MATERIALS.includes(m)).map((m: string) => (
+                  <span key={m} className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                    {m}
+                    <button type="button" onClick={() => toggleMaterial(m)}><X className="h-3 w-3" /></button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
           <div>
             <Label>Estado</Label>
             <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
