@@ -58,7 +58,7 @@ export function FeriaDetail({ feria, onBack }: { feria: Feria; onBack: () => voi
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className={`grid grid-cols-2 gap-3 ${canSeeFinancials ? "md:grid-cols-4" : "md:grid-cols-2"}`}>
         <Card className="p-4">
           <div className="flex items-center gap-2 text-muted-foreground text-xs"><Calendar className="h-3 w-3" />Fechas</div>
           <p className="text-sm font-medium mt-1">{format(new Date(feria.start_date), "dd MMM", { locale: es })} – {format(new Date(feria.end_date), "dd MMM yyyy", { locale: es })}</p>
@@ -68,29 +68,38 @@ export function FeriaDetail({ feria, onBack }: { feria: Feria; onBack: () => voi
             </p>
           )}
         </Card>
+        {canSeeFinancials && (
+          <>
+            <Card className="p-4">
+              <div className="text-xs text-muted-foreground">Costo Total</div>
+              <p className="text-lg font-semibold text-destructive">${totalCosts.toLocaleString()}</p>
+            </Card>
+            <Card className="p-4">
+              <div className="text-xs text-muted-foreground">Ingreso Total</div>
+              <p className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">${totalRevenue.toLocaleString()}</p>
+            </Card>
+            <Card className="p-4">
+              <div className="text-xs text-muted-foreground">Utilidad</div>
+              <p className={`text-lg font-semibold ${profit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>
+                ${profit.toLocaleString()}
+              </p>
+              {totalRevenue > 0 && <p className="text-xs text-muted-foreground">{margin.toFixed(1)}% margen</p>}
+            </Card>
+          </>
+        )}
         <Card className="p-4">
-          <div className="text-xs text-muted-foreground">Costo Total</div>
-          <p className="text-lg font-semibold text-destructive">${totalCosts.toLocaleString()}</p>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs text-muted-foreground">Ingreso Total</div>
-          <p className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">${totalRevenue.toLocaleString()}</p>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs text-muted-foreground">Utilidad</div>
-          <p className={`text-lg font-semibold ${profit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>
-            ${profit.toLocaleString()}
-          </p>
-          {totalRevenue > 0 && <p className="text-xs text-muted-foreground">{margin.toFixed(1)}% margen</p>}
+          <div className="text-xs text-muted-foreground">Estado</div>
+          <p className="text-sm font-medium mt-1 capitalize">{feria.status.replace("_", " ")}</p>
         </Card>
       </div>
 
       <Tabs defaultValue="info">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="info">Información</TabsTrigger>
-          <TabsTrigger value="costos">Desglose de costos</TabsTrigger>
+          {canSeeFinancials && <TabsTrigger value="costos">Desglose de costos</TabsTrigger>}
+          <TabsTrigger value="personal"><Users className="mr-2 h-4 w-4" />Personal</TabsTrigger>
           <TabsTrigger value="inventario"><Package className="mr-2 h-4 w-4" />Inventario asignado</TabsTrigger>
-          <TabsTrigger value="ventas">Ventas</TabsTrigger>
+          {canSeeFinancials && <TabsTrigger value="ventas">Ventas</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="info" className="space-y-3">
