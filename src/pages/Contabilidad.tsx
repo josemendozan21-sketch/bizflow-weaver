@@ -183,6 +183,18 @@ const OrderCard = ({ order, actionSlot }: { order: Order; actionSlot?: React.Rea
           </div>
         )}
 
+        {rutMissing && (
+          <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 p-2 flex items-center justify-between gap-2 text-sm">
+            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span className="font-medium">Falta RUT del cliente</span>
+            </div>
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={handleRequestRut}>
+              <Mail className="h-3 w-3" /> Solicitar
+            </Button>
+          </div>
+        )}
+
         {order.observations && (
           <p className="text-sm text-muted-foreground border-t pt-2">{order.observations}</p>
         )}
