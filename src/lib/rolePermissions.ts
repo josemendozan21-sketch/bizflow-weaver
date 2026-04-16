@@ -19,11 +19,11 @@ const ROLE_EDIT_SECTIONS: Record<AppRole, string[]> = {
   admin: ["/", "/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/admin-usuarios", "/costos", "/eventos", "/ferias"],
   asesor_comercial: ["/ventas", "/diseno-logos"],
   produccion: ["/produccion", "/inventarios"],
-  contabilidad: ["/ferias"],
+  contabilidad: [],
   estampacion: ["/produccion", "/diseno-logos"],
   usuario_visual: [],
   disenador: ["/diseno-logos"],
-  logistica: ["/logistica", "/ferias"],
+  logistica: ["/logistica"],
 };
 
 export function canAccessRoute(role: AppRole | null, path: string): boolean {

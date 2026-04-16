@@ -10,11 +10,19 @@ export interface Feria {
   venue: string | null;
   start_date: string;
   end_date: string;
+  setup_date: string | null;
   stand_number: string | null;
   stand_size: string | null;
-  stand_cost: number;
-  transport_cost: number;
-  lodging_cost: number;
+  // Costos detallados
+  stand_cost: number;          // Costo Feria
+  shipping_cost: number;       // Envío Mercancía
+  tickets_cost: number;        // Tiquetes
+  advertising_cost: number;    // Publicidad
+  merchandise_cost: number;    // Costo de Mercancía
+  employees_cost: number;      // Empleados
+  lodging_cost: number;        // Viáticos: Hospedaje
+  transport_cost: number;      // Viáticos: Transporte
+  food_cost: number;           // Viáticos: Alimentación
   other_costs: number;
   assigned_staff: string[] | null;
   materials_needed: string[] | null;
@@ -23,6 +31,12 @@ export interface Feria {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export function calcFeriaTotalCost(f: Feria): number {
+  return (f.stand_cost || 0) + (f.shipping_cost || 0) + (f.tickets_cost || 0) +
+    (f.advertising_cost || 0) + (f.merchandise_cost || 0) + (f.employees_cost || 0) +
+    (f.lodging_cost || 0) + (f.transport_cost || 0) + (f.food_cost || 0) + (f.other_costs || 0);
 }
 
 export interface FeriaInventory {

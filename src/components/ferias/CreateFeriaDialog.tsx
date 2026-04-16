@@ -8,26 +8,32 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus } from "lucide-react";
 import { useCreateFeria } from "@/hooks/useFerias";
 
+const COST_FIELDS: Array<{ key: string; label: string }> = [
+  { key: "stand_cost", label: "Costo Feria" },
+  { key: "shipping_cost", label: "Envío Mercancía" },
+  { key: "tickets_cost", label: "Tiquetes" },
+  { key: "advertising_cost", label: "Publicidad" },
+  { key: "merchandise_cost", label: "Costo de Mercancía" },
+  { key: "employees_cost", label: "Empleados" },
+  { key: "lodging_cost", label: "Viáticos: Hospedaje" },
+  { key: "transport_cost", label: "Viáticos: Transporte" },
+  { key: "food_cost", label: "Viáticos: Alimentación" },
+  { key: "other_costs", label: "Otros costos" },
+];
+
 export function CreateFeriaDialog() {
   const [open, setOpen] = useState(false);
   const create = useCreateFeria();
-  const [form, setForm] = useState({
-    name: "",
-    city: "",
-    venue: "",
-    start_date: "",
-    end_date: "",
-    stand_number: "",
-    stand_size: "",
-    stand_cost: "0",
-    transport_cost: "0",
-    lodging_cost: "0",
-    other_costs: "0",
-    assigned_staff: "",
-    materials_needed: "",
-    status: "planificada",
-    notes: "",
+  const [form, setForm] = useState<any>({
+    name: "", city: "", venue: "", start_date: "", end_date: "", setup_date: "",
+    stand_number: "", stand_size: "",
+    stand_cost: "0", shipping_cost: "0", tickets_cost: "0", advertising_cost: "0",
+    merchandise_cost: "0", employees_cost: "0", lodging_cost: "0", transport_cost: "0",
+    food_cost: "0", other_costs: "0",
+    materials_needed: "", status: "planificada", notes: "",
   });
+
+  const totalCosts = COST_FIELDS.reduce((s, f) => s + (parseFloat(form[f.key]) || 0), 0);
 
   const handleSubmit = async () => {
     if (!form.name || !form.city || !form.start_date || !form.end_date) return;
@@ -37,19 +43,25 @@ export function CreateFeriaDialog() {
       venue: form.venue || null,
       start_date: form.start_date,
       end_date: form.end_date,
+      setup_date: form.setup_date || null,
       stand_number: form.stand_number || null,
       stand_size: form.stand_size || null,
       stand_cost: parseFloat(form.stand_cost) || 0,
-      transport_cost: parseFloat(form.transport_cost) || 0,
+      shipping_cost: parseFloat(form.shipping_cost) || 0,
+      tickets_cost: parseFloat(form.tickets_cost) || 0,
+      advertising_cost: parseFloat(form.advertising_cost) || 0,
+      merchandise_cost: parseFloat(form.merchandise_cost) || 0,
+      employees_cost: parseFloat(form.employees_cost) || 0,
       lodging_cost: parseFloat(form.lodging_cost) || 0,
+      transport_cost: parseFloat(form.transport_cost) || 0,
+      food_cost: parseFloat(form.food_cost) || 0,
       other_costs: parseFloat(form.other_costs) || 0,
-      assigned_staff: form.assigned_staff ? form.assigned_staff.split(",").map((s) => s.trim()).filter(Boolean) : null,
-      materials_needed: form.materials_needed ? form.materials_needed.split(",").map((s) => s.trim()).filter(Boolean) : null,
+      assigned_staff: null,
+      materials_needed: form.materials_needed ? form.materials_needed.split(",").map((s: string) => s.trim()).filter(Boolean) : null,
       status: form.status,
       notes: form.notes || null,
     });
     setOpen(false);
-    setForm({ ...form, name: "", city: "", venue: "", start_date: "", end_date: "", stand_number: "", stand_size: "", stand_cost: "0", transport_cost: "0", lodging_cost: "0", other_costs: "0", assigned_staff: "", materials_needed: "", notes: "" });
   };
 
   return (
@@ -57,7 +69,7 @@ export function CreateFeriaDialog() {
       <DialogTrigger asChild>
         <Button><Plus className="mr-2 h-4 w-4" />Nueva feria</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Nueva feria</DialogTitle></DialogHeader>
         <div className="grid gap-4 py-2">
           <div className="grid grid-cols-2 gap-3">
@@ -65,7 +77,8 @@ export function CreateFeriaDialog() {
             <div><Label>Ciudad *</Label><Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></div>
           </div>
           <div><Label>Lugar / Venue</Label><Input value={form.venue} onChange={(e) => setForm({ ...form, venue: e.target.value })} placeholder="Ej. Corferias" /></div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
+            <div><Label>Fecha montaje</Label><Input type="date" value={form.setup_date} onChange={(e) => setForm({ ...form, setup_date: e.target.value })} /></div>
             <div><Label>Fecha inicio *</Label><Input type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} /></div>
             <div><Label>Fecha fin *</Label><Input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} /></div>
           </div>
@@ -73,13 +86,23 @@ export function CreateFeriaDialog() {
             <div><Label>N° Stand</Label><Input value={form.stand_number} onChange={(e) => setForm({ ...form, stand_number: e.target.value })} /></div>
             <div><Label>Tamaño stand</Label><Input value={form.stand_size} onChange={(e) => setForm({ ...form, stand_size: e.target.value })} placeholder="Ej. 3x3 m" /></div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><Label>Costo stand</Label><Input type="number" value={form.stand_cost} onChange={(e) => setForm({ ...form, stand_cost: e.target.value })} /></div>
-            <div><Label>Costo transporte</Label><Input type="number" value={form.transport_cost} onChange={(e) => setForm({ ...form, transport_cost: e.target.value })} /></div>
-            <div><Label>Hospedaje</Label><Input type="number" value={form.lodging_cost} onChange={(e) => setForm({ ...form, lodging_cost: e.target.value })} /></div>
-            <div><Label>Otros costos</Label><Input type="number" value={form.other_costs} onChange={(e) => setForm({ ...form, other_costs: e.target.value })} /></div>
+
+          <div className="border rounded-lg p-3 bg-muted/30">
+            <h4 className="font-semibold mb-3 text-sm">Costos de la feria</h4>
+            <div className="grid grid-cols-2 gap-3">
+              {COST_FIELDS.map((f) => (
+                <div key={f.key}>
+                  <Label className="text-xs">{f.label}</Label>
+                  <Input type="number" value={form[f.key]} onChange={(e) => setForm({ ...form, [f.key]: e.target.value })} />
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between mt-3 pt-3 border-t font-semibold">
+              <span>Costo Total</span>
+              <span>${totalCosts.toLocaleString()}</span>
+            </div>
           </div>
-          <div><Label>Personal asignado (separado por comas)</Label><Input value={form.assigned_staff} onChange={(e) => setForm({ ...form, assigned_staff: e.target.value })} placeholder="Juan, Ana, Pedro" /></div>
+
           <div><Label>Materiales necesarios (separados por comas)</Label><Input value={form.materials_needed} onChange={(e) => setForm({ ...form, materials_needed: e.target.value })} placeholder="Carpa, mesa, displays" /></div>
           <div>
             <Label>Estado</Label>
