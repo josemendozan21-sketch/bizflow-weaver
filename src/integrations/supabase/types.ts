@@ -156,6 +156,175 @@ export type Database = {
         }
         Relationships: []
       }
+      feria_inventory: {
+        Row: {
+          brand: string
+          created_at: string
+          feria_id: string
+          id: string
+          notes: string | null
+          product_name: string
+          quantity_assigned: number
+          quantity_returned: number | null
+          unit_price: number | null
+          updated_at: string
+        }
+        Insert: {
+          brand: string
+          created_at?: string
+          feria_id: string
+          id?: string
+          notes?: string | null
+          product_name: string
+          quantity_assigned?: number
+          quantity_returned?: number | null
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Update: {
+          brand?: string
+          created_at?: string
+          feria_id?: string
+          id?: string
+          notes?: string | null
+          product_name?: string
+          quantity_assigned?: number
+          quantity_returned?: number | null
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feria_inventory_feria_id_fkey"
+            columns: ["feria_id"]
+            isOneToOne: false
+            referencedRelation: "ferias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feria_sales: {
+        Row: {
+          brand: string
+          client_name: string | null
+          created_at: string
+          feria_id: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          product_name: string
+          quantity: number
+          recorded_by: string | null
+          sale_date: string
+          total_amount: number
+          unit_price: number
+        }
+        Insert: {
+          brand: string
+          client_name?: string | null
+          created_at?: string
+          feria_id: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          product_name: string
+          quantity?: number
+          recorded_by?: string | null
+          sale_date?: string
+          total_amount?: number
+          unit_price?: number
+        }
+        Update: {
+          brand?: string
+          client_name?: string | null
+          created_at?: string
+          feria_id?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          product_name?: string
+          quantity?: number
+          recorded_by?: string | null
+          sale_date?: string
+          total_amount?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feria_sales_feria_id_fkey"
+            columns: ["feria_id"]
+            isOneToOne: false
+            referencedRelation: "ferias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ferias: {
+        Row: {
+          assigned_staff: string[] | null
+          city: string
+          created_at: string
+          created_by: string | null
+          end_date: string
+          id: string
+          lodging_cost: number | null
+          materials_needed: string[] | null
+          name: string
+          notes: string | null
+          other_costs: number | null
+          stand_cost: number | null
+          stand_number: string | null
+          stand_size: string | null
+          start_date: string
+          status: string
+          transport_cost: number | null
+          updated_at: string
+          venue: string | null
+        }
+        Insert: {
+          assigned_staff?: string[] | null
+          city: string
+          created_at?: string
+          created_by?: string | null
+          end_date: string
+          id?: string
+          lodging_cost?: number | null
+          materials_needed?: string[] | null
+          name: string
+          notes?: string | null
+          other_costs?: number | null
+          stand_cost?: number | null
+          stand_number?: string | null
+          stand_size?: string | null
+          start_date: string
+          status?: string
+          transport_cost?: number | null
+          updated_at?: string
+          venue?: string | null
+        }
+        Update: {
+          assigned_staff?: string[] | null
+          city?: string
+          created_at?: string
+          created_by?: string | null
+          end_date?: string
+          id?: string
+          lodging_cost?: number | null
+          materials_needed?: string[] | null
+          name?: string
+          notes?: string | null
+          other_costs?: number | null
+          stand_cost?: number | null
+          stand_number?: string | null
+          stand_size?: string | null
+          start_date?: string
+          status?: string
+          transport_cost?: number | null
+          updated_at?: string
+          venue?: string | null
+        }
+        Relationships: []
+      }
       logo_requests: {
         Row: {
           additional_instructions: string | null
