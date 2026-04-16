@@ -282,7 +282,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
   // Grand total across all lines
   const grandTotal = useMemo(() => {
-    return orderLines.reduce((sum, line) => sum + (parseFloat(line.valorTotal) || 0), 0);
+    return orderLines.reduce((sum, line) => line.isGift ? sum : sum + (parseFloat(line.valorTotal) || 0), 0);
   }, [orderLines]);
 
   // Auto-fill abono when pago_total
