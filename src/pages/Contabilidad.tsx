@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Upload, Download, Clock, FileText, ExternalLink, BarChart3, Wallet, Trash2 } from "lucide-react";
+import { Upload, Download, Clock, FileText, ExternalLink, BarChart3, Wallet, Trash2, AlertTriangle, Mail } from "lucide-react";
 import AccountingDashboard from "@/components/contabilidad/AccountingDashboard";
 import CajaMenor from "@/components/contabilidad/CajaMenor";
 import { useOrders, type Order } from "@/hooks/useOrders";
@@ -109,8 +109,25 @@ const UploadInvoiceButton = ({ order, onUploaded }: { order: Order; onUploaded: 
 
 const OrderCard = ({ order, actionSlot }: { order: Order; actionSlot?: React.ReactNode }) => {
   const isMayor = order.sale_type === "mayor";
+  const rutMissing = isMayor && !order.client_nit;
+
+  const handleRequestRut = () => {
+    const subject = encodeURIComponent("Solicitud de RUT - Pedido pendiente de facturación");
+    const body = encodeURIComponent(
+      `Hola ${order.client_name},\n\nPara poder emitir la factura de tu pedido (${order.product} x${order.quantity}), necesitamos que nos compartas el RUT de la empresa.\n\nQuedamos atentos.\n\nGracias.`
+    );
+    if (order.client_email) {
+      window.location.href = `mailto:${order.client_email}?subject=${subject}&body=${body}`;
+    } else {
+      navigator.clipboard.writeText(decodeURIComponent(body));
+      toast.info("Cliente sin email registrado", {
+        description: "El mensaje se copió al portapapeles para enviarlo manualmente.",
+      });
+    }
+  };
+
   return (
-    <Card>
+    <Card className={rutMissing ? "border-amber-300 dark:border-amber-700" : undefined}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="space-y-1">
@@ -122,6 +139,11 @@ const OrderCard = ({ order, actionSlot }: { order: Order; actionSlot?: React.Rea
               <Badge variant={isMayor ? "default" : "outline"}>
                 {isMayor ? "Al por mayor" : "Al por menor"}
               </Badge>
+              {rutMissing && (
+                <Badge variant="outline" className="border-amber-500 text-amber-700 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-300 gap-1">
+                  <AlertTriangle className="h-3 w-3" /> RUT pendiente
+                </Badge>
+              )}
             </div>
           </div>
           <span className="text-xs text-muted-foreground whitespace-nowrap">{order.created_at?.slice(0, 10)}</span>
@@ -158,6 +180,18 @@ const OrderCard = ({ order, actionSlot }: { order: Order; actionSlot?: React.Rea
                 <ExternalLink className="h-3 w-3" /> Ver soporte
               </Button>
             </a>
+          </div>
+        )}
+
+        {rutMissing && (
+          <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 p-2 flex items-center justify-between gap-2 text-sm">
+            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span className="font-medium">Falta RUT del cliente</span>
+            </div>
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={handleRequestRut}>
+              <Mail className="h-3 w-3" /> Solicitar
+            </Button>
           </div>
         )}
 
