@@ -586,6 +586,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                   valorUnitario: String(p.valor_unitario || ""),
                   valorTotal: String(p.valor_total || ""),
                   autoCalc: !p.valor_total,
+                  isGift: false,
                 }));
                 setOrderLines(newLines);
               }
