@@ -721,7 +721,6 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 🎁 Adicionar obsequio
               </Button>
             </div>
-            </Button>
           </fieldset>
 
           <fieldset className="space-y-4">
