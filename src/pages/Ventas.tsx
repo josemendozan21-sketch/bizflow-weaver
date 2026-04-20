@@ -943,7 +943,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
     // Auto-create design request once if logo was uploaded (skip for recompra)
     let logoUrl: string | null = null;
-    if (logoFile && logoFile.size > 0 && user && !ssIsRecompra) {
+    const ssShouldCreateLogoRequest = !ssIsRecompra || (ssIsRecompra && ssNeedsLogoAdjustment);
+    if (logoFile && logoFile.size > 0 && user && ssShouldCreateLogoRequest) {
       const firstRef = ssLines[0].referencia;
       const result = await createLogoRequestFromOrder({
         brand: "Sweatspot",
