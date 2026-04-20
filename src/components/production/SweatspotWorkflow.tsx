@@ -111,7 +111,14 @@ export const SweatspotWorkflow = () => {
       </div>
 
       <Separator />
-      <h3 className="text-sm font-semibold text-foreground">Órdenes de producción ({activeOrders.length} activas)</h3>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h3 className="text-sm font-semibold text-foreground">Órdenes de producción ({activeOrders.length} activas)</h3>
+        {isAdmin && selected.size > 0 && (
+          <Button size="sm" onClick={handleBulkFinalize}>
+            <ShieldCheck className="h-4 w-4 mr-1" /> Finalizar {selected.size} seleccionado(s)
+          </Button>
+        )}
+      </div>
       <p className="text-xs text-muted-foreground -mt-4">Estas órdenes se crean automáticamente desde la sección de Ventas.</p>
 
       {activeOrders.length === 0 && (
@@ -129,6 +136,9 @@ export const SweatspotWorkflow = () => {
               key={order.id}
               order={order}
               role={role}
+              isAdmin={isAdmin}
+              selected={selected.has(order.id)}
+              onToggleSelect={() => toggleSelect(order.id)}
               onStart={() => updateStageStatus.mutate({ orderId: order.id, status: "en_proceso" })}
               onFinish={() => {
                 if (isLastStage) {
