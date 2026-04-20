@@ -377,10 +377,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       }
     }
 
-    // Upload logo once if provided (skip design request for recompra)
+    // Upload logo once if provided — siempre crear solicitud de diseño,
+    // incluso para recompras (el cliente puede pedir ajustes al logo).
     let logoUrl: string | null = null;
-    const shouldCreateLogoRequest = !isRecompra || (isRecompra && needsLogoAdjustment);
-    if (logoFile && logoFile.size > 0 && user && shouldCreateLogoRequest) {
+    if (logoFile && logoFile.size > 0 && user) {
       const firstLine = orderLines[0];
       const referencia = `${firstLine.product} (${firstLine.type})`;
       const result = await createLogoRequestFromOrder({
@@ -399,8 +399,6 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       } else {
         toast.error("Diseño de logo", { description: result.message });
       }
-    } else if (logoFile && logoFile.size > 0 && isRecompra) {
-      logoUrl = "recompra-logo";
     }
 
     const magicalStages = ["produccion_cuerpos", "estampacion", "dosificacion", "sellado", "recorte", "empaque", "listo"];
@@ -941,10 +939,9 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       }
     }
 
-    // Auto-create design request once if logo was uploaded (skip for recompra)
+    // Auto-create design request once if logo was uploaded — siempre, incluso recompras.
     let logoUrl: string | null = null;
-    const ssShouldCreateLogoRequest = !ssIsRecompra || (ssIsRecompra && ssNeedsLogoAdjustment);
-    if (logoFile && logoFile.size > 0 && user && ssShouldCreateLogoRequest) {
+    if (logoFile && logoFile.size > 0 && user) {
       const firstRef = ssLines[0].referencia;
       const result = await createLogoRequestFromOrder({
         brand: "Sweatspot",
@@ -962,8 +959,6 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       } else {
         toast.error("Diseño de logo", { description: result.message });
       }
-    } else if (logoFile && logoFile.size > 0 && ssIsRecompra) {
-      logoUrl = "recompra-logo";
     }
 
     const ssShortStages = ["estampacion", "colocacion_boquilla", "listo"];
