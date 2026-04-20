@@ -963,6 +963,10 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       const abonoAmount = ssEstadoPago === "pago_total" ? lineTotal : (parseFloat(ssAbono) || 0);
       const logoType = tipoLogo === "Impresión básica" ? "impresion_basica" as const : "impresion_full" as const;
 
+      // Sweatspot solo produce termos (150/250/500 ml). El resto (canguros, chalecos,
+      // imanes, etc.) son productos importados/finalizados y van directo a Logística.
+      const isImportedProduct = !/termo/i.test(referencia);
+
       useAccountingStore.getState().addOrder({
         clientName,
         brand: "sweatspot",
@@ -1004,7 +1008,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
           personalization: personalizacion || null,
           advisor_id: user?.id || "",
           advisor_name: user?.email || "Asesor",
-          production_status: "pendiente",
+          production_status: isImportedProduct ? "listo" : "pendiente",
           is_recompra: ssIsRecompra,
           payment_proof_url: ssPaymentProofUrl,
           payment_complete: ssEstadoPago === "pago_total",
@@ -1026,6 +1030,22 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         });
         setIsSubmitting(false);
         return;
+      }
+
+      // Productos importados: saltan producción y van directo a logística
+      if (isImportedProduct) {
+        await createOrderNotifications({
+          orderId: orderData.id,
+          brand: "sweatspot",
+          product: referencia,
+          quantity,
+          clientName,
+          needsCuerpos: false,
+          shortage: 0,
+          hasLogo: false,
+          advisorId: user?.id || "",
+        });
+        continue;
       }
 
       const bodyResult = await reserveBodyStockDB("sweatspot", referencia, quantity, {
@@ -1186,6 +1206,11 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                 <div className="space-y-1.5">
                   <Label>Referencia o molde</Label>
                   <Input value={line.referencia} onChange={(e) => updateSSLine(line.id, { referencia: e.target.value })} required />
+                  {line.referencia && !/termo/i.test(line.referencia) && (
+                    <p className="text-xs text-muted-foreground bg-muted/50 rounded-md p-2">
+                      ℹ️ Producto importado (no es termo): pasará directo a Logística sin producción.
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label>Tamaño</Label>
