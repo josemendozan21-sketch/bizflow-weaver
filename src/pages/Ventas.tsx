@@ -772,23 +772,9 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
               </div>
             </div>
             {isRecompra && (
-              <div className="space-y-2 rounded-md border border-input bg-muted/30 p-3">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="mw_logo_adjust" className="cursor-pointer text-sm">
-                    El cliente solicita ajuste al logo
-                  </Label>
-                  <Switch
-                    id="mw_logo_adjust"
-                    checked={needsLogoAdjustment}
-                    onCheckedChange={setNeedsLogoAdjustment}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {needsLogoAdjustment
-                    ? "✎ Se enviará al diseñador para ajustar el logo antes de producir."
-                    : "✓ Se reutiliza el logo anterior, no se generará solicitud de diseño."}
-                </p>
-              </div>
+              <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3">
+                ℹ️ Aunque sea recompra, el logo siempre se enviará al diseñador para revisión o ajustes antes de producir.
+              </p>
             )}
           </fieldset>
 
