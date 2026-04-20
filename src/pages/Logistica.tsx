@@ -62,36 +62,98 @@ function exportOrdersToCSV(orders: Order[], brandLabel: (b: string) => string, s
   toast.success("Archivo descargado");
 }
 
-function generateLabelsForOrders(orders: Order[]) {
-  if (orders.length === 0) return;
-  const labelsHtml = orders.map((o) => {
-    const total = Number(o.total_amount) || 0;
-    const abono = Number(o.abono) || 0;
-    const saldo = total - abono;
-    const shippingCost = Number(o.shipping_cost) || 0;
+/* ---------- Shipment grouping ---------- */
+
+export interface ShipmentGroup {
+  key: string;
+  clientName: string;
+  clientNit?: string | null;
+  clientPhone?: string | null;
+  city?: string | null;
+  address?: string | null;
+  saleType: string;
+  brands: string[];
+  items: Order[];
+  totalUnits: number;
+  totalAmount: number;
+  totalAbono: number;
+  totalShipping: number;
+  allIds: string[];
+  oldestCreatedAt: string;
+  observations: string[];
+}
+
+function groupOrdersByShipment(orders: Order[], extraKeyFn?: (o: Order) => string): ShipmentGroup[] {
+  const map = new Map<string, ShipmentGroup>();
+  for (const o of orders) {
+    const baseKey = `${o.client_name || ""}|${o.client_city || ""}|${o.client_address || ""}|${o.sale_type || ""}`;
+    const key = extraKeyFn ? `${baseKey}|${extraKeyFn(o)}` : baseKey;
+    let group = map.get(key);
+    if (!group) {
+      group = {
+        key,
+        clientName: o.client_name,
+        clientNit: o.client_nit,
+        clientPhone: o.client_phone,
+        city: o.client_city,
+        address: o.client_address,
+        saleType: o.sale_type,
+        brands: [],
+        items: [],
+        totalUnits: 0,
+        totalAmount: 0,
+        totalAbono: 0,
+        totalShipping: 0,
+        allIds: [],
+        oldestCreatedAt: o.created_at,
+        observations: [],
+      };
+      map.set(key, group);
+    }
+    group.items.push(o);
+    group.allIds.push(o.id);
+    group.totalUnits += Number(o.quantity) || 0;
+    group.totalAmount += Number(o.total_amount) || 0;
+    group.totalAbono += Number(o.abono) || 0;
+    group.totalShipping += Number(o.shipping_cost) || 0;
+    if (!group.brands.includes(o.brand)) group.brands.push(o.brand);
+    if (o.created_at < group.oldestCreatedAt) group.oldestCreatedAt = o.created_at;
+    if (o.observations && !group.observations.includes(o.observations)) group.observations.push(o.observations);
+  }
+  return Array.from(map.values()).sort((a, b) => a.oldestCreatedAt.localeCompare(b.oldestCreatedAt));
+}
+
+function generateLabelsForGroups(groups: ShipmentGroup[]) {
+  if (groups.length === 0) return;
+  const labelsHtml = groups.map((g) => {
+    const saldo = g.totalAmount - g.totalAbono;
+    const firstItem = g.items[0];
     let pagoInfo = "";
-    if (o.sale_type === "menor") {
-      if (o.payment_method === "contra_entrega") {
-        pagoInfo = `CONTRA ENTREGA: $${(saldo + shippingCost).toLocaleString("es-CO")}`;
+    if (g.saleType === "menor") {
+      if (firstItem?.payment_method === "contra_entrega") {
+        pagoInfo = `CONTRA ENTREGA: $${(saldo + g.totalShipping).toLocaleString("es-CO")}`;
       } else {
         pagoInfo = "PAGADO";
       }
     } else {
       pagoInfo = saldo <= 0 ? "PAGO COMPLETO" : `SALDO: $${saldo.toLocaleString("es-CO")}`;
     }
+    const itemsHtml = g.items
+      .map((it) => `<div class="item">• ${it.product} — ${it.quantity} und</div>`)
+      .join("");
     return `
       <div class="label">
         <div class="header">Rótulo de Envío</div>
-        <div class="row"><span class="lbl">Destinatario:</span> <span class="val">${o.client_name}</span></div>
-        <div class="row"><span class="lbl">Cédula/NIT:</span> <span class="val">${o.client_nit || "—"}</span></div>
-        <div class="row"><span class="lbl">Ciudad:</span> <span class="val">${o.client_city || "—"}</span></div>
-        <div class="row"><span class="lbl">Dirección:</span> <span class="val">${o.client_address || "—"}</span></div>
-        <div class="row"><span class="lbl">Celular:</span> <span class="val">${o.client_phone || "—"}</span></div>
+        <div class="row"><span class="lbl">Destinatario:</span> <span class="val">${g.clientName}</span></div>
+        <div class="row"><span class="lbl">Cédula/NIT:</span> <span class="val">${g.clientNit || "—"}</span></div>
+        <div class="row"><span class="lbl">Ciudad:</span> <span class="val">${g.city || "—"}</span></div>
+        <div class="row"><span class="lbl">Dirección:</span> <span class="val">${g.address || "—"}</span></div>
+        <div class="row"><span class="lbl">Celular:</span> <span class="val">${g.clientPhone || "—"}</span></div>
         <div class="divider"></div>
-        <div class="row"><span class="lbl">Producto:</span> <span class="val">${o.product}</span></div>
-        <div class="row"><span class="lbl">Unidades:</span> <span class="val">${o.quantity}</span></div>
+        <div class="row"><span class="lbl">Contenido (${g.items.length} items, ${g.totalUnits} und):</span></div>
+        <div class="items">${itemsHtml}</div>
         <div class="row pago"><span class="lbl">Pago:</span> <span class="val">${pagoInfo}</span></div>
-        ${o.observations ? `<div class="row obs"><span class="lbl">Obs:</span> <span class="val">${o.observations}</span></div>` : ""}
+        ${g.observations.length ? `<div class="row obs"><span class="lbl">Obs:</span> <span class="val">${g.observations.join(" | ")}</span></div>` : ""}
       </div>
     `;
   }).join("");
@@ -103,21 +165,23 @@ function generateLabelsForOrders(orders: Order[]) {
     @page { size: 10cm 10cm; margin: 0; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: Arial, sans-serif; }
-    .label { width: 10cm; height: 10cm; border: 2px solid #000; padding: 8mm; page-break-after: always; display: flex; flex-direction: column; justify-content: center; }
+    .label { width: 10cm; min-height: 10cm; border: 2px solid #000; padding: 6mm; page-break-after: always; display: flex; flex-direction: column; }
     .label:last-child { page-break-after: auto; }
     .header { text-align: center; font-size: 13px; font-weight: bold; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 6px; letter-spacing: 1px; }
-    .row { font-size: 11px; margin-bottom: 3px; line-height: 1.3; }
+    .row { font-size: 10.5px; margin-bottom: 2px; line-height: 1.3; }
+    .items { font-size: 10px; margin: 2px 0 4px 4px; }
+    .item { line-height: 1.3; }
     .lbl { font-weight: bold; text-transform: uppercase; color: #333; }
     .val { font-weight: 600; }
     .divider { border-top: 1px dashed #999; margin: 4px 0; }
-    .pago { font-size: 12px; font-weight: bold; margin-top: 2px; }
-    .obs { font-size: 10px; font-style: italic; color: #555; }
+    .pago { font-size: 11.5px; font-weight: bold; margin-top: 4px; }
+    .obs { font-size: 9.5px; font-style: italic; color: #555; }
     @media print { body { margin: 0; } }
   </style></head><body>${labelsHtml}
   <script>window.onload=()=>{window.print();}</script>
   </body></html>`);
   printWindow.document.close();
-  toast.success("Rótulos generados", { description: `${orders.length} rótulo(s) listo(s) para imprimir/guardar como PDF.` });
+  toast.success("Rótulos generados", { description: `${groups.length} rótulo(s) consolidado(s) listo(s) para imprimir.` });
 }
 
 const Logistica = () => {
