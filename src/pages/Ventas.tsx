@@ -377,10 +377,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       }
     }
 
-    // Upload logo once if provided (skip design request for recompra)
+    // Upload logo once if provided — siempre crear solicitud de diseño,
+    // incluso para recompras (el cliente puede pedir ajustes al logo).
     let logoUrl: string | null = null;
-    const shouldCreateLogoRequest = !isRecompra || (isRecompra && needsLogoAdjustment);
-    if (logoFile && logoFile.size > 0 && user && shouldCreateLogoRequest) {
+    if (logoFile && logoFile.size > 0 && user) {
       const firstLine = orderLines[0];
       const referencia = `${firstLine.product} (${firstLine.type})`;
       const result = await createLogoRequestFromOrder({
@@ -399,8 +399,6 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       } else {
         toast.error("Diseño de logo", { description: result.message });
       }
-    } else if (logoFile && logoFile.size > 0 && isRecompra) {
-      logoUrl = "recompra-logo";
     }
 
     const magicalStages = ["produccion_cuerpos", "estampacion", "dosificacion", "sellado", "recorte", "empaque", "listo"];
@@ -774,23 +772,9 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
               </div>
             </div>
             {isRecompra && (
-              <div className="space-y-2 rounded-md border border-input bg-muted/30 p-3">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="mw_logo_adjust" className="cursor-pointer text-sm">
-                    El cliente solicita ajuste al logo
-                  </Label>
-                  <Switch
-                    id="mw_logo_adjust"
-                    checked={needsLogoAdjustment}
-                    onCheckedChange={setNeedsLogoAdjustment}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {needsLogoAdjustment
-                    ? "✎ Se enviará al diseñador para ajustar el logo antes de producir."
-                    : "✓ Se reutiliza el logo anterior, no se generará solicitud de diseño."}
-                </p>
-              </div>
+              <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3">
+                ℹ️ Aunque sea recompra, el logo siempre se enviará al diseñador para revisión o ajustes antes de producir.
+              </p>
             )}
           </fieldset>
 
@@ -941,10 +925,9 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       }
     }
 
-    // Auto-create design request once if logo was uploaded (skip for recompra)
+    // Auto-create design request once if logo was uploaded — siempre, incluso recompras.
     let logoUrl: string | null = null;
-    const ssShouldCreateLogoRequest = !ssIsRecompra || (ssIsRecompra && ssNeedsLogoAdjustment);
-    if (logoFile && logoFile.size > 0 && user && ssShouldCreateLogoRequest) {
+    if (logoFile && logoFile.size > 0 && user) {
       const firstRef = ssLines[0].referencia;
       const result = await createLogoRequestFromOrder({
         brand: "Sweatspot",
@@ -962,8 +945,6 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       } else {
         toast.error("Diseño de logo", { description: result.message });
       }
-    } else if (logoFile && logoFile.size > 0 && ssIsRecompra) {
-      logoUrl = "recompra-logo";
     }
 
     const ssShortStages = ["estampacion", "colocacion_boquilla", "listo"];
@@ -1321,23 +1302,9 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
               <Switch id="ss_recompra" checked={ssIsRecompra} onCheckedChange={setSsIsRecompra} />
             </div>
             {ssIsRecompra && (
-              <div className="space-y-2 rounded-md border border-input bg-muted/30 p-3 max-w-md">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="ss_logo_adjust" className="cursor-pointer text-sm">
-                    El cliente solicita ajuste al logo
-                  </Label>
-                  <Switch
-                    id="ss_logo_adjust"
-                    checked={ssNeedsLogoAdjustment}
-                    onCheckedChange={setSsNeedsLogoAdjustment}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {ssNeedsLogoAdjustment
-                    ? "✎ Se enviará al diseñador para ajustar el logo antes de producir."
-                    : "✓ Se reutiliza el logo anterior, no se generará solicitud de diseño."}
-                </p>
-              </div>
+              <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3 max-w-md">
+                ℹ️ Aunque sea recompra, el logo siempre se enviará al diseñador para revisión o ajustes antes de producir.
+              </p>
             )}
           </fieldset>
 
