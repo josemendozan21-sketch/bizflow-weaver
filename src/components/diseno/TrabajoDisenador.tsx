@@ -274,9 +274,14 @@ function DesignerCard({ request: req }: { request: LogoRequest }) {
         )}
 
         {/* Advisor approval/modification — only when adjusted logo exists */}
-        {isAdvisor && req.adjusted_logo_url && (
+        {isAdvisor && (req.adjusted_logo_url || req.status === "listo_aprobacion" || req.additional_instructions?.includes("recompra")) && (
           <div className="space-y-3 pt-3 border-t">
-            <p className="text-xs font-medium text-muted-foreground">Revisión del asesor</p>
+            <p className="text-xs font-medium text-muted-foreground">
+              Revisión del asesor
+              {!req.adjusted_logo_url && (
+                <span className="ml-2 text-orange-600">(Recompra — aprueba si se reutiliza el logo original)</span>
+              )}
+            </p>
             {!showModInput ? (
               <div className="flex gap-3">
                 <Button
