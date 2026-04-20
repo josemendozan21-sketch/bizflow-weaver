@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
 import {
   CheckCircle2,
   Play,
@@ -16,6 +18,7 @@ import {
   Target,
   Truck,
   Info,
+  ShieldCheck,
 } from "lucide-react";
 import { useProductionOrders, type ProductionOrder } from "@/hooks/useProductionOrders";
 import { useAuth } from "@/contexts/AuthContext";
