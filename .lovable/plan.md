@@ -1,38 +1,55 @@
 
 
-## Plan: Fix inventory discount on order creation + Confirm quantity before finalizing body production
+## Agrupar pedidos por cliente en Logística
 
-### Problems identified
+Actualmente cada producto aparece como una fila independiente, lo que provoca que se confundan o se pierdan envíos cuando un mismo cliente tiene varios items. Voy a agruparlos en **una sola tarjeta por cliente** (consolidando por cliente + ciudad + dirección + tipo de venta).
 
-1. **Inventory not discounting on order creation**: When an advisor creates a wholesale order, `reserveBodyStockDB` is called and it does discount from `body_stock`. However, the `discountStockDB("gel", ...)` call searches `stock_items` by a partial name match for "gel" — this may not match properly if the DB item is named "Mezcla Gel" or similar. Need to verify and fix the matching logic so gel and other materials are actually discounted.
+### Cambios en `/logistica`
 
-2. **Product names inconsistency ("Shoulder" → "Hombro")**: No translation exists in the codebase — all product names use "Shoulder", "Lumbar", etc. consistently in both the Zustand store and the database. The issue is likely from manual data entry. The fix is to ensure all product selectors across roles pull from the same canonical list (the `materialConfigs` or `stock_items` table) and never allow free-text entry where a dropdown should be used.
+**Pestaña "Listos para despacho"**
+- Reemplazar la tabla actual por **tarjetas agrupadas**, una por cliente/envío.
+- Cada tarjeta mostrará:
+  - Encabezado: nombre del cliente, ciudad, marca(s), tipo (Por mayor / Por menor), total de unidades y total de items.
+  - Lista interna de productos: `Producto (variante) — N unidades — estado de pago`.
+  - Un solo checkbox que selecciona todos los items del cliente.
+  - Un solo botón **"Rótulo"** (genera un único rótulo consolidado con todos los productos del envío).
+  - Un solo botón **"Despachar"** que marca todos los items del grupo como despachados con la misma transportadora y guía.
 
-3. **Body production tasks: no quantity confirmation before finalizing**: Currently, clicking "Finalizar proceso" on a body task immediately marks it as `finalizado` without confirming the actual quantity produced. Need to add an intermediate step (dialog) to input the real quantity before updating `body_stock`.
+**Pestaña "Pendientes"**
+- Misma lógica de agrupación: una fila por cliente que expanda los productos pendientes, con resumen de unidades y antigüedad del pedido más viejo del grupo.
 
----
+**Pestaña "Despachados"**
+- Agrupar por cliente + número de guía (los items despachados juntos comparten transportadora/guía), mostrando un único registro consolidado del envío.
 
-### Changes
+### Lógica de agrupación
 
-#### 1. Fix inventory discount during order creation (`src/hooks/useInventory.ts` + `src/pages/Ventas.tsx`)
-- Review and fix the `discountStock` function's name matching to ensure "gel" matches the actual DB item name (e.g., "Mezcla Gel").
-- Verify that `reserveBodyStock` properly matches the product reference format `"Shoulder (Frío)"` against `body_stock` entries like `"Shoulder (Frio)"` (accent differences).
-- Add console logging or toast feedback when discount succeeds/fails so the advisor knows what happened.
+Clave de grupo: `client_name + client_city + client_address + sale_type`. Esto evita mezclar dos envíos distintos del mismo cliente a direcciones diferentes.
 
-#### 2. Standardize product names across all roles
-- Ensure the product dropdown in the sales form, production views, and events all use the same canonical names from `materialConfigs` (which already has "Shoulder", not "Hombro").
-- In `BodyProductionForm` (inside `MagicalWarmersWorkflow.tsx`), replace the free-text reference input with a dropdown of known product names from `materialConfigs` or `body_stock`, so operators can't accidentally type translated names.
+### Acciones masivas por grupo
 
-#### 3. Add quantity confirmation dialog for body production tasks (`src/components/production/MagicalWarmersWorkflow.tsx` + `src/hooks/useProductionOrders.ts`)
-- Add a confirmation dialog that appears when "Finalizar proceso" is clicked on a body task (status `en_proceso`).
-- The dialog shows the original estimated quantity and an editable input for the actual quantity produced.
-- Modify `updateBodyTaskStatus` mutation in `useProductionOrders.ts` to accept an optional `actualQuantity` parameter.
-- When `status === "finalizado"` and `actualQuantity` is provided, upsert `body_stock` with the confirmed quantity (increment existing stock or create new entry).
-- Similarly, modify `advanceStage` to accept `confirmedQuantity` for orders in `produccion_cuerpos` stage, and use that value instead of `po.quantity` when updating `body_stock`.
+- **Rótulo consolidado**: un solo rótulo por grupo listando todos los productos y unidades, en lugar de N rótulos separados.
+- **Despachar grupo**: el diálogo de despacho se abre una vez y aplica la misma transportadora + guía a todos los `order.id` del grupo (loop sobre `supabase.from("orders").update(...)`).
+- **Selección múltiple de grupos**: el botón "Descargar rótulos (N)" seguirá funcionando, pero N será el número de **envíos** seleccionados, no de items.
 
-### Files to modify
-- `src/hooks/useInventory.ts` — Fix name matching in `discountStock`
-- `src/hooks/useProductionOrders.ts` — Add `actualQuantity` param to `updateBodyTaskStatus`, add body_stock upsert; add `confirmedQuantity` to `advanceStage`
-- `src/components/production/MagicalWarmersWorkflow.tsx` — Add confirmation dialog for body tasks and production orders in cuerpos stage; replace free-text reference input with dropdown
-- `src/pages/Ventas.tsx` — Ensure discount feedback is visible to the advisor
+### Detalles técnicos
+
+- Crear helper `groupOrdersByShipment(orders)` en `src/pages/Logistica.tsx` que devuelve `Array<{ key, clientName, city, address, saleType, brands: Set, items: Order[], totalUnits, allIds: string[] }>`.
+- Reescribir las tres tablas (`ready`, `pending`, `dispatched`) usando este agrupador.
+- Adaptar `generateLabelsForOrders` para aceptar grupos y generar **un rótulo por grupo** que liste todos los productos en una sección "Contenido del envío".
+- Adaptar `DispatchDialog` (o crear `DispatchGroupDialog`) que reciba `orderIds: string[]` y aplique el update a todos.
+- `selectedIds` pasará a ser `selectedGroupKeys: Set<string>`.
+
+### Resultado visual
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ ☐  Lizeth Sepúlveda · Medellín · Por menor   [Rótulo][Desp]│
+│    Magical Warmers · 4 items · 6 unidades                   │
+│    ─────────────────────────────────────────────────────    │
+│    • Handy (Térmico)        1 und   N/A                     │
+│    • Pocket (Térmico)       3 und   Pagado                  │
+│    • Pocket (Frío)          1 und   N/A                     │
+│    • Gorro (Frío)           1 und   Pagado                  │
+└─────────────────────────────────────────────────────────────┘
+```
 
