@@ -265,6 +265,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [dobleTinta, setDobleTinta] = useState(false);
   const [escarcha, setEscarcha] = useState(false);
   const [isRecompra, setIsRecompra] = useState(false);
+  const [needsLogoAdjustment, setNeedsLogoAdjustment] = useState(false);
   const [orderLines, setOrderLines] = useState<OrderLine[]>([createEmptyLine()]);
   const [abono, setAbono] = useState("");
   const [estadoPago, setEstadoPago] = useState<"abono_inicial" | "pago_total" | "pendiente">("abono_inicial");
