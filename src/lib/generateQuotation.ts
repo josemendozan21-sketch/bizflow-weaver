@@ -205,6 +205,42 @@ export function generateQuotationPDF(data: QuotationData) {
     y += 6;
   });
 
+  // ── Photos (optional) ──
+  if (data.photos && data.photos.length > 0) {
+    doc.addPage();
+    let py = 20;
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...darkGray);
+    doc.text("REFERENCIAS VISUALES", margin, py);
+    py += 10;
+
+    const pageH = doc.internal.pageSize.getHeight();
+    const colW = (pageW - margin * 2 - 8) / 2;
+    const imgH = 70;
+    let col = 0;
+
+    data.photos.forEach((dataUrl) => {
+      if (py + imgH > pageH - 20) {
+        doc.addPage();
+        py = 20;
+        col = 0;
+      }
+      const x = margin + col * (colW + 8);
+      try {
+        const fmt = dataUrl.includes("image/png") ? "PNG" : "JPEG";
+        doc.addImage(dataUrl, fmt, x, py, colW, imgH, undefined, "FAST");
+      } catch (e) {
+        // skip invalid image
+      }
+      col++;
+      if (col >= 2) {
+        col = 0;
+        py += imgH + 8;
+      }
+    });
+  }
+
   // ── Footer ──
   const footerY = doc.internal.pageSize.getHeight() - 25;
   doc.setDrawColor(229, 231, 235);
