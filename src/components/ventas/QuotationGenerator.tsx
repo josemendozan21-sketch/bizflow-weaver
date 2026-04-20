@@ -301,6 +301,47 @@ export default function QuotationGenerator() {
           </div>
         </fieldset>
 
+        {/* Photos (optional) */}
+        <fieldset className="space-y-3">
+          <legend className="text-sm font-semibold text-foreground mb-2">
+            Fotografías de referencia <span className="text-muted-foreground font-normal">(opcional)</span>
+          </legend>
+          <p className="text-xs text-muted-foreground">
+            Agrega imágenes de productos o referencias. Aparecerán en una página adicional del PDF. Máx. 8 imágenes, 5MB c/u.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {photos.map((ph) => (
+              <div key={ph.id} className="relative group">
+                <img src={ph.dataUrl} alt={ph.name} className="h-24 w-24 object-cover rounded-md border border-border" />
+                <button
+                  type="button"
+                  onClick={() => removePhoto(ph.id)}
+                  className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md hover:scale-110 transition-transform"
+                  aria-label="Eliminar foto"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+            {photos.length < 8 && (
+              <label className="h-24 w-24 rounded-md border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer transition-colors">
+                <ImagePlus className="h-5 w-5" />
+                <span className="text-xs">Agregar</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    handlePhotosSelected(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            )}
+          </div>
+        </fieldset>
+
         {/* Actions */}
         <div className="flex gap-3 pt-2">
           <Button onClick={handleGenerate} className="gap-2">
