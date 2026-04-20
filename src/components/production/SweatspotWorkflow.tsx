@@ -52,12 +52,33 @@ const STATUS_BADGE: Record<string, { label: string; variant: "secondary" | "defa
 };
 
 export const SweatspotWorkflow = () => {
-  const { orders, isLoading, updateStageStatus, advanceStage } = useProductionOrders("sweatspot");
+  const { orders, isLoading, updateStageStatus, advanceStage, forceCompleteOrder } = useProductionOrders("sweatspot");
   const { role } = useAuth();
   const [completionOrder, setCompletionOrder] = useState<ProductionOrder | null>(null);
+  const isAdmin = role === "admin";
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const activeOrders = orders.filter((o) => o.current_stage !== "listo");
   const completedOrders = orders.filter((o) => o.current_stage === "listo");
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkFinalize = async () => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    if (!confirm(`¿Finalizar ${ids.length} pedido(s) y enviarlos a Logística?`)) return;
+    for (const id of ids) {
+      await forceCompleteOrder.mutateAsync({ orderId: id });
+    }
+    toast.success(`${ids.length} pedido(s) finalizado(s) y enviados a Logística.`);
+    setSelected(new Set());
+  };
 
   if (isLoading) {
     return <div className="space-y-4">{[1,2,3].map(i => <Skeleton key={i} className="h-32 w-full" />)}</div>;
