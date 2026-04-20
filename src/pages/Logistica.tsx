@@ -434,7 +434,7 @@ const TRANSPORTADORAS = [
   { value: "bogoexpress", label: "Bogoexpress" },
 ];
 
-function DispatchDialog({ order }: { order: Order }) {
+function GroupDispatchDialog({ group }: { group: ShipmentGroup }) {
   const [open, setOpen] = useState(false);
   const [transportadora, setTransportadora] = useState("");
   const [numeroGuia, setNumeroGuia] = useState("");
@@ -457,7 +457,7 @@ function DispatchDialog({ order }: { order: Order }) {
     // Upload guide file if provided
     if (guiaFile) {
       const ext = guiaFile.name.split(".").pop();
-      const path = `guias/${order.id}_${Date.now()}.${ext}`;
+      const path = `guias/${group.allIds[0]}_${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage
         .from("invoice-files")
         .upload(path, guiaFile);
@@ -476,7 +476,7 @@ function DispatchDialog({ order }: { order: Order }) {
       transportadora: TRANSPORTADORAS.find(t => t.value === transportadora)?.label || transportadora || null,
       numero_guia: isBogoexpress ? "N/A - Bogoexpress" : (numeroGuia.trim() || null),
       dispatch_notes: [dispatchNotes.trim(), guiaFileUrl ? `Guía adjunta: ${guiaFileUrl}` : ""].filter(Boolean).join(" | ") || null,
-    }).eq("id", order.id);
+    }).in("id", group.allIds);
 
     setUploading(false);
 
@@ -486,7 +486,7 @@ function DispatchDialog({ order }: { order: Order }) {
     }
 
     queryClient.invalidateQueries({ queryKey: ["orders"] });
-    toast.success("Pedido despachado", { description: `Pedido de ${order.client_name} marcado como despachado.` });
+    toast.success("Envío despachado", { description: `${group.allIds.length} pedido(s) de ${group.clientName} marcados como despachados.` });
     setOpen(false);
     setTransportadora("");
     setNumeroGuia("");
@@ -506,7 +506,7 @@ function DispatchDialog({ order }: { order: Order }) {
           <DialogTitle>Confirmar despacho</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
-          Pedido de <span className="font-semibold text-foreground">{order.client_name}</span> — {order.quantity} uds de {order.product}
+          Envío de <span className="font-semibold text-foreground">{group.clientName}</span> — {group.items.length} item(s), {group.totalUnits} unidades en total
         </p>
         <div className="space-y-4 pt-2">
           <div className="space-y-1.5">
@@ -559,6 +559,170 @@ function DispatchDialog({ order }: { order: Order }) {
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/* ---------- Shipment group cards ---------- */
+
+function ShipmentGroupCard({
+  group,
+  selected,
+  onToggle,
+  brandLabel,
+  saleLabel,
+  canEdit,
+}: {
+  group: ShipmentGroup;
+  selected: boolean;
+  onToggle: (checked: boolean) => void;
+  brandLabel: (b: string) => string;
+  saleLabel: (t: string) => string;
+  canEdit: boolean;
+}) {
+  return (
+    <div className={`rounded-lg border bg-card transition-colors ${selected ? "border-primary ring-1 ring-primary/30" : ""}`}>
+      <div className="flex items-start gap-3 p-4 border-b">
+        <Checkbox checked={selected} onCheckedChange={(c) => onToggle(!!c)} className="mt-1" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center flex-wrap gap-2">
+            <h3 className="font-semibold text-foreground truncate">{group.clientName}</h3>
+            {group.city && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <MapPin className="h-3 w-3" /> {group.city}
+              </span>
+            )}
+            <Badge variant="outline" className="text-xs">{saleLabel(group.saleType)}</Badge>
+            {group.brands.map((b) => (
+              <Badge key={b} variant={b === "magical" ? "default" : "secondary"} className="text-xs">{brandLabel(b)}</Badge>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            {group.items.length} item(s) · {group.totalUnits} unidades
+          </p>
+        </div>
+        <div className="flex gap-2 shrink-0">
+          <ShippingLabelDialog clientName={group.clientName} />
+          {canEdit && <GroupDispatchDialog group={group} />}
+        </div>
+      </div>
+      <div className="p-4 pt-3 space-y-1.5">
+        {group.items.map((it) => (
+          <div key={it.id} className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-foreground truncate">• {it.product}</span>
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="text-muted-foreground">{it.quantity} und</span>
+              <PaymentBadge order={it} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PendingGroupCard({
+  group,
+  brandLabel,
+  saleLabel,
+}: {
+  group: ShipmentGroup;
+  brandLabel: (b: string) => string;
+  saleLabel: (t: string) => string;
+}) {
+  const oldestDate = new Date(group.oldestCreatedAt);
+  const aging = differenceInDays(new Date(), oldestDate);
+  const allPaid = group.items.every((o) => o.payment_complete || (o.total_amount && o.abono && Number(o.abono) >= Number(o.total_amount)));
+  const earliestDelivery = group.items
+    .map((o) => o.delivery_date)
+    .filter(Boolean)
+    .sort()[0];
+  return (
+    <div className={`rounded-lg border bg-card ${allPaid ? "" : "opacity-70"}`}>
+      <div className="flex items-start gap-3 p-4 border-b flex-wrap">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center flex-wrap gap-2">
+            <h3 className="font-semibold text-foreground truncate">{group.clientName}</h3>
+            {group.city && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <MapPin className="h-3 w-3" /> {group.city}
+              </span>
+            )}
+            <Badge variant="outline" className="text-xs">{saleLabel(group.saleType)}</Badge>
+            {group.brands.map((b) => (
+              <Badge key={b} variant={b === "magical" ? "default" : "secondary"} className="text-xs">{brandLabel(b)}</Badge>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            {group.items.length} item(s) · {group.totalUnits} unidades · creado {format(oldestDate, "dd MMM yyyy", { locale: es })}
+            {earliestDelivery && (
+              <> · entrega <span className="inline-flex items-center gap-0.5"><CalendarDays className="h-3 w-3" />{format(new Date(earliestDelivery), "dd MMM", { locale: es })}</span></>
+            )}
+          </p>
+        </div>
+        <AgingBadge days={aging} />
+      </div>
+      <div className="p-4 pt-3 space-y-1.5">
+        {group.items.map((it) => (
+          <div key={it.id} className="flex items-center justify-between gap-3 text-sm flex-wrap">
+            <span className="text-foreground truncate">• {it.product} <span className="text-muted-foreground">— {it.quantity} und</span></span>
+            <div className="flex items-center gap-2 shrink-0">
+              <ProductionStatusBadge status={it.production_status} order={it} />
+              <PaymentBadge order={it} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DispatchedGroupCard({
+  group,
+  brandLabel,
+  saleLabel,
+}: {
+  group: ShipmentGroup;
+  brandLabel: (b: string) => string;
+  saleLabel: (t: string) => string;
+}) {
+  const first = group.items[0];
+  return (
+    <div className="rounded-lg border bg-card">
+      <div className="flex items-start gap-3 p-4 border-b flex-wrap">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center flex-wrap gap-2">
+            <h3 className="font-semibold text-foreground truncate">{group.clientName}</h3>
+            {group.city && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <MapPin className="h-3 w-3" /> {group.city}
+              </span>
+            )}
+            <Badge variant="outline" className="text-xs">{saleLabel(group.saleType)}</Badge>
+            {group.brands.map((b) => (
+              <Badge key={b} variant={b === "magical" ? "default" : "secondary"} className="text-xs">{brandLabel(b)}</Badge>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            {group.items.length} item(s) · {group.totalUnits} unidades · despachado {first?.dispatched_at || "—"}
+          </p>
+        </div>
+        <div className="text-right text-xs space-y-0.5 shrink-0">
+          <p className="text-muted-foreground">{first?.transportadora || "—"}</p>
+          <p className="font-mono text-foreground">{first?.numero_guia || "—"}</p>
+        </div>
+      </div>
+      <div className="p-4 pt-3 space-y-1">
+        {group.items.map((it) => (
+          <div key={it.id} className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-foreground truncate">• {it.product}</span>
+            <span className="text-muted-foreground shrink-0">{it.quantity} und</span>
+          </div>
+        ))}
+        {first?.dispatch_notes && (
+          <p className="text-xs text-muted-foreground italic pt-2 border-t mt-2">{first.dispatch_notes}</p>
+        )}
+      </div>
+    </div>
   );
 }
 
