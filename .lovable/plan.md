@@ -1,55 +1,50 @@
 
 
-## Agrupar pedidos por cliente en Logística
+## Recompra con ajuste de logo: permitir flujo de diseño opcional
 
-Actualmente cada producto aparece como una fila independiente, lo que provoca que se confundan o se pierdan envíos cuando un mismo cliente tiene varios items. Voy a agruparlos en **una sola tarjeta por cliente** (consolidando por cliente + ciudad + dirección + tipo de venta).
+Actualmente al marcar un pedido como **Recompra** en ventas al por mayor, el sistema omite automáticamente la creación de la solicitud de diseño. Esto funciona cuando el cliente reutiliza el mismo logo, pero falla cuando pide un ajuste.
 
-### Cambios en `/logistica`
+### Cambio propuesto
 
-**Pestaña "Listos para despacho"**
-- Reemplazar la tabla actual por **tarjetas agrupadas**, una por cliente/envío.
-- Cada tarjeta mostrará:
-  - Encabezado: nombre del cliente, ciudad, marca(s), tipo (Por mayor / Por menor), total de unidades y total de items.
-  - Lista interna de productos: `Producto (variante) — N unidades — estado de pago`.
-  - Un solo checkbox que selecciona todos los items del cliente.
-  - Un solo botón **"Rótulo"** (genera un único rótulo consolidado con todos los productos del envío).
-  - Un solo botón **"Despachar"** que marca todos los items del grupo como despachados con la misma transportadora y guía.
+Agregar una segunda casilla opcional en los formularios de venta al por mayor (Magical Warmers y Sweatspot) que solo aparece cuando **Recompra** está activo:
 
-**Pestaña "Pendientes"**
-- Misma lógica de agrupación: una fila por cliente que expanda los productos pendientes, con resumen de unidades y antigüedad del pedido más viejo del grupo.
+> ☐ **El cliente solicita ajuste al logo** (enviará el pedido al diseñador)
 
-**Pestaña "Despachados"**
-- Agrupar por cliente + número de guía (los items despachados juntos comparten transportadora/guía), mostrando un único registro consolidado del envío.
+Comportamiento:
+- **Recompra + sin ajuste** → flujo actual: NO se crea `logo_request`, el pedido pasa directo a producción/estampación con el logo anterior. (sin cambio)
+- **Recompra + con ajuste** → se crea `logo_request` normal con estado `pendiente_diseno` y el pedido espera aprobación de diseño antes de estampar.
+- **Pedido nuevo (no recompra)** → flujo actual sin cambios: siempre crea `logo_request`.
 
-### Lógica de agrupación
+### UI
 
-Clave de grupo: `client_name + client_city + client_address + sale_type`. Esto evita mezclar dos envíos distintos del mismo cliente a direcciones diferentes.
-
-### Acciones masivas por grupo
-
-- **Rótulo consolidado**: un solo rótulo por grupo listando todos los productos y unidades, en lugar de N rótulos separados.
-- **Despachar grupo**: el diálogo de despacho se abre una vez y aplica la misma transportadora + guía a todos los `order.id` del grupo (loop sobre `supabase.from("orders").update(...)`).
-- **Selección múltiple de grupos**: el botón "Descargar rótulos (N)" seguirá funcionando, pero N será el número de **envíos** seleccionados, no de items.
-
-### Detalles técnicos
-
-- Crear helper `groupOrdersByShipment(orders)` en `src/pages/Logistica.tsx` que devuelve `Array<{ key, clientName, city, address, saleType, brands: Set, items: Order[], totalUnits, allIds: string[] }>`.
-- Reescribir las tres tablas (`ready`, `pending`, `dispatched`) usando este agrupador.
-- Adaptar `generateLabelsForOrders` para aceptar grupos y generar **un rótulo por grupo** que liste todos los productos en una sección "Contenido del envío".
-- Adaptar `DispatchDialog` (o crear `DispatchGroupDialog`) que reciba `orderIds: string[]` y aplique el update a todos.
-- `selectedIds` pasará a ser `selectedGroupKeys: Set<string>`.
-
-### Resultado visual
+En `src/pages/Ventas.tsx`, dentro de los formularios `MagicalMayorForm` y `SweatspotMayorForm`:
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│ ☐  Lizeth Sepúlveda · Medellín · Por menor   [Rótulo][Desp]│
-│    Magical Warmers · 4 items · 6 unidades                   │
-│    ─────────────────────────────────────────────────────    │
-│    • Handy (Térmico)        1 und   N/A                     │
-│    • Pocket (Térmico)       3 und   Pagado                  │
-│    • Pocket (Frío)          1 und   N/A                     │
-│    • Gorro (Frío)           1 und   Pagado                  │
-└─────────────────────────────────────────────────────────────┘
+☑ Es recompra (omitir diseño de logo)
+   └─ ☐ Pero el cliente solicita un ajuste al logo
 ```
+
+La sub-casilla solo se muestra cuando Recompra está marcada y se desactiva/oculta al desmarcarla. Incluye un texto de ayuda breve: *"Marca esta opción si aunque sea recompra, el cliente pidió cambios en el logo (color, tamaño, texto, etc.)"*.
+
+### Lógica
+
+En el handler de envío del pedido al por mayor:
+
+```text
+if (!isRecompra || (isRecompra && needsLogoAdjustment)) {
+  → createLogoRequestFromOrder(...)
+}
+```
+
+Es decir, la solicitud de diseño se crea siempre **excepto** cuando es recompra sin ajustes.
+
+### Archivos a modificar
+
+- `src/pages/Ventas.tsx` — agregar estado `needsLogoAdjustment`, el checkbox condicional y actualizar la condición que decide si invocar `createLogoRequestFromOrder`.
+
+### Impacto
+
+- No requiere cambios en la base de datos ni en RLS.
+- El flujo del diseñador, asesor y estampación permanece intacto: una vez creada la `logo_request`, sigue el flujo estándar ya implementado.
+- Compatible con pedidos multi-línea de Magical Warmers: la bandera aplica a todo el pedido (todas las líneas comparten el mismo logo del cliente).
 
