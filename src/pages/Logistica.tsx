@@ -220,6 +220,21 @@ const Logistica = () => {
   const brandLabel = (brand: string) => brand === "magical" ? "Magical Warmers" : "Sweatspot";
   const saleLabel = (type: string) => type === "mayor" ? "Por mayor" : "Por menor";
 
+  // Build shipment groups
+  const readyGroups = groupOrdersByShipment(readyOrders);
+  const pendingGroups = groupOrdersByShipment(pendingOrders);
+  // Dispatched: include guía in key so different shipments to same client stay separate
+  const dispatchedGroups = groupOrdersByShipment(dispatchedOrders, (o) => `${o.numero_guia || ""}|${o.dispatched_at || ""}`);
+
+  const isGroupSelected = (g: ShipmentGroup) => selectedIds.has(g.key);
+  const toggleGroup = (g: ShipmentGroup, checked: boolean) => {
+    const next = new Set(selectedIds);
+    if (checked) next.add(g.key);
+    else next.delete(g.key);
+    setSelectedIds(next);
+  };
+  const selectedGroups = readyGroups.filter(isGroupSelected);
+
   return (
     <div className="space-y-6">
       <div>
