@@ -6,14 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useOrders, type Order } from "@/hooks/useOrders";
 import { useAuth } from "@/contexts/AuthContext";
 import { canEditSection } from "@/lib/rolePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { Package, Truck, CheckCircle2, Clock, AlertTriangle, CalendarDays, Paperclip, FileCheck, Download, FileImage } from "lucide-react";
+import { Package, Truck, CheckCircle2, Clock, AlertTriangle, CalendarDays, FileCheck, Download, FileImage, MapPin } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
@@ -64,36 +63,98 @@ function exportOrdersToCSV(orders: Order[], brandLabel: (b: string) => string, s
   toast.success("Archivo descargado");
 }
 
-function generateLabelsForOrders(orders: Order[]) {
-  if (orders.length === 0) return;
-  const labelsHtml = orders.map((o) => {
-    const total = Number(o.total_amount) || 0;
-    const abono = Number(o.abono) || 0;
-    const saldo = total - abono;
-    const shippingCost = Number(o.shipping_cost) || 0;
+/* ---------- Shipment grouping ---------- */
+
+export interface ShipmentGroup {
+  key: string;
+  clientName: string;
+  clientNit?: string | null;
+  clientPhone?: string | null;
+  city?: string | null;
+  address?: string | null;
+  saleType: string;
+  brands: string[];
+  items: Order[];
+  totalUnits: number;
+  totalAmount: number;
+  totalAbono: number;
+  totalShipping: number;
+  allIds: string[];
+  oldestCreatedAt: string;
+  observations: string[];
+}
+
+function groupOrdersByShipment(orders: Order[], extraKeyFn?: (o: Order) => string): ShipmentGroup[] {
+  const map = new Map<string, ShipmentGroup>();
+  for (const o of orders) {
+    const baseKey = `${o.client_name || ""}|${o.client_city || ""}|${o.client_address || ""}|${o.sale_type || ""}`;
+    const key = extraKeyFn ? `${baseKey}|${extraKeyFn(o)}` : baseKey;
+    let group = map.get(key);
+    if (!group) {
+      group = {
+        key,
+        clientName: o.client_name,
+        clientNit: o.client_nit,
+        clientPhone: o.client_phone,
+        city: o.client_city,
+        address: o.client_address,
+        saleType: o.sale_type,
+        brands: [],
+        items: [],
+        totalUnits: 0,
+        totalAmount: 0,
+        totalAbono: 0,
+        totalShipping: 0,
+        allIds: [],
+        oldestCreatedAt: o.created_at,
+        observations: [],
+      };
+      map.set(key, group);
+    }
+    group.items.push(o);
+    group.allIds.push(o.id);
+    group.totalUnits += Number(o.quantity) || 0;
+    group.totalAmount += Number(o.total_amount) || 0;
+    group.totalAbono += Number(o.abono) || 0;
+    group.totalShipping += Number(o.shipping_cost) || 0;
+    if (!group.brands.includes(o.brand)) group.brands.push(o.brand);
+    if (o.created_at < group.oldestCreatedAt) group.oldestCreatedAt = o.created_at;
+    if (o.observations && !group.observations.includes(o.observations)) group.observations.push(o.observations);
+  }
+  return Array.from(map.values()).sort((a, b) => a.oldestCreatedAt.localeCompare(b.oldestCreatedAt));
+}
+
+function generateLabelsForGroups(groups: ShipmentGroup[]) {
+  if (groups.length === 0) return;
+  const labelsHtml = groups.map((g) => {
+    const saldo = g.totalAmount - g.totalAbono;
+    const firstItem = g.items[0];
     let pagoInfo = "";
-    if (o.sale_type === "menor") {
-      if (o.payment_method === "contra_entrega") {
-        pagoInfo = `CONTRA ENTREGA: $${(saldo + shippingCost).toLocaleString("es-CO")}`;
+    if (g.saleType === "menor") {
+      if (firstItem?.payment_method === "contra_entrega") {
+        pagoInfo = `CONTRA ENTREGA: $${(saldo + g.totalShipping).toLocaleString("es-CO")}`;
       } else {
         pagoInfo = "PAGADO";
       }
     } else {
       pagoInfo = saldo <= 0 ? "PAGO COMPLETO" : `SALDO: $${saldo.toLocaleString("es-CO")}`;
     }
+    const itemsHtml = g.items
+      .map((it) => `<div class="item">• ${it.product} — ${it.quantity} und</div>`)
+      .join("");
     return `
       <div class="label">
         <div class="header">Rótulo de Envío</div>
-        <div class="row"><span class="lbl">Destinatario:</span> <span class="val">${o.client_name}</span></div>
-        <div class="row"><span class="lbl">Cédula/NIT:</span> <span class="val">${o.client_nit || "—"}</span></div>
-        <div class="row"><span class="lbl">Ciudad:</span> <span class="val">${o.client_city || "—"}</span></div>
-        <div class="row"><span class="lbl">Dirección:</span> <span class="val">${o.client_address || "—"}</span></div>
-        <div class="row"><span class="lbl">Celular:</span> <span class="val">${o.client_phone || "—"}</span></div>
+        <div class="row"><span class="lbl">Destinatario:</span> <span class="val">${g.clientName}</span></div>
+        <div class="row"><span class="lbl">Cédula/NIT:</span> <span class="val">${g.clientNit || "—"}</span></div>
+        <div class="row"><span class="lbl">Ciudad:</span> <span class="val">${g.city || "—"}</span></div>
+        <div class="row"><span class="lbl">Dirección:</span> <span class="val">${g.address || "—"}</span></div>
+        <div class="row"><span class="lbl">Celular:</span> <span class="val">${g.clientPhone || "—"}</span></div>
         <div class="divider"></div>
-        <div class="row"><span class="lbl">Producto:</span> <span class="val">${o.product}</span></div>
-        <div class="row"><span class="lbl">Unidades:</span> <span class="val">${o.quantity}</span></div>
+        <div class="row"><span class="lbl">Contenido (${g.items.length} items, ${g.totalUnits} und):</span></div>
+        <div class="items">${itemsHtml}</div>
         <div class="row pago"><span class="lbl">Pago:</span> <span class="val">${pagoInfo}</span></div>
-        ${o.observations ? `<div class="row obs"><span class="lbl">Obs:</span> <span class="val">${o.observations}</span></div>` : ""}
+        ${g.observations.length ? `<div class="row obs"><span class="lbl">Obs:</span> <span class="val">${g.observations.join(" | ")}</span></div>` : ""}
       </div>
     `;
   }).join("");
@@ -105,21 +166,23 @@ function generateLabelsForOrders(orders: Order[]) {
     @page { size: 10cm 10cm; margin: 0; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: Arial, sans-serif; }
-    .label { width: 10cm; height: 10cm; border: 2px solid #000; padding: 8mm; page-break-after: always; display: flex; flex-direction: column; justify-content: center; }
+    .label { width: 10cm; min-height: 10cm; border: 2px solid #000; padding: 6mm; page-break-after: always; display: flex; flex-direction: column; }
     .label:last-child { page-break-after: auto; }
     .header { text-align: center; font-size: 13px; font-weight: bold; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 6px; letter-spacing: 1px; }
-    .row { font-size: 11px; margin-bottom: 3px; line-height: 1.3; }
+    .row { font-size: 10.5px; margin-bottom: 2px; line-height: 1.3; }
+    .items { font-size: 10px; margin: 2px 0 4px 4px; }
+    .item { line-height: 1.3; }
     .lbl { font-weight: bold; text-transform: uppercase; color: #333; }
     .val { font-weight: 600; }
     .divider { border-top: 1px dashed #999; margin: 4px 0; }
-    .pago { font-size: 12px; font-weight: bold; margin-top: 2px; }
-    .obs { font-size: 10px; font-style: italic; color: #555; }
+    .pago { font-size: 11.5px; font-weight: bold; margin-top: 4px; }
+    .obs { font-size: 9.5px; font-style: italic; color: #555; }
     @media print { body { margin: 0; } }
   </style></head><body>${labelsHtml}
   <script>window.onload=()=>{window.print();}</script>
   </body></html>`);
   printWindow.document.close();
-  toast.success("Rótulos generados", { description: `${orders.length} rótulo(s) listo(s) para imprimir/guardar como PDF.` });
+  toast.success("Rótulos generados", { description: `${groups.length} rótulo(s) consolidado(s) listo(s) para imprimir.` });
 }
 
 const Logistica = () => {
@@ -158,6 +221,21 @@ const Logistica = () => {
   const brandLabel = (brand: string) => brand === "magical" ? "Magical Warmers" : "Sweatspot";
   const saleLabel = (type: string) => type === "mayor" ? "Por mayor" : "Por menor";
 
+  // Build shipment groups
+  const readyGroups = groupOrdersByShipment(readyOrders);
+  const pendingGroups = groupOrdersByShipment(pendingOrders);
+  // Dispatched: include guía in key so different shipments to same client stay separate
+  const dispatchedGroups = groupOrdersByShipment(dispatchedOrders, (o) => `${o.numero_guia || ""}|${o.dispatched_at || ""}`);
+
+  const isGroupSelected = (g: ShipmentGroup) => selectedIds.has(g.key);
+  const toggleGroup = (g: ShipmentGroup, checked: boolean) => {
+    const next = new Set(selectedIds);
+    if (checked) next.add(g.key);
+    else next.delete(g.key);
+    setSelectedIds(next);
+  };
+  const selectedGroups = readyGroups.filter(isGroupSelected);
+
   return (
     <div className="space-y-6">
       <div>
@@ -192,11 +270,11 @@ const Logistica = () => {
         <TabsContent value="ready">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
-              <CardTitle className="text-lg">Pedidos listos para despacho</CardTitle>
+              <CardTitle className="text-lg">Envíos listos para despacho</CardTitle>
               <div className="flex gap-2">
-                {selectedIds.size > 0 && (
-                  <Button variant="outline" size="sm" onClick={() => generateLabelsForOrders(readyOrders.filter(o => selectedIds.has(o.id)))}>
-                    <FileImage className="h-4 w-4 mr-2" /> Descargar rótulos ({selectedIds.size})
+                {selectedGroups.length > 0 && (
+                  <Button variant="outline" size="sm" onClick={() => generateLabelsForGroups(selectedGroups)}>
+                    <FileImage className="h-4 w-4 mr-2" /> Descargar rótulos ({selectedGroups.length})
                   </Button>
                 )}
                 {readyOrders.length > 0 && (
@@ -207,61 +285,32 @@ const Logistica = () => {
               </div>
             </CardHeader>
             <CardContent>
-              {readyOrders.length === 0 ? (
+              {readyGroups.length === 0 ? (
                 <EmptyState icon={<Package className="h-12 w-12 mb-3 opacity-40" />} title="No hay pedidos listos para despacho" subtitle="Los pedidos aparecerán aquí cuando estén listos y pagados." />
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-10">
-                        <Checkbox
-                          checked={readyOrders.length > 0 && readyOrders.every(o => selectedIds.has(o.id))}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedIds(new Set(readyOrders.map(o => o.id)));
-                            } else {
-                              setSelectedIds(new Set());
-                            }
-                          }}
-                        />
-                      </TableHead>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Marca</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Producto</TableHead>
-                      <TableHead className="text-right">Unidades</TableHead>
-                      <TableHead>Pago</TableHead>
-                      <TableHead className="text-right">Acción</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {readyOrders.map((order) => (
-                      <TableRow key={order.id} className={selectedIds.has(order.id) ? "bg-muted/50" : ""}>
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedIds.has(order.id)}
-                            onCheckedChange={(checked) => {
-                              const next = new Set(selectedIds);
-                              if (checked) next.add(order.id);
-                              else next.delete(order.id);
-                              setSelectedIds(next);
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell className="font-medium">{order.client_name}</TableCell>
-                        <TableCell><Badge variant={order.brand === "magical" ? "default" : "secondary"}>{brandLabel(order.brand)}</Badge></TableCell>
-                        <TableCell><Badge variant="outline">{saleLabel(order.sale_type)}</Badge></TableCell>
-                        <TableCell>{order.product}</TableCell>
-                        <TableCell className="text-right font-medium">{order.quantity.toLocaleString()}</TableCell>
-                        <TableCell><PaymentBadge order={order} /></TableCell>
-                        <TableCell className="text-right space-x-2">
-                          <ShippingLabelDialog clientName={order.client_name} />
-                          {canEdit && <DispatchDialog order={order} />}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 px-1 pb-1 border-b">
+                    <Checkbox
+                      checked={readyGroups.length > 0 && readyGroups.every(isGroupSelected)}
+                      onCheckedChange={(checked) => {
+                        if (checked) setSelectedIds(new Set(readyGroups.map(g => g.key)));
+                        else setSelectedIds(new Set());
+                      }}
+                    />
+                    <span className="text-xs text-muted-foreground">Seleccionar todos los envíos ({readyGroups.length})</span>
+                  </div>
+                  {readyGroups.map((g) => (
+                    <ShipmentGroupCard
+                      key={g.key}
+                      group={g}
+                      selected={isGroupSelected(g)}
+                      onToggle={(c) => toggleGroup(g, c)}
+                      brandLabel={brandLabel}
+                      saleLabel={saleLabel}
+                      canEdit={canEdit}
+                    />
+                  ))}
+                </div>
               )}
             </CardContent>
           </Card>
@@ -269,53 +318,21 @@ const Logistica = () => {
 
         <TabsContent value="pending">
           <Card>
-            <CardHeader><CardTitle className="text-lg">Pedidos recién montados — Pendientes de despacho</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-lg">Envíos pendientes — Recién montados</CardTitle></CardHeader>
             <CardContent>
-              {pendingOrders.length === 0 ? (
+              {pendingGroups.length === 0 ? (
                 <EmptyState icon={<AlertTriangle className="h-12 w-12 mb-3 opacity-40" />} title="No hay pedidos pendientes" subtitle="Los pedidos al por mayor aparecerán aquí hasta que producción los apruebe y estén pagados." />
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Marca</TableHead>
-                      <TableHead>Producto</TableHead>
-                      <TableHead className="text-right">Unidades</TableHead>
-                      <TableHead>Fecha creación</TableHead>
-                      <TableHead>Fecha entrega est.</TableHead>
-                      <TableHead>Antigüedad</TableHead>
-                      <TableHead>Estado producción</TableHead>
-                      <TableHead>Pago</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pendingOrders.map((order) => {
-                      const createdDate = new Date(order.created_at);
-                      const aging = differenceInDays(new Date(), createdDate);
-                      const paid = order.payment_complete || (order.total_amount && order.abono && Number(order.abono) >= Number(order.total_amount));
-                      return (
-                        <TableRow key={order.id} className={paid ? "" : "opacity-60"}>
-                          <TableCell className="font-medium">{order.client_name}</TableCell>
-                          <TableCell><Badge variant={order.brand === "magical" ? "default" : "secondary"}>{brandLabel(order.brand)}</Badge></TableCell>
-                          <TableCell>{order.product}</TableCell>
-                          <TableCell className="text-right font-medium">{order.quantity.toLocaleString()}</TableCell>
-                          <TableCell className="text-sm">{format(createdDate, "dd MMM yyyy", { locale: es })}</TableCell>
-                          <TableCell className="text-sm">
-                            {order.delivery_date ? (
-                              <span className="flex items-center gap-1">
-                                <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
-                                {format(new Date(order.delivery_date), "dd MMM yyyy", { locale: es })}
-                              </span>
-                            ) : <span className="text-muted-foreground">—</span>}
-                          </TableCell>
-                          <TableCell><AgingBadge days={aging} /></TableCell>
-                          <TableCell><ProductionStatusBadge status={order.production_status} order={order} /></TableCell>
-                          <TableCell><PaymentBadge order={order} /></TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                <div className="space-y-3">
+                  {pendingGroups.map((g) => (
+                    <PendingGroupCard
+                      key={g.key}
+                      group={g}
+                      brandLabel={brandLabel}
+                      saleLabel={saleLabel}
+                    />
+                  ))}
+                </div>
               )}
             </CardContent>
           </Card>
@@ -323,41 +340,21 @@ const Logistica = () => {
 
         <TabsContent value="dispatched">
           <Card>
-            <CardHeader><CardTitle className="text-lg">Pedidos despachados</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-lg">Envíos despachados</CardTitle></CardHeader>
             <CardContent>
-              {dispatchedOrders.length === 0 ? (
+              {dispatchedGroups.length === 0 ? (
                 <EmptyState icon={<CheckCircle2 className="h-12 w-12 mb-3 opacity-40" />} title="No hay pedidos despachados aún" subtitle="Los pedidos despachados aparecerán en este historial." />
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Marca</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Producto</TableHead>
-                      <TableHead className="text-right">Unidades</TableHead>
-                      <TableHead>Transportadora</TableHead>
-                      <TableHead>Guía</TableHead>
-                      <TableHead>Notas</TableHead>
-                      <TableHead>Fecha despacho</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {dispatchedOrders.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell className="font-medium">{order.client_name}</TableCell>
-                        <TableCell><Badge variant={order.brand === "magical" ? "default" : "secondary"}>{brandLabel(order.brand)}</Badge></TableCell>
-                        <TableCell><Badge variant="outline">{saleLabel(order.sale_type)}</Badge></TableCell>
-                        <TableCell>{order.product}</TableCell>
-                        <TableCell className="text-right font-medium">{order.quantity.toLocaleString()}</TableCell>
-                        <TableCell>{order.transportadora || "—"}</TableCell>
-                        <TableCell className="font-mono text-sm">{order.numero_guia || "—"}</TableCell>
-                        <TableCell className="max-w-[200px] truncate text-sm">{order.dispatch_notes || "—"}</TableCell>
-                        <TableCell>{order.dispatched_at || "—"}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="space-y-3">
+                  {dispatchedGroups.map((g) => (
+                    <DispatchedGroupCard
+                      key={g.key}
+                      group={g}
+                      brandLabel={brandLabel}
+                      saleLabel={saleLabel}
+                    />
+                  ))}
+                </div>
               )}
             </CardContent>
           </Card>
@@ -438,7 +435,7 @@ const TRANSPORTADORAS = [
   { value: "bogoexpress", label: "Bogoexpress" },
 ];
 
-function DispatchDialog({ order }: { order: Order }) {
+function GroupDispatchDialog({ group }: { group: ShipmentGroup }) {
   const [open, setOpen] = useState(false);
   const [transportadora, setTransportadora] = useState("");
   const [numeroGuia, setNumeroGuia] = useState("");
@@ -461,7 +458,7 @@ function DispatchDialog({ order }: { order: Order }) {
     // Upload guide file if provided
     if (guiaFile) {
       const ext = guiaFile.name.split(".").pop();
-      const path = `guias/${order.id}_${Date.now()}.${ext}`;
+      const path = `guias/${group.allIds[0]}_${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage
         .from("invoice-files")
         .upload(path, guiaFile);
@@ -480,7 +477,7 @@ function DispatchDialog({ order }: { order: Order }) {
       transportadora: TRANSPORTADORAS.find(t => t.value === transportadora)?.label || transportadora || null,
       numero_guia: isBogoexpress ? "N/A - Bogoexpress" : (numeroGuia.trim() || null),
       dispatch_notes: [dispatchNotes.trim(), guiaFileUrl ? `Guía adjunta: ${guiaFileUrl}` : ""].filter(Boolean).join(" | ") || null,
-    }).eq("id", order.id);
+    }).in("id", group.allIds);
 
     setUploading(false);
 
@@ -490,7 +487,7 @@ function DispatchDialog({ order }: { order: Order }) {
     }
 
     queryClient.invalidateQueries({ queryKey: ["orders"] });
-    toast.success("Pedido despachado", { description: `Pedido de ${order.client_name} marcado como despachado.` });
+    toast.success("Envío despachado", { description: `${group.allIds.length} pedido(s) de ${group.clientName} marcados como despachados.` });
     setOpen(false);
     setTransportadora("");
     setNumeroGuia("");
@@ -510,7 +507,7 @@ function DispatchDialog({ order }: { order: Order }) {
           <DialogTitle>Confirmar despacho</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
-          Pedido de <span className="font-semibold text-foreground">{order.client_name}</span> — {order.quantity} uds de {order.product}
+          Envío de <span className="font-semibold text-foreground">{group.clientName}</span> — {group.items.length} item(s), {group.totalUnits} unidades en total
         </p>
         <div className="space-y-4 pt-2">
           <div className="space-y-1.5">
@@ -563,6 +560,170 @@ function DispatchDialog({ order }: { order: Order }) {
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/* ---------- Shipment group cards ---------- */
+
+function ShipmentGroupCard({
+  group,
+  selected,
+  onToggle,
+  brandLabel,
+  saleLabel,
+  canEdit,
+}: {
+  group: ShipmentGroup;
+  selected: boolean;
+  onToggle: (checked: boolean) => void;
+  brandLabel: (b: string) => string;
+  saleLabel: (t: string) => string;
+  canEdit: boolean;
+}) {
+  return (
+    <div className={`rounded-lg border bg-card transition-colors ${selected ? "border-primary ring-1 ring-primary/30" : ""}`}>
+      <div className="flex items-start gap-3 p-4 border-b">
+        <Checkbox checked={selected} onCheckedChange={(c) => onToggle(!!c)} className="mt-1" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center flex-wrap gap-2">
+            <h3 className="font-semibold text-foreground truncate">{group.clientName}</h3>
+            {group.city && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <MapPin className="h-3 w-3" /> {group.city}
+              </span>
+            )}
+            <Badge variant="outline" className="text-xs">{saleLabel(group.saleType)}</Badge>
+            {group.brands.map((b) => (
+              <Badge key={b} variant={b === "magical" ? "default" : "secondary"} className="text-xs">{brandLabel(b)}</Badge>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            {group.items.length} item(s) · {group.totalUnits} unidades
+          </p>
+        </div>
+        <div className="flex gap-2 shrink-0">
+          <ShippingLabelDialog clientName={group.clientName} />
+          {canEdit && <GroupDispatchDialog group={group} />}
+        </div>
+      </div>
+      <div className="p-4 pt-3 space-y-1.5">
+        {group.items.map((it) => (
+          <div key={it.id} className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-foreground truncate">• {it.product}</span>
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="text-muted-foreground">{it.quantity} und</span>
+              <PaymentBadge order={it} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PendingGroupCard({
+  group,
+  brandLabel,
+  saleLabel,
+}: {
+  group: ShipmentGroup;
+  brandLabel: (b: string) => string;
+  saleLabel: (t: string) => string;
+}) {
+  const oldestDate = new Date(group.oldestCreatedAt);
+  const aging = differenceInDays(new Date(), oldestDate);
+  const allPaid = group.items.every((o) => o.payment_complete || (o.total_amount && o.abono && Number(o.abono) >= Number(o.total_amount)));
+  const earliestDelivery = group.items
+    .map((o) => o.delivery_date)
+    .filter(Boolean)
+    .sort()[0];
+  return (
+    <div className={`rounded-lg border bg-card ${allPaid ? "" : "opacity-70"}`}>
+      <div className="flex items-start gap-3 p-4 border-b flex-wrap">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center flex-wrap gap-2">
+            <h3 className="font-semibold text-foreground truncate">{group.clientName}</h3>
+            {group.city && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <MapPin className="h-3 w-3" /> {group.city}
+              </span>
+            )}
+            <Badge variant="outline" className="text-xs">{saleLabel(group.saleType)}</Badge>
+            {group.brands.map((b) => (
+              <Badge key={b} variant={b === "magical" ? "default" : "secondary"} className="text-xs">{brandLabel(b)}</Badge>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            {group.items.length} item(s) · {group.totalUnits} unidades · creado {format(oldestDate, "dd MMM yyyy", { locale: es })}
+            {earliestDelivery && (
+              <> · entrega <span className="inline-flex items-center gap-0.5"><CalendarDays className="h-3 w-3" />{format(new Date(earliestDelivery), "dd MMM", { locale: es })}</span></>
+            )}
+          </p>
+        </div>
+        <AgingBadge days={aging} />
+      </div>
+      <div className="p-4 pt-3 space-y-1.5">
+        {group.items.map((it) => (
+          <div key={it.id} className="flex items-center justify-between gap-3 text-sm flex-wrap">
+            <span className="text-foreground truncate">• {it.product} <span className="text-muted-foreground">— {it.quantity} und</span></span>
+            <div className="flex items-center gap-2 shrink-0">
+              <ProductionStatusBadge status={it.production_status} order={it} />
+              <PaymentBadge order={it} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DispatchedGroupCard({
+  group,
+  brandLabel,
+  saleLabel,
+}: {
+  group: ShipmentGroup;
+  brandLabel: (b: string) => string;
+  saleLabel: (t: string) => string;
+}) {
+  const first = group.items[0];
+  return (
+    <div className="rounded-lg border bg-card">
+      <div className="flex items-start gap-3 p-4 border-b flex-wrap">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center flex-wrap gap-2">
+            <h3 className="font-semibold text-foreground truncate">{group.clientName}</h3>
+            {group.city && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <MapPin className="h-3 w-3" /> {group.city}
+              </span>
+            )}
+            <Badge variant="outline" className="text-xs">{saleLabel(group.saleType)}</Badge>
+            {group.brands.map((b) => (
+              <Badge key={b} variant={b === "magical" ? "default" : "secondary"} className="text-xs">{brandLabel(b)}</Badge>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            {group.items.length} item(s) · {group.totalUnits} unidades · despachado {first?.dispatched_at || "—"}
+          </p>
+        </div>
+        <div className="text-right text-xs space-y-0.5 shrink-0">
+          <p className="text-muted-foreground">{first?.transportadora || "—"}</p>
+          <p className="font-mono text-foreground">{first?.numero_guia || "—"}</p>
+        </div>
+      </div>
+      <div className="p-4 pt-3 space-y-1">
+        {group.items.map((it) => (
+          <div key={it.id} className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-foreground truncate">• {it.product}</span>
+            <span className="text-muted-foreground shrink-0">{it.quantity} und</span>
+          </div>
+        ))}
+        {first?.dispatch_notes && (
+          <p className="text-xs text-muted-foreground italic pt-2 border-t mt-2">{first.dispatch_notes}</p>
+        )}
+      </div>
+    </div>
   );
 }
 
