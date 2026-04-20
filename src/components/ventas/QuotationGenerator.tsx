@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, FileText, TrendingUp } from "lucide-react";
+import { Plus, Trash2, FileText, TrendingUp, ImagePlus, X } from "lucide-react";
 import { toast } from "sonner";
 import { generateQuotationPDF } from "@/lib/generateQuotation";
 import { useAuth } from "@/contexts/AuthContext";
@@ -44,6 +44,7 @@ export default function QuotationGenerator() {
     { id: crypto.randomUUID(), producto: "", cantidad: 1, precioUnitario: 0 },
   ]);
   const [costData, setCostData] = useState<ProductCostData[]>([]);
+  const [photos, setPhotos] = useState<{ id: string; dataUrl: string; name: string }[]>([]);
 
   useEffect(() => {
     if (isAdmin) {
@@ -52,6 +53,29 @@ export default function QuotationGenerator() {
       });
     }
   }, [isAdmin]);
+
+  const handlePhotosSelected = (files: FileList | null) => {
+    if (!files) return;
+    const remaining = 8 - photos.length;
+    if (remaining <= 0) {
+      toast.error("Máximo 8 fotografías");
+      return;
+    }
+    Array.from(files).slice(0, remaining).forEach((file) => {
+      if (!file.type.startsWith("image/")) return;
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(`${file.name} supera 5MB`);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        setPhotos((prev) => [...prev, { id: crypto.randomUUID(), dataUrl: reader.result as string, name: file.name }]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removePhoto = (id: string) => setPhotos((p) => p.filter((x) => x.id !== id));
 
   const addProduct = () => {
     setProducts((p) => [...p, { id: crypto.randomUUID(), producto: "", cantidad: 1, precioUnitario: 0 }]);
@@ -116,6 +140,7 @@ export default function QuotationGenerator() {
         producto: p.producto, cantidad: p.cantidad, precioUnitario: p.precioUnitario, total: p.cantidad * p.precioUnitario,
       })),
       subtotal, iva, total, tiempoProduccion, condicionesPago, vigencia, garantia,
+      photos: photos.map((p) => p.dataUrl),
     });
 
     toast.success("Cotización generada", { description: `${quotationNumber} exportada como PDF` });
@@ -273,6 +298,47 @@ export default function QuotationGenerator() {
               <Label>Garantía</Label>
               <Input value={garantia} onChange={(e) => setGarantia(e.target.value)} />
             </div>
+          </div>
+        </fieldset>
+
+        {/* Photos (optional) */}
+        <fieldset className="space-y-3">
+          <legend className="text-sm font-semibold text-foreground mb-2">
+            Fotografías de referencia <span className="text-muted-foreground font-normal">(opcional)</span>
+          </legend>
+          <p className="text-xs text-muted-foreground">
+            Agrega imágenes de productos o referencias. Aparecerán en una página adicional del PDF. Máx. 8 imágenes, 5MB c/u.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {photos.map((ph) => (
+              <div key={ph.id} className="relative group">
+                <img src={ph.dataUrl} alt={ph.name} className="h-24 w-24 object-cover rounded-md border border-border" />
+                <button
+                  type="button"
+                  onClick={() => removePhoto(ph.id)}
+                  className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md hover:scale-110 transition-transform"
+                  aria-label="Eliminar foto"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+            {photos.length < 8 && (
+              <label className="h-24 w-24 rounded-md border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer transition-colors">
+                <ImagePlus className="h-5 w-5" />
+                <span className="text-xs">Agregar</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    handlePhotosSelected(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            )}
           </div>
         </fieldset>
 
