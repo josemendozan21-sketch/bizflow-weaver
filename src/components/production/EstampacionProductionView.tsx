@@ -170,7 +170,13 @@ function EstampacionOrderCard({
   );
 
   const hasLogo = !!order.logo_file;
-  const logoApproved = !hasLogo || (matchingLogo && (matchingLogo.status === "aprobado" || matchingLogo.status === "finalizado"));
+  // If there's no matching logo_request, it's a recompra without logo adjustment → treat as approved.
+  // Otherwise, require explicit approval.
+  const logoApproved =
+    !hasLogo ||
+    !matchingLogo ||
+    matchingLogo.status === "aprobado" ||
+    matchingLogo.status === "finalizado";
   const logoUrl = matchingLogo?.adjusted_logo_url || matchingLogo?.original_logo_url;
 
   // Stamping approval status
