@@ -81,8 +81,10 @@ const CANONICAL_REFERENCES = [
 ];
 
 export const MagicalWarmersWorkflow = () => {
-  const { orders, bodyTasks, isLoading, updateStageStatus, advanceStage, addBodyTask, updateBodyTaskStatus } = useProductionOrders("magical");
+  const { orders, bodyTasks, isLoading, updateStageStatus, advanceStage, addBodyTask, updateBodyTaskStatus, forceCompleteOrder } = useProductionOrders("magical");
   const { role } = useAuth();
+  const isAdmin = role === "admin";
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showBodyForm, setShowBodyForm] = useState(false);
 
   // Confirmation dialog state for body tasks
@@ -100,6 +102,25 @@ export const MagicalWarmersWorkflow = () => {
   const completedOrders = orders.filter((o) => o.current_stage === "listo");
   const activeBodyTasks = bodyTasks.filter((t) => t.status !== "finalizado");
   const completedBodyTasks = bodyTasks.filter((t) => t.status === "finalizado");
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkFinalize = async () => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    if (!confirm(`¿Finalizar ${ids.length} pedido(s) y enviarlos a Logística?`)) return;
+    for (const id of ids) {
+      await forceCompleteOrder.mutateAsync({ orderId: id });
+    }
+    toast.success(`${ids.length} pedido(s) finalizado(s) y enviados a Logística.`);
+    setSelected(new Set());
+  };
 
   const handleFinishBodyTask = (task: BodyTask) => {
     setConfirmTask(task);
