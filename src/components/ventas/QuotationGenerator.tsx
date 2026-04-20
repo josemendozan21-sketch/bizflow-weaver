@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, FileText, TrendingUp } from "lucide-react";
+import { Plus, Trash2, FileText, TrendingUp, ImagePlus, X } from "lucide-react";
 import { toast } from "sonner";
 import { generateQuotationPDF } from "@/lib/generateQuotation";
 import { useAuth } from "@/contexts/AuthContext";
@@ -44,6 +44,7 @@ export default function QuotationGenerator() {
     { id: crypto.randomUUID(), producto: "", cantidad: 1, precioUnitario: 0 },
   ]);
   const [costData, setCostData] = useState<ProductCostData[]>([]);
+  const [photos, setPhotos] = useState<{ id: string; dataUrl: string; name: string }[]>([]);
 
   useEffect(() => {
     if (isAdmin) {
@@ -52,6 +53,29 @@ export default function QuotationGenerator() {
       });
     }
   }, [isAdmin]);
+
+  const handlePhotosSelected = (files: FileList | null) => {
+    if (!files) return;
+    const remaining = 8 - photos.length;
+    if (remaining <= 0) {
+      toast.error("Máximo 8 fotografías");
+      return;
+    }
+    Array.from(files).slice(0, remaining).forEach((file) => {
+      if (!file.type.startsWith("image/")) return;
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(`${file.name} supera 5MB`);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        setPhotos((prev) => [...prev, { id: crypto.randomUUID(), dataUrl: reader.result as string, name: file.name }]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removePhoto = (id: string) => setPhotos((p) => p.filter((x) => x.id !== id));
 
   const addProduct = () => {
     setProducts((p) => [...p, { id: crypto.randomUUID(), producto: "", cantidad: 1, precioUnitario: 0 }]);
@@ -116,6 +140,7 @@ export default function QuotationGenerator() {
         producto: p.producto, cantidad: p.cantidad, precioUnitario: p.precioUnitario, total: p.cantidad * p.precioUnitario,
       })),
       subtotal, iva, total, tiempoProduccion, condicionesPago, vigencia, garantia,
+      photos: photos.map((p) => p.dataUrl),
     });
 
     toast.success("Cotización generada", { description: `${quotationNumber} exportada como PDF` });
