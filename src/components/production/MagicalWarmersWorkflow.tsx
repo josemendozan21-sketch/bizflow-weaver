@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +31,7 @@ import {
   Info,
   Thermometer,
   Snowflake,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useProductionOrders, type ProductionOrder, type BodyTask } from "@/hooks/useProductionOrders";
