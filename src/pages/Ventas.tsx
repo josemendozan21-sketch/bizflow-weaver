@@ -1206,6 +1206,11 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                 <div className="space-y-1.5">
                   <Label>Referencia o molde</Label>
                   <Input value={line.referencia} onChange={(e) => updateSSLine(line.id, { referencia: e.target.value })} required />
+                  {line.referencia && !/termo/i.test(line.referencia) && (
+                    <p className="text-xs text-muted-foreground bg-muted/50 rounded-md p-2">
+                      ℹ️ Producto importado (no es termo): pasará directo a Logística sin producción.
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label>Tamaño</Label>
