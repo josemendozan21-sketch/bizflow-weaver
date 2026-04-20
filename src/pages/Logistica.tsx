@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { differenceInDays, format } from "date-fns";
 import { es } from "date-fns/locale";
+import ShippingLabelDialog from "@/components/logistics/ShippingLabelDialog";
 
 function exportOrdersToCSV(orders: Order[], brandLabel: (b: string) => string, saleLabel: (t: string) => string) {
   const headers = ["Cliente", "Cédula/NIT", "Teléfono", "Email", "Ciudad", "Dirección", "Marca", "Tipo", "Producto", "Unidades", "Método de pago", "Valor total", "Abono", "Saldo pendiente", "Costo envío", "Observaciones"];
