@@ -1321,9 +1321,23 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
               <Switch id="ss_recompra" checked={ssIsRecompra} onCheckedChange={setSsIsRecompra} />
             </div>
             {ssIsRecompra && (
-              <p className="text-xs text-muted-foreground bg-muted/50 rounded-md p-2">
-                ✓ Recompra: El logo ya existe, no se generará solicitud de diseño automática.
-              </p>
+              <div className="space-y-2 rounded-md border border-input bg-muted/30 p-3 max-w-md">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="ss_logo_adjust" className="cursor-pointer text-sm">
+                    El cliente solicita ajuste al logo
+                  </Label>
+                  <Switch
+                    id="ss_logo_adjust"
+                    checked={ssNeedsLogoAdjustment}
+                    onCheckedChange={setSsNeedsLogoAdjustment}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {ssNeedsLogoAdjustment
+                    ? "✎ Se enviará al diseñador para ajustar el logo antes de producir."
+                    : "✓ Se reutiliza el logo anterior, no se generará solicitud de diseño."}
+                </p>
+              </div>
             )}
           </fieldset>
 
