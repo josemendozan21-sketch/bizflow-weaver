@@ -17,6 +17,7 @@ export interface QuotationData {
   condicionesPago: string;
   vigencia: string;
   garantia: string;
+  photos?: string[]; // data URLs (base64) for product photos
 }
 
 const fmt = (n: number) =>
