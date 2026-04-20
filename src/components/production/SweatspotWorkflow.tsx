@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
 import {
   CheckCircle2,
   Play,
@@ -16,6 +18,7 @@ import {
   Target,
   Truck,
   Info,
+  ShieldCheck,
 } from "lucide-react";
 import { useProductionOrders, type ProductionOrder } from "@/hooks/useProductionOrders";
 import { useAuth } from "@/contexts/AuthContext";
@@ -49,12 +52,33 @@ const STATUS_BADGE: Record<string, { label: string; variant: "secondary" | "defa
 };
 
 export const SweatspotWorkflow = () => {
-  const { orders, isLoading, updateStageStatus, advanceStage } = useProductionOrders("sweatspot");
+  const { orders, isLoading, updateStageStatus, advanceStage, forceCompleteOrder } = useProductionOrders("sweatspot");
   const { role } = useAuth();
   const [completionOrder, setCompletionOrder] = useState<ProductionOrder | null>(null);
+  const isAdmin = role === "admin";
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const activeOrders = orders.filter((o) => o.current_stage !== "listo");
   const completedOrders = orders.filter((o) => o.current_stage === "listo");
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkFinalize = async () => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    if (!confirm(`¿Finalizar ${ids.length} pedido(s) y enviarlos a Logística?`)) return;
+    for (const id of ids) {
+      await forceCompleteOrder.mutateAsync({ orderId: id });
+    }
+    toast.success(`${ids.length} pedido(s) finalizado(s) y enviados a Logística.`);
+    setSelected(new Set());
+  };
 
   if (isLoading) {
     return <div className="space-y-4">{[1,2,3].map(i => <Skeleton key={i} className="h-32 w-full" />)}</div>;
@@ -87,7 +111,14 @@ export const SweatspotWorkflow = () => {
       </div>
 
       <Separator />
-      <h3 className="text-sm font-semibold text-foreground">Órdenes de producción ({activeOrders.length} activas)</h3>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h3 className="text-sm font-semibold text-foreground">Órdenes de producción ({activeOrders.length} activas)</h3>
+        {isAdmin && selected.size > 0 && (
+          <Button size="sm" onClick={handleBulkFinalize}>
+            <ShieldCheck className="h-4 w-4 mr-1" /> Finalizar {selected.size} seleccionado(s)
+          </Button>
+        )}
+      </div>
       <p className="text-xs text-muted-foreground -mt-4">Estas órdenes se crean automáticamente desde la sección de Ventas.</p>
 
       {activeOrders.length === 0 && (
@@ -105,6 +136,9 @@ export const SweatspotWorkflow = () => {
               key={order.id}
               order={order}
               role={role}
+              isAdmin={isAdmin}
+              selected={selected.has(order.id)}
+              onToggleSelect={() => toggleSelect(order.id)}
               onStart={() => updateStageStatus.mutate({ orderId: order.id, status: "en_proceso" })}
               onFinish={() => {
                 if (isLastStage) {
@@ -160,7 +194,7 @@ export const SweatspotWorkflow = () => {
 };
 
 /* Order Card */
-function OrderCard({ order, role, onStart, onFinish }: { order: ProductionOrder; role: string | null; onStart: () => void; onFinish: () => void }) {
+function OrderCard({ order, role, isAdmin, selected, onToggleSelect, onStart, onFinish }: { order: ProductionOrder; role: string | null; isAdmin: boolean; selected: boolean; onToggleSelect: () => void; onStart: () => void; onFinish: () => void }) {
   const stages = order.stages;
   const currentIdx = stages.indexOf(order.current_stage);
   const Icon = STAGE_ICONS[order.current_stage] || Paintbrush;
@@ -169,10 +203,13 @@ function OrderCard({ order, role, onStart, onFinish }: { order: ProductionOrder;
   const disableButtons = isEstampacionStage && role === "produccion";
 
   return (
-    <Card>
+    <Card className={selected ? "ring-2 ring-primary" : ""}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
+            {isAdmin && (
+              <Checkbox checked={selected} onCheckedChange={onToggleSelect} aria-label="Seleccionar pedido" />
+            )}
             <div className="rounded-lg bg-primary/10 p-2">
               <Icon className="h-5 w-5 text-primary" />
             </div>

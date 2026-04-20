@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +31,7 @@ import {
   Info,
   Thermometer,
   Snowflake,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useProductionOrders, type ProductionOrder, type BodyTask } from "@/hooks/useProductionOrders";
@@ -79,8 +81,10 @@ const CANONICAL_REFERENCES = [
 ];
 
 export const MagicalWarmersWorkflow = () => {
-  const { orders, bodyTasks, isLoading, updateStageStatus, advanceStage, addBodyTask, updateBodyTaskStatus } = useProductionOrders("magical");
+  const { orders, bodyTasks, isLoading, updateStageStatus, advanceStage, addBodyTask, updateBodyTaskStatus, forceCompleteOrder } = useProductionOrders("magical");
   const { role } = useAuth();
+  const isAdmin = role === "admin";
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showBodyForm, setShowBodyForm] = useState(false);
 
   // Confirmation dialog state for body tasks
@@ -98,6 +102,25 @@ export const MagicalWarmersWorkflow = () => {
   const completedOrders = orders.filter((o) => o.current_stage === "listo");
   const activeBodyTasks = bodyTasks.filter((t) => t.status !== "finalizado");
   const completedBodyTasks = bodyTasks.filter((t) => t.status === "finalizado");
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkFinalize = async () => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    if (!confirm(`¿Finalizar ${ids.length} pedido(s) y enviarlos a Logística?`)) return;
+    for (const id of ids) {
+      await forceCompleteOrder.mutateAsync({ orderId: id });
+    }
+    toast.success(`${ids.length} pedido(s) finalizado(s) y enviados a Logística.`);
+    setSelected(new Set());
+  };
 
   const handleFinishBodyTask = (task: BodyTask) => {
     setConfirmTask(task);
@@ -256,7 +279,14 @@ export const MagicalWarmersWorkflow = () => {
 
       {/* Production Orders */}
       <Separator />
-      <h3 className="text-sm font-semibold text-foreground">Órdenes de producción ({activeOrders.length} activas)</h3>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h3 className="text-sm font-semibold text-foreground">Órdenes de producción ({activeOrders.length} activas)</h3>
+        {isAdmin && selected.size > 0 && (
+          <Button size="sm" onClick={handleBulkFinalize}>
+            <ShieldCheck className="h-4 w-4 mr-1" /> Finalizar {selected.size} seleccionado(s)
+          </Button>
+        )}
+      </div>
       <p className="text-xs text-muted-foreground -mt-4">Estas órdenes se crean automáticamente desde la sección de Ventas.</p>
 
       {activeOrders.length === 0 && (
@@ -269,6 +299,9 @@ export const MagicalWarmersWorkflow = () => {
             key={order.id}
             order={order}
             role={role}
+            isAdmin={isAdmin}
+            selected={selected.has(order.id)}
+            onToggleSelect={() => toggleSelect(order.id)}
             onStart={() => updateStageStatus.mutate({ orderId: order.id, status: "en_proceso" })}
             onFinish={() => handleFinishOrder(order)}
           />
@@ -394,7 +427,7 @@ export const MagicalWarmersWorkflow = () => {
 };
 
 /* Order Card */
-function OrderCard({ order, role, onStart, onFinish }: { order: ProductionOrder; role: string | null; onStart: () => void; onFinish: () => void }) {
+function OrderCard({ order, role, isAdmin, selected, onToggleSelect, onStart, onFinish }: { order: ProductionOrder; role: string | null; isAdmin: boolean; selected: boolean; onToggleSelect: () => void; onStart: () => void; onFinish: () => void }) {
   const stages = order.stages;
   const currentIdx = stages.indexOf(order.current_stage);
   const Icon = STAGE_ICONS[order.current_stage] || Package;
@@ -403,10 +436,13 @@ function OrderCard({ order, role, onStart, onFinish }: { order: ProductionOrder;
   const disableButtons = isEstampacionStage && role === "produccion";
 
   return (
-    <Card>
+    <Card className={selected ? "ring-2 ring-primary" : ""}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
+            {isAdmin && (
+              <Checkbox checked={selected} onCheckedChange={onToggleSelect} aria-label="Seleccionar pedido" />
+            )}
             <div className="rounded-lg bg-primary/10 p-2">
               <Icon className="h-5 w-5 text-primary" />
             </div>

@@ -307,6 +307,47 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
     },
   });
 
+  /** Admin: force complete an order (skip all remaining stages, send to Logística). */
+  const forceCompleteOrder = useMutation({
+    mutationFn: async ({ orderId }: { orderId: string }) => {
+      const { data: order, error: fetchErr } = await supabase
+        .from("production_orders")
+        .select("*")
+        .eq("id", orderId)
+        .single();
+      if (fetchErr || !order) throw fetchErr || new Error("Orden no encontrada");
+      const po = order as ProductionOrder;
+
+      const { error } = await supabase
+        .from("production_orders")
+        .update({
+          current_stage: "listo",
+          stage_status: "finalizado",
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", orderId);
+      if (error) throw error;
+
+      if (po.order_id) {
+        await supabase.from("orders").update({ production_status: "listo" }).eq("id", po.order_id);
+      }
+
+      useLogisticsStore.getState().addWholesaleReady({
+        clientName: po.client_name,
+        brand: po.brand as "magical" | "sweatspot",
+        product: po.brand === "magical" ? `Magical Warmers — ${po.molde}` : `Termo ${po.thermo_size}`,
+        quantity: po.quantity,
+        saleType: "mayor",
+        sourceTaskId: orderId,
+      });
+      return po;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["production_orders"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    },
+  });
+
   return {
     orders: ordersQuery.data ?? [],
     bodyTasks: bodyTasksQuery.data ?? [],
@@ -316,5 +357,6 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
     advanceStage,
     addBodyTask,
     updateBodyTaskStatus,
+    forceCompleteOrder,
   };
 }
