@@ -194,7 +194,7 @@ export const SweatspotWorkflow = () => {
 };
 
 /* Order Card */
-function OrderCard({ order, role, onStart, onFinish }: { order: ProductionOrder; role: string | null; onStart: () => void; onFinish: () => void }) {
+function OrderCard({ order, role, isAdmin, selected, onToggleSelect, onStart, onFinish }: { order: ProductionOrder; role: string | null; isAdmin: boolean; selected: boolean; onToggleSelect: () => void; onStart: () => void; onFinish: () => void }) {
   const stages = order.stages;
   const currentIdx = stages.indexOf(order.current_stage);
   const Icon = STAGE_ICONS[order.current_stage] || Paintbrush;
@@ -203,10 +203,13 @@ function OrderCard({ order, role, onStart, onFinish }: { order: ProductionOrder;
   const disableButtons = isEstampacionStage && role === "produccion";
 
   return (
-    <Card>
+    <Card className={selected ? "ring-2 ring-primary" : ""}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
+            {isAdmin && (
+              <Checkbox checked={selected} onCheckedChange={onToggleSelect} aria-label="Seleccionar pedido" />
+            )}
             <div className="rounded-lg bg-primary/10 p-2">
               <Icon className="h-5 w-5 text-primary" />
             </div>
