@@ -269,11 +269,11 @@ const Logistica = () => {
         <TabsContent value="ready">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
-              <CardTitle className="text-lg">Pedidos listos para despacho</CardTitle>
+              <CardTitle className="text-lg">Envíos listos para despacho</CardTitle>
               <div className="flex gap-2">
-                {selectedIds.size > 0 && (
-                  <Button variant="outline" size="sm" onClick={() => generateLabelsForOrders(readyOrders.filter(o => selectedIds.has(o.id)))}>
-                    <FileImage className="h-4 w-4 mr-2" /> Descargar rótulos ({selectedIds.size})
+                {selectedGroups.length > 0 && (
+                  <Button variant="outline" size="sm" onClick={() => generateLabelsForGroups(selectedGroups)}>
+                    <FileImage className="h-4 w-4 mr-2" /> Descargar rótulos ({selectedGroups.length})
                   </Button>
                 )}
                 {readyOrders.length > 0 && (
@@ -284,61 +284,32 @@ const Logistica = () => {
               </div>
             </CardHeader>
             <CardContent>
-              {readyOrders.length === 0 ? (
+              {readyGroups.length === 0 ? (
                 <EmptyState icon={<Package className="h-12 w-12 mb-3 opacity-40" />} title="No hay pedidos listos para despacho" subtitle="Los pedidos aparecerán aquí cuando estén listos y pagados." />
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-10">
-                        <Checkbox
-                          checked={readyOrders.length > 0 && readyOrders.every(o => selectedIds.has(o.id))}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedIds(new Set(readyOrders.map(o => o.id)));
-                            } else {
-                              setSelectedIds(new Set());
-                            }
-                          }}
-                        />
-                      </TableHead>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Marca</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Producto</TableHead>
-                      <TableHead className="text-right">Unidades</TableHead>
-                      <TableHead>Pago</TableHead>
-                      <TableHead className="text-right">Acción</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {readyOrders.map((order) => (
-                      <TableRow key={order.id} className={selectedIds.has(order.id) ? "bg-muted/50" : ""}>
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedIds.has(order.id)}
-                            onCheckedChange={(checked) => {
-                              const next = new Set(selectedIds);
-                              if (checked) next.add(order.id);
-                              else next.delete(order.id);
-                              setSelectedIds(next);
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell className="font-medium">{order.client_name}</TableCell>
-                        <TableCell><Badge variant={order.brand === "magical" ? "default" : "secondary"}>{brandLabel(order.brand)}</Badge></TableCell>
-                        <TableCell><Badge variant="outline">{saleLabel(order.sale_type)}</Badge></TableCell>
-                        <TableCell>{order.product}</TableCell>
-                        <TableCell className="text-right font-medium">{order.quantity.toLocaleString()}</TableCell>
-                        <TableCell><PaymentBadge order={order} /></TableCell>
-                        <TableCell className="text-right space-x-2">
-                          <ShippingLabelDialog clientName={order.client_name} />
-                          {canEdit && <DispatchDialog order={order} />}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 px-1 pb-1 border-b">
+                    <Checkbox
+                      checked={readyGroups.length > 0 && readyGroups.every(isGroupSelected)}
+                      onCheckedChange={(checked) => {
+                        if (checked) setSelectedIds(new Set(readyGroups.map(g => g.key)));
+                        else setSelectedIds(new Set());
+                      }}
+                    />
+                    <span className="text-xs text-muted-foreground">Seleccionar todos los envíos ({readyGroups.length})</span>
+                  </div>
+                  {readyGroups.map((g) => (
+                    <ShipmentGroupCard
+                      key={g.key}
+                      group={g}
+                      selected={isGroupSelected(g)}
+                      onToggle={(c) => toggleGroup(g, c)}
+                      brandLabel={brandLabel}
+                      saleLabel={saleLabel}
+                      canEdit={canEdit}
+                    />
+                  ))}
+                </div>
               )}
             </CardContent>
           </Card>
@@ -346,53 +317,21 @@ const Logistica = () => {
 
         <TabsContent value="pending">
           <Card>
-            <CardHeader><CardTitle className="text-lg">Pedidos recién montados — Pendientes de despacho</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-lg">Envíos pendientes — Recién montados</CardTitle></CardHeader>
             <CardContent>
-              {pendingOrders.length === 0 ? (
+              {pendingGroups.length === 0 ? (
                 <EmptyState icon={<AlertTriangle className="h-12 w-12 mb-3 opacity-40" />} title="No hay pedidos pendientes" subtitle="Los pedidos al por mayor aparecerán aquí hasta que producción los apruebe y estén pagados." />
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Marca</TableHead>
-                      <TableHead>Producto</TableHead>
-                      <TableHead className="text-right">Unidades</TableHead>
-                      <TableHead>Fecha creación</TableHead>
-                      <TableHead>Fecha entrega est.</TableHead>
-                      <TableHead>Antigüedad</TableHead>
-                      <TableHead>Estado producción</TableHead>
-                      <TableHead>Pago</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pendingOrders.map((order) => {
-                      const createdDate = new Date(order.created_at);
-                      const aging = differenceInDays(new Date(), createdDate);
-                      const paid = order.payment_complete || (order.total_amount && order.abono && Number(order.abono) >= Number(order.total_amount));
-                      return (
-                        <TableRow key={order.id} className={paid ? "" : "opacity-60"}>
-                          <TableCell className="font-medium">{order.client_name}</TableCell>
-                          <TableCell><Badge variant={order.brand === "magical" ? "default" : "secondary"}>{brandLabel(order.brand)}</Badge></TableCell>
-                          <TableCell>{order.product}</TableCell>
-                          <TableCell className="text-right font-medium">{order.quantity.toLocaleString()}</TableCell>
-                          <TableCell className="text-sm">{format(createdDate, "dd MMM yyyy", { locale: es })}</TableCell>
-                          <TableCell className="text-sm">
-                            {order.delivery_date ? (
-                              <span className="flex items-center gap-1">
-                                <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
-                                {format(new Date(order.delivery_date), "dd MMM yyyy", { locale: es })}
-                              </span>
-                            ) : <span className="text-muted-foreground">—</span>}
-                          </TableCell>
-                          <TableCell><AgingBadge days={aging} /></TableCell>
-                          <TableCell><ProductionStatusBadge status={order.production_status} order={order} /></TableCell>
-                          <TableCell><PaymentBadge order={order} /></TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                <div className="space-y-3">
+                  {pendingGroups.map((g) => (
+                    <PendingGroupCard
+                      key={g.key}
+                      group={g}
+                      brandLabel={brandLabel}
+                      saleLabel={saleLabel}
+                    />
+                  ))}
+                </div>
               )}
             </CardContent>
           </Card>
@@ -400,41 +339,21 @@ const Logistica = () => {
 
         <TabsContent value="dispatched">
           <Card>
-            <CardHeader><CardTitle className="text-lg">Pedidos despachados</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-lg">Envíos despachados</CardTitle></CardHeader>
             <CardContent>
-              {dispatchedOrders.length === 0 ? (
+              {dispatchedGroups.length === 0 ? (
                 <EmptyState icon={<CheckCircle2 className="h-12 w-12 mb-3 opacity-40" />} title="No hay pedidos despachados aún" subtitle="Los pedidos despachados aparecerán en este historial." />
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Marca</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Producto</TableHead>
-                      <TableHead className="text-right">Unidades</TableHead>
-                      <TableHead>Transportadora</TableHead>
-                      <TableHead>Guía</TableHead>
-                      <TableHead>Notas</TableHead>
-                      <TableHead>Fecha despacho</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {dispatchedOrders.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell className="font-medium">{order.client_name}</TableCell>
-                        <TableCell><Badge variant={order.brand === "magical" ? "default" : "secondary"}>{brandLabel(order.brand)}</Badge></TableCell>
-                        <TableCell><Badge variant="outline">{saleLabel(order.sale_type)}</Badge></TableCell>
-                        <TableCell>{order.product}</TableCell>
-                        <TableCell className="text-right font-medium">{order.quantity.toLocaleString()}</TableCell>
-                        <TableCell>{order.transportadora || "—"}</TableCell>
-                        <TableCell className="font-mono text-sm">{order.numero_guia || "—"}</TableCell>
-                        <TableCell className="max-w-[200px] truncate text-sm">{order.dispatch_notes || "—"}</TableCell>
-                        <TableCell>{order.dispatched_at || "—"}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="space-y-3">
+                  {dispatchedGroups.map((g) => (
+                    <DispatchedGroupCard
+                      key={g.key}
+                      group={g}
+                      brandLabel={brandLabel}
+                      saleLabel={saleLabel}
+                    />
+                  ))}
+                </div>
               )}
             </CardContent>
           </Card>
