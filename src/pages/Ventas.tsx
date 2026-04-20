@@ -379,7 +379,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
     // Upload logo once if provided (skip design request for recompra)
     let logoUrl: string | null = null;
-    if (logoFile && logoFile.size > 0 && user && !isRecompra) {
+    const shouldCreateLogoRequest = !isRecompra || (isRecompra && needsLogoAdjustment);
+    if (logoFile && logoFile.size > 0 && user && shouldCreateLogoRequest) {
       const firstLine = orderLines[0];
       const referencia = `${firstLine.product} (${firstLine.type})`;
       const result = await createLogoRequestFromOrder({
