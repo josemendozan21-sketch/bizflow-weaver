@@ -502,7 +502,16 @@ function GroupDispatchDialog({ group }: { group: ShipmentGroup }) {
       <DialogTrigger asChild>
         <Button size="sm"><Truck className="h-4 w-4 mr-1" /> Despachar</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent
+        className="sm:max-w-md"
+        onPointerDownOutside={(e) => {
+          // Prevent the dialog from closing when clicking inside a Radix Select portal
+          const target = e.target as HTMLElement;
+          if (target.closest("[data-radix-select-content], [data-radix-popper-content-wrapper]")) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Confirmar despacho</DialogTitle>
         </DialogHeader>
