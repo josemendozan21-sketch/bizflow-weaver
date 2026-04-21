@@ -505,9 +505,14 @@ function GroupDispatchDialog({ group }: { group: ShipmentGroup }) {
       <DialogContent
         className="sm:max-w-md"
         onPointerDownOutside={(e) => {
-          // Prevent the dialog from closing when clicking inside a Radix Select portal
           const target = e.target as HTMLElement;
-          if (target.closest("[data-radix-select-content], [data-radix-popper-content-wrapper]")) {
+          if (target.closest("[data-radix-select-content], [data-radix-popper-content-wrapper], [data-radix-select-viewport], [data-radix-select-item], [role='listbox'], [role='option']")) {
+            e.preventDefault();
+          }
+        }}
+        onInteractOutside={(e) => {
+          const target = e.target as HTMLElement;
+          if (target.closest("[data-radix-select-content], [data-radix-popper-content-wrapper], [data-radix-select-viewport], [data-radix-select-item], [role='listbox'], [role='option']")) {
             e.preventDefault();
           }
         }}
