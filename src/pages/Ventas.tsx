@@ -377,10 +377,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       }
     }
 
-    // Upload logo once if provided — siempre crear solicitud de diseño,
-    // incluso para recompras (el cliente puede pedir ajustes al logo).
+    // Upload logo once if provided. En recompras NO se crea solicitud
+    // de diseño automática (el logo ya existe y fue aprobado antes).
     let logoUrl: string | null = null;
-    if (logoFile && logoFile.size > 0 && user) {
+    if (logoFile && logoFile.size > 0 && user && !isRecompra) {
       const firstLine = orderLines[0];
       const referencia = `${firstLine.product} (${firstLine.type})`;
       const result = await createLogoRequestFromOrder({
@@ -399,6 +399,9 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       } else {
         toast.error("Diseño de logo", { description: result.message });
       }
+    } else if (logoFile && logoFile.size > 0 && isRecompra) {
+      // Marcar que hay logo adjunto pero sin generar solicitud de diseño.
+      logoUrl = "logo-uploaded";
     }
 
     const magicalStages = ["produccion_cuerpos", "estampacion", "dosificacion", "sellado", "recorte", "empaque", "listo"];
@@ -773,7 +776,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             </div>
             {isRecompra && (
               <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3">
-                ℹ️ Aunque sea recompra, el logo siempre se enviará al diseñador para revisión o ajustes antes de producir.
+                ✓ Recompra: El logo ya existe, no se generará solicitud de diseño automática.
               </p>
             )}
           </fieldset>
@@ -925,9 +928,10 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       }
     }
 
-    // Auto-create design request once if logo was uploaded — siempre, incluso recompras.
+    // Auto-create design request once if logo was uploaded.
+    // En recompras NO se crea solicitud de diseño automática.
     let logoUrl: string | null = null;
-    if (logoFile && logoFile.size > 0 && user) {
+    if (logoFile && logoFile.size > 0 && user && !ssIsRecompra) {
       const firstRef = ssLines[0].referencia;
       const result = await createLogoRequestFromOrder({
         brand: "Sweatspot",
@@ -1303,7 +1307,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
             </div>
             {ssIsRecompra && (
               <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3 max-w-md">
-                ℹ️ Aunque sea recompra, el logo siempre se enviará al diseñador para revisión o ajustes antes de producir.
+                ✓ Recompra: El logo ya existe, no se generará solicitud de diseño automática.
               </p>
             )}
           </fieldset>
