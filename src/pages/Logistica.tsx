@@ -14,7 +14,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Package, Truck, CheckCircle2, Clock, AlertTriangle, CalendarDays, FileCheck, Download, FileImage, MapPin } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { differenceInDays, format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -545,16 +544,25 @@ function GroupDispatchDialog({ group }: { group: ShipmentGroup }) {
         <div className="space-y-4 pt-2">
           <div className="space-y-1.5">
             <Label>Transportadora</Label>
-            <Select value={transportadora} onValueChange={setTransportadora}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar transportadora" />
-              </SelectTrigger>
-              <SelectContent>
-                {TRANSPORTADORAS.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-2 gap-2">
+              {TRANSPORTADORAS.map((t) => {
+                const active = transportadora === t.value;
+                return (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => setTransportadora(t.value)}
+                    className={`text-sm rounded-md border px-3 py-2 text-left transition-colors ${
+                      active
+                        ? "border-primary bg-primary/10 text-foreground font-medium ring-1 ring-primary"
+                        : "border-input bg-background text-foreground hover:bg-accent"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {isBogoexpress ? (
