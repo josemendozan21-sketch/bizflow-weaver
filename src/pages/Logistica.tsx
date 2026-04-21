@@ -11,7 +11,7 @@ import { useOrders, type Order } from "@/hooks/useOrders";
 import { useAuth } from "@/contexts/AuthContext";
 import { canEditSection } from "@/lib/rolePermissions";
 import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Package, Truck, CheckCircle2, Clock, AlertTriangle, CalendarDays, FileCheck, Download, FileImage, MapPin } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -193,6 +193,24 @@ const Logistica = () => {
   const queryClient = useQueryClient();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  // Fetch finished product photos from production orders
+  const { data: productionOrders = [] } = useQuery({
+    queryKey: ["production_orders_for_logistics"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("production_orders")
+        .select("order_id, finished_photo_url, packager_name, final_count")
+        .not("finished_photo_url", "is", null);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const completionMap = new Map(
+    productionOrders
+      .filter((po) => po.order_id)
+      .map((po) => [po.order_id, { photoUrl: po.finished_photo_url, packagerName: po.packager_name, finalCount: po.final_count }])
+  );
+
   // Ready for dispatch: retail orders with status "listo" OR wholesale orders that are production-complete AND fully paid
   const readyOrders = allOrders.filter((o) => {
     if (o.production_status === "despachado" || o.production_status === "entregado") return false;
@@ -308,6 +326,7 @@ const Logistica = () => {
                       brandLabel={brandLabel}
                       saleLabel={saleLabel}
                       canEdit={canEdit}
+                      completionMap={completionMap}
                     />
                   ))}
                 </div>
@@ -586,6 +605,7 @@ function ShipmentGroupCard({
   brandLabel,
   saleLabel,
   canEdit,
+  completionMap,
 }: {
   group: ShipmentGroup;
   selected: boolean;
@@ -593,7 +613,13 @@ function ShipmentGroupCard({
   brandLabel: (b: string) => string;
   saleLabel: (t: string) => string;
   canEdit: boolean;
+  completionMap?: Map<string, { photoUrl: string | null; packagerName: string | null; finalCount: number | null }>;
 }) {
+  // Find finished photos for items in this group
+  const finishedPhotos = group.items
+    .map((it) => completionMap?.get(it.id))
+    .filter((c): c is { photoUrl: string | null; packagerName: string | null; finalCount: number | null } => !!c && !!c.photoUrl);
+
   return (
     <div className={`rounded-lg border bg-card transition-colors ${selected ? "border-primary ring-1 ring-primary/30" : ""}`}>
       <div className="flex items-start gap-3 p-4 border-b">
@@ -630,6 +656,27 @@ function ShipmentGroupCard({
             </div>
           </div>
         ))}
+        {finishedPhotos.length > 0 && (
+          <div className="pt-3 mt-2 border-t">
+            <p className="text-xs font-medium text-muted-foreground mb-2">
+              Foto(s) de producto terminado ({finishedPhotos.length})
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {finishedPhotos.map((c, idx) => (
+                <a
+                  key={idx}
+                  href={c.photoUrl!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-20 h-20 rounded-md border overflow-hidden bg-muted hover:ring-2 hover:ring-primary transition"
+                  title={`Empacado por ${c.packagerName || "—"}${c.finalCount ? ` · ${c.finalCount} und` : ""}`}
+                >
+                  <img src={c.photoUrl!} alt="Producto terminado" className="w-full h-full object-cover" />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
