@@ -193,6 +193,24 @@ const Logistica = () => {
   const queryClient = useQueryClient();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  // Fetch finished product photos from production orders
+  const { data: productionOrders = [] } = useQuery({
+    queryKey: ["production_orders_for_logistics"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("production_orders")
+        .select("order_id, finished_photo_url, packager_name, final_count")
+        .not("finished_photo_url", "is", null);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const completionMap = new Map(
+    productionOrders
+      .filter((po) => po.order_id)
+      .map((po) => [po.order_id, { photoUrl: po.finished_photo_url, packagerName: po.packager_name, finalCount: po.final_count }])
+  );
+
   // Ready for dispatch: retail orders with status "listo" OR wholesale orders that are production-complete AND fully paid
   const readyOrders = allOrders.filter((o) => {
     if (o.production_status === "despachado" || o.production_status === "entregado") return false;
