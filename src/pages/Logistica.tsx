@@ -326,6 +326,7 @@ const Logistica = () => {
                       brandLabel={brandLabel}
                       saleLabel={saleLabel}
                       canEdit={canEdit}
+                      completionMap={completionMap}
                     />
                   ))}
                 </div>
