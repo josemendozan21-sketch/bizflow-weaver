@@ -206,6 +206,15 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
           sourceTaskId: orderId,
         });
 
+        // Notify logistics team
+        await supabase.from("notifications").insert({
+          target_role: "logistica",
+          title: "Pedido listo para despacho",
+          message: `${po.client_name} — ${po.quantity} und ${po.brand === "magical" ? "Magical Warmers" : "Sweatspot"}. Producción finalizada y enviado a Logística.`,
+          type: "pedido_listo",
+          reference_id: po.order_id || orderId,
+        });
+
         return { completed: true, order: po };
       }
 
