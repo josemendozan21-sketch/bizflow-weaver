@@ -215,6 +215,36 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
           reference_id: po.order_id || orderId,
         });
 
+        // Notify other teams about completion (Ventas via advisor, Contabilidad, Admin)
+        const brandLabel = po.brand === "magical" ? "Magical Warmers" : "Sweatspot";
+        const completionNotifs: any[] = [
+          {
+            target_role: "contabilidad",
+            title: "Pedido finalizado en producción",
+            message: `${po.client_name} — ${po.quantity} und ${brandLabel}. Listo para facturación.`,
+            type: "pedido_listo",
+            reference_id: po.order_id || orderId,
+          },
+          {
+            target_role: "admin",
+            title: "Pedido finalizado en producción",
+            message: `${po.client_name} — ${po.quantity} und ${brandLabel}. Producción completada.`,
+            type: "pedido_listo",
+            reference_id: po.order_id || orderId,
+          },
+        ];
+        if (po.advisor_id) {
+          completionNotifs.push({
+            target_role: "asesor_comercial",
+            target_user_id: po.advisor_id,
+            title: "Tu pedido está listo",
+            message: `${po.client_name} — ${po.quantity} und ${brandLabel}. Producción finalizada y enviado a Logística.`,
+            type: "pedido_listo",
+            reference_id: po.order_id || orderId,
+          });
+        }
+        await supabase.from("notifications").insert(completionNotifs);
+
         return { completed: true, order: po };
       }
 
@@ -238,6 +268,39 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
       if (po.order_id) {
         await supabase.from("orders").update({ production_status: nextStage }).eq("id", po.order_id);
       }
+
+      // Notify teams of stage advancement
+      const labels = po.brand === "magical" ? MAGICAL_STAGE_LABELS : SS_STAGE_LABELS;
+      const prevLabel = labels[po.current_stage] || po.current_stage;
+      const nextLabel = labels[nextStage] || nextStage;
+      const brandLabel = po.brand === "magical" ? "Magical Warmers" : "Sweatspot";
+      const stageNotifs: any[] = [
+        {
+          target_role: "produccion",
+          title: "Avance de etapa",
+          message: `${po.client_name} — ${brandLabel}. ${prevLabel} finalizada → ${nextLabel}.`,
+          type: "avance_etapa",
+          reference_id: po.order_id || orderId,
+        },
+        {
+          target_role: "admin",
+          title: "Avance de etapa",
+          message: `${po.client_name} — ${brandLabel}. ${prevLabel} → ${nextLabel}.`,
+          type: "avance_etapa",
+          reference_id: po.order_id || orderId,
+        },
+      ];
+      if (po.advisor_id) {
+        stageNotifs.push({
+          target_role: "asesor_comercial",
+          target_user_id: po.advisor_id,
+          title: "Avance de tu pedido",
+          message: `${po.client_name} — ${brandLabel}. ${prevLabel} finalizada → ${nextLabel}.`,
+          type: "avance_etapa",
+          reference_id: po.order_id || orderId,
+        });
+      }
+      await supabase.from("notifications").insert(stageNotifs);
 
       return { completed: false, order: po, nextStage };
     },
