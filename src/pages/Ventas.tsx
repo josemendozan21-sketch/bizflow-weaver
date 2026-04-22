@@ -340,6 +340,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const personalizacion = (fd.get("mw_personalizacion") as string) || "";
     const observaciones = (fd.get("mw_observaciones") as string) || "";
     const logoFile = fd.get("mw_logo") as File;
+    const logoNombre = ((fd.get("mw_logo_nombre") as string) || "").trim();
     const fechaRequerida = fd.get("mw_fechaRequerida") as string;
 
     // Validate all lines
@@ -511,7 +512,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           stages: magicalStages,
           gel_color: gelColor,
           ink_color: inkColor,
-          logo_file: logoFile?.name || null,
+          logo_file: logoNombre || logoFile?.name || null,
           needs_cuerpos: needsCuerpos,
           has_stock: bodyResult.available,
           molde: referencia,
@@ -914,6 +915,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     const personalizacion = (fd.get("ss_personalizacion") as string) || "";
     const observaciones = (fd.get("ss_observaciones") as string) || "";
     const logoFile = fd.get("ss_logo") as File;
+    const logoNombre = ((fd.get("ss_logo_nombre") as string) || "").trim();
     const fechaRequerida = fd.get("ss_fechaRequerida") as string;
 
     // Validate all lines
@@ -1091,7 +1093,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
           thermo_size: thermoSize,
           silicone_color: siliconeColor,
           logo_type: logoType,
-          logo_file: logoFile?.name || null,
+          logo_file: logoNombre || logoFile?.name || null,
           has_stock: hasStock,
           needs_cuerpos: !hasStock,
           observations: observaciones || null,
