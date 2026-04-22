@@ -1,0 +1,1 @@
+UPDATE public.stock_items SET brand = 'magical' WHERE name = 'Labios' AND brand = 'magical_warmers';
