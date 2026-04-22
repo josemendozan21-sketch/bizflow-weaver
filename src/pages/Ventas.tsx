@@ -340,6 +340,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const personalizacion = (fd.get("mw_personalizacion") as string) || "";
     const observaciones = (fd.get("mw_observaciones") as string) || "";
     const logoFile = fd.get("mw_logo") as File;
+    const logoNombre = ((fd.get("mw_logo_nombre") as string) || "").trim();
     const fechaRequerida = fd.get("mw_fechaRequerida") as string;
 
     // Validate all lines
@@ -511,7 +512,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           stages: magicalStages,
           gel_color: gelColor,
           ink_color: inkColor,
-          logo_file: logoFile?.name || null,
+          logo_file: logoNombre || logoFile?.name || null,
           needs_cuerpos: needsCuerpos,
           has_stock: bodyResult.available,
           molde: referencia,
@@ -787,6 +788,17 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
               <FileField label="Adjuntar logo" name="mw_logo" />
               <FileField label="Adjuntar RUT de la empresa (opcional)" name="mw_rut" />
             </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="mw_logo_nombre">Nombre o referencia del logo</Label>
+              <Input
+                id="mw_logo_nombre"
+                name="mw_logo_nombre"
+                placeholder="Ej: Logo Coca-Cola v2, Escudo Colegio San José..."
+              />
+              <p className="text-xs text-muted-foreground">
+                Escriba un nombre claro para que producción identifique fácilmente este logo.
+              </p>
+            </div>
           </fieldset>
 
           <fieldset className="space-y-4">
@@ -903,6 +915,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     const personalizacion = (fd.get("ss_personalizacion") as string) || "";
     const observaciones = (fd.get("ss_observaciones") as string) || "";
     const logoFile = fd.get("ss_logo") as File;
+    const logoNombre = ((fd.get("ss_logo_nombre") as string) || "").trim();
     const fechaRequerida = fd.get("ss_fechaRequerida") as string;
 
     // Validate all lines
@@ -1080,7 +1093,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
           thermo_size: thermoSize,
           silicone_color: siliconeColor,
           logo_type: logoType,
-          logo_file: logoFile?.name || null,
+          logo_file: logoNombre || logoFile?.name || null,
           has_stock: hasStock,
           needs_cuerpos: !hasStock,
           observations: observaciones || null,
@@ -1317,6 +1330,17 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
             <div className="grid gap-4 sm:grid-cols-2">
               <FileField label="Adjuntar logo" name="ss_logo" />
               <FileField label="Adjuntar RUT de la empresa (opcional)" name="ss_rut" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ss_logo_nombre">Nombre o referencia del logo</Label>
+              <Input
+                id="ss_logo_nombre"
+                name="ss_logo_nombre"
+                placeholder="Ej: Logo Coca-Cola v2, Escudo Colegio San José..."
+              />
+              <p className="text-xs text-muted-foreground">
+                Escriba un nombre claro para que producción identifique fácilmente este logo.
+              </p>
             </div>
           </fieldset>
 
