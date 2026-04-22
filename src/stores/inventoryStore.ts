@@ -80,6 +80,8 @@ const INITIAL_CONFIGS: MaterialConfig[] = [
   { id: "12", productName: "Handy", productType: "Térmico", gramsPerUnit: 75, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
   { id: "13", productName: "Muela", productType: "Frío", gramsPerUnit: 50, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
   { id: "14", productName: "Muela", productType: "Térmico", gramsPerUnit: 50, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "14a", productName: "Labios", productType: "Frío", gramsPerUnit: 40, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "14b", productName: "Labios", productType: "Térmico", gramsPerUnit: 40, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
   { id: "15", productName: "Círculo 8 cm", productType: "Frío", gramsPerUnit: 35, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
   { id: "16", productName: "Círculo 8 cm", productType: "Térmico", gramsPerUnit: 35, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
   { id: "17", productName: "Círculo 12 cm", productType: "Frío", gramsPerUnit: 125, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
