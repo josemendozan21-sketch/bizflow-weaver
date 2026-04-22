@@ -77,7 +77,7 @@ const PLASTICO_OPTIONS = [
 /** Canonical product references for body production */
 const CANONICAL_REFERENCES = [
   "Lumbar", "Shoulder", "Cervical", "Multiusos", "Pocket", "Handy",
-  "Muela", "Círculo 8 cm", "Círculo 12 cm",
+  "Muela", "Labios", "Círculo 8 cm", "Círculo 12 cm",
 ];
 
 export const MagicalWarmersWorkflow = () => {
