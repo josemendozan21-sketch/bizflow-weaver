@@ -951,8 +951,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       }
     }
 
-    const ssShortStages = ["estampacion", "colocacion_boquilla", "listo"];
-    const ssFullStages = ["estampacion", "produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"];
+    const ssShortStages = ["produccion_cuerpos", "estampacion", "colocacion_boquilla", "listo"];
+    const ssFullStages = ["produccion_cuerpos", "estampacion", "produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"];
 
     // Process each line as a separate order
     for (const line of ssLines) {
