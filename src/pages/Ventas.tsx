@@ -787,6 +787,17 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
               <FileField label="Adjuntar logo" name="mw_logo" />
               <FileField label="Adjuntar RUT de la empresa (opcional)" name="mw_rut" />
             </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="mw_logo_nombre">Nombre o referencia del logo</Label>
+              <Input
+                id="mw_logo_nombre"
+                name="mw_logo_nombre"
+                placeholder="Ej: Logo Coca-Cola v2, Escudo Colegio San José..."
+              />
+              <p className="text-xs text-muted-foreground">
+                Escriba un nombre claro para que producción identifique fácilmente este logo.
+              </p>
+            </div>
           </fieldset>
 
           <fieldset className="space-y-4">
@@ -1317,6 +1328,17 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
             <div className="grid gap-4 sm:grid-cols-2">
               <FileField label="Adjuntar logo" name="ss_logo" />
               <FileField label="Adjuntar RUT de la empresa (opcional)" name="ss_rut" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ss_logo_nombre">Nombre o referencia del logo</Label>
+              <Input
+                id="ss_logo_nombre"
+                name="ss_logo_nombre"
+                placeholder="Ej: Logo Coca-Cola v2, Escudo Colegio San José..."
+              />
+              <p className="text-xs text-muted-foreground">
+                Escriba un nombre claro para que producción identifique fácilmente este logo.
+              </p>
             </div>
           </fieldset>
 
