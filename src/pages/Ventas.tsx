@@ -396,13 +396,22 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       });
       if (result.success) {
         toast.success("Diseño de logo", { description: result.message });
-        logoUrl = "logo-uploaded";
+        logoUrl = result.logoUrl || "logo-uploaded";
       } else {
         toast.error("Diseño de logo", { description: result.message });
+        if (result.logoUrl) logoUrl = result.logoUrl;
       }
     } else if (logoFile && logoFile.size > 0 && isRecompra) {
-      // Marcar que hay logo adjunto pero sin generar solicitud de diseño.
-      logoUrl = "logo-uploaded";
+      // Recompra: subir el logo directamente para conservar la URL real.
+      const ext = logoFile.name.split(".").pop();
+      const path = `originals/${crypto.randomUUID()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("logo-files").upload(path, logoFile);
+      if (!upErr) {
+        const { data: urlData } = supabase.storage.from("logo-files").getPublicUrl(path);
+        logoUrl = urlData.publicUrl;
+      } else {
+        logoUrl = "logo-uploaded";
+      }
     }
 
     const magicalStages = ["produccion_cuerpos", "estampacion", "dosificacion", "sellado", "recorte", "empaque", "listo"];
@@ -958,9 +967,10 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       });
       if (result.success) {
         toast.success("Diseño de logo", { description: result.message });
-        logoUrl = "logo-uploaded";
+        logoUrl = result.logoUrl || "logo-uploaded";
       } else {
         toast.error("Diseño de logo", { description: result.message });
+        if (result.logoUrl) logoUrl = result.logoUrl;
       }
     }
 
