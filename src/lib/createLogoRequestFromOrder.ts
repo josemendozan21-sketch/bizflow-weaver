@@ -15,7 +15,7 @@ interface OrderLogoData {
  * Uploads the logo file and creates a design request automatically
  * when a new wholesale order includes a logo.
  */
-export async function createLogoRequestFromOrder(data: OrderLogoData): Promise<{ success: boolean; message: string }> {
+export async function createLogoRequestFromOrder(data: OrderLogoData): Promise<{ success: boolean; message: string; logoUrl?: string }> {
   try {
     // 1. Upload logo to storage
     const ext = data.logoFile.name.split(".").pop();
@@ -46,10 +46,10 @@ export async function createLogoRequestFromOrder(data: OrderLogoData): Promise<{
 
     if (insertError) {
       console.error("Error creating logo request:", insertError);
-      return { success: false, message: `Error al crear solicitud de diseño: ${insertError.message}` };
+      return { success: false, message: `Error al crear solicitud de diseño: ${insertError.message}`, logoUrl: urlData.publicUrl };
     }
 
-    return { success: true, message: "Solicitud de diseño creada automáticamente." };
+    return { success: true, message: "Solicitud de diseño creada automáticamente.", logoUrl: urlData.publicUrl };
   } catch (err: any) {
     console.error("Unexpected error creating logo request:", err);
     return { success: false, message: err.message || "Error inesperado" };
