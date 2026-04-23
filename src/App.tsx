@@ -18,6 +18,7 @@ import AdminUsuarios from "./pages/AdminUsuarios";
 import Costos from "./pages/Costos";
 import Eventos from "./pages/Eventos";
 import Ferias from "./pages/Ferias";
+import Galeria from "./pages/Galeria";
 import NotFound from "./pages/NotFound";
 import { ReactNode } from "react";
 
@@ -71,6 +72,7 @@ const App = () => (
                 <Route path="/costos" element={<ProtectedRoute path="/costos"><Costos /></ProtectedRoute>} />
                 <Route path="/eventos" element={<ProtectedRoute path="/eventos"><Eventos /></ProtectedRoute>} />
                 <Route path="/ferias" element={<ProtectedRoute path="/ferias"><Ferias /></ProtectedRoute>} />
+                <Route path="/galeria" element={<ProtectedRoute path="/galeria"><Galeria /></ProtectedRoute>} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

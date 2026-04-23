@@ -4,14 +4,14 @@ type AppRole = Database["public"]["Enums"]["app_role"];
 
 // Define which routes each role can access
 const ROLE_ROUTES: Record<AppRole, string[]> = {
-  admin: ["/", "/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/admin-usuarios", "/costos", "/eventos", "/ferias"],
-  asesor_comercial: ["/ventas", "/inventarios", "/diseno-logos", "/logistica", "/contabilidad", "/eventos", "/ferias"],
-  produccion: ["/produccion", "/inventarios", "/eventos", "/ferias"],
-  contabilidad: ["/contabilidad", "/eventos", "/ferias"],
-  estampacion: ["/diseno-logos", "/produccion", "/eventos", "/ferias"],
-  usuario_visual: ["/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/eventos", "/ferias"],
-  disenador: ["/diseno-logos", "/eventos", "/ferias"],
-  logistica: ["/logistica", "/eventos", "/ferias"],
+  admin: ["/", "/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/admin-usuarios", "/costos", "/eventos", "/ferias", "/galeria"],
+  asesor_comercial: ["/ventas", "/inventarios", "/diseno-logos", "/logistica", "/contabilidad", "/eventos", "/ferias", "/galeria"],
+  produccion: ["/produccion", "/inventarios", "/eventos", "/ferias", "/galeria"],
+  contabilidad: ["/contabilidad", "/eventos", "/ferias", "/galeria"],
+  estampacion: ["/diseno-logos", "/produccion", "/eventos", "/ferias", "/galeria"],
+  usuario_visual: ["/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/eventos", "/ferias", "/galeria"],
+  disenador: ["/diseno-logos", "/eventos", "/ferias", "/galeria"],
+  logistica: ["/logistica", "/eventos", "/ferias", "/galeria"],
 };
 
 // Sections where the role can edit (create, update, delete)
