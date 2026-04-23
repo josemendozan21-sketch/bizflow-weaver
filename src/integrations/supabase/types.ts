@@ -734,6 +734,51 @@ export type Database = {
         }
         Relationships: []
       }
+      product_gallery: {
+        Row: {
+          brand: string
+          client_name: string | null
+          created_at: string
+          id: string
+          logo_reference: string | null
+          notes: string | null
+          photo_url: string
+          product_name: string
+          storage_path: string
+          updated_at: string
+          uploaded_by: string
+          uploaded_by_name: string | null
+        }
+        Insert: {
+          brand: string
+          client_name?: string | null
+          created_at?: string
+          id?: string
+          logo_reference?: string | null
+          notes?: string | null
+          photo_url: string
+          product_name: string
+          storage_path: string
+          updated_at?: string
+          uploaded_by: string
+          uploaded_by_name?: string | null
+        }
+        Update: {
+          brand?: string
+          client_name?: string | null
+          created_at?: string
+          id?: string
+          logo_reference?: string | null
+          notes?: string | null
+          photo_url?: string
+          product_name?: string
+          storage_path?: string
+          updated_at?: string
+          uploaded_by?: string
+          uploaded_by_name?: string | null
+        }
+        Relationships: []
+      }
       production_orders: {
         Row: {
           advisor_id: string | null
