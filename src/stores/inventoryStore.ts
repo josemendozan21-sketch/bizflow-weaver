@@ -93,6 +93,22 @@ const INITIAL_CONFIGS: MaterialConfig[] = [
   { id: "21b", productName: "Gafas grandes", productType: "Térmico", gramsPerUnit: 50, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
   { id: "22", productName: "Gorro", productType: "Frío", gramsPerUnit: 600, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
   { id: "22b", productName: "Gorro", productType: "Térmico", gramsPerUnit: 600, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "23", productName: "Multiusos Mediana", productType: "Frío", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "23b", productName: "Multiusos Mediana", productType: "Térmico", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "24", productName: "Multiusos Grande", productType: "Frío", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "24b", productName: "Multiusos Grande", productType: "Térmico", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "25", productName: "Lumbar Mediana", productType: "Frío", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "25b", productName: "Lumbar Mediana", productType: "Térmico", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "26", productName: "Faja Post. Operatoria", productType: "Frío", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "26b", productName: "Faja Post. Operatoria", productType: "Térmico", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "27", productName: "Senos", productType: "Frío", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "27b", productName: "Senos", productType: "Térmico", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "28", productName: "Glúteos", productType: "Frío", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "28b", productName: "Glúteos", productType: "Térmico", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "29", productName: "Banda Cefálica", productType: "Frío", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "29b", productName: "Banda Cefálica", productType: "Térmico", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "30", productName: "Pélvica", productType: "Frío", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "30b", productName: "Pélvica", productType: "Térmico", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
 ];
 
 const INITIAL_GEL_STOCK: GelStock[] = [
