@@ -273,6 +273,12 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [estadoPago, setEstadoPago] = useState<"abono_inicial" | "pago_total" | "pendiente">("abono_inicial");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
+  const [costoAdicional, setCostoAdicional] = useState("");
+
+  // Reset costo adicional si se desactivan ambas opciones
+  useEffect(() => {
+    if (!dobleTinta && !escarcha) setCostoAdicional("");
+  }, [dobleTinta, escarcha]);
 
   const materialConfigs = useInventoryStore((s) => s.materialConfigs);
   const { reserveBodyStock: reserveBodyStockDB, discountStock: discountStockDB, stockItems: inventoryStockItems } = useInventory();
@@ -285,8 +291,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
   // Grand total across all lines
   const grandTotal = useMemo(() => {
-    return orderLines.reduce((sum, line) => line.isGift ? sum : sum + (parseFloat(line.valorTotal) || 0), 0);
-  }, [orderLines]);
+    const linesSum = orderLines.reduce((sum, line) => line.isGift ? sum : sum + (parseFloat(line.valorTotal) || 0), 0);
+    const extra = (dobleTinta || escarcha) ? (parseFloat(costoAdicional) || 0) : 0;
+    return linesSum + extra;
+  }, [orderLines, costoAdicional, dobleTinta, escarcha]);
 
   // Auto-fill abono when pago_total
   useEffect(() => {
