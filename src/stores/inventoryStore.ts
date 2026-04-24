@@ -109,6 +109,8 @@ const INITIAL_CONFIGS: MaterialConfig[] = [
   { id: "29b", productName: "Banda Cefálica", productType: "Térmico", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
   { id: "30", productName: "Pélvica", productType: "Frío", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
   { id: "30b", productName: "Pélvica", productType: "Térmico", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "31", productName: "Antifaz", productType: "Frío", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "31b", productName: "Antifaz", productType: "Térmico", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
 ];
 
 const INITIAL_GEL_STOCK: GelStock[] = [
