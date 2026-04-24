@@ -265,6 +265,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [dobleTinta, setDobleTinta] = useState(false);
   const [escarcha, setEscarcha] = useState(false);
   const [isRecompra, setIsRecompra] = useState(false);
+  const [noLogo, setNoLogo] = useState(false);
   const [needsLogoAdjustment, setNeedsLogoAdjustment] = useState(false);
   const [orderLines, setOrderLines] = useState<OrderLine[]>([createEmptyLine()]);
   const [abono, setAbono] = useState("");
@@ -381,7 +382,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     // Upload logo once if provided. En recompras NO se crea solicitud
     // de diseño automática (el logo ya existe y fue aprobado antes).
     let logoUrl: string | null = null;
-    if (logoFile && logoFile.size > 0 && user && !isRecompra) {
+    if (logoFile && logoFile.size > 0 && user && !isRecompra && !noLogo) {
       const firstLine = orderLines[0];
       const referencia = `${firstLine.product} (${firstLine.type})`;
       const result = await createLogoRequestFromOrder({
@@ -414,7 +415,9 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       }
     }
 
-    const magicalStages = ["produccion_cuerpos", "estampacion", "dosificacion", "sellado", "recorte", "empaque", "listo"];
+    const magicalStages = noLogo
+      ? ["produccion_cuerpos", "dosificacion", "sellado", "recorte", "empaque", "listo"]
+      : ["produccion_cuerpos", "estampacion", "dosificacion", "sellado", "recorte", "empaque", "listo"];
 
     // Process each line as a separate order
     for (const line of orderLines) {
@@ -505,7 +508,9 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       });
 
       const needsCuerpos = !bodyResult.available || bodyResult.discounted < quantity;
-      const initialStage = needsCuerpos ? "produccion_cuerpos" : "estampacion";
+      const initialStage = needsCuerpos
+        ? "produccion_cuerpos"
+        : (noLogo ? "dosificacion" : "estampacion");
 
       await supabase.from("orders").update({ production_status: initialStage }).eq("id", orderData.id);
 
@@ -770,7 +775,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Opciones adicionales</legend>
-            <div className="grid gap-6 sm:grid-cols-3">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               <div className="flex items-center justify-between rounded-md border border-input p-3">
                 <Label htmlFor="mw_recompra" className="cursor-pointer">Recompra</Label>
                 <Switch id="mw_recompra" checked={isRecompra} onCheckedChange={setIsRecompra} />
@@ -783,10 +788,19 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 <Label htmlFor="mw_escarcha" className="cursor-pointer">Escarcha</Label>
                 <Switch id="mw_escarcha" checked={escarcha} onCheckedChange={setEscarcha} />
               </div>
+              <div className="flex items-center justify-between rounded-md border border-input p-3">
+                <Label htmlFor="mw_noLogo" className="cursor-pointer">No requiere logo</Label>
+                <Switch id="mw_noLogo" checked={noLogo} onCheckedChange={setNoLogo} />
+              </div>
             </div>
             {isRecompra && (
               <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3">
                 ✓ Recompra: El logo ya existe, no se generará solicitud de diseño automática.
+              </p>
+            )}
+            {noLogo && (
+              <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3">
+                ✓ Sin logo: El pedido omitirá la etapa de estampación y pasará directo a producción.
               </p>
             )}
           </fieldset>
@@ -877,6 +891,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const [ssEstadoPago, setSsEstadoPago] = useState<"abono_inicial" | "pago_total" | "pendiente">("abono_inicial");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ssIsRecompra, setSsIsRecompra] = useState(false);
+  const [ssNoLogo, setSsNoLogo] = useState(false);
   const [ssNeedsLogoAdjustment, setSsNeedsLogoAdjustment] = useState(false);
   const [ssPaymentProofFile, setSsPaymentProofFile] = useState<File | null>(null);
   const tamanos = ["150 ml", "250 ml", "250 ml juguetón", "500 ml"] as const;
@@ -929,8 +944,13 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
     // Validate all lines
     for (const line of ssLines) {
-      if (!line.referencia || !line.tamano || !line.tipoLogo || !line.colorSilicona || !line.colorTinta || !line.units) {
+      if (!line.referencia || !line.tamano || !line.colorSilicona || !line.colorTinta || !line.units) {
         toast.error("Datos incompletos", { description: "Complete todos los campos en cada producto." });
+        setIsSubmitting(false);
+        return;
+      }
+      if (!ssNoLogo && !line.tipoLogo) {
+        toast.error("Tipo de logo requerido", { description: "Seleccione el tipo de logo o marque 'No requiere logo'." });
         setIsSubmitting(false);
         return;
       }
@@ -953,7 +973,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     // Auto-create design request once if logo was uploaded.
     // En recompras NO se crea solicitud de diseño automática.
     let logoUrl: string | null = null;
-    if (logoFile && logoFile.size > 0 && user && !ssIsRecompra) {
+    if (logoFile && logoFile.size > 0 && user && !ssIsRecompra && !ssNoLogo) {
       const firstRef = ssLines[0].referencia;
       const result = await createLogoRequestFromOrder({
         brand: "Sweatspot",
@@ -974,8 +994,12 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       }
     }
 
-    const ssShortStages = ["produccion_cuerpos", "estampacion", "colocacion_boquilla", "listo"];
-    const ssFullStages = ["produccion_cuerpos", "estampacion", "produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"];
+    const ssShortStages = ssNoLogo
+      ? ["produccion_cuerpos", "colocacion_boquilla", "listo"]
+      : ["produccion_cuerpos", "estampacion", "colocacion_boquilla", "listo"];
+    const ssFullStages = ssNoLogo
+      ? ["produccion_cuerpos", "produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"]
+      : ["produccion_cuerpos", "estampacion", "produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"];
 
     // Process each line as a separate order
     for (const line of ssLines) {
@@ -1081,9 +1105,11 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       const needsCuerpos = !bodyResult.available || bodyResult.discounted < quantity;
       const hasStock = bodyResult.available && bodyResult.discounted >= quantity;
 
-      const workflowType = (logoType === "impresion_basica" && hasStock) ? "short" : "full";
+      const workflowType = ((ssNoLogo || logoType === "impresion_basica") && hasStock) ? "short" : "full";
       const ssStages = workflowType === "short" ? ssShortStages : ssFullStages;
-      const initialStage = needsCuerpos ? "produccion_cuerpos" : "estampacion";
+      const initialStage = needsCuerpos
+        ? "produccion_cuerpos"
+        : (ssNoLogo ? (workflowType === "short" ? "colocacion_boquilla" : "produccion_tubos") : "estampacion");
 
       await supabase.from("orders")
         .update({ production_status: initialStage })
@@ -1324,13 +1350,24 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Opciones adicionales</legend>
-            <div className="flex items-center justify-between rounded-md border border-input p-3 max-w-xs">
-              <Label htmlFor="ss_recompra" className="cursor-pointer">Recompra</Label>
-              <Switch id="ss_recompra" checked={ssIsRecompra} onCheckedChange={setSsIsRecompra} />
+            <div className="grid gap-6 sm:grid-cols-2 max-w-xl">
+              <div className="flex items-center justify-between rounded-md border border-input p-3">
+                <Label htmlFor="ss_recompra" className="cursor-pointer">Recompra</Label>
+                <Switch id="ss_recompra" checked={ssIsRecompra} onCheckedChange={setSsIsRecompra} />
+              </div>
+              <div className="flex items-center justify-between rounded-md border border-input p-3">
+                <Label htmlFor="ss_noLogo" className="cursor-pointer">No requiere logo</Label>
+                <Switch id="ss_noLogo" checked={ssNoLogo} onCheckedChange={setSsNoLogo} />
+              </div>
             </div>
             {ssIsRecompra && (
               <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3 max-w-md">
                 ✓ Recompra: El logo ya existe, no se generará solicitud de diseño automática.
+              </p>
+            )}
+            {ssNoLogo && (
+              <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3 max-w-md">
+                ✓ Sin logo: El pedido omitirá la etapa de estampación y pasará directo a producción.
               </p>
             )}
           </fieldset>
