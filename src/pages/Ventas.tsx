@@ -775,7 +775,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Opciones adicionales</legend>
-            <div className="grid gap-6 sm:grid-cols-3">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               <div className="flex items-center justify-between rounded-md border border-input p-3">
                 <Label htmlFor="mw_recompra" className="cursor-pointer">Recompra</Label>
                 <Switch id="mw_recompra" checked={isRecompra} onCheckedChange={setIsRecompra} />
@@ -788,10 +788,19 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 <Label htmlFor="mw_escarcha" className="cursor-pointer">Escarcha</Label>
                 <Switch id="mw_escarcha" checked={escarcha} onCheckedChange={setEscarcha} />
               </div>
+              <div className="flex items-center justify-between rounded-md border border-input p-3">
+                <Label htmlFor="mw_noLogo" className="cursor-pointer">No requiere logo</Label>
+                <Switch id="mw_noLogo" checked={noLogo} onCheckedChange={setNoLogo} />
+              </div>
             </div>
             {isRecompra && (
               <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3">
                 ✓ Recompra: El logo ya existe, no se generará solicitud de diseño automática.
+              </p>
+            )}
+            {noLogo && (
+              <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3">
+                ✓ Sin logo: El pedido omitirá la etapa de estampación y pasará directo a producción.
               </p>
             )}
           </fieldset>
