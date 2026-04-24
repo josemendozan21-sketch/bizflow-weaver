@@ -273,6 +273,12 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [estadoPago, setEstadoPago] = useState<"abono_inicial" | "pago_total" | "pendiente">("abono_inicial");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
+  const [costoAdicional, setCostoAdicional] = useState("");
+
+  // Reset costo adicional si se desactivan ambas opciones
+  useEffect(() => {
+    if (!dobleTinta && !escarcha) setCostoAdicional("");
+  }, [dobleTinta, escarcha]);
 
   const materialConfigs = useInventoryStore((s) => s.materialConfigs);
   const { reserveBodyStock: reserveBodyStockDB, discountStock: discountStockDB, stockItems: inventoryStockItems } = useInventory();
@@ -285,8 +291,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
   // Grand total across all lines
   const grandTotal = useMemo(() => {
-    return orderLines.reduce((sum, line) => line.isGift ? sum : sum + (parseFloat(line.valorTotal) || 0), 0);
-  }, [orderLines]);
+    const linesSum = orderLines.reduce((sum, line) => line.isGift ? sum : sum + (parseFloat(line.valorTotal) || 0), 0);
+    const extra = (dobleTinta || escarcha) ? (parseFloat(costoAdicional) || 0) : 0;
+    return linesSum + extra;
+  }, [orderLines, costoAdicional, dobleTinta, escarcha]);
 
   // Auto-fill abono when pago_total
   useEffect(() => {
@@ -421,12 +429,24 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       : ["produccion_cuerpos", "estampacion", "dosificacion", "sellado", "recorte", "empaque", "listo"];
 
     // Process each line as a separate order
-    for (const line of orderLines) {
+    const extraCost = (dobleTinta || escarcha) ? (parseFloat(costoAdicional) || 0) : 0;
+    const extraNoteParts: string[] = [];
+    if (dobleTinta) extraNoteParts.push("doble tinta");
+    if (escarcha) extraNoteParts.push("escarcha");
+    const extraNote = extraCost > 0
+      ? `Costo adicional ${extraNoteParts.join(" y ")}: $${extraCost.toLocaleString("es-CO")}`
+      : "";
+
+    for (let lineIdx = 0; lineIdx < orderLines.length; lineIdx++) {
+      const line = orderLines[lineIdx];
+      const isFirstLine = lineIdx === 0;
       const quantity = parseInt(line.units, 10) || 0;
       const referencia = `${line.product} (${line.type})`;
       const gelColor = resolveColor(line.gelColor, line.gelCustom);
       const inkColor = resolveColor(line.inkColor, line.inkCustom);
-      const lineTotal = line.isGift ? 0 : (parseFloat(line.valorTotal) || 0);
+      const baseLineTotal = line.isGift ? 0 : (parseFloat(line.valorTotal) || 0);
+      // Sumar el costo adicional sólo a la primera línea (no a obsequios)
+      const lineTotal = (isFirstLine && !line.isGift) ? baseLineTotal + extraCost : baseLineTotal;
       const abonoAmount = line.isGift ? 0 : (estadoPago === "pago_total" ? lineTotal : (parseFloat(abono) || 0));
       const matchedConfig = getMatchedConfig(line.product, line.type);
 
@@ -478,7 +498,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           ink_color: inkColor,
           gel_color: gelColor,
           logo_url: logoUrl,
-          observations: [observaciones, line.isGift ? "🎁 OBSEQUIO" : ""].filter(Boolean).join(" | ") || null,
+          observations: [observaciones, line.isGift ? "🎁 OBSEQUIO" : "", isFirstLine ? extraNote : ""].filter(Boolean).join(" | ") || null,
           personalization: personalizacion || null,
           advisor_id: user?.id || "",
           advisor_name: user?.email || "Asesor",
@@ -803,6 +823,26 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
               <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3">
                 ✓ Sin logo: El pedido omitirá la etapa de estampación y pasará directo a producción.
               </p>
+            )}
+            {(dobleTinta || escarcha) && (
+              <div className="space-y-1.5 rounded-md border border-input bg-muted/30 p-3">
+                <Label htmlFor="mw_costoAdicional">
+                  Costo adicional ({[dobleTinta && "doble tinta", escarcha && "escarcha"].filter(Boolean).join(" y ")})
+                </Label>
+                <Input
+                  id="mw_costoAdicional"
+                  type="number"
+                  min="0"
+                  step="any"
+                  inputMode="decimal"
+                  placeholder="Ej: 15000"
+                  value={costoAdicional}
+                  onChange={(e) => setCostoAdicional(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Este valor se sumará al total del pedido y será cobrado al cliente.
+                </p>
+              </div>
             )}
           </fieldset>
 
