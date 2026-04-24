@@ -994,8 +994,12 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       }
     }
 
-    const ssShortStages = ["produccion_cuerpos", "estampacion", "colocacion_boquilla", "listo"];
-    const ssFullStages = ["produccion_cuerpos", "estampacion", "produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"];
+    const ssShortStages = ssNoLogo
+      ? ["produccion_cuerpos", "colocacion_boquilla", "listo"]
+      : ["produccion_cuerpos", "estampacion", "colocacion_boquilla", "listo"];
+    const ssFullStages = ssNoLogo
+      ? ["produccion_cuerpos", "produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"]
+      : ["produccion_cuerpos", "estampacion", "produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"];
 
     // Process each line as a separate order
     for (const line of ssLines) {
@@ -1103,7 +1107,9 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
       const workflowType = (logoType === "impresion_basica" && hasStock) ? "short" : "full";
       const ssStages = workflowType === "short" ? ssShortStages : ssFullStages;
-      const initialStage = needsCuerpos ? "produccion_cuerpos" : "estampacion";
+      const initialStage = needsCuerpos
+        ? "produccion_cuerpos"
+        : (ssNoLogo ? (workflowType === "short" ? "colocacion_boquilla" : "produccion_tubos") : "estampacion");
 
       await supabase.from("orders")
         .update({ production_status: initialStage })
