@@ -184,6 +184,7 @@ function OrderForm({ brand, saleType, onReset }: { brand: Brand; saleType: SaleT
 /* ---- Magical Warmers – Al por mayor ---- */
 
 const PREDEFINED_COLORS = [
+  "No aplica",
   "Azul", "Rosado", "Morado", "Negro", "Blanco", "Transparente",
   "Aguamarina", "Azul claro", "Verde lima", "Verde militar",
 ];
