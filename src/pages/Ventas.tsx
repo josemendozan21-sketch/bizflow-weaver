@@ -1105,7 +1105,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       const needsCuerpos = !bodyResult.available || bodyResult.discounted < quantity;
       const hasStock = bodyResult.available && bodyResult.discounted >= quantity;
 
-      const workflowType = (logoType === "impresion_basica" && hasStock) ? "short" : "full";
+      const workflowType = ((ssNoLogo || logoType === "impresion_basica") && hasStock) ? "short" : "full";
       const ssStages = workflowType === "short" ? ssShortStages : ssFullStages;
       const initialStage = needsCuerpos
         ? "produccion_cuerpos"
