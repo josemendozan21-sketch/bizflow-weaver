@@ -382,7 +382,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     // Upload logo once if provided. En recompras NO se crea solicitud
     // de diseño automática (el logo ya existe y fue aprobado antes).
     let logoUrl: string | null = null;
-    if (logoFile && logoFile.size > 0 && user && !isRecompra) {
+    if (logoFile && logoFile.size > 0 && user && !isRecompra && !noLogo) {
       const firstLine = orderLines[0];
       const referencia = `${firstLine.product} (${firstLine.type})`;
       const result = await createLogoRequestFromOrder({
@@ -415,7 +415,9 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       }
     }
 
-    const magicalStages = ["produccion_cuerpos", "estampacion", "dosificacion", "sellado", "recorte", "empaque", "listo"];
+    const magicalStages = noLogo
+      ? ["produccion_cuerpos", "dosificacion", "sellado", "recorte", "empaque", "listo"]
+      : ["produccion_cuerpos", "estampacion", "dosificacion", "sellado", "recorte", "empaque", "listo"];
 
     // Process each line as a separate order
     for (const line of orderLines) {
@@ -506,7 +508,9 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       });
 
       const needsCuerpos = !bodyResult.available || bodyResult.discounted < quantity;
-      const initialStage = needsCuerpos ? "produccion_cuerpos" : "estampacion";
+      const initialStage = needsCuerpos
+        ? "produccion_cuerpos"
+        : (noLogo ? "dosificacion" : "estampacion");
 
       await supabase.from("orders").update({ production_status: initialStage }).eq("id", orderData.id);
 
