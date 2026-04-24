@@ -1350,13 +1350,24 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Opciones adicionales</legend>
-            <div className="flex items-center justify-between rounded-md border border-input p-3 max-w-xs">
-              <Label htmlFor="ss_recompra" className="cursor-pointer">Recompra</Label>
-              <Switch id="ss_recompra" checked={ssIsRecompra} onCheckedChange={setSsIsRecompra} />
+            <div className="grid gap-6 sm:grid-cols-2 max-w-xl">
+              <div className="flex items-center justify-between rounded-md border border-input p-3">
+                <Label htmlFor="ss_recompra" className="cursor-pointer">Recompra</Label>
+                <Switch id="ss_recompra" checked={ssIsRecompra} onCheckedChange={setSsIsRecompra} />
+              </div>
+              <div className="flex items-center justify-between rounded-md border border-input p-3">
+                <Label htmlFor="ss_noLogo" className="cursor-pointer">No requiere logo</Label>
+                <Switch id="ss_noLogo" checked={ssNoLogo} onCheckedChange={setSsNoLogo} />
+              </div>
             </div>
             {ssIsRecompra && (
               <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3 max-w-md">
                 ✓ Recompra: El logo ya existe, no se generará solicitud de diseño automática.
+              </p>
+            )}
+            {ssNoLogo && (
+              <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3 max-w-md">
+                ✓ Sin logo: El pedido omitirá la etapa de estampación y pasará directo a producción.
               </p>
             )}
           </fieldset>
