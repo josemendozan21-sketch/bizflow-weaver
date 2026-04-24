@@ -812,6 +812,26 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 ✓ Sin logo: El pedido omitirá la etapa de estampación y pasará directo a producción.
               </p>
             )}
+            {(dobleTinta || escarcha) && (
+              <div className="space-y-1.5 rounded-md border border-input bg-muted/30 p-3">
+                <Label htmlFor="mw_costoAdicional">
+                  Costo adicional ({[dobleTinta && "doble tinta", escarcha && "escarcha"].filter(Boolean).join(" y ")})
+                </Label>
+                <Input
+                  id="mw_costoAdicional"
+                  type="number"
+                  min="0"
+                  step="any"
+                  inputMode="decimal"
+                  placeholder="Ej: 15000"
+                  value={costoAdicional}
+                  onChange={(e) => setCostoAdicional(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Este valor se sumará al total del pedido y será cobrado al cliente.
+                </p>
+              </div>
+            )}
           </fieldset>
 
           <fieldset className="space-y-4">
