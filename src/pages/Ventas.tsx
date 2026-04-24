@@ -944,8 +944,13 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
     // Validate all lines
     for (const line of ssLines) {
-      if (!line.referencia || !line.tamano || !line.tipoLogo || !line.colorSilicona || !line.colorTinta || !line.units) {
+      if (!line.referencia || !line.tamano || !line.colorSilicona || !line.colorTinta || !line.units) {
         toast.error("Datos incompletos", { description: "Complete todos los campos en cada producto." });
+        setIsSubmitting(false);
+        return;
+      }
+      if (!ssNoLogo && !line.tipoLogo) {
+        toast.error("Tipo de logo requerido", { description: "Seleccione el tipo de logo o marque 'No requiere logo'." });
         setIsSubmitting(false);
         return;
       }
@@ -968,7 +973,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     // Auto-create design request once if logo was uploaded.
     // En recompras NO se crea solicitud de diseño automática.
     let logoUrl: string | null = null;
-    if (logoFile && logoFile.size > 0 && user && !ssIsRecompra) {
+    if (logoFile && logoFile.size > 0 && user && !ssIsRecompra && !ssNoLogo) {
       const firstRef = ssLines[0].referencia;
       const result = await createLogoRequestFromOrder({
         brand: "Sweatspot",
