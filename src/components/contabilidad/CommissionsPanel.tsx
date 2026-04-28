@@ -70,7 +70,7 @@ export default function CommissionsPanel({ orders }: Props) {
 
   const setLineOverride = (
     orderId: string,
-    patch: Partial<{ paymentMode: PaymentMode; returned: boolean }>
+    patch: Partial<{ paymentMode: PaymentMode }>
   ) => {
     setOverrides((prev) => ({
       ...prev,
@@ -304,15 +304,13 @@ export default function CommissionsPanel({ orders }: Props) {
                                   </Select>
                                 </TableCell>
                                 <TableCell>
-                                  <Checkbox
-                                    checked={l.returned}
-                                    disabled={l.paymentMode !== "contraentrega"}
-                                    onCheckedChange={(v) =>
-                                      setLineOverride(l.order.id, {
-                                        returned: !!v,
-                                      })
-                                    }
-                                  />
+                                  {l.returned ? (
+                                    <Badge variant="destructive" className="text-[10px]">
+                                      Devuelto
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">—</span>
+                                  )}
                                 </TableCell>
                                 <TableCell className="text-right">
                                   {fmt(l.totalWithVat)}
