@@ -6,10 +6,12 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useOrders, PRODUCTION_STATUS_LABELS, PRODUCTION_STATUS_COLORS, type Order } from "@/hooks/useOrders";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { Loader2, Package, Calendar, DollarSign, MapPin, Upload, CheckCircle2, AlertTriangle, FileText, Camera, User } from "lucide-react";
+import { Loader2, Package, Calendar, DollarSign, MapPin, Upload, CheckCircle2, AlertTriangle, FileText, Camera, User, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
@@ -259,6 +261,8 @@ export function MisPedidos() {
                   <span>{order.advisor_name}</span>
                   <span>{format(new Date(order.created_at), "d MMM yyyy HH:mm", { locale: es })}</span>
                 </div>
+
+                <EditOrderDialog order={order} />
               </CardContent>
             </Card>
           );
@@ -358,6 +362,225 @@ function PaymentConfirmDialog({ order }: { order: Order }) {
             {uploading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-1" />}
             Confirmar pago y autorizar despacho
           </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+const COLOR_OPTIONS = [
+  "No Aplica",
+  "Azul",
+  "Rojo",
+  "Verde",
+  "Negro",
+  "Blanco",
+  "Amarillo",
+  "Rosado",
+  "Morado",
+  "Naranja",
+  "Gris",
+];
+
+const LOCKED_STATUSES = ["despachado", "entregado"];
+
+function EditOrderDialog({ order }: { order: Order }) {
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
+
+  const isLocked = LOCKED_STATUSES.includes(order.production_status);
+
+  // Parse extra cost from observations if present (format: [Costos adicionales: $X - desc])
+  const parseExtras = (obs: string | null) => {
+    if (!obs) return { extraCost: 0, extraDesc: "", baseObs: "" };
+    const match = obs.match(/\[Costos adicionales: \$([0-9.,]+)(?: - ([^\]]+))?\]\s*/);
+    if (match) {
+      return {
+        extraCost: Number(match[1].replace(/[.,]/g, "")) || 0,
+        extraDesc: match[2] || "",
+        baseObs: obs.replace(match[0], "").trim(),
+      };
+    }
+    return { extraCost: 0, extraDesc: "", baseObs: obs };
+  };
+
+  const initialExtras = parseExtras(order.observations);
+
+  const [gelColor, setGelColor] = useState(order.gel_color || "");
+  const [inkColor, setInkColor] = useState(order.ink_color || "");
+  const [siliconeColor, setSiliconeColor] = useState(order.silicone_color || "");
+  const [personalization, setPersonalization] = useState(order.personalization || "");
+  const [observations, setObservations] = useState(initialExtras.baseObs);
+  const [extraCost, setExtraCost] = useState<number>(initialExtras.extraCost);
+  const [extraDesc, setExtraDesc] = useState(initialExtras.extraDesc);
+  const [deliveryDate, setDeliveryDate] = useState(order.delivery_date || "");
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      // Rebuild observations with extras tag if any
+      let finalObs = observations.trim();
+      if (extraCost > 0) {
+        const tag = `[Costos adicionales: $${extraCost.toLocaleString("es-CO")}${extraDesc ? ` - ${extraDesc}` : ""}]`;
+        finalObs = finalObs ? `${tag} ${finalObs}` : tag;
+      }
+
+      // Recalculate total: base (unit_price * quantity) + extra cost
+      const baseTotal = (Number(order.unit_price) || 0) * (Number(order.quantity) || 0);
+      const newTotal = baseTotal + (Number(extraCost) || 0);
+
+      const { error } = await supabase
+        .from("orders")
+        .update({
+          gel_color: gelColor || null,
+          ink_color: inkColor || null,
+          silicone_color: siliconeColor || null,
+          personalization: personalization || null,
+          observations: finalObs || null,
+          delivery_date: deliveryDate || null,
+          total_amount: newTotal,
+        })
+        .eq("id", order.id);
+
+      if (error) throw error;
+
+      // Notify production so they see the updated specs
+      await supabase.from("notifications").insert({
+        target_role: "produccion",
+        title: "Pedido actualizado por asesor",
+        message: `${order.advisor_name} modificó las especificaciones del pedido de ${order.client_name} (${order.product}). Revisa los nuevos colores/observaciones antes de continuar.`,
+        type: "info",
+        reference_id: order.id,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      toast.success("Pedido actualizado", {
+        description: "Se notificó al equipo de producción de los cambios.",
+      });
+      setOpen(false);
+    } catch (err: any) {
+      toast.error("Error al actualizar", { description: err.message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="w-full">
+          <Pencil className="h-3.5 w-3.5 mr-1" /> Ver / Editar detalles
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Detalles del pedido — {order.client_name}</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Read-only summary */}
+          <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-1">
+            <p><strong>Producto:</strong> {order.product} — {order.quantity} uds</p>
+            <p><strong>Marca:</strong> {order.brand === "magical" ? "Magical Warmers" : "Sweatspot"}</p>
+            <p><strong>Tipo:</strong> {order.sale_type === "mayor" ? "Al por mayor" : "Al por menor"}</p>
+            <p><strong>Etapa actual:</strong> {PRODUCTION_STATUS_LABELS[order.production_status] || order.production_status}</p>
+          </div>
+
+          {isLocked && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 flex gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+              Este pedido ya fue {order.production_status}. No se puede editar. Para cualquier ajuste contacta a logística o administración.
+            </div>
+          )}
+
+          <fieldset disabled={isLocked || saving} className="space-y-4 disabled:opacity-60">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Color de gel</Label>
+                <Select value={gelColor} onValueChange={setGelColor}>
+                  <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                  <SelectContent>
+                    {COLOR_OPTIONS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Color de tinta</Label>
+                <Select value={inkColor} onValueChange={setInkColor}>
+                  <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                  <SelectContent>
+                    {COLOR_OPTIONS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {order.brand === "sweatspot" && (
+              <div className="space-y-1.5">
+                <Label>Color de silicona</Label>
+                <Input value={siliconeColor} onChange={(e) => setSiliconeColor(e.target.value)} placeholder="Ej: Negro" />
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <Label>Personalización (escarcha, doble tinta, etc.)</Label>
+              <Textarea
+                value={personalization}
+                onChange={(e) => setPersonalization(e.target.value)}
+                placeholder="Ej: Escarcha plateada, doble tinta azul + blanco"
+                rows={2}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Costo adicional ($)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={extraCost || ""}
+                  onChange={(e) => setExtraCost(Number(e.target.value) || 0)}
+                  placeholder="0"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Concepto del costo</Label>
+                <Input
+                  value={extraDesc}
+                  onChange={(e) => setExtraDesc(e.target.value)}
+                  placeholder="Ej: Escarcha"
+                />
+              </div>
+            </div>
+            {extraCost > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Nuevo total: ${((Number(order.unit_price) || 0) * (Number(order.quantity) || 0) + extraCost).toLocaleString("es-CO")}
+              </p>
+            )}
+
+            <div className="space-y-1.5">
+              <Label>Fecha de entrega</Label>
+              <Input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Observaciones</Label>
+              <Textarea
+                value={observations}
+                onChange={(e) => setObservations(e.target.value)}
+                placeholder="Notas adicionales para producción"
+                rows={3}
+              />
+            </div>
+          </fieldset>
+
+          {!isLocked && (
+            <Button className="w-full" onClick={handleSave} disabled={saving}>
+              {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-1" />}
+              Guardar cambios
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
