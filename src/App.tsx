@@ -20,6 +20,7 @@ import Eventos from "./pages/Eventos";
 import Ferias from "./pages/Ferias";
 import Galeria from "./pages/Galeria";
 import NotFound from "./pages/NotFound";
+import Install from "./pages/Install";
 import { ReactNode } from "react";
 
 const queryClient = new QueryClient();
@@ -60,6 +61,7 @@ const App = () => (
         <AuthProvider>
           <AuthGate>
             <Routes>
+              <Route path="/install" element={<Install />} />
               <Route element={<DashboardLayout />}>
                 <Route path="/" element={<HomeRedirect />} />
                 <Route path="/ventas" element={<ProtectedRoute path="/ventas"><Ventas /></ProtectedRoute>} />
