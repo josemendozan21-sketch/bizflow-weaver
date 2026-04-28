@@ -13,6 +13,10 @@ const typeIcons: Record<string, string> = {
   diseno_logo: "🎨",
   confirmacion: "✅",
   produccion: "🏭",
+  pedido_listo: "✨",
+  pedido_despachado: "🚚",
+  facturado: "🧾",
+  avance_etapa: "➡️",
 };
 
 const typeColors: Record<string, { bg: string; border: string; dot: string }> = {
@@ -21,6 +25,10 @@ const typeColors: Record<string, { bg: string; border: string; dot: string }> = 
   confirmacion: { bg: "bg-green-500/10", border: "border-l-4 border-l-green-500", dot: "bg-green-500" },
   diseno_logo: { bg: "bg-blue-500/10", border: "border-l-4 border-l-blue-500", dot: "bg-blue-500" },
   produccion: { bg: "bg-orange-500/10", border: "border-l-4 border-l-orange-500", dot: "bg-orange-500" },
+  pedido_listo: { bg: "bg-emerald-500/10", border: "border-l-4 border-l-emerald-500", dot: "bg-emerald-500" },
+  pedido_despachado: { bg: "bg-cyan-500/10", border: "border-l-4 border-l-cyan-500", dot: "bg-cyan-500" },
+  facturado: { bg: "bg-violet-500/10", border: "border-l-4 border-l-violet-500", dot: "bg-violet-500" },
+  avance_etapa: { bg: "bg-sky-500/10", border: "border-l-4 border-l-sky-500", dot: "bg-sky-500" },
 };
 
 const defaultColor = { bg: "", border: "border-l-4 border-l-muted", dot: "bg-muted-foreground" };
