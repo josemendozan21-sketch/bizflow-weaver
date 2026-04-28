@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { getRoleLabel } from "@/lib/rolePermissions";
+import logoBionovations from "@/assets/logo-bionovations.jpg";
 
 const items = [
   { title: "Inicio", url: "/", icon: Home },
@@ -48,18 +49,22 @@ export function AppSidebar() {
       <SidebarHeader className="p-4">
         {!collapsed ? (
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-md bg-sidebar-primary flex items-center justify-center">
-              <span className="text-sidebar-primary-foreground font-bold text-sm">B</span>
-            </div>
+            <img
+              src={logoBionovations}
+              alt="Bionovations"
+              className="h-9 w-9 rounded-md object-contain bg-white p-0.5"
+            />
             <div>
               <h2 className="text-sm font-semibold text-sidebar-foreground">Bionovations</h2>
               <p className="text-xs text-sidebar-foreground/60">Panel interno</p>
             </div>
           </div>
         ) : (
-          <div className="h-8 w-8 rounded-md bg-sidebar-primary flex items-center justify-center mx-auto">
-            <span className="text-sidebar-primary-foreground font-bold text-sm">B</span>
-          </div>
+          <img
+            src={logoBionovations}
+            alt="Bionovations"
+            className="h-8 w-8 rounded-md object-contain bg-white p-0.5 mx-auto"
+          />
         )}
       </SidebarHeader>
       <SidebarContent>
