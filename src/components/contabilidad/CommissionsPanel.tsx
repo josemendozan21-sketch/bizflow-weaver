@@ -346,8 +346,8 @@ export default function CommissionsPanel({ orders }: Props) {
         <CardContent className="pt-4 text-xs flex gap-2">
           <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
           <p className="text-muted-foreground">
-            Los campos <b>Forma de pago</b> y <b>Devuelto</b> se ajustan manualmente.
-            Por defecto cada pedido se calcula como contado/transferencia inmediata.
+            <b>Forma de pago</b> se ajusta manualmente aquí (default: contado).{" "}
+            <b>Devolución</b> la registra Logística desde su módulo al recibir el paquete.
             Los KPIs de mayoristas nuevos y tiempo de respuesta se validan fuera del sistema.
           </p>
         </CardContent>
