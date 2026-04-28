@@ -20,6 +20,7 @@ import Eventos from "./pages/Eventos";
 import Ferias from "./pages/Ferias";
 import Galeria from "./pages/Galeria";
 import NotFound from "./pages/NotFound";
+import Install from "./pages/Install";
 import { ReactNode } from "react";
 
 const queryClient = new QueryClient();
@@ -58,9 +59,12 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <AuthGate>
-            <Routes>
-              <Route element={<DashboardLayout />}>
+          <Routes>
+            <Route path="/install" element={<Install />} />
+            <Route path="*" element={
+              <AuthGate>
+                <Routes>
+                  <Route element={<DashboardLayout />}>
                 <Route path="/" element={<HomeRedirect />} />
                 <Route path="/ventas" element={<ProtectedRoute path="/ventas"><Ventas /></ProtectedRoute>} />
                 <Route path="/inventarios" element={<ProtectedRoute path="/inventarios"><Inventarios /></ProtectedRoute>} />
@@ -73,10 +77,12 @@ const App = () => (
                 <Route path="/eventos" element={<ProtectedRoute path="/eventos"><Eventos /></ProtectedRoute>} />
                 <Route path="/ferias" element={<ProtectedRoute path="/ferias"><Ferias /></ProtectedRoute>} />
                 <Route path="/galeria" element={<ProtectedRoute path="/galeria"><Galeria /></ProtectedRoute>} />
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AuthGate>
+                  </Route>
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </AuthGate>
+            } />
+          </Routes>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
