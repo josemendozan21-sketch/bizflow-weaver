@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Upload, Download, Clock, FileText, ExternalLink, BarChart3, Wallet, Trash2, AlertTriangle, Mail } from "lucide-react";
 import AccountingDashboard from "@/components/contabilidad/AccountingDashboard";
+import MonthlyAnalysis from "@/components/contabilidad/MonthlyAnalysis";
 import CajaMenor from "@/components/contabilidad/CajaMenor";
 import { useOrders, type Order } from "@/hooks/useOrders";
 import { supabase } from "@/integrations/supabase/client";
@@ -330,6 +331,7 @@ const Contabilidad = () => {
       <Tabs defaultValue={isReadOnly ? "pendientes" : "dashboard"}>
         <TabsList>
           {!isReadOnly && <TabsTrigger value="dashboard"><BarChart3 className="h-4 w-4 mr-1" />Dashboard</TabsTrigger>}
+          {!isReadOnly && <TabsTrigger value="analisis"><BarChart3 className="h-4 w-4 mr-1" />Análisis mensual</TabsTrigger>}
           <TabsTrigger value="pendientes">Pendientes ({pending.length})</TabsTrigger>
           <TabsTrigger value="facturados">Facturados ({invoiced.length})</TabsTrigger>
           {!isReadOnly && <TabsTrigger value="caja_menor"><Wallet className="h-4 w-4 mr-1" />Caja menor</TabsTrigger>}
@@ -338,6 +340,12 @@ const Contabilidad = () => {
         {!isReadOnly && (
           <TabsContent value="dashboard">
             <AccountingDashboard orders={allOrders} />
+          </TabsContent>
+        )}
+
+        {!isReadOnly && (
+          <TabsContent value="analisis">
+            <MonthlyAnalysis orders={allOrders} />
           </TabsContent>
         )}
 

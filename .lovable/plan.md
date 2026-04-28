@@ -1,50 +1,68 @@
 
+# Análisis mensual de ventas, pedidos e ingresos
 
-## Recompra con ajuste de logo: permitir flujo de diseño opcional
+Crear una nueva vista de análisis con desglose mensual que permita ver el comportamiento del negocio mes a mes y, posteriormente, sirva como base para proyecciones.
 
-Actualmente al marcar un pedido como **Recompra** en ventas al por mayor, el sistema omite automáticamente la creación de la solicitud de diseño. Esto funciona cuando el cliente reutiliza el mismo logo, pero falla cuando pide un ajuste.
+## Dónde vivirá
 
-### Cambio propuesto
+Nueva pestaña **"Análisis mensual"** dentro del módulo de **Contabilidad** (junto a Dashboard, Pendientes, Facturados, Caja menor). Visible solo para roles **admin** y **contabilidad** (mismo criterio que el Dashboard actual).
 
-Agregar una segunda casilla opcional en los formularios de venta al por mayor (Magical Warmers y Sweatspot) que solo aparece cuando **Recompra** está activo:
+Razón: ya tienen acceso completo a todos los pedidos vía RLS, todas las métricas financieras viven aquí, y mantenemos el patrón existente.
 
-> ☐ **El cliente solicita ajuste al logo** (enviará el pedido al diseñador)
+## Qué mostrará la pestaña
 
-Comportamiento:
-- **Recompra + sin ajuste** → flujo actual: NO se crea `logo_request`, el pedido pasa directo a producción/estampación con el logo anterior. (sin cambio)
-- **Recompra + con ajuste** → se crea `logo_request` normal con estado `pendiente_diseno` y el pedido espera aprobación de diseño antes de estampar.
-- **Pedido nuevo (no recompra)** → flujo actual sin cambios: siempre crea `logo_request`.
+### 1. Selector de periodo
+- Selector de **año** (default: año en curso).
+- Selector de **mes** (default: mes en curso) — para ver el detalle de un mes específico.
+- Toggle **Marca**: Todas / Magical Warmers / Sweatspot.
 
-### UI
+### 2. KPIs del mes seleccionado (4 tarjetas)
+- **Ventas totales** del mes (suma de `total_amount`) + comparativa vs mes anterior (% y flecha).
+- **Pedidos creados** en el mes + comparativa.
+- **Ingresos cobrados** del mes (suma de `abono`) + saldo pendiente.
+- **Unidades producidas / despachadas** del mes (suma de `quantity` en pedidos despachados).
 
-En `src/pages/Ventas.tsx`, dentro de los formularios `MagicalMayorForm` y `SweatspotMayorForm`:
+### 3. Gráfico de evolución 12 meses
+Gráfico de barras combinado con línea (recharts) mostrando los últimos 12 meses:
+- Barras: ventas en pesos por mes.
+- Línea: cantidad de pedidos por mes.
+- Tooltip con desglose por marca.
 
-```text
-☑ Es recompra (omitir diseño de logo)
-   └─ ☐ Pero el cliente solicita un ajuste al logo
-```
+### 4. Tabla "Rotación de productos" del mes
+Tabla ordenable con todos los productos vendidos en el mes:
 
-La sub-casilla solo se muestra cuando Recompra está marcada y se desactiva/oculta al desmarcarla. Incluye un texto de ayuda breve: *"Marca esta opción si aunque sea recompra, el cliente pidió cambios en el logo (color, tamaño, texto, etc.)"*.
+| Producto | Marca | Unidades | Pedidos | Ingresos | % del mes |
+|---|---|---|---|---|---|
 
-### Lógica
+Ordenable por cualquier columna, default por unidades desc. Identifica visualmente el **top 3** con badge "🔥 Top".
 
-En el handler de envío del pedido al por mayor:
+### 5. Tabla "Histórico mensual por producto" (12 meses)
+Matriz pivotada — filas = producto, columnas = los últimos 12 meses, celdas = unidades vendidas. Heatmap (celdas más oscuras = más volumen). Total al final de cada fila para detectar rotación sostenida.
 
-```text
-if (!isRecompra || (isRecompra && needsLogoAdjustment)) {
-  → createLogoRequestFromOrder(...)
-}
-```
+Esta tabla es la base para futuras proyecciones.
 
-Es decir, la solicitud de diseño se crea siempre **excepto** cuando es recompra sin ajustes.
+### 6. Sección "Producción del mes"
+Mini-tabla con conteo de pedidos por estado del flujo (`production_status`) en el mes:
+- En estampación / dosificación / sellado / empaque / listo / despachado / entregado.
 
-### Archivos a modificar
+Útil para ver dónde se concentra el cuello de botella del mes.
 
-- `src/pages/Ventas.tsx` — agregar estado `needsLogoAdjustment`, el checkbox condicional y actualizar la condición que decide si invocar `createLogoRequestFromOrder`.
+## Detalles técnicos
 
-### Impacto
+**Archivos nuevos:**
+- `src/components/contabilidad/MonthlyAnalysis.tsx` — componente principal con selectores, KPIs, gráficos y tablas.
+- `src/lib/monthlyAnalytics.ts` — funciones puras para agregar pedidos por mes/producto/marca (facilita pruebas y reutilización futura para proyecciones).
 
-- No requiere cambios en la base de datos ni en RLS.
-- El flujo del diseñador, asesor y estampación permanece intacto: una vez creada la `logo_request`, sigue el flujo estándar ya implementado.
-- Compatible con pedidos multi-línea de Magical Warmers: la bandera aplica a todo el pedido (todas las líneas comparten el mismo logo del cliente).
+**Archivos modificados:**
+- `src/pages/Contabilidad.tsx` — añadir `<TabsTrigger value="analisis">` y `<TabsContent>` que renderice `<MonthlyAnalysis orders={allOrders} />`.
 
+**Datos:** todo se calcula desde la tabla `orders` ya disponible en `allOrders`. No requiere migraciones ni nuevas tablas — usamos `created_at` (mes del pedido), `total_amount`, `abono`, `quantity`, `product`, `brand`, `production_status`, `dispatched_at`.
+
+**Librerías ya instaladas:** `recharts` para gráficos, `date-fns` para manejo de fechas (startOfMonth, subMonths, format con locale `es`).
+
+**Performance:** todas las agregaciones envueltas en `useMemo` con dependencias en `[orders, year, month, brandFilter]`. Para 12 meses x ~cientos de pedidos no hay riesgo.
+
+## Lo que NO incluye este plan (pero queda preparado)
+
+- **Proyecciones automáticas** mes a mes — la tabla histórica de 12 meses es exactamente el insumo que necesita un módulo de proyecciones futuro (promedio móvil, tendencia, estacionalidad). Cuando lo pidas, se monta sobre los mismos agregados.
+- **Exportación a Excel del análisis** — fácil de añadir luego con la misma utilidad de `exportSiigo.ts`.
