@@ -33,14 +33,11 @@ export type ClientKind = "nuevo" | "recompra";
 export interface CommissionContext {
   /** Override manual: forma de pago (default: contado) */
   paymentMode: PaymentMode;
-  /** Override manual: pedido devuelto (descuenta $10k) */
-  returned: boolean;
 }
 
 /** Default context cuando no hay override */
 export const defaultCtx: CommissionContext = {
   paymentMode: "contado",
-  returned: false,
 };
 
 function isWeekend(date: Date): boolean {
@@ -170,14 +167,17 @@ export function summarizeAdvisorMonth(
         weekendUnlocked,
       });
       const rawCommission = baseSinIva * rate;
+      // returned se lee desde el pedido (Logística lo registra). Solo aplica
+      // penalización si la forma de pago configurada es contraentrega.
+      const returned = !!o.returned_at;
       const penalty =
-        ctx.returned && ctx.paymentMode === "contraentrega" ? RETURN_PENALTY : 0;
+        returned && ctx.paymentMode === "contraentrega" ? RETURN_PENALTY : 0;
       return {
         order: o,
         weekend,
         paymentMode: ctx.paymentMode,
         clientKind,
-        returned: ctx.returned,
+        returned,
         totalWithVat: total,
         baseSinIva,
         ratePct: rate,
