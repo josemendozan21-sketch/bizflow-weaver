@@ -140,6 +140,14 @@ export async function createOrderNotifications(data: OrderNotificationData) {
       type: "diseno_logo",
       reference_id: data.orderId,
     });
+    // Estampación: aviso anticipado de pedido con logo en camino
+    notifications.push({
+      target_role: "estampacion",
+      title: "Pedido con logo en preparación",
+      message: `Próximo trabajo: ${shortDesc}. Pendiente aprobación de diseño.`,
+      type: "nuevo_pedido",
+      reference_id: data.orderId,
+    });
   }
 
   // Contabilidad
@@ -147,6 +155,15 @@ export async function createOrderNotifications(data: OrderNotificationData) {
     target_role: "contabilidad",
     title: "Nuevo pedido registrado",
     message: `Pedido al por mayor: ${shortDesc}`,
+    type: "nuevo_pedido",
+    reference_id: data.orderId,
+  });
+
+  // Logística: planeación anticipada del despacho
+  notifications.push({
+    target_role: "logistica",
+    title: "Nuevo pedido para planear despacho",
+    message: `Próximo despacho: ${shortDesc}.`,
     type: "nuevo_pedido",
     reference_id: data.orderId,
   });
