@@ -6,10 +6,12 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useOrders, PRODUCTION_STATUS_LABELS, PRODUCTION_STATUS_COLORS, type Order } from "@/hooks/useOrders";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { Loader2, Package, Calendar, DollarSign, MapPin, Upload, CheckCircle2, AlertTriangle, FileText, Camera, User } from "lucide-react";
+import { Loader2, Package, Calendar, DollarSign, MapPin, Upload, CheckCircle2, AlertTriangle, FileText, Camera, User, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
@@ -259,6 +261,8 @@ export function MisPedidos() {
                   <span>{order.advisor_name}</span>
                   <span>{format(new Date(order.created_at), "d MMM yyyy HH:mm", { locale: es })}</span>
                 </div>
+
+                <EditOrderDialog order={order} />
               </CardContent>
             </Card>
           );
