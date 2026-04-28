@@ -86,6 +86,32 @@ const UploadInvoiceButton = ({ order, onUploaded }: { order: Order; onUploaded: 
         .eq("id", order.id);
       if (updateError) throw updateError;
 
+      // Notificar al asesor y admin que el pedido fue facturado
+      try {
+        const notifs: any[] = [
+          {
+            target_role: "admin",
+            title: "Pedido facturado",
+            message: `${order.client_name} — ${order.quantity} und. Factura adjuntada por contabilidad.`,
+            type: "facturado",
+            reference_id: order.id,
+          },
+        ];
+        if (order.advisor_id) {
+          notifs.push({
+            target_role: "asesor_comercial",
+            target_user_id: order.advisor_id,
+            title: "Pedido facturado",
+            message: `${order.client_name} — ${order.quantity} und. Ya cuenta con factura.`,
+            type: "facturado",
+            reference_id: order.id,
+          });
+        }
+        await supabase.from("notifications").insert(notifs);
+      } catch (notifErr) {
+        console.error("Error sending invoice notifications:", notifErr);
+      }
+
       toast.success("Factura adjuntada correctamente");
       onUploaded();
     } catch (err: any) {
