@@ -85,6 +85,39 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_rules: {
+        Row: {
+          active: boolean
+          brand: string
+          created_at: string
+          id: string
+          notes: string | null
+          percentage: number
+          sale_type: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          brand: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          percentage?: number
+          sale_type?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          brand?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          percentage?: number
+          sale_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       event_products: {
         Row: {
           brand: string
