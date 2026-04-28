@@ -570,6 +570,8 @@ export type Database = {
           product: string
           production_status: string
           quantity: number
+          return_notes: string | null
+          returned_at: string | null
           sale_type: string
           shipping_cost: number | null
           silicone_color: string | null
@@ -613,6 +615,8 @@ export type Database = {
           product: string
           production_status?: string
           quantity?: number
+          return_notes?: string | null
+          returned_at?: string | null
           sale_type?: string
           shipping_cost?: number | null
           silicone_color?: string | null
@@ -656,6 +660,8 @@ export type Database = {
           product?: string
           production_status?: string
           quantity?: number
+          return_notes?: string | null
+          returned_at?: string | null
           sale_type?: string
           shipping_cost?: number | null
           silicone_color?: string | null

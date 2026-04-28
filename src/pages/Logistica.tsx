@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { canEditSection } from "@/lib/rolePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { Package, Truck, CheckCircle2, Clock, AlertTriangle, CalendarDays, FileCheck, Download, FileImage, MapPin } from "lucide-react";
+import { Package, Truck, CheckCircle2, Clock, AlertTriangle, CalendarDays, FileCheck, Download, FileImage, MapPin, PackageX, Undo2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { differenceInDays, format } from "date-fns";
@@ -830,15 +830,153 @@ function DispatchedGroupCard({
       <div className="p-4 pt-3 space-y-1">
         {group.items.map((it) => (
           <div key={it.id} className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-foreground truncate">• {it.product}</span>
-            <span className="text-muted-foreground shrink-0">{it.quantity} und</span>
+            <span className="text-foreground truncate flex items-center gap-2">
+              • {it.product}
+              {it.returned_at && (
+                <Badge variant="destructive" className="text-[10px] gap-1">
+                  <PackageX className="h-3 w-3" /> Devuelto
+                </Badge>
+              )}
+            </span>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-muted-foreground">{it.quantity} und</span>
+              <ReturnOrderButton order={it} />
+            </div>
           </div>
         ))}
         {first?.dispatch_notes && (
           <p className="text-xs text-muted-foreground italic pt-2 border-t mt-2">{first.dispatch_notes}</p>
         )}
+        {group.items.some((it) => it.returned_at && it.return_notes) && (
+          <div className="pt-2 border-t mt-2 space-y-1">
+            {group.items
+              .filter((it) => it.returned_at && it.return_notes)
+              .map((it) => (
+                <p key={it.id} className="text-xs text-destructive">
+                  <b>Devolución {it.product}:</b> {it.return_notes}
+                </p>
+              ))}
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+/* ---------- Return order button ---------- */
+
+function ReturnOrderButton({ order }: { order: Order }) {
+  const { role } = useAuth();
+  const canReturn = role === "logistica" || role === "admin";
+  const [open, setOpen] = useState(false);
+  const [notes, setNotes] = useState(order.return_notes || "");
+  const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
+
+  if (!canReturn) {
+    return order.returned_at ? (
+      <Badge variant="destructive" className="text-[10px]">Devuelto</Badge>
+    ) : null;
+  }
+
+  const isReturned = !!order.returned_at;
+
+  const handleMarkReturned = async () => {
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({
+          returned_at: new Date().toISOString(),
+          return_notes: notes || null,
+        })
+        .eq("id", order.id);
+      if (error) throw error;
+      toast.success("Pedido marcado como devuelto", {
+        description: "Se aplicará una penalización de $10.000 en la comisión del asesor.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      setOpen(false);
+    } catch (err: any) {
+      toast.error("Error al marcar devolución", { description: err.message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUndo = async () => {
+    if (!confirm("¿Deshacer la marca de devolución?")) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ returned_at: null, return_notes: null })
+        .eq("id", order.id);
+      if (error) throw error;
+      toast.success("Devolución anulada");
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    } catch (err: any) {
+      toast.error("Error", { description: err.message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (isReturned) {
+    return (
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-7 text-xs gap-1"
+        onClick={handleUndo}
+        disabled={saving}
+        title="Anular devolución"
+      >
+        <Undo2 className="h-3 w-3" /> Anular
+      </Button>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
+          <PackageX className="h-3 w-3" /> Devuelto
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Marcar pedido como devuelto</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="text-sm space-y-1 rounded-md border p-3 bg-muted/30">
+            <p><b>Cliente:</b> {order.client_name}</p>
+            <p><b>Producto:</b> {order.product} — {order.quantity} und</p>
+            <p><b>Asesor:</b> {order.advisor_name}</p>
+          </div>
+          <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/20 p-3 text-xs flex gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+            <p>
+              Si el pedido es <b>contraentrega</b>, se aplicará una penalización de
+              <b> $10.000</b> sobre la comisión del asesor en el módulo de Contabilidad.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Motivo de la devolución (opcional)</Label>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Ej: Cliente no quiso recibir, dirección incorrecta, producto rechazado..."
+              rows={3}
+            />
+          </div>
+          <Button className="w-full" onClick={handleMarkReturned} disabled={saving}>
+            <PackageX className="h-4 w-4 mr-1" />
+            {saving ? "Registrando..." : "Confirmar devolución"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

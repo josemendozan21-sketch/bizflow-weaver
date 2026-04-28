@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -70,7 +69,7 @@ export default function CommissionsPanel({ orders }: Props) {
 
   const setLineOverride = (
     orderId: string,
-    patch: Partial<{ paymentMode: PaymentMode; returned: boolean }>
+    patch: Partial<{ paymentMode: PaymentMode }>
   ) => {
     setOverrides((prev) => ({
       ...prev,
@@ -304,15 +303,13 @@ export default function CommissionsPanel({ orders }: Props) {
                                   </Select>
                                 </TableCell>
                                 <TableCell>
-                                  <Checkbox
-                                    checked={l.returned}
-                                    disabled={l.paymentMode !== "contraentrega"}
-                                    onCheckedChange={(v) =>
-                                      setLineOverride(l.order.id, {
-                                        returned: !!v,
-                                      })
-                                    }
-                                  />
+                                  {l.returned ? (
+                                    <Badge variant="destructive" className="text-[10px]">
+                                      Devuelto
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">—</span>
+                                  )}
                                 </TableCell>
                                 <TableCell className="text-right">
                                   {fmt(l.totalWithVat)}
@@ -349,8 +346,8 @@ export default function CommissionsPanel({ orders }: Props) {
         <CardContent className="pt-4 text-xs flex gap-2">
           <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
           <p className="text-muted-foreground">
-            Los campos <b>Forma de pago</b> y <b>Devuelto</b> se ajustan manualmente.
-            Por defecto cada pedido se calcula como contado/transferencia inmediata.
+            <b>Forma de pago</b> se ajusta manualmente aquí (default: contado).{" "}
+            <b>Devolución</b> la registra Logística desde su módulo al recibir el paquete.
             Los KPIs de mayoristas nuevos y tiempo de respuesta se validan fuera del sistema.
           </p>
         </CardContent>
