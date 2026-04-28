@@ -506,6 +506,52 @@ function GroupDispatchDialog({ group }: { group: ShipmentGroup }) {
 
     queryClient.invalidateQueries({ queryKey: ["orders"] });
     toast.success("Envío despachado", { description: `${group.allIds.length} pedido(s) de ${group.clientName} marcados como despachados.` });
+
+    // Notificar al asesor y a contabilidad
+    try {
+      const advisorIds = Array.from(
+        new Set(group.items.map((it: any) => it.advisor_id).filter(Boolean))
+      );
+      const totalUnits = group.totalUnits;
+      const transpLabel =
+        TRANSPORTADORAS.find((t) => t.value === transportadora)?.label || transportadora;
+      const guiaInfo = isBogoexpress
+        ? "Bogoexpress"
+        : numeroGuia.trim()
+        ? `guía ${numeroGuia.trim()}`
+        : "sin guía";
+
+      const notifs: any[] = [
+        {
+          target_role: "contabilidad",
+          title: "Pedido despachado",
+          message: `${group.clientName} — ${totalUnits} und. ${transpLabel} (${guiaInfo}). Pendiente facturación.`,
+          type: "pedido_despachado",
+          reference_id: group.allIds[0],
+        },
+        {
+          target_role: "admin",
+          title: "Pedido despachado",
+          message: `${group.clientName} — ${totalUnits} und por ${transpLabel}.`,
+          type: "pedido_despachado",
+          reference_id: group.allIds[0],
+        },
+      ];
+      for (const advisorId of advisorIds) {
+        notifs.push({
+          target_role: "asesor_comercial",
+          target_user_id: advisorId,
+          title: "Tu pedido fue despachado",
+          message: `${group.clientName} — ${totalUnits} und. Transportadora: ${transpLabel} (${guiaInfo}).`,
+          type: "pedido_despachado",
+          reference_id: group.allIds[0],
+        });
+      }
+      await supabase.from("notifications").insert(notifs);
+    } catch (notifErr) {
+      console.error("Error sending dispatch notifications:", notifErr);
+    }
+
     setOpen(false);
     setTransportadora("");
     setNumeroGuia("");
