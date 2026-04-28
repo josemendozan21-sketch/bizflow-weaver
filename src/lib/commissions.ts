@@ -1,104 +1,236 @@
 import type { Order } from "@/hooks/useOrders";
-import { startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
+import { startOfMonth, endOfMonth, isWithinInterval, getDay, parseISO } from "date-fns";
 
-export interface CommissionRule {
-  id: string;
-  brand: string;
-  sale_type: string;
-  percentage: number;
-  active: boolean;
-  notes: string | null;
+/**
+ * Política de Comisiones y Bonos – Asesores Comerciales 2026
+ *
+ * Reglas oficiales:
+ * - Base: pedidos FACTURADOS (invoice_status = 'facturado').
+ * - Comisión sobre el valor SIN IVA (IVA 19%).
+ * - % depende de: canal (detal/mayor), día (semana/FDS), forma de pago,
+ *   y si es cliente nuevo o recompra (mayoristas).
+ * - Bonos por facturación mensual (CON IVA): $150k @ $10M, +$100k @ $18M.
+ * - Comisiones FDS y mix solo se desbloquean si la facturación mensual ≥ $15M.
+ * - Cada pedido devuelto contraentrega descuenta $10.000.
+ */
+
+export const IVA_RATE = 0.19;
+export const IVA_DIVISOR = 1 + IVA_RATE; // 1.19
+
+export const BONUS_TIER_1_THRESHOLD = 10_000_000;
+export const BONUS_TIER_1_AMOUNT = 150_000;
+export const UNLOCK_THRESHOLD = 15_000_000;
+export const BONUS_TIER_2_THRESHOLD = 18_000_000;
+export const BONUS_TIER_2_AMOUNT = 100_000;
+
+export const RETURN_PENALTY = 10_000;
+export const MIN_TICKET_DETAL = 80_000;
+export const MIN_WEEKEND_PCT = 0.10;
+
+export type PaymentMode = "contado" | "contraentrega";
+export type ClientKind = "nuevo" | "recompra";
+
+export interface CommissionContext {
+  /** Override manual: forma de pago (default: contado) */
+  paymentMode: PaymentMode;
+  /** Override manual: pedido devuelto (descuenta $10k) */
+  returned: boolean;
 }
 
-function brandKey(b: string | null | undefined): string {
-  const v = (b || "").toLowerCase();
-  if (v.includes("magical")) return "magical_warmers";
-  if (v.includes("sweat")) return "sweatspot";
-  return v;
-}
+/** Default context cuando no hay override */
+export const defaultCtx: CommissionContext = {
+  paymentMode: "contado",
+  returned: false,
+};
 
-function findRule(rules: CommissionRule[], brand: string, saleType: string): CommissionRule | undefined {
-  const bk = brandKey(brand);
-  return rules.find((r) => r.active && r.brand === bk && r.sale_type === (saleType || "mayor"));
+function isWeekend(date: Date): boolean {
+  const d = getDay(date); // 0=Dom, 6=Sab
+  return d === 0 || d === 6;
 }
 
 /**
- * Defaults aplicados:
- * - Base: ventas FACTURADAS (invoice_status === 'facturado').
- * - Descontamos shipping_cost del subtotal antes de aplicar el %.
- * - Excluimos recompras (is_recompra).
+ * Devuelve el % de comisión a aplicar según política.
+ * @param weekendUnlocked Si el asesor tiene desbloqueadas las comisiones de FDS este mes.
  */
+export function getCommissionRate(params: {
+  saleType: "menor" | "mayor";
+  weekend: boolean;
+  paymentMode: PaymentMode;
+  clientKind: ClientKind;
+  weekendUnlocked: boolean;
+}): number {
+  const { saleType, weekend, paymentMode, clientKind, weekendUnlocked } = params;
+
+  // Si es FDS pero no está desbloqueado, se paga como semana.
+  const effectiveWeekend = weekend && weekendUnlocked;
+
+  if (saleType === "menor") {
+    if (effectiveWeekend) {
+      return paymentMode === "contado" ? 0.20 : 0.17;
+    }
+    return paymentMode === "contado" ? 0.12 : 0.10;
+  }
+  // mayor
+  if (clientKind === "recompra") {
+    return effectiveWeekend ? 0.07 : 0.06;
+  }
+  // mayorista nuevo
+  return effectiveWeekend ? 0.12 : 0.10;
+}
+
 export interface CommissionLine {
   order: Order;
-  base: number;
-  percentage: number;
-  commission: number;
-  excluded?: string;
+  weekend: boolean;
+  paymentMode: PaymentMode;
+  clientKind: ClientKind;
+  returned: boolean;
+  totalWithVat: number;
+  baseSinIva: number;
+  ratePct: number; // ej 0.12
+  rawCommission: number;
+  penalty: number;
+  netCommission: number;
 }
 
-export function calculateCommissionForOrder(
-  order: Order,
-  rules: CommissionRule[]
-): CommissionLine | null {
-  if (order.invoice_status !== "facturado") return null;
-  if (order.is_recompra) {
-    return {
-      order,
-      base: 0,
-      percentage: 0,
-      commission: 0,
-      excluded: "Recompra",
-    };
-  }
-  const rule = findRule(rules, order.brand, order.sale_type);
-  if (!rule) return null;
-  const total = Number(order.total_amount || 0);
-  const shipping = Number(order.shipping_cost || 0);
-  const base = Math.max(total - shipping, 0);
-  const commission = base * (Number(rule.percentage) / 100);
-  return { order, base, percentage: rule.percentage, commission };
-}
-
-export interface AdvisorCommissionSummary {
+/**
+ * Resumen mensual por asesor con cálculo final, KPIs y bonos.
+ */
+export interface AdvisorMonthSummary {
   advisorId: string;
   advisorName: string;
   ordersCount: number;
-  baseTotal: number;
-  commissionTotal: number;
+  totalWithVat: number;
+  totalSinIva: number;
+  weekendSales: number;
+  weekendPct: number;
+  ticketAvgDetal: number;
+  returnsCount: number;
+  returnsPenalty: number;
+  rawCommission: number;
+  bonus: number;
+  totalToPay: number;
+  weekendUnlocked: boolean;
+  kpiTicketOk: boolean;
+  kpiWeekendPctOk: boolean;
   lines: CommissionLine[];
 }
 
-export function summarizeCommissionsByAdvisor(
+export type OrderOverrides = Record<string, Partial<CommissionContext>>;
+
+function getOrderDate(o: Order): Date {
+  const ref = o.invoice_date || o.created_at;
+  return typeof ref === "string" ? parseISO(ref) : new Date(ref);
+}
+
+export function summarizeAdvisorMonth(
   orders: Order[],
-  rules: CommissionRule[],
+  overrides: OrderOverrides,
   year: number,
   month: number
-): AdvisorCommissionSummary[] {
+): AdvisorMonthSummary[] {
   const start = startOfMonth(new Date(year, month, 1));
   const end = endOfMonth(new Date(year, month, 1));
-  const map = new Map<string, AdvisorCommissionSummary>();
 
+  // Agrupar por asesor primero (para calcular desbloqueo y KPIs)
+  const byAdvisor = new Map<string, Order[]>();
   for (const o of orders) {
-    // Usamos invoice_date si existe, si no created_at (fallback)
-    const ref = o.invoice_date ? new Date(o.invoice_date) : new Date(o.created_at);
-    if (!isWithinInterval(ref, { start, end })) continue;
-    const line = calculateCommissionForOrder(o, rules);
-    if (!line) continue;
-    const prev =
-      map.get(o.advisor_id) ||
-      ({
-        advisorId: o.advisor_id,
-        advisorName: o.advisor_name,
-        ordersCount: 0,
-        baseTotal: 0,
-        commissionTotal: 0,
-        lines: [],
-      } as AdvisorCommissionSummary);
-    prev.ordersCount += 1;
-    prev.baseTotal += line.base;
-    prev.commissionTotal += line.commission;
-    prev.lines.push(line);
-    map.set(o.advisor_id, prev);
+    if (o.invoice_status !== "facturado") continue;
+    const d = getOrderDate(o);
+    if (!isWithinInterval(d, { start, end })) continue;
+    const arr = byAdvisor.get(o.advisor_id) || [];
+    arr.push(o);
+    byAdvisor.set(o.advisor_id, arr);
   }
-  return Array.from(map.values()).sort((a, b) => b.commissionTotal - a.commissionTotal);
+
+  const result: AdvisorMonthSummary[] = [];
+
+  for (const [advisorId, advisorOrders] of byAdvisor) {
+    const advisorName = advisorOrders[0]?.advisor_name || "—";
+
+    // Paso 1: total mensual CON IVA para decidir desbloqueo y bonos.
+    const totalWithVat = advisorOrders.reduce(
+      (s, o) => s + Number(o.total_amount || 0),
+      0
+    );
+    const weekendUnlocked = totalWithVat >= UNLOCK_THRESHOLD;
+
+    // Paso 2: calcular cada línea con tasa final.
+    const lines: CommissionLine[] = advisorOrders.map((o) => {
+      const ctx = { ...defaultCtx, ...(overrides[o.id] || {}) };
+      const d = getOrderDate(o);
+      const weekend = isWeekend(d);
+      const clientKind: ClientKind = o.is_recompra ? "recompra" : "nuevo";
+      const total = Number(o.total_amount || 0);
+      const baseSinIva = total / IVA_DIVISOR;
+      const rate = getCommissionRate({
+        saleType: o.sale_type as "menor" | "mayor",
+        weekend,
+        paymentMode: ctx.paymentMode,
+        clientKind,
+        weekendUnlocked,
+      });
+      const rawCommission = baseSinIva * rate;
+      const penalty =
+        ctx.returned && ctx.paymentMode === "contraentrega" ? RETURN_PENALTY : 0;
+      return {
+        order: o,
+        weekend,
+        paymentMode: ctx.paymentMode,
+        clientKind,
+        returned: ctx.returned,
+        totalWithVat: total,
+        baseSinIva,
+        ratePct: rate,
+        rawCommission,
+        penalty,
+        netCommission: Math.max(rawCommission - penalty, 0),
+      };
+    });
+
+    const totalSinIva = totalWithVat / IVA_DIVISOR;
+    const weekendSales = lines
+      .filter((l) => l.weekend)
+      .reduce((s, l) => s + l.totalWithVat, 0);
+    const weekendPct = totalWithVat > 0 ? weekendSales / totalWithVat : 0;
+
+    const detalLines = lines.filter((l) => l.order.sale_type === "menor");
+    const ticketAvgDetal =
+      detalLines.length > 0
+        ? detalLines.reduce((s, l) => s + l.totalWithVat, 0) / detalLines.length
+        : 0;
+
+    const returnsCount = lines.filter((l) => l.returned).length;
+    const returnsPenalty = lines.reduce((s, l) => s + l.penalty, 0);
+    const rawCommission = lines.reduce((s, l) => s + l.netCommission, 0);
+
+    // KPIs visibles (no bloquean cálculo de bonos automáticamente — admin valida)
+    const kpiTicketOk = ticketAvgDetal >= MIN_TICKET_DETAL || detalLines.length === 0;
+    const kpiWeekendPctOk = weekendPct >= MIN_WEEKEND_PCT;
+
+    let bonus = 0;
+    if (totalWithVat >= BONUS_TIER_1_THRESHOLD) bonus += BONUS_TIER_1_AMOUNT;
+    if (totalWithVat >= BONUS_TIER_2_THRESHOLD) bonus += BONUS_TIER_2_AMOUNT;
+
+    result.push({
+      advisorId,
+      advisorName,
+      ordersCount: lines.length,
+      totalWithVat,
+      totalSinIva,
+      weekendSales,
+      weekendPct,
+      ticketAvgDetal,
+      returnsCount,
+      returnsPenalty,
+      rawCommission,
+      bonus,
+      totalToPay: rawCommission + bonus,
+      weekendUnlocked,
+      kpiTicketOk,
+      kpiWeekendPctOk,
+      lines,
+    });
+  }
+
+  return result.sort((a, b) => b.totalToPay - a.totalToPay);
 }
