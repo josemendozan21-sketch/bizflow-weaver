@@ -237,7 +237,7 @@ function ColorSelect({
   return (
     <div className="space-y-1.5">
       <Label>{label}</Label>
-      <Select value={value} onValueChange={onValueChange}>
+      <Select value={value || undefined} onValueChange={onValueChange}>
         <SelectTrigger>
           <SelectValue placeholder="Seleccionar color" />
         </SelectTrigger>
