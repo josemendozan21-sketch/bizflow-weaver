@@ -437,6 +437,19 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       ? `Costo adicional ${extraNoteParts.join(" y ")}: $${extraCost.toLocaleString("es-CO")}`
       : "";
 
+    // Calcular totales del pedido completo para prorratear el abono entre líneas.
+    // El abono ingresado por el asesor es por el TOTAL del pedido, no por cada línea.
+    const lineTotalsForProration = orderLines.map((line, idx) => {
+      if (line.isGift) return 0;
+      const base = parseFloat(line.valorTotal) || 0;
+      return idx === 0 ? base + extraCost : base;
+    });
+    const orderGrandTotal = lineTotalsForProration.reduce((s, v) => s + v, 0);
+    const totalAbonoPedido = estadoPago === "pago_total"
+      ? orderGrandTotal
+      : (parseFloat(abono) || 0);
+    let abonoAsignado = 0;
+
     for (let lineIdx = 0; lineIdx < orderLines.length; lineIdx++) {
       const line = orderLines[lineIdx];
       const isFirstLine = lineIdx === 0;
@@ -447,7 +460,22 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       const baseLineTotal = line.isGift ? 0 : (parseFloat(line.valorTotal) || 0);
       // Sumar el costo adicional sólo a la primera línea (no a obsequios)
       const lineTotal = (isFirstLine && !line.isGift) ? baseLineTotal + extraCost : baseLineTotal;
-      const abonoAmount = line.isGift ? 0 : (estadoPago === "pago_total" ? lineTotal : (parseFloat(abono) || 0));
+      // Prorratear el abono total proporcionalmente al peso de la línea sobre el total.
+      // La última línea no-obsequio recibe el residuo para evitar errores de redondeo.
+      let abonoAmount = 0;
+      if (!line.isGift && orderGrandTotal > 0) {
+        const remainingLines = lineTotalsForProration
+          .slice(lineIdx + 1)
+          .some((v) => v > 0);
+        if (remainingLines) {
+          abonoAmount = Math.round((totalAbonoPedido * lineTotal) / orderGrandTotal);
+          abonoAsignado += abonoAmount;
+        } else {
+          // Última línea con valor: asignar el residuo
+          abonoAmount = Math.max(totalAbonoPedido - abonoAsignado, 0);
+          abonoAsignado += abonoAmount;
+        }
+      }
       const matchedConfig = getMatchedConfig(line.product, line.type);
 
       // Discount gel
@@ -1043,7 +1071,16 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       : ["produccion_cuerpos", "estampacion", "produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"];
 
     // Process each line as a separate order
-    for (const line of ssLines) {
+    // Calcular totales para prorratear el abono entre líneas (el abono es por el TOTAL del pedido).
+    const ssLineTotals = ssLines.map((line) => parseFloat(line.valorTotal) || 0);
+    const ssGrandTotal = ssLineTotals.reduce((s, v) => s + v, 0);
+    const totalAbonoPedidoSs = ssEstadoPago === "pago_total"
+      ? ssGrandTotal
+      : (parseFloat(ssAbono) || 0);
+    let abonoAsignadoSs = 0;
+
+    for (let lineIdx = 0; lineIdx < ssLines.length; lineIdx++) {
+      const line = ssLines[lineIdx];
       const quantity = parseInt(line.units, 10) || 0;
       const referencia = line.referencia;
       const inkColor = line.colorTinta;
@@ -1051,7 +1088,18 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       const thermoSize = line.tamano as "150 ml" | "250 ml" | "250 ml juguetón" | "500 ml";
       const tipoLogo = line.tipoLogo;
       const lineTotal = parseFloat(line.valorTotal) || 0;
-      const abonoAmount = ssEstadoPago === "pago_total" ? lineTotal : (parseFloat(ssAbono) || 0);
+      // Prorratear el abono según el peso de la línea sobre el total del pedido.
+      let abonoAmount = 0;
+      if (ssGrandTotal > 0) {
+        const isLast = lineIdx === ssLines.length - 1;
+        if (!isLast) {
+          abonoAmount = Math.round((totalAbonoPedidoSs * lineTotal) / ssGrandTotal);
+          abonoAsignadoSs += abonoAmount;
+        } else {
+          abonoAmount = Math.max(totalAbonoPedidoSs - abonoAsignadoSs, 0);
+          abonoAsignadoSs += abonoAmount;
+        }
+      }
       const logoType = tipoLogo === "Impresión básica" ? "impresion_basica" as const : "impresion_full" as const;
 
       // Sweatspot solo produce termos (150/250/500 ml). El resto (canguros, chalecos,
