@@ -711,7 +711,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label>Producto / Referencia</Label>
-                    <Select value={line.product} onValueChange={(v) => updateLine(line.id, { product: v, type: "" })}>
+                     <Select value={line.product || undefined} onValueChange={(v) => updateLine(line.id, { product: v, type: "" })}>
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar producto" />
                       </SelectTrigger>
@@ -724,7 +724,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                   </div>
                   <div className="space-y-1.5">
                     <Label>Tipo</Label>
-                    <Select value={line.type} onValueChange={(v) => updateLine(line.id, { type: v })} disabled={!line.product}>
+                    <Select value={line.type || undefined} onValueChange={(v) => updateLine(line.id, { type: v })} disabled={!line.product}>
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar tipo" />
                       </SelectTrigger>
