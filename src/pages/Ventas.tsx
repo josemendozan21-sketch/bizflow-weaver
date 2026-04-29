@@ -1071,7 +1071,16 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       : ["produccion_cuerpos", "estampacion", "produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"];
 
     // Process each line as a separate order
-    for (const line of ssLines) {
+    // Calcular totales para prorratear el abono entre líneas (el abono es por el TOTAL del pedido).
+    const ssLineTotals = ssLines.map((line) => parseFloat(line.valorTotal) || 0);
+    const ssGrandTotal = ssLineTotals.reduce((s, v) => s + v, 0);
+    const totalAbonoPedidoSs = ssEstadoPago === "pago_total"
+      ? ssGrandTotal
+      : (parseFloat(ssAbono) || 0);
+    let abonoAsignadoSs = 0;
+
+    for (let lineIdx = 0; lineIdx < ssLines.length; lineIdx++) {
+      const line = ssLines[lineIdx];
       const quantity = parseInt(line.units, 10) || 0;
       const referencia = line.referencia;
       const inkColor = line.colorTinta;
@@ -1079,7 +1088,18 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       const thermoSize = line.tamano as "150 ml" | "250 ml" | "250 ml juguetón" | "500 ml";
       const tipoLogo = line.tipoLogo;
       const lineTotal = parseFloat(line.valorTotal) || 0;
-      const abonoAmount = ssEstadoPago === "pago_total" ? lineTotal : (parseFloat(ssAbono) || 0);
+      // Prorratear el abono según el peso de la línea sobre el total del pedido.
+      let abonoAmount = 0;
+      if (ssGrandTotal > 0) {
+        const isLast = lineIdx === ssLines.length - 1;
+        if (!isLast) {
+          abonoAmount = Math.round((totalAbonoPedidoSs * lineTotal) / ssGrandTotal);
+          abonoAsignadoSs += abonoAmount;
+        } else {
+          abonoAmount = Math.max(totalAbonoPedidoSs - abonoAsignadoSs, 0);
+          abonoAsignadoSs += abonoAmount;
+        }
+      }
       const logoType = tipoLogo === "Impresión básica" ? "impresion_basica" as const : "impresion_full" as const;
 
       // Sweatspot solo produce termos (150/250/500 ml). El resto (canguros, chalecos,
