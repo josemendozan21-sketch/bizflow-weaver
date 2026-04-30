@@ -771,13 +771,13 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label>Producto / Referencia</Label>
-                     <Select value={line.product || undefined} onValueChange={(v) => updateLine(line.id, { product: v, type: "" })}>
+                     <Select value={getProductSelectValue(line) || undefined} onValueChange={(v) => handleProductSelect(line.id, v)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar producto" />
                       </SelectTrigger>
                       <SelectContent>
-                        {productNames.map((name) => (
-                          <SelectItem key={name} value={name}>{name}</SelectItem>
+                        {productOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
