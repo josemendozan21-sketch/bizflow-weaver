@@ -189,15 +189,62 @@ export type Database = {
         }
         Relationships: []
       }
+      feria_dispatch_requests: {
+        Row: {
+          created_at: string
+          dispatch_notes: string | null
+          dispatched_at: string | null
+          dispatched_by: string | null
+          feria_id: string
+          furniture_dispatched: boolean
+          furniture_items: string[] | null
+          id: string
+          requested_at: string
+          requested_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dispatch_notes?: string | null
+          dispatched_at?: string | null
+          dispatched_by?: string | null
+          feria_id: string
+          furniture_dispatched?: boolean
+          furniture_items?: string[] | null
+          id?: string
+          requested_at?: string
+          requested_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dispatch_notes?: string | null
+          dispatched_at?: string | null
+          dispatched_by?: string | null
+          feria_id?: string
+          furniture_dispatched?: boolean
+          furniture_items?: string[] | null
+          id?: string
+          requested_at?: string
+          requested_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       feria_inventory: {
         Row: {
           brand: string
           created_at: string
+          dispatch_status: string
           feria_id: string
           id: string
           notes: string | null
           product_name: string
           quantity_assigned: number
+          quantity_dispatched: number
           quantity_returned: number | null
           unit_price: number | null
           updated_at: string
@@ -205,11 +252,13 @@ export type Database = {
         Insert: {
           brand: string
           created_at?: string
+          dispatch_status?: string
           feria_id: string
           id?: string
           notes?: string | null
           product_name: string
           quantity_assigned?: number
+          quantity_dispatched?: number
           quantity_returned?: number | null
           unit_price?: number | null
           updated_at?: string
@@ -217,11 +266,13 @@ export type Database = {
         Update: {
           brand?: string
           created_at?: string
+          dispatch_status?: string
           feria_id?: string
           id?: string
           notes?: string | null
           product_name?: string
           quantity_assigned?: number
+          quantity_dispatched?: number
           quantity_returned?: number | null
           unit_price?: number | null
           updated_at?: string
@@ -235,6 +286,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      feria_pos_assignments: {
+        Row: {
+          assigned_at: string
+          created_at: string
+          feria_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          created_at?: string
+          feria_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          created_at?: string
+          feria_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       feria_sales: {
         Row: {
@@ -1108,6 +1183,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_pos_for_feria: { Args: { _feria_id: string }; Returns: boolean }
     }
     Enums: {
       app_role:
