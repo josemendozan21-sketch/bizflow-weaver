@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -22,16 +22,21 @@ interface Props {
   budgetId: string;
   kind: "ingreso" | "egreso";
   category: string;
+  defaultDescription?: string;
 }
 
-export function AddEntryDialog({ open, onOpenChange, budgetId, kind, category }: Props) {
+export function AddEntryDialog({ open, onOpenChange, budgetId, kind, category, defaultDescription }: Props) {
   const add = useAddBudgetEntry();
   const [amount, setAmount] = useState("");
-  const [description, setDescription] = useState("");
+  const [description, setDescription] = useState(defaultDescription ?? "");
   const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10));
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) setDescription(defaultDescription ?? "");
+  }, [open, defaultDescription]);
 
   const handleSave = async () => {
     const val = parseFloat(amount);

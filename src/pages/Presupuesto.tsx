@@ -60,7 +60,7 @@ export default function Presupuesto() {
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth() + 1);
   const [defineOpen, setDefineOpen] = useState(false);
-  const [addEntry, setAddEntry] = useState<{ kind: "ingreso" | "egreso"; category: string } | null>(null);
+  const [addEntry, setAddEntry] = useState<{ kind: "ingreso" | "egreso"; category: string; description?: string } | null>(null);
 
   const { data: budget } = useMonthlyBudget(year, month);
   const { data: lines = [] } = useBudgetLines(budget?.id);
@@ -100,25 +100,51 @@ export default function Presupuesto() {
     const incomes = INCOME_CATEGORIES.flatMap((c) => {
       if (c === "Ferias") {
         const feriaLines = lines.filter((l) => l.kind === "ingreso" && l.category === "Ferias");
-        const rows = feriaLines.map((l) => ({
-          category: `Ferias - ${l.description || "sin nombre"}`,
-          projected: Number(l.projected_amount || 0),
-          manual: 0,
-          auto: 0,
-          real: 0,
-        }));
+        const rows = feriaLines.map((l) => {
+          const name = l.description || "sin nombre";
+          const manual = entries
+            .filter(
+              (e) =>
+                e.kind === "ingreso" &&
+                e.category === "Ferias" &&
+                (e.description || "sin nombre") === name
+            )
+            .reduce((s, e) => s + Number(e.amount || 0), 0);
+          return {
+            category: `Ferias - ${name}`,
+            projected: Number(l.projected_amount || 0),
+            manual,
+            auto: 0,
+            real: manual,
+            entryCategory: "Ferias",
+            entryDescription: name,
+          };
+        });
         const totalsRow = { category: "Ferias (total real)", ...byCat("ingreso", "Ferias") };
         return rows.length > 0 ? [...rows, totalsRow] : [totalsRow];
       }
       if (c === "Otros ingresos") {
         const otrosLines = lines.filter((l) => l.kind === "ingreso" && l.category === "Otros ingresos");
-        const rows = otrosLines.map((l) => ({
-          category: `Otros ingresos - ${l.description || "sin nombre"}`,
-          projected: Number(l.projected_amount || 0),
-          manual: 0,
-          auto: 0,
-          real: 0,
-        }));
+        const rows = otrosLines.map((l) => {
+          const name = l.description || "sin nombre";
+          const manual = entries
+            .filter(
+              (e) =>
+                e.kind === "ingreso" &&
+                e.category === "Otros ingresos" &&
+                (e.description || "sin nombre") === name
+            )
+            .reduce((s, e) => s + Number(e.amount || 0), 0);
+          return {
+            category: `Otros ingresos - ${name}`,
+            projected: Number(l.projected_amount || 0),
+            manual,
+            auto: 0,
+            real: manual,
+            entryCategory: "Otros ingresos",
+            entryDescription: name,
+          };
+        });
         const totalsRow = { category: "Otros ingresos (total real)", ...byCat("ingreso", "Otros ingresos") };
         return rows.length > 0 ? [...rows, totalsRow] : [totalsRow];
       }
@@ -127,13 +153,26 @@ export default function Presupuesto() {
     const expenses = EXPENSE_CATEGORIES.flatMap((c) => {
       if (c === "Otros gastos") {
         const otrosLines = lines.filter((l) => l.kind === "egreso" && l.category === "Otros gastos");
-        const rows = otrosLines.map((l) => ({
-          category: `Otros gastos - ${l.description || "sin nombre"}`,
-          projected: Number(l.projected_amount || 0),
-          manual: 0,
-          auto: 0,
-          real: 0,
-        }));
+        const rows = otrosLines.map((l) => {
+          const name = l.description || "sin nombre";
+          const manual = entries
+            .filter(
+              (e) =>
+                e.kind === "egreso" &&
+                e.category === "Otros gastos" &&
+                (e.description || "sin nombre") === name
+            )
+            .reduce((s, e) => s + Number(e.amount || 0), 0);
+          return {
+            category: `Otros gastos - ${name}`,
+            projected: Number(l.projected_amount || 0),
+            manual,
+            auto: 0,
+            real: manual,
+            entryCategory: "Otros gastos",
+            entryDescription: name,
+          };
+        });
         const totalsRow = { category: "Otros gastos (total real)", ...byCat("egreso", "Otros gastos") };
         return rows.length > 0 ? [...rows, totalsRow] : [totalsRow];
       }
@@ -353,7 +392,7 @@ export default function Presupuesto() {
         title="Ingresos"
         rows={aggregate.incomes}
         kind="ingreso"
-        onAddEntry={(cat) => setAddEntry({ kind: "ingreso", category: cat })}
+        onAddEntry={(cat, desc) => setAddEntry({ kind: "ingreso", category: cat, description: desc })}
         disabled={isClosed || !budget}
       />
 
@@ -362,7 +401,7 @@ export default function Presupuesto() {
         title="Egresos / Costos y gastos"
         rows={aggregate.expenses}
         kind="egreso"
-        onAddEntry={(cat) => setAddEntry({ kind: "egreso", category: cat })}
+        onAddEntry={(cat, desc) => setAddEntry({ kind: "egreso", category: cat, description: desc })}
         disabled={isClosed || !budget}
       />
 
@@ -445,6 +484,7 @@ export default function Presupuesto() {
           budgetId={budget.id}
           kind={addEntry.kind}
           category={addEntry.category}
+          defaultDescription={addEntry.description}
         />
       )}
     </div>
@@ -493,9 +533,9 @@ function CategoryTable({
   disabled,
 }: {
   title: string;
-  rows: { category: string; projected: number; real: number; auto: number; manual: number }[];
+  rows: { category: string; projected: number; real: number; auto: number; manual: number; entryCategory?: string; entryDescription?: string }[];
   kind: "ingreso" | "egreso";
-  onAddEntry: (category: string) => void;
+  onAddEntry: (category: string, description?: string) => void;
   disabled?: boolean;
 }) {
   return (
@@ -541,10 +581,10 @@ function CategoryTable({
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => onAddEntry(r.category)}
+                      onClick={() => onAddEntry(r.entryCategory ?? r.category, r.entryDescription)}
                       disabled={disabled}
                     >
-                      <Plus className="h-3 w-3 mr-1" /> Movimiento
+                      <Plus className="h-3 w-3 mr-1" /> {r.entryDescription ? "+ Real" : "Movimiento"}
                     </Button>
                   </TableCell>
                 </TableRow>
