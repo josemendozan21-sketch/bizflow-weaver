@@ -381,6 +381,15 @@ const Logistica = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="ferias">
+          <Card>
+            <CardHeader><CardTitle className="text-lg">Solicitudes de ferias</CardTitle></CardHeader>
+            <CardContent>
+              <FeriaDispatchTab />
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
     </div>
   );
