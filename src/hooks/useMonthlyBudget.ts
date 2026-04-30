@@ -231,7 +231,7 @@ export function useAutoReadings(year: number, month: number) {
       const [ordersRes, feriaRes, pettyRes] = await Promise.all([
         supabase
           .from("orders")
-          .select("total_amount, sale_type, invoice_status, created_at")
+          .select("total_amount, sale_type, invoice_status, created_at, advisor_name")
           .eq("invoice_status", "facturado")
           .gte("created_at", startISO)
           .lt("created_at", endISO),
