@@ -100,25 +100,51 @@ export default function Presupuesto() {
     const incomes = INCOME_CATEGORIES.flatMap((c) => {
       if (c === "Ferias") {
         const feriaLines = lines.filter((l) => l.kind === "ingreso" && l.category === "Ferias");
-        const rows = feriaLines.map((l) => ({
-          category: `Ferias - ${l.description || "sin nombre"}`,
-          projected: Number(l.projected_amount || 0),
-          manual: 0,
-          auto: 0,
-          real: 0,
-        }));
+        const rows = feriaLines.map((l) => {
+          const name = l.description || "sin nombre";
+          const manual = entries
+            .filter(
+              (e) =>
+                e.kind === "ingreso" &&
+                e.category === "Ferias" &&
+                (e.description || "sin nombre") === name
+            )
+            .reduce((s, e) => s + Number(e.amount || 0), 0);
+          return {
+            category: `Ferias - ${name}`,
+            projected: Number(l.projected_amount || 0),
+            manual,
+            auto: 0,
+            real: manual,
+            entryCategory: "Ferias",
+            entryDescription: name,
+          };
+        });
         const totalsRow = { category: "Ferias (total real)", ...byCat("ingreso", "Ferias") };
         return rows.length > 0 ? [...rows, totalsRow] : [totalsRow];
       }
       if (c === "Otros ingresos") {
         const otrosLines = lines.filter((l) => l.kind === "ingreso" && l.category === "Otros ingresos");
-        const rows = otrosLines.map((l) => ({
-          category: `Otros ingresos - ${l.description || "sin nombre"}`,
-          projected: Number(l.projected_amount || 0),
-          manual: 0,
-          auto: 0,
-          real: 0,
-        }));
+        const rows = otrosLines.map((l) => {
+          const name = l.description || "sin nombre";
+          const manual = entries
+            .filter(
+              (e) =>
+                e.kind === "ingreso" &&
+                e.category === "Otros ingresos" &&
+                (e.description || "sin nombre") === name
+            )
+            .reduce((s, e) => s + Number(e.amount || 0), 0);
+          return {
+            category: `Otros ingresos - ${name}`,
+            projected: Number(l.projected_amount || 0),
+            manual,
+            auto: 0,
+            real: manual,
+            entryCategory: "Otros ingresos",
+            entryDescription: name,
+          };
+        });
         const totalsRow = { category: "Otros ingresos (total real)", ...byCat("ingreso", "Otros ingresos") };
         return rows.length > 0 ? [...rows, totalsRow] : [totalsRow];
       }
@@ -127,13 +153,26 @@ export default function Presupuesto() {
     const expenses = EXPENSE_CATEGORIES.flatMap((c) => {
       if (c === "Otros gastos") {
         const otrosLines = lines.filter((l) => l.kind === "egreso" && l.category === "Otros gastos");
-        const rows = otrosLines.map((l) => ({
-          category: `Otros gastos - ${l.description || "sin nombre"}`,
-          projected: Number(l.projected_amount || 0),
-          manual: 0,
-          auto: 0,
-          real: 0,
-        }));
+        const rows = otrosLines.map((l) => {
+          const name = l.description || "sin nombre";
+          const manual = entries
+            .filter(
+              (e) =>
+                e.kind === "egreso" &&
+                e.category === "Otros gastos" &&
+                (e.description || "sin nombre") === name
+            )
+            .reduce((s, e) => s + Number(e.amount || 0), 0);
+          return {
+            category: `Otros gastos - ${name}`,
+            projected: Number(l.projected_amount || 0),
+            manual,
+            auto: 0,
+            real: manual,
+            entryCategory: "Otros gastos",
+            entryDescription: name,
+          };
+        });
         const totalsRow = { category: "Otros gastos (total real)", ...byCat("egreso", "Otros gastos") };
         return rows.length > 0 ? [...rows, totalsRow] : [totalsRow];
       }
