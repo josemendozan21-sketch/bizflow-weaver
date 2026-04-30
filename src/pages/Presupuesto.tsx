@@ -96,11 +96,33 @@ export default function Presupuesto() {
       return { projected, manual, auto: autoVal, real };
     };
 
-    const incomes = INCOME_CATEGORIES.map((c) => ({ category: c, ...byCat("ingreso", c) }));
+    // Expand Ferias into one row per named feria; non-feria categories stay as-is
+    const incomes = INCOME_CATEGORIES.flatMap((c) => {
+      if (c !== "Ferias") return [{ category: c, ...byCat("ingreso", c) }];
+      const feriaLines = lines.filter((l) => l.kind === "ingreso" && l.category === "Ferias");
+      const rows = feriaLines.map((l) => ({
+        category: `Ferias - ${l.description || "sin nombre"}`,
+        projected: Number(l.projected_amount || 0),
+        manual: 0,
+        auto: 0,
+        real: 0,
+      }));
+      // Totals row for Ferias (real comes from auto + manual entries on category "Ferias")
+      const totalsRow = { category: "Ferias (total real)", ...byCat("ingreso", "Ferias") };
+      // If no named ferias defined, just show the totals row
+      return rows.length > 0 ? [...rows, totalsRow] : [totalsRow];
+    });
     const expenses = EXPENSE_CATEGORIES.map((c) => ({ category: c, ...byCat("egreso", c) }));
 
-    const totalIncomeProj = incomes.reduce((s, c) => s + c.projected, 0);
-    const totalIncomeReal = incomes.reduce((s, c) => s + c.real, 0);
+    // Avoid double-counting Ferias: sum projected from named rows, real from totals row only
+    const totalIncomeProj = incomes
+      .filter((c) => c.category !== "Ferias (total real)")
+      .reduce((s, c) => s + c.projected, 0);
+    const totalIncomeReal = incomes
+      .filter(
+        (c) => !c.category.startsWith("Ferias - ") // skip per-feria rows (real always 0 there)
+      )
+      .reduce((s, c) => s + c.real, 0);
     const totalExpenseProj = expenses.reduce((s, c) => s + c.projected, 0);
     const totalExpenseReal = expenses.reduce((s, c) => s + c.real, 0);
 
