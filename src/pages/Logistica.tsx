@@ -12,7 +12,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { canEditSection } from "@/lib/rolePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { Package, Truck, CheckCircle2, Clock, AlertTriangle, CalendarDays, FileCheck, Download, FileImage, MapPin, PackageX, Undo2 } from "lucide-react";
+import { Package, Truck, CheckCircle2, Clock, AlertTriangle, CalendarDays, FileCheck, Download, FileImage, MapPin, PackageX, Undo2, Tent } from "lucide-react";
+import { FeriaDispatchTab } from "@/components/logistics/FeriaDispatchTab";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { differenceInDays, format } from "date-fns";
@@ -282,6 +283,9 @@ const Logistica = () => {
             <CheckCircle2 className="h-4 w-4" /> Despachados
             {dispatchedOrders.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{dispatchedOrders.length}</Badge>}
           </TabsTrigger>
+          <TabsTrigger value="ferias" className="gap-1.5">
+            <Tent className="h-4 w-4" /> Ferias
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="ready">
@@ -374,6 +378,15 @@ const Logistica = () => {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="ferias">
+          <Card>
+            <CardHeader><CardTitle className="text-lg">Solicitudes de ferias</CardTitle></CardHeader>
+            <CardContent>
+              <FeriaDispatchTab />
             </CardContent>
           </Card>
         </TabsContent>

@@ -1,4 +1,4 @@
-import { Home, ShoppingCart, Factory, Truck, Calculator, Package, Palette, Shield, DollarSign, CalendarDays, Tent, Images } from "lucide-react";
+import { Home, ShoppingCart, Factory, Truck, Calculator, Package, Palette, Shield, DollarSign, CalendarDays, Tent, Images, Store } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,6 +32,7 @@ const items = [
   { title: "Costos", url: "/costos", icon: DollarSign },
   { title: "Eventos", url: "/eventos", icon: CalendarDays },
   { title: "Ferias", url: "/ferias", icon: Tent },
+  { title: "Feria POS", url: "/feria-pos", icon: Store },
   { title: "Galería", url: "/galeria", icon: Images },
   { title: "Usuarios", url: "/admin-usuarios", icon: Shield },
 ];
