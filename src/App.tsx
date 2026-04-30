@@ -32,23 +32,49 @@ function getDefaultRoute(role: string | null): string {
   return routes[0] || "/";
 }
 
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <p className="text-muted-foreground">Cargando...</p>
+    </div>
+  );
+}
+
+function NoRoleScreen() {
+  const { signOut, user } = useAuth();
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="max-w-md text-center space-y-4">
+        <h1 className="text-xl font-semibold text-foreground">Usuario sin permisos asignados</h1>
+        <p className="text-sm text-muted-foreground">
+          La cuenta {user?.email ? `(${user.email}) ` : ""}ya inició sesión, pero todavía no tiene un rol activo. Pide al administrador que le asigne un rol.
+        </p>
+        <button className="text-sm font-medium text-primary hover:underline" onClick={signOut}>Cerrar sesión</button>
+      </div>
+    </div>
+  );
+}
+
 function ProtectedRoute({ children, path }: { children: ReactNode; path: string }) {
   const { role, loading } = useAuth();
-  if (loading) return null;
+  if (loading) return <LoadingScreen />;
+  if (!role) return <NoRoleScreen />;
   if (!canAccessRoute(role, path)) return <Navigate to={getDefaultRoute(role)} replace />;
   return <>{children}</>;
 }
 
 function HomeRedirect() {
   const { role, loading } = useAuth();
-  if (loading) return null;
+  if (loading) return <LoadingScreen />;
+  if (!role) return <NoRoleScreen />;
   if (role === "admin") return <Index />;
   return <Navigate to={getDefaultRoute(role)} replace />;
 }
 
 function AuthGate({ children }: { children: ReactNode }) {
   const { session, loading } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><p className="text-muted-foreground">Cargando...</p></div>;
+  if (loading) return <LoadingScreen />;
   if (!session) return <Auth />;
   return <>{children}</>;
 }
