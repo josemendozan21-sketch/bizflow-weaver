@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,8 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Package } from "lucide-react";
 import { useCreateFeria } from "@/hooks/useFerias";
+import { useInventory } from "@/hooks/useInventory";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
 
 const PREDEFINED_MATERIALS = [
   "Malla exhibición",
@@ -44,6 +47,7 @@ const COST_FIELDS: Array<{ key: string; label: string }> = [
 export function CreateFeriaDialog() {
   const [open, setOpen] = useState(false);
   const create = useCreateFeria();
+  const { stockItems } = useInventory();
   const [form, setForm] = useState<any>({
     name: "", city: "", venue: "", start_date: "", end_date: "", setup_date: "",
     stand_number: "", stand_size: "",
@@ -53,6 +57,66 @@ export function CreateFeriaDialog() {
     materials_needed: [] as string[], status: "planificada", notes: "",
   });
   const [customMaterial, setCustomMaterial] = useState("");
+
+  // Productos a llevar: key = "brand|product_name"
+  const [selectedProducts, setSelectedProducts] = useState<Record<string, { brand: string; product_name: string; quantity: number; unit_price: number }>>({});
+  const [magicalSearch, setMagicalSearch] = useState("");
+  const [sweatspotSearch, setSweatspotSearch] = useState("");
+  const [magicalOpen, setMagicalOpen] = useState(false);
+  const [sweatspotOpen, setSweatspotOpen] = useState(false);
+
+  const magicalOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const opts: { key: string; label: string; product_name: string }[] = [];
+    stockItems
+      .filter((it: any) => it.brand === "magical" && it.category === "producto_terminado")
+      .forEach((it: any) => {
+        const label = it.product_type ? `${it.name} (${it.product_type})` : it.name;
+        const key = `magical|${label}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          opts.push({ key, label, product_name: label });
+        }
+      });
+    return opts.sort((a, b) => a.label.localeCompare(b.label, "es"));
+  }, [stockItems]);
+
+  const sweatspotOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const opts: { key: string; label: string; product_name: string }[] = [];
+    stockItems
+      .filter((it: any) => it.brand === "sweatspot" && it.category === "producto_terminado")
+      .forEach((it: any) => {
+        const label = it.color ? `${it.name} - ${it.color}` : it.name;
+        const key = `sweatspot|${label}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          opts.push({ key, label, product_name: label });
+        }
+      });
+    return opts.sort((a, b) => a.label.localeCompare(b.label, "es"));
+  }, [stockItems]);
+
+  const filteredMagical = magicalOptions.filter((o) => o.label.toLowerCase().includes(magicalSearch.toLowerCase()));
+  const filteredSweatspot = sweatspotOptions.filter((o) => o.label.toLowerCase().includes(sweatspotSearch.toLowerCase()));
+
+  const toggleProduct = (key: string, brand: string, product_name: string) => {
+    setSelectedProducts((prev) => {
+      const next = { ...prev };
+      if (next[key]) delete next[key];
+      else next[key] = { brand, product_name, quantity: 1, unit_price: 0 };
+      return next;
+    });
+  };
+
+  const updateProduct = (key: string, field: "quantity" | "unit_price", value: string) => {
+    setSelectedProducts((prev) => ({
+      ...prev,
+      [key]: { ...prev[key], [field]: parseFloat(value) || 0 },
+    }));
+  };
+
+  const totalProductsSelected = Object.keys(selectedProducts).length;
 
   const totalCosts = COST_FIELDS.reduce((s, f) => s + (parseFloat(form[f.key]) || 0), 0);
 
@@ -97,8 +161,10 @@ export function CreateFeriaDialog() {
       materials_needed: form.materials_needed.length > 0 ? form.materials_needed : null,
       status: form.status,
       notes: form.notes || null,
+      initial_inventory: Object.values(selectedProducts).filter((p) => p.quantity > 0),
     });
     setOpen(false);
+    setSelectedProducts({});
   };
 
   return (
@@ -176,6 +242,126 @@ export function CreateFeriaDialog() {
               </div>
             )}
           </div>
+
+          <div className="border rounded-lg p-3 bg-muted/30">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-semibold text-sm flex items-center gap-2">
+                <Package className="h-4 w-4" /> Productos a llevar
+              </h4>
+              {totalProductsSelected > 0 && (
+                <span className="text-xs text-muted-foreground">{totalProductsSelected} seleccionados</span>
+              )}
+            </div>
+
+            {/* Magical Warmers */}
+            <Collapsible open={magicalOpen} onOpenChange={setMagicalOpen} className="mb-2">
+              <CollapsibleTrigger asChild>
+                <Button type="button" variant="outline" size="sm" className="w-full justify-between">
+                  <span>Magical Warmers ({magicalOptions.length})</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${magicalOpen ? "rotate-180" : ""}`} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2 space-y-2">
+                <Input
+                  placeholder="Buscar producto Magical..."
+                  value={magicalSearch}
+                  onChange={(e) => setMagicalSearch(e.target.value)}
+                  className="text-sm h-8"
+                />
+                <div className="max-h-64 overflow-y-auto border rounded-md bg-background divide-y">
+                  {filteredMagical.length === 0 ? (
+                    <p className="text-xs text-muted-foreground p-3 text-center">Sin productos</p>
+                  ) : filteredMagical.map((o) => {
+                    const checked = !!selectedProducts[o.key];
+                    return (
+                      <div key={o.key} className="flex items-center gap-2 p-2">
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={() => toggleProduct(o.key, "magical", o.product_name)}
+                        />
+                        <span className="flex-1 text-sm">{o.label}</span>
+                        {checked && (
+                          <>
+                            <Input
+                              type="number"
+                              min={1}
+                              placeholder="Cant."
+                              value={selectedProducts[o.key].quantity || ""}
+                              onChange={(e) => updateProduct(o.key, "quantity", e.target.value)}
+                              className="h-7 w-20 text-right text-sm"
+                            />
+                            <Input
+                              type="number"
+                              min={0}
+                              placeholder="Precio"
+                              value={selectedProducts[o.key].unit_price || ""}
+                              onChange={(e) => updateProduct(o.key, "unit_price", e.target.value)}
+                              className="h-7 w-24 text-right text-sm"
+                            />
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
+            {/* Sweatspot */}
+            <Collapsible open={sweatspotOpen} onOpenChange={setSweatspotOpen}>
+              <CollapsibleTrigger asChild>
+                <Button type="button" variant="outline" size="sm" className="w-full justify-between">
+                  <span>Sweatspot ({sweatspotOptions.length})</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${sweatspotOpen ? "rotate-180" : ""}`} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2 space-y-2">
+                <Input
+                  placeholder="Buscar producto Sweatspot..."
+                  value={sweatspotSearch}
+                  onChange={(e) => setSweatspotSearch(e.target.value)}
+                  className="text-sm h-8"
+                />
+                <div className="max-h-64 overflow-y-auto border rounded-md bg-background divide-y">
+                  {filteredSweatspot.length === 0 ? (
+                    <p className="text-xs text-muted-foreground p-3 text-center">Sin productos</p>
+                  ) : filteredSweatspot.map((o) => {
+                    const checked = !!selectedProducts[o.key];
+                    return (
+                      <div key={o.key} className="flex items-center gap-2 p-2">
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={() => toggleProduct(o.key, "sweatspot", o.product_name)}
+                        />
+                        <span className="flex-1 text-sm">{o.label}</span>
+                        {checked && (
+                          <>
+                            <Input
+                              type="number"
+                              min={1}
+                              placeholder="Cant."
+                              value={selectedProducts[o.key].quantity || ""}
+                              onChange={(e) => updateProduct(o.key, "quantity", e.target.value)}
+                              className="h-7 w-20 text-right text-sm"
+                            />
+                            <Input
+                              type="number"
+                              min={0}
+                              placeholder="Precio"
+                              value={selectedProducts[o.key].unit_price || ""}
+                              onChange={(e) => updateProduct(o.key, "unit_price", e.target.value)}
+                              className="h-7 w-24 text-right text-sm"
+                            />
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+
           <div>
             <Label>Estado</Label>
             <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
