@@ -60,7 +60,7 @@ export default function Presupuesto() {
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth() + 1);
   const [defineOpen, setDefineOpen] = useState(false);
-  const [addEntry, setAddEntry] = useState<{ kind: "ingreso" | "egreso"; category: string } | null>(null);
+  const [addEntry, setAddEntry] = useState<{ kind: "ingreso" | "egreso"; category: string; description?: string } | null>(null);
 
   const { data: budget } = useMonthlyBudget(year, month);
   const { data: lines = [] } = useBudgetLines(budget?.id);
@@ -392,7 +392,7 @@ export default function Presupuesto() {
         title="Ingresos"
         rows={aggregate.incomes}
         kind="ingreso"
-        onAddEntry={(cat) => setAddEntry({ kind: "ingreso", category: cat })}
+        onAddEntry={(cat, desc) => setAddEntry({ kind: "ingreso", category: cat, description: desc })}
         disabled={isClosed || !budget}
       />
 
@@ -401,7 +401,7 @@ export default function Presupuesto() {
         title="Egresos / Costos y gastos"
         rows={aggregate.expenses}
         kind="egreso"
-        onAddEntry={(cat) => setAddEntry({ kind: "egreso", category: cat })}
+        onAddEntry={(cat, desc) => setAddEntry({ kind: "egreso", category: cat, description: desc })}
         disabled={isClosed || !budget}
       />
 
@@ -484,6 +484,7 @@ export default function Presupuesto() {
           budgetId={budget.id}
           kind={addEntry.kind}
           category={addEntry.category}
+          defaultDescription={addEntry.description}
         />
       )}
     </div>
