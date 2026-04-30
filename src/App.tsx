@@ -26,22 +26,51 @@ import { ReactNode } from "react";
 
 const queryClient = new QueryClient();
 
-function getDefaultRoute(role: string | null): string {
+function getDefaultRoute(role: Parameters<typeof getAllowedRoutes>[0]): string {
   if (!role) return "/";
-  const routes = getAllowedRoutes(role as any);
+  const routes = getAllowedRoutes(role);
   return routes[0] || "/";
 }
 
 function LoadingScreen() {
+  const handleCleanAndReload = async () => {
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((registration) => registration.unregister()));
+    }
+    if ("caches" in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
+    }
+    window.location.reload();
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p className="text-muted-foreground">Cargando...</p>
+    <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="text-center space-y-3">
+        <p className="text-muted-foreground">Cargando...</p>
+        <button className="text-sm font-medium text-primary hover:underline" onClick={handleCleanAndReload}>
+          Limpiar caché y reintentar
+        </button>
+      </div>
     </div>
   );
 }
 
 function NoRoleScreen() {
   const { signOut, user } = useAuth();
+
+  const handleRetry = async () => {
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((registration) => registration.unregister()));
+    }
+    if ("caches" in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
+    }
+    window.location.reload();
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
@@ -50,7 +79,10 @@ function NoRoleScreen() {
         <p className="text-sm text-muted-foreground">
           La cuenta {user?.email ? `(${user.email}) ` : ""}ya inició sesión, pero todavía no tiene un rol activo. Pide al administrador que le asigne un rol.
         </p>
-        <button className="text-sm font-medium text-primary hover:underline" onClick={signOut}>Cerrar sesión</button>
+        <div className="flex flex-col items-center gap-2">
+          <button className="text-sm font-medium text-primary hover:underline" onClick={handleRetry}>Reintentar permisos</button>
+          <button className="text-sm font-medium text-muted-foreground hover:text-primary hover:underline" onClick={signOut}>Cerrar sesión</button>
+        </div>
       </div>
     </div>
   );

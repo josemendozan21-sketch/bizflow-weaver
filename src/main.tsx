@@ -31,8 +31,17 @@ if (typeof Node !== "undefined") {
 }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.getRegistrations().then((registrations) => {
-    registrations.forEach((registration) => registration.unregister());
+  navigator.serviceWorker.getRegistrations().then(async (registrations) => {
+    await Promise.all(registrations.map((registration) => registration.unregister()));
+    if ("caches" in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
+    }
+
+    if (navigator.serviceWorker.controller && !sessionStorage.getItem("bionovations-sw-cleaned")) {
+      sessionStorage.setItem("bionovations-sw-cleaned", "true");
+      window.location.reload();
+    }
   });
 }
 
