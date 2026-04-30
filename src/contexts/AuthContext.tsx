@@ -30,34 +30,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchRole = async (userId: string) => {
-    const { data } = await supabase.rpc("get_user_role", { _user_id: userId });
-    setRole(data as AppRole | null);
+    const { data, error } = await supabase.rpc("get_user_role", { _user_id: userId });
+    if (error) {
+      console.error("[AuthContext] Error loading user role:", error);
+      return null;
+    }
+    return data as AppRole | null;
   };
 
   useEffect(() => {
+    let mounted = true;
+
+    const applySession = async (nextSession: Session | null) => {
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+
+      if (nextSession?.user) {
+        const userRole = await fetchRole(nextSession.user.id);
+        if (!mounted) return;
+        setRole(userRole);
+      } else {
+        setRole(null);
+      }
+
+      if (mounted) setLoading(false);
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          setTimeout(() => fetchRole(session.user.id), 0);
-        } else {
-          setRole(null);
-        }
-        setLoading(false);
+        setLoading(true);
+        await applySession(session);
       }
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchRole(session.user.id);
-      }
-      setLoading(false);
+      applySession(session);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
