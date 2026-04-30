@@ -1,152 +1,56 @@
 
-# Solicitudes de Feria a Logística + Módulo Feria Punto de Venta
-
 ## Objetivo
 
-1. Cuando el admin asigna inventario a una feria, esa lista se convierte en una **solicitud de despacho** que aparece en Logística. Logística ve cuántas unidades fueron pedidas y registra cuántas realmente despacha (más mobiliario opcional).
-2. Crear el módulo **Feria Punto de Venta (POS)**, accesible por un nuevo rol dedicado (`feria_pos`), donde solo se ve el inventario realmente despachado por logística para la feria asignada y se registran ventas en modo rápido o detallado.
+Permitir que al **crear una feria** desde el diálogo "Nueva feria", el admin pueda seleccionar de una lista desplegable los productos de **Magical Warmers** y **Sweatspot** que necesita llevar, indicando la cantidad de cada uno. Estos productos quedarán automáticamente asignados al inventario de la feria.
 
----
+## Cambios
 
-## Parte 1 — Solicitud de despacho a Logística
+### 1. `src/components/ferias/CreateFeriaDialog.tsx`
 
-### Cambios en base de datos
+Agregar una nueva sección **"Productos a llevar"** debajo de "Materiales necesarios", con:
 
-Nueva tabla `feria_dispatch_requests` (una por feria):
-- `id`, `feria_id`, `status` (`pendiente`, `parcial`, `despachado`)
-- `dispatched_at`, `dispatched_by`, `dispatch_notes`
-- `furniture_items` (text[]) — mobiliario despachado (mesas, sillas, racks…)
-- `furniture_dispatched` (boolean)
+- Dos bloques colapsables: **Magical Warmers** y **Sweatspot**.
+- Cada bloque muestra la lista de productos terminados disponibles (leídos del inventario vía `useInventory()`, filtrando `category === "producto_terminado"` por marca).
+  - Magical: `nombre (Frío|Térmico)` — misma lógica que `FeriaInventoryTab`.
+  - Sweatspot: `nombre - color` — misma lógica que `FeriaInventoryTab`.
+- Para cada producto: un **checkbox** para seleccionarlo y un input numérico (cantidad) que aparece al marcarlo.
+- Buscador (input) por marca para filtrar la lista cuando hay muchas referencias.
+- También un input opcional de **precio unitario** por producto (para no tener que entrarlo después en el inventario).
 
-Nuevas columnas en `feria_inventory`:
-- `quantity_dispatched` (int, default 0) — lo que log\u00edstica realmente envió
-- `dispatch_status` (`pendiente` | `despachado`)
-
-RLS:
-- Admin: full access.
-- Logística y Contabilidad: SELECT + UPDATE.
-- Nuevo rol `feria_pos`: SELECT solo de su feria (ver Parte 3).
-
-### Flujo en la pestaña "Inventario asignado" (FeriaInventoryTab)
-
-- El admin sigue agregando productos como hoy (esa es la "solicitud").
-- Al lado del botón "Asignar producto" se agrega un botón **"Enviar a logística"** que:
-  - Crea/actualiza el registro `feria_dispatch_requests` con status `pendiente`.
-  - Notifica al rol `logistica`.
-- La tabla muestra una nueva columna **Estado despacho** (Pendiente / Despachado / Parcial).
-
-### Cambios en `Logistica.tsx`
-
-Nueva pestaña **"Ferias"** junto a Listos / Pendientes / Despachados.
-
-Cada fila muestra:
-- Nombre de la feria, ciudad, fechas.
-- Tabla con: Producto · Marca · **Pedido** · **Despacho** (input editable) · Restante.
-- Sección **Mobiliario**: checkbox "¿Despacha mobiliario?" + lista editable (mesas, sillas, etc.).
-- Botón **"Confirmar despacho"** que:
-  - Guarda `quantity_dispatched` por línea.
-  - Marca cada línea como `despachado`.
-  - Marca `feria_dispatch_requests.status = 'despachado'` (cierra el ciclo: el faltante NO se reabastece automáticamente — solo queda registrado lo que realmente salió).
-  - Notifica al rol `feria_pos` y al admin.
-
-### Hooks nuevos en `useFerias.ts`
-
-- `useFeriaDispatchRequest(feriaId)`
-- `useCreateDispatchRequest()`
-- `useConfirmDispatch()` — actualiza cantidades y estado.
-
----
-
-## Parte 2 — Módulo Feria Punto de Venta
-
-### Nueva ruta y página
-
-- Ruta: `/feria-pos`
-- Página: `src/pages/FeriaPOS.tsx`
-- Sidebar: nuevo item visible solo para roles `feria_pos` y `admin`.
-
-### Estructura de la página
-
-Selector superior con la **feria activa** (la que tenga despacho confirmado y status `en_curso`; si hay varias, dropdown). Para usuarios `feria_pos` se autoselecciona su única feria asignada.
-
-Tres tabs:
-
-1. **Vender (rápido)** — vista tipo POS:
-   - Grid de tarjetas grandes por producto despachado, mostrando nombre, precio y stock restante (`quantity_dispatched - vendido`).
-   - Tap a una tarjeta agrega 1 unidad a un "carrito" lateral.
-   - Carrito: ajustar cantidad, total, selector de método de pago, botón **"Cobrar"**.
-   - Productos con stock 0 quedan deshabilitados.
-
-2. **Vender (detallado)** — formulario completo con cliente/notas (reusa el de `FeriaSalesTab` adaptado para mostrar solo productos despachados).
-
-3. **Mis ventas** — tabla con las ventas registradas por el usuario actual en esta feria, con total del día.
-
-Las ventas se siguen guardando en `feria_sales` (sin cambios estructurales más allá de respetar `recorded_by`).
-
-### Stock disponible en POS
-
-Se calcula en cliente:
+Estado interno nuevo:
+```ts
+selectedProducts: Array<{ brand: "magical" | "sweatspot"; product_name: string; quantity: number; unit_price: number }>
 ```
-restante = quantity_dispatched - SUM(feria_sales.quantity por producto)
+
+### 2. Hook `useCreateFeria` en `src/hooks/useFerias.ts`
+
+Extender la mutación para aceptar opcionalmente un array `initial_inventory` y, después de insertar la feria, hacer un `insert` masivo en `feria_inventory` con esos productos (`quantity_assigned`, `quantity_dispatched: 0`, `dispatch_status: "pendiente"`).
+
+```ts
+useCreateFeria.mutateAsync({
+  ...feriaFields,
+  initial_inventory: selectedProducts, // opcional
+});
 ```
-La pestaña "Inventario asignado" del admin también empieza a usar `quantity_dispatched` (no `quantity_assigned`) para calcular el restante una vez confirmado el despacho.
 
----
+Si el insert de inventario falla, mostrar toast pero no eliminar la feria (la feria queda creada y se puede completar luego desde la pestaña Inventario).
 
-## Parte 3 — Nuevo rol `feria_pos`
+### 3. Sin cambios de DB
 
-### Migración de enum
+Se reutiliza la tabla existente `feria_inventory`. No se requieren migraciones.
 
-Agregar valor `feria_pos` al enum `app_role`.
+## Flujo del usuario
 
-### `rolePermissions.ts`
+1. Admin abre "Nueva feria" desde `/ferias`.
+2. Llena datos básicos, costos, materiales (igual que hoy).
+3. En la nueva sección "Productos a llevar":
+   - Expande "Magical Warmers", marca los productos deseados y digita cantidades/precios.
+   - Hace lo mismo con "Sweatspot".
+4. Al pulsar "Crear feria": se crea la feria **y** se cargan automáticamente los productos seleccionados en el inventario de la feria.
+5. La pestaña **Inventario** de la feria ya muestra todo listo, y el admin/asesor puede pulsar "Enviar a logística" cuando quiera despachar.
 
-```
-feria_pos: ["/feria-pos"]    // solo esta ruta
-```
-Edit sections: `["/feria-pos"]` (puede registrar ventas).
+## Notas técnicas
 
-Label: "Feria Punto de Venta".
-
-### Asignación de feria al usuario POS
-
-Nueva tabla `feria_pos_assignments`:
-- `user_id`, `feria_id`, `assigned_at`
-- RLS: admin gestiona; el propio usuario puede leer su asignación.
-
-En `AdminUsuarios.tsx`: cuando se crea un usuario con rol `feria_pos`, mostrar un selector de feria activa para asignar.
-
-### RLS adicional
-
-- `feria_inventory`, `feria_sales`, `ferias`: agregar policies SELECT/INSERT para `feria_pos` limitadas a su feria asignada (`EXISTS feria_pos_assignments WHERE user_id = auth.uid() AND feria_id = ...`).
-
----
-
-## Detalles técnicos
-
-**Archivos nuevos:**
-- `src/pages/FeriaPOS.tsx`
-- `src/components/feria-pos/QuickSaleGrid.tsx`
-- `src/components/feria-pos/Cart.tsx`
-- `src/components/feria-pos/MySalesTab.tsx`
-- `src/components/logistics/FeriaDispatchTab.tsx`
-- `src/components/logistics/FeriaDispatchCard.tsx`
-
-**Archivos modificados:**
-- `src/App.tsx` — nueva ruta `/feria-pos`.
-- `src/components/AppSidebar.tsx` — nuevo item de menú.
-- `src/lib/rolePermissions.ts` — rol `feria_pos`.
-- `src/pages/Logistica.tsx` — nueva tab "Ferias".
-- `src/components/ferias/FeriaInventoryTab.tsx` — botón "Enviar a logística" + columna estado despacho.
-- `src/hooks/useFerias.ts` — nuevos hooks de despacho.
-- `src/pages/AdminUsuarios.tsx` — asignación de feria al crear `feria_pos`.
-- `src/integrations/supabase/types.ts` — se regenera solo.
-
-**Migraciones SQL:**
-1. `ALTER TYPE app_role ADD VALUE 'feria_pos';`
-2. `CREATE TABLE feria_dispatch_requests (...)` + RLS.
-3. `ALTER TABLE feria_inventory ADD COLUMN quantity_dispatched int DEFAULT 0, dispatch_status text DEFAULT 'pendiente';`
-4. `CREATE TABLE feria_pos_assignments (...)` + RLS.
-5. Nuevas policies en `feria_inventory`, `feria_sales`, `ferias` para `feria_pos`.
-
-**Comportamiento del faltante (decisión confirmada):** al confirmar despacho, lo no enviado se descarta — solo lo despachado queda visible en POS. No se crea tarea de producción automática.
+- Sin cambios en RLS (el admin ya puede insertar en `feria_inventory`).
+- El diálogo de creación ya es scrollable (`max-h-[90vh] overflow-y-auto`), así que la sección extra no rompe el layout móvil.
+- La lógica de etiquetado de productos (Frío/Térmico, color) se extraerá a un pequeño helper compartido para evitar duplicar entre `CreateFeriaDialog` y `FeriaInventoryTab`.
