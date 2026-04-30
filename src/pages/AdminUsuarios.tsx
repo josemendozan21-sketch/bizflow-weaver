@@ -3,13 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getRoleLabel } from "@/lib/rolePermissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Users } from "lucide-react";
+import { Shield, Users, Tent } from "lucide-react";
 import { toast } from "sonner";
 import { Navigate } from "react-router-dom";
 import type { Database } from "@/integrations/supabase/types";
+import { useFerias, useAllPosAssignments, useAssignPosUser } from "@/hooks/useFerias";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -25,6 +27,9 @@ const AdminUsuarios = () => {
   const { role } = useAuth();
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const { data: ferias = [] } = useFerias();
+  const { data: posAssignments = [] } = useAllPosAssignments();
+  const assignPos = useAssignPosUser();
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -133,8 +138,27 @@ const AdminUsuarios = () => {
                           <SelectItem value="contabilidad">Contabilidad</SelectItem>
                           <SelectItem value="estampacion">Estampación</SelectItem>
                           <SelectItem value="usuario_visual">Usuario Visual</SelectItem>
+                          <SelectItem value="feria_pos">Feria Punto de Venta</SelectItem>
                         </SelectContent>
                       </Select>
+                      {u.role === "feria_pos" && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <Tent className="h-3 w-3 text-muted-foreground" />
+                          <Select
+                            value={posAssignments.find((a) => a.user_id === u.user_id)?.feria_id ?? ""}
+                            onValueChange={(feria_id) => assignPos.mutate({ user_id: u.user_id, feria_id })}
+                          >
+                            <SelectTrigger className="w-[180px] h-8 text-xs">
+                              <SelectValue placeholder="Asignar feria" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {ferias.map((f) => (
+                                <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {new Date(u.created_at).toLocaleDateString("es-CO")}
