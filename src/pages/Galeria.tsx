@@ -338,7 +338,7 @@ export default function Galeria() {
           <CardTitle className="text-base">Filtros</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Tabs value={brandTab} onValueChange={(v) => { setBrandTab(v); setProductFilter("all"); }}>
+          <Tabs value={brandTab} onValueChange={(v) => { setBrandTab(v); setProductFilter("all"); setInkFilter("all"); setGelFilter("all"); }}>
             <TabsList>
               <TabsTrigger value="all">Todas</TabsTrigger>
               {BRANDS.map((b) => (
@@ -346,7 +346,7 @@ export default function Galeria() {
               ))}
             </TabsList>
           </Tabs>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Producto</Label>
               <Select value={productFilter} onValueChange={setProductFilter}>
@@ -355,6 +355,30 @@ export default function Galeria() {
                   <SelectItem value="all">Todos los productos</SelectItem>
                   {products.map((p) => (
                     <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Color de tinta</Label>
+              <Select value={inkFilter} onValueChange={setInkFilter}>
+                <SelectTrigger><SelectValue placeholder="Todas las tintas" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las tintas</SelectItem>
+                  {inkColors.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Color de gel</Label>
+              <Select value={gelFilter} onValueChange={setGelFilter}>
+                <SelectTrigger><SelectValue placeholder="Todos los geles" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los geles</SelectItem>
+                  {gelColors.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -422,6 +446,16 @@ export default function Galeria() {
                           )}
                           {it.logo_reference && (
                             <p className="text-[11px] text-muted-foreground truncate">{it.logo_reference}</p>
+                          )}
+                          {(it.ink_color || it.gel_color) && (
+                            <div className="flex flex-wrap gap-1 pt-0.5">
+                              {it.ink_color && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0">Tinta: {it.ink_color}</Badge>
+                              )}
+                              {it.gel_color && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0">Gel: {it.gel_color}</Badge>
+                              )}
+                            </div>
                           )}
                           <div className="flex items-center justify-between gap-1 pt-1">
                             <Button
