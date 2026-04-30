@@ -853,11 +853,15 @@ export type Database = {
           brand: string
           client_name: string | null
           created_at: string
+          gel_color: string | null
           id: string
+          ink_color: string | null
           logo_reference: string | null
           notes: string | null
           photo_url: string
           product_name: string
+          source_order_id: string | null
+          source_production_order_id: string | null
           storage_path: string
           updated_at: string
           uploaded_by: string
@@ -867,11 +871,15 @@ export type Database = {
           brand: string
           client_name?: string | null
           created_at?: string
+          gel_color?: string | null
           id?: string
+          ink_color?: string | null
           logo_reference?: string | null
           notes?: string | null
           photo_url: string
           product_name: string
+          source_order_id?: string | null
+          source_production_order_id?: string | null
           storage_path: string
           updated_at?: string
           uploaded_by: string
@@ -881,11 +889,15 @@ export type Database = {
           brand?: string
           client_name?: string | null
           created_at?: string
+          gel_color?: string | null
           id?: string
+          ink_color?: string | null
           logo_reference?: string | null
           notes?: string | null
           photo_url?: string
           product_name?: string
+          source_order_id?: string | null
+          source_production_order_id?: string | null
           storage_path?: string
           updated_at?: string
           uploaded_by?: string
