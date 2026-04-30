@@ -30,6 +30,8 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
       product_name: form.product_name,
       quantity_assigned: parseInt(form.quantity_assigned, 10),
       quantity_returned: 0,
+      quantity_dispatched: 0,
+      dispatch_status: "pendiente",
       unit_price: parseFloat(form.unit_price) || 0,
       notes: form.notes || null,
     });
