@@ -283,11 +283,16 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const materialConfigs = useInventoryStore((s) => s.materialConfigs);
   const { reserveBodyStock: reserveBodyStockDB, discountStock: discountStockDB, stockItems: inventoryStockItems } = useInventory();
 
-  // Unique product names
+  // Unique product names — combine local material configs with Magical products from DB
+  // so newly-added references (e.g. "Tiroides") show up for all advisors.
   const productNames = useMemo(() => {
-    const names = [...new Set(materialConfigs.map((c) => c.productName))];
-    return names.sort();
-  }, [materialConfigs]);
+    const fromConfig = materialConfigs.map((c) => c.productName);
+    const fromDB = inventoryStockItems
+      .filter((s) => s.brand === "magical" && s.category === "producto_terminado")
+      .map((s) => s.name);
+    const names = [...new Set([...fromConfig, ...fromDB])];
+    return names.sort((a, b) => a.localeCompare(b, "es"));
+  }, [materialConfigs, inventoryStockItems]);
 
   // Grand total across all lines
   const grandTotal = useMemo(() => {
@@ -327,7 +332,19 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
   const getAvailableTypes = (productName: string) => {
     if (!productName) return [];
-    return materialConfigs.filter((c) => c.productName === productName).map((c) => c.productType);
+    const fromConfig = materialConfigs
+      .filter((c) => c.productName === productName)
+      .map((c) => c.productType);
+    const fromDB = inventoryStockItems
+      .filter(
+        (s) =>
+          s.brand === "magical" &&
+          s.category === "producto_terminado" &&
+          s.name === productName &&
+          s.product_type
+      )
+      .map((s) => s.product_type as string);
+    return [...new Set([...fromConfig, ...fromDB])];
   };
 
   const getMatchedConfig = (productName: string, productType: string) => {
