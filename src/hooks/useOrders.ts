@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface Order {
   id: string;
@@ -77,8 +78,11 @@ export const PRODUCTION_STATUS_COLORS: Record<string, string> = {
 };
 
 export function useOrders() {
+  const { user, role } = useAuth();
+
   return useQuery({
-    queryKey: ["orders"],
+    queryKey: ["orders", user?.id, role],
+    enabled: !!user && !!role,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")

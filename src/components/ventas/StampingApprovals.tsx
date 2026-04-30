@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, XCircle, Camera, Loader2, Eye } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface StampApproval {
   id: string;
@@ -27,9 +28,11 @@ interface StampApproval {
 
 export function StampingApprovals() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: pendingApprovals = [], isLoading } = useQuery({
-    queryKey: ["stamping_approvals"],
+    queryKey: ["stamping_approvals", user?.id],
+    enabled: !!user,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("production_orders")
