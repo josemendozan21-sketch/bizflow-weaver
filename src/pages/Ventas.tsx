@@ -189,6 +189,9 @@ const PREDEFINED_COLORS = [
   "Aguamarina", "Azul claro", "Verde lima", "Verde militar",
 ];
 
+const TIROIDES_TYPES = ["Frío", "Térmico"] as const;
+const TIROIDES_OPTION_PREFIX = "Tiroides__";
+
 interface OrderLine {
   id: string;
   product: string;
@@ -301,6 +304,34 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     return names.sort((a, b) => a.localeCompare(b, "es"));
   }, [materialConfigs, inventoryStockItems]);
 
+  const productOptions = useMemo(() => {
+    const tiroidesOptions = TIROIDES_TYPES.map((type) => ({
+      value: `${TIROIDES_OPTION_PREFIX}${type}`,
+      label: `Tiroides (${type})`,
+      product: "Tiroides",
+      type,
+    }));
+    const regularOptions = productNames
+      .filter((name) => name !== "Tiroides")
+      .map((name) => ({ value: name, label: name, product: name, type: "" }));
+    return [...tiroidesOptions, ...regularOptions];
+  }, [productNames]);
+
+  const getProductSelectValue = (line: OrderLine) => {
+    if (line.product === "Tiroides" && TIROIDES_TYPES.includes(line.type as typeof TIROIDES_TYPES[number])) {
+      return `${TIROIDES_OPTION_PREFIX}${line.type}`;
+    }
+    return line.product;
+  };
+
+  const handleProductSelect = (lineId: string, value: string) => {
+    if (value.startsWith(TIROIDES_OPTION_PREFIX)) {
+      updateLine(lineId, { product: "Tiroides", type: value.replace(TIROIDES_OPTION_PREFIX, "") });
+      return;
+    }
+    updateLine(lineId, { product: value, type: "" });
+  };
+
   // Grand total across all lines
   const grandTotal = useMemo(() => {
     const linesSum = orderLines.reduce((sum, line) => line.isGift ? sum : sum + (parseFloat(line.valorTotal) || 0), 0);
@@ -352,9 +383,9 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       )
       .map((s) => s.product_type as string);
     const merged = [...new Set([...fromConfig, ...fromDB])];
-    // Fallback for known references without local config (e.g. Tiroides)
-    if (merged.length === 0 && productName === "Tiroides") {
-      return ["Frío", "Térmico"];
+    // Reliable fallback for known references without local config (e.g. Tiroides)
+    if (productName === "Tiroides") {
+      return [...new Set([...TIROIDES_TYPES, ...merged])];
     }
     return merged;
   };
