@@ -533,9 +533,9 @@ function CategoryTable({
   disabled,
 }: {
   title: string;
-  rows: { category: string; projected: number; real: number; auto: number; manual: number }[];
+  rows: { category: string; projected: number; real: number; auto: number; manual: number; entryCategory?: string; entryDescription?: string }[];
   kind: "ingreso" | "egreso";
-  onAddEntry: (category: string) => void;
+  onAddEntry: (category: string, description?: string) => void;
   disabled?: boolean;
 }) {
   return (
@@ -581,10 +581,10 @@ function CategoryTable({
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => onAddEntry(r.category)}
+                      onClick={() => onAddEntry(r.entryCategory ?? r.category, r.entryDescription)}
                       disabled={disabled}
                     >
-                      <Plus className="h-3 w-3 mr-1" /> Movimiento
+                      <Plus className="h-3 w-3 mr-1" /> {r.entryDescription ? "+ Real" : "Movimiento"}
                     </Button>
                   </TableCell>
                 </TableRow>
