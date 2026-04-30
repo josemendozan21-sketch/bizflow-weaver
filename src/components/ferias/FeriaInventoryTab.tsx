@@ -3,12 +3,14 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Plus, Send, CheckCircle2 } from "lucide-react";
 import { useFeriaInventory, useAddFeriaInventory, useDeleteFeriaInventory, useFeriaSales, useFeriaDispatchRequest, useCreateDispatchRequest } from "@/hooks/useFerias";
 import { useAuth } from "@/contexts/AuthContext";
+import { useInventoryStore } from "@/stores/inventoryStore";
+import { useMemo } from "react";
 
 export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   const { data: inventory = [] } = useFeriaInventory(feriaId);
@@ -19,7 +21,42 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   const canSend = role === "admin" || role === "asesor_comercial";
   const add = useAddFeriaInventory();
   const del = useDeleteFeriaInventory();
-  const [form, setForm] = useState({ brand: "magical", product_name: "", quantity_assigned: "", unit_price: "", notes: "" });
+  const materialConfigs = useInventoryStore((s) => s.materialConfigs);
+  const stockItems = useInventoryStore((s) => s.stockItems);
+
+  // Selection format: "magical|<name> (<Frío|Térmico>)"  or  "sweatspot|<name> - <color>"
+  const [selectedKey, setSelectedKey] = useState("");
+  const [form, setForm] = useState({ quantity_assigned: "", unit_price: "", notes: "" });
+
+  const magicalOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const opts: { value: string; label: string }[] = [];
+    materialConfigs.forEach((c) => {
+      const label = `${c.productName} (${c.productType})`;
+      const value = `magical|${label}`;
+      if (!seen.has(value)) {
+        seen.add(value);
+        opts.push({ value, label });
+      }
+    });
+    return opts.sort((a, b) => a.label.localeCompare(b.label, "es"));
+  }, [materialConfigs]);
+
+  const sweatspotOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const opts: { value: string; label: string }[] = [];
+    stockItems
+      .filter((it) => it.brand === "sweatspot" && it.category === "producto_terminado")
+      .forEach((it) => {
+        const label = it.color ? `${it.name} - ${it.color}` : it.name;
+        const value = `sweatspot|${label}`;
+        if (!seen.has(value)) {
+          seen.add(value);
+          opts.push({ value, label });
+        }
+      });
+    return opts.sort((a, b) => a.label.localeCompare(b.label, "es"));
+  }, [stockItems]);
 
   const soldByProduct = sales.reduce<Record<string, number>>((acc, s) => {
     const k = `${s.brand}|${s.product_name}`;
@@ -28,11 +65,12 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   }, {});
 
   const handleAdd = async () => {
-    if (!form.product_name || !form.quantity_assigned) return;
+    if (!selectedKey || !form.quantity_assigned) return;
+    const [brand, productName] = selectedKey.split("|");
     await add.mutateAsync({
       feria_id: feriaId,
-      brand: form.brand,
-      product_name: form.product_name,
+      brand,
+      product_name: productName,
       quantity_assigned: parseInt(form.quantity_assigned, 10),
       quantity_returned: 0,
       quantity_dispatched: 0,
@@ -40,7 +78,8 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
       unit_price: parseFloat(form.unit_price) || 0,
       notes: form.notes || null,
     });
-    setForm({ ...form, product_name: "", quantity_assigned: "", unit_price: "", notes: "" });
+    setSelectedKey("");
+    setForm({ quantity_assigned: "", unit_price: "", notes: "" });
   };
 
   return (
@@ -73,21 +112,34 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
             </Button>
           )}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-          <div>
-            <Label>Marca</Label>
-            <Select value={form.brand} onValueChange={(v) => setForm({ ...form, brand: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="magical">Magical</SelectItem>
-                <SelectItem value="sweatspot">Sweatspot</SelectItem>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div className="md:col-span-2">
+            <Label>Producto (Magical o Sweatspot)</Label>
+            <Select value={selectedKey} onValueChange={setSelectedKey}>
+              <SelectTrigger><SelectValue placeholder="Seleccionar referencia..." /></SelectTrigger>
+              <SelectContent className="max-h-80">
+                <SelectGroup>
+                  <SelectLabel>Magical Warmers</SelectLabel>
+                  {magicalOptions.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectGroup>
+                <SelectGroup>
+                  <SelectLabel>Sweatspot</SelectLabel>
+                  {sweatspotOptions.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
           </div>
-          <div><Label>Producto</Label><Input value={form.product_name} onChange={(e) => setForm({ ...form, product_name: e.target.value })} /></div>
           <div><Label>Cantidad</Label><Input type="number" value={form.quantity_assigned} onChange={(e) => setForm({ ...form, quantity_assigned: e.target.value })} /></div>
           <div><Label>Precio unitario</Label><Input type="number" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} /></div>
-          <div className="flex items-end"><Button className="w-full" onClick={handleAdd}><Plus className="mr-2 h-4 w-4" />Agregar</Button></div>
+          <div className="md:col-span-4 flex justify-end">
+            <Button onClick={handleAdd} disabled={!selectedKey || !form.quantity_assigned}>
+              <Plus className="mr-2 h-4 w-4" />Agregar referencia
+            </Button>
+          </div>
         </div>
       </Card>
 
