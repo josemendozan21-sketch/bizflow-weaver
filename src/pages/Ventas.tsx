@@ -305,15 +305,31 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   }, [materialConfigs, inventoryStockItems]);
 
   const productOptions = useMemo(() => {
-    // Single entry per product name (incl. Tiroides). Type is selected separately.
-    return productNames.map((name) => ({ value: name, label: name, product: name, type: "" }));
+    const tiroidesDirectOptions = TIROIDES_TYPES.map((type) => ({
+      value: `${TIROIDES_OPTION_PREFIX}${type}`,
+      label: `Tiroides (${type})`,
+      product: "Tiroides",
+      type,
+    }));
+    const regularOptions = productNames
+      .filter((name) => name !== "Tiroides")
+      .map((name) => ({ value: name, label: name, product: name, type: "" }));
+    return [...tiroidesDirectOptions, { value: "Tiroides", label: "Tiroides", product: "Tiroides", type: "" }, ...regularOptions];
   }, [productNames]);
 
   const getProductSelectValue = (line: OrderLine) => {
+    if (line.product === "Tiroides" && TIROIDES_TYPES.includes(line.type as (typeof TIROIDES_TYPES)[number])) {
+      return `${TIROIDES_OPTION_PREFIX}${line.type}`;
+    }
     return line.product;
   };
 
   const handleProductSelect = (lineId: string, value: string) => {
+    const selectedOption = productOptions.find((option) => option.value === value);
+    if (selectedOption) {
+      updateLine(lineId, { product: selectedOption.product, type: selectedOption.type });
+      return;
+    }
     updateLine(lineId, { product: value, type: "" });
   };
 
