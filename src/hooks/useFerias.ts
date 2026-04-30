@@ -46,6 +46,8 @@ export interface FeriaInventory {
   product_name: string;
   quantity_assigned: number;
   quantity_returned: number | null;
+  quantity_dispatched: number;
+  dispatch_status: string;
   unit_price: number;
   notes: string | null;
 }
@@ -62,6 +64,19 @@ export interface FeriaSale {
   client_name: string | null;
   sale_date: string;
   notes: string | null;
+}
+
+export interface FeriaDispatchRequest {
+  id: string;
+  feria_id: string;
+  status: string; // pendiente | despachado
+  furniture_dispatched: boolean;
+  furniture_items: string[] | null;
+  dispatch_notes: string | null;
+  requested_at: string;
+  requested_by: string | null;
+  dispatched_at: string | null;
+  dispatched_by: string | null;
 }
 
 export function useFerias() {
@@ -223,6 +238,175 @@ export function useDeleteFeriaSale() {
     onSuccess: (feria_id) => {
       qc.invalidateQueries({ queryKey: ["feria_sales", feria_id] });
       toast.success("Venta eliminada");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+}
+
+/* -------------------- Dispatch requests -------------------- */
+
+export function useFeriaDispatchRequest(feriaId: string | null) {
+  return useQuery({
+    queryKey: ["feria_dispatch_request", feriaId],
+    queryFn: async () => {
+      if (!feriaId) return null;
+      const { data, error } = await supabase
+        .from("feria_dispatch_requests")
+        .select("*")
+        .eq("feria_id", feriaId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as FeriaDispatchRequest | null;
+    },
+    enabled: !!feriaId,
+  });
+}
+
+export function useAllDispatchRequests() {
+  return useQuery({
+    queryKey: ["feria_dispatch_requests_all"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("feria_dispatch_requests")
+        .select("*")
+        .order("requested_at", { ascending: false });
+      if (error) throw error;
+      return data as FeriaDispatchRequest[];
+    },
+  });
+}
+
+export function useCreateDispatchRequest() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async (feriaId: string) => {
+      const { data, error } = await supabase
+        .from("feria_dispatch_requests")
+        .upsert(
+          { feria_id: feriaId, status: "pendiente", requested_by: user?.id },
+          { onConflict: "feria_id" }
+        )
+        .select()
+        .single();
+      if (error) throw error;
+
+      await supabase.from("notifications").insert({
+        target_role: "logistica",
+        title: "Nueva solicitud de feria",
+        message: "Una feria envió su solicitud de inventario para despacho.",
+        type: "feria_dispatch",
+        reference_id: feriaId,
+      });
+      return data;
+    },
+    onSuccess: (_d, feriaId) => {
+      qc.invalidateQueries({ queryKey: ["feria_dispatch_request", feriaId] });
+      qc.invalidateQueries({ queryKey: ["feria_dispatch_requests_all"] });
+      toast.success("Solicitud enviada a logística");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+}
+
+export function useConfirmDispatch() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async (input: {
+      feria_id: string;
+      lines: { id: string; quantity_dispatched: number }[];
+      furniture_dispatched: boolean;
+      furniture_items: string[];
+      dispatch_notes: string;
+    }) => {
+      // Update each inventory line
+      for (const line of input.lines) {
+        const { error } = await supabase
+          .from("feria_inventory")
+          .update({
+            quantity_dispatched: line.quantity_dispatched,
+            dispatch_status: "despachado",
+          })
+          .eq("id", line.id);
+        if (error) throw error;
+      }
+      // Mark request as dispatched
+      const { error: rErr } = await supabase
+        .from("feria_dispatch_requests")
+        .update({
+          status: "despachado",
+          dispatched_at: new Date().toISOString(),
+          dispatched_by: user?.id,
+          furniture_dispatched: input.furniture_dispatched,
+          furniture_items: input.furniture_items,
+          dispatch_notes: input.dispatch_notes || null,
+        })
+        .eq("feria_id", input.feria_id);
+      if (rErr) throw rErr;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["feria_inventory", vars.feria_id] });
+      qc.invalidateQueries({ queryKey: ["feria_dispatch_request", vars.feria_id] });
+      qc.invalidateQueries({ queryKey: ["feria_dispatch_requests_all"] });
+      toast.success("Despacho confirmado");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+}
+
+/* -------------------- POS assignments -------------------- */
+
+export interface FeriaPosAssignment {
+  id: string;
+  user_id: string;
+  feria_id: string;
+  assigned_at: string;
+}
+
+export function useMyPosAssignment() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["my_pos_assignment", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from("feria_pos_assignments")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data as FeriaPosAssignment | null;
+    },
+    enabled: !!user?.id,
+  });
+}
+
+export function useAllPosAssignments() {
+  return useQuery({
+    queryKey: ["pos_assignments_all"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("feria_pos_assignments").select("*");
+      if (error) throw error;
+      return data as FeriaPosAssignment[];
+    },
+  });
+}
+
+export function useAssignPosUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ user_id, feria_id }: { user_id: string; feria_id: string }) => {
+      // Remove previous assignments for this user, then insert new one
+      await supabase.from("feria_pos_assignments").delete().eq("user_id", user_id);
+      const { error } = await supabase
+        .from("feria_pos_assignments")
+        .insert({ user_id, feria_id });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pos_assignments_all"] });
+      toast.success("Feria asignada al usuario POS");
     },
     onError: (e: any) => toast.error(e.message),
   });
