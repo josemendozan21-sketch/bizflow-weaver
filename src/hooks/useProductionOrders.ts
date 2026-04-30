@@ -191,6 +191,46 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
           .eq("id", orderId);
         if (error) throw error;
 
+        // Auto-publish finished photo to product gallery
+        if (completionData?.photoUrl) {
+          try {
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            if (authUser) {
+              // Derive a friendly product name
+              const productName = po.brand === "magical"
+                ? (po.molde ? `Magical Warmers — ${po.molde}` : "Magical Warmers")
+                : (po.thermo_size ? `Termo ${po.thermo_size}` : "Sweatspot");
+              // Try to extract storage path from public URL
+              const marker = "/object/public/product-gallery/";
+              const idx = completionData.photoUrl.indexOf(marker);
+              const storagePath = idx >= 0
+                ? completionData.photoUrl.slice(idx + marker.length)
+                : completionData.photoUrl;
+              await supabase.from("product_gallery").upsert(
+                {
+                  brand: po.brand,
+                  product_name: productName,
+                  photo_url: completionData.photoUrl,
+                  storage_path: storagePath,
+                  client_name: po.client_name,
+                  logo_reference: po.logo_file || null,
+                  ink_color: po.ink_color || null,
+                  gel_color: po.gel_color || null,
+                  notes: po.observations || null,
+                  uploaded_by: authUser.id,
+                  uploaded_by_name: completionData.packagerName || authUser.email || "Producción",
+                  source_order_id: po.order_id,
+                  source_production_order_id: orderId,
+                } as any,
+                { onConflict: "source_production_order_id" }
+              );
+            }
+          } catch (galleryErr) {
+            // Non-fatal: gallery is a nice-to-have
+            console.warn("[useProductionOrders] Could not publish to gallery:", galleryErr);
+          }
+        }
+
         // Update parent order
         if (po.order_id) {
           await supabase.from("orders").update({ production_status: "listo" }).eq("id", po.order_id);
