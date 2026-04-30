@@ -191,6 +191,8 @@ const PREDEFINED_COLORS = [
 
 const TIROIDES_TYPES = ["Frío", "Térmico"] as const;
 const TIROIDES_OPTION_PREFIX = "Tiroides__";
+const HERBOLOGY_TYPES = ["Frío", "Térmico"] as const;
+const HERBOLOGY_OPTION_PREFIX = "Herbology__";
 
 interface OrderLine {
   id: string;
@@ -299,7 +301,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       .map((s) => s.name);
     // Hardcoded fallback to guarantee key references always show up
     // even if the database fetch hasn't completed or is filtered out.
-    const fallback = ["Tiroides"];
+    const fallback = ["Tiroides", "Herbology"];
     const names = [...new Set([...fromConfig, ...fromDB, ...fallback])];
     return names.sort((a, b) => a.localeCompare(b, "es"));
   }, [materialConfigs, inventoryStockItems]);
@@ -311,15 +313,30 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       product: "Tiroides",
       type,
     }));
+    const herbologyDirectOptions = HERBOLOGY_TYPES.map((type) => ({
+      value: `${HERBOLOGY_OPTION_PREFIX}${type}`,
+      label: `Herbology (${type})`,
+      product: "Herbology",
+      type,
+    }));
     const regularOptions = productNames
-      .filter((name) => name !== "Tiroides")
+      .filter((name) => name !== "Tiroides" && name !== "Herbology")
       .map((name) => ({ value: name, label: name, product: name, type: "" }));
-    return [...tiroidesDirectOptions, { value: "Tiroides", label: "Tiroides", product: "Tiroides", type: "" }, ...regularOptions];
+    return [
+      ...tiroidesDirectOptions,
+      { value: "Tiroides", label: "Tiroides", product: "Tiroides", type: "" },
+      ...herbologyDirectOptions,
+      { value: "Herbology", label: "Herbology", product: "Herbology", type: "" },
+      ...regularOptions,
+    ];
   }, [productNames]);
 
   const getProductSelectValue = (line: OrderLine) => {
     if (line.product === "Tiroides" && TIROIDES_TYPES.includes(line.type as (typeof TIROIDES_TYPES)[number])) {
       return `${TIROIDES_OPTION_PREFIX}${line.type}`;
+    }
+    if (line.product === "Herbology" && HERBOLOGY_TYPES.includes(line.type as (typeof HERBOLOGY_TYPES)[number])) {
+      return `${HERBOLOGY_OPTION_PREFIX}${line.type}`;
     }
     return line.product;
   };
@@ -387,6 +404,9 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     // Reliable fallback for known references without local config (e.g. Tiroides)
     if (productName === "Tiroides") {
       return [...new Set([...TIROIDES_TYPES, ...merged])];
+    }
+    if (productName === "Herbology") {
+      return [...new Set([...HERBOLOGY_TYPES, ...merged])];
     }
     return merged;
   };
