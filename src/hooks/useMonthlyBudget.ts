@@ -36,9 +36,10 @@ export interface BudgetEntry {
   created_at: string;
 }
 
+export const ADVISORS = ["Valentina", "Angela", "Pilar", "Ilian", "Jose Mario"] as const;
+
 export const INCOME_CATEGORIES = [
-  "Ventas asesores (mayor)",
-  "Ventas asesores (menor)",
+  ...ADVISORS.map((a) => `Asesores - ${a}`),
   "Ferias",
   "Otros ingresos",
 ];
@@ -230,7 +231,7 @@ export function useAutoReadings(year: number, month: number) {
       const [ordersRes, feriaRes, pettyRes] = await Promise.all([
         supabase
           .from("orders")
-          .select("total_amount, sale_type, invoice_status, created_at")
+          .select("total_amount, sale_type, invoice_status, created_at, advisor_name")
           .eq("invoice_status", "facturado")
           .gte("created_at", startISO)
           .lt("created_at", endISO),
@@ -250,21 +251,25 @@ export function useAutoReadings(year: number, month: number) {
       const feria = feriaRes.data ?? [];
       const petty = pettyRes.data ?? [];
 
-      const ventasMayor = orders
-        .filter((o: any) => o.sale_type === "mayor")
-        .reduce((s: number, o: any) => s + Number(o.total_amount || 0), 0);
-      const ventasMenor = orders
-        .filter((o: any) => o.sale_type === "menor")
-        .reduce((s: number, o: any) => s + Number(o.total_amount || 0), 0);
       const feriasTotal = feria.reduce((s: number, f: any) => s + Number(f.total_amount || 0), 0);
       const pettyTotal = petty.reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
 
-      return {
-        "Ventas asesores (mayor)": ventasMayor,
-        "Ventas asesores (menor)": ventasMenor,
+      // Sum sales per advisor by name (case/diacritic-insensitive matching)
+      const norm = (s: string) =>
+        (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+      const result: Record<string, number> = {
         Ferias: feriasTotal,
         "Gastos diarios": pettyTotal,
-      } as Record<string, number>;
+      };
+      for (const advisor of ADVISORS) {
+        const target = norm(advisor);
+        const total = orders
+          .filter((o: any) => norm(o.advisor_name || "").includes(target))
+          .reduce((s: number, o: any) => s + Number(o.total_amount || 0), 0);
+        result[`Asesores - ${advisor}`] = total;
+      }
+      return result;
     },
   });
 }
