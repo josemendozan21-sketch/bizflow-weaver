@@ -26,9 +26,9 @@ import { ReactNode } from "react";
 
 const queryClient = new QueryClient();
 
-function getDefaultRoute(role: string | null): string {
+function getDefaultRoute(role: Parameters<typeof getAllowedRoutes>[0]): string {
   if (!role) return "/";
-  const routes = getAllowedRoutes(role as any);
+  const routes = getAllowedRoutes(role);
   return routes[0] || "/";
 }
 
