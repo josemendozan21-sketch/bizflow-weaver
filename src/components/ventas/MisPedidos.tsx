@@ -177,24 +177,6 @@ export function MisPedidos() {
       .map((po) => [po.order_id, { photoUrl: po.finished_photo_url, packagerName: po.packager_name, finalCount: po.final_count }])
   );
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (orders.length === 0) {
-    return (
-      <Card>
-        <CardContent className="py-8 text-center text-muted-foreground">
-          No tienes pedidos registrados aún.
-        </CardContent>
-      </Card>
-    );
-  }
-
   // Filtros + agrupación
   const filteredOrders = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -226,6 +208,24 @@ export function MisPedidos() {
       .sort((a, b) => b.newestCreatedAt.localeCompare(a.newestCreatedAt)),
     [groups, activeTab]
   );
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (orders.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center text-muted-foreground">
+          No tienes pedidos registrados aún.
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-4">
