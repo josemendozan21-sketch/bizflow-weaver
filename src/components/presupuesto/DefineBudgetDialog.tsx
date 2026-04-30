@@ -41,17 +41,19 @@ export function DefineBudgetDialog({
   const [income, setIncome] = useState<Record<string, string>>({});
   const [expense, setExpense] = useState<Record<string, string>>({});
   const [ferias, setFerias] = useState<{ name: string; amount: string }[]>([]);
+  const [otrosIngresos, setOtrosIngresos] = useState<{ name: string; amount: string }[]>([]);
+  const [otrosGastos, setOtrosGastos] = useState<{ name: string; amount: string }[]>([]);
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
     if (open) {
       const inc: Record<string, string> = {};
       const exp: Record<string, string> = {};
-      INCOME_CATEGORIES.filter((c) => c !== "Ferias").forEach((c) => {
+      INCOME_CATEGORIES.filter((c) => c !== "Ferias" && c !== "Otros ingresos").forEach((c) => {
         const l = existingLines.find((l) => l.kind === "ingreso" && l.category === c);
         inc[c] = l ? String(l.projected_amount) : "";
       });
-      EXPENSE_CATEGORIES.forEach((c) => {
+      EXPENSE_CATEGORIES.filter((c) => c !== "Otros gastos").forEach((c) => {
         const l = existingLines.find((l) => l.kind === "egreso" && l.category === c);
         exp[c] = l ? String(l.projected_amount) : "";
       });
@@ -61,6 +63,28 @@ export function DefineBudgetDialog({
       setFerias(
         feriaLines.length > 0
           ? feriaLines.map((l) => ({
+              name: l.description || "",
+              amount: String(l.projected_amount),
+            }))
+          : [{ name: "", amount: "" }]
+      );
+      const otrosIngLines = existingLines.filter(
+        (l) => l.kind === "ingreso" && l.category === "Otros ingresos"
+      );
+      setOtrosIngresos(
+        otrosIngLines.length > 0
+          ? otrosIngLines.map((l) => ({
+              name: l.description || "",
+              amount: String(l.projected_amount),
+            }))
+          : [{ name: "", amount: "" }]
+      );
+      const otrosGasLines = existingLines.filter(
+        (l) => l.kind === "egreso" && l.category === "Otros gastos"
+      );
+      setOtrosGastos(
+        otrosGasLines.length > 0
+          ? otrosGasLines.map((l) => ({
               name: l.description || "",
               amount: String(l.projected_amount),
             }))
@@ -81,18 +105,36 @@ export function DefineBudgetDialog({
         description: f.name.trim() || "Feria sin nombre",
         projected_amount: parseFloat(f.amount) || 0,
       }));
+    const otrosIngLines = otrosIngresos
+      .filter((f) => f.name.trim() || parseFloat(f.amount) > 0)
+      .map((f) => ({
+        kind: "ingreso" as const,
+        category: "Otros ingresos",
+        description: f.name.trim() || "Sin nombre",
+        projected_amount: parseFloat(f.amount) || 0,
+      }));
+    const otrosGasLines = otrosGastos
+      .filter((f) => f.name.trim() || parseFloat(f.amount) > 0)
+      .map((f) => ({
+        kind: "egreso" as const,
+        category: "Otros gastos",
+        description: f.name.trim() || "Sin nombre",
+        projected_amount: parseFloat(f.amount) || 0,
+      }));
     const lines = [
-      ...INCOME_CATEGORIES.filter((c) => c !== "Ferias").map((c) => ({
+      ...INCOME_CATEGORIES.filter((c) => c !== "Ferias" && c !== "Otros ingresos").map((c) => ({
         kind: "ingreso" as const,
         category: c,
         projected_amount: parseFloat(income[c]) || 0,
       })),
       ...feriaLines,
-      ...EXPENSE_CATEGORIES.map((c) => ({
+      ...otrosIngLines,
+      ...EXPENSE_CATEGORIES.filter((c) => c !== "Otros gastos").map((c) => ({
         kind: "egreso" as const,
         category: c,
         projected_amount: parseFloat(expense[c]) || 0,
       })),
+      ...otrosGasLines,
     ];
     upsert.mutate(
       { year, month, lines, notes: notes.trim() || null },
@@ -119,7 +161,7 @@ export function DefineBudgetDialog({
         <div className="space-y-6">
           <section className="space-y-3">
             <h3 className="text-sm font-semibold text-foreground">Ingresos proyectados</h3>
-            {INCOME_CATEGORIES.filter((c) => c !== "Ferias").map((c) => (
+            {INCOME_CATEGORIES.filter((c) => c !== "Ferias" && c !== "Otros ingresos").map((c) => (
               <div key={c} className="grid grid-cols-3 gap-2 items-center">
                 <Label className="col-span-2 text-sm">{c}</Label>
                 <Input
@@ -179,11 +221,59 @@ export function DefineBudgetDialog({
                 </div>
               ))}
             </div>
+
+            <div className="space-y-2 pt-2 border-t">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Otros ingresos</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setOtrosIngresos([...otrosIngresos, { name: "", amount: "" }])}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Agregar
+                </Button>
+              </div>
+              {otrosIngresos.map((f, idx) => (
+                <div key={idx} className="grid grid-cols-[1fr_140px_auto] gap-2 items-center">
+                  <Input
+                    placeholder="Concepto (ej. reembolso)"
+                    value={f.name}
+                    onChange={(e) => {
+                      const next = [...otrosIngresos];
+                      next[idx].name = e.target.value;
+                      setOtrosIngresos(next);
+                    }}
+                  />
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={f.amount}
+                    onChange={(e) => {
+                      const next = [...otrosIngresos];
+                      next[idx].amount = e.target.value;
+                      setOtrosIngresos(next);
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => setOtrosIngresos(otrosIngresos.filter((_, i) => i !== idx))}
+                    disabled={otrosIngresos.length === 1}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
           </section>
 
           <section className="space-y-3">
             <h3 className="text-sm font-semibold text-foreground">Egresos proyectados</h3>
-            {EXPENSE_CATEGORIES.map((c) => (
+            {EXPENSE_CATEGORIES.filter((c) => c !== "Otros gastos").map((c) => (
               <div key={c} className="grid grid-cols-3 gap-2 items-center">
                 <Label className="col-span-2 text-sm">{c}</Label>
                 <Input
@@ -195,6 +285,54 @@ export function DefineBudgetDialog({
                 />
               </div>
             ))}
+
+            <div className="space-y-2 pt-2 border-t">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Otros gastos (ej. Picap, Coordinadora, Bogotá Express)</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setOtrosGastos([...otrosGastos, { name: "", amount: "" }])}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Agregar
+                </Button>
+              </div>
+              {otrosGastos.map((f, idx) => (
+                <div key={idx} className="grid grid-cols-[1fr_140px_auto] gap-2 items-center">
+                  <Input
+                    placeholder="Concepto (ej. Picap)"
+                    value={f.name}
+                    onChange={(e) => {
+                      const next = [...otrosGastos];
+                      next[idx].name = e.target.value;
+                      setOtrosGastos(next);
+                    }}
+                  />
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={f.amount}
+                    onChange={(e) => {
+                      const next = [...otrosGastos];
+                      next[idx].amount = e.target.value;
+                      setOtrosGastos(next);
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => setOtrosGastos(otrosGastos.filter((_, i) => i !== idx))}
+                    disabled={otrosGastos.length === 1}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
           </section>
 
           <div className="space-y-2">
