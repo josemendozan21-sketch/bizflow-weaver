@@ -293,6 +293,49 @@ export function MisPedidos() {
                 No hay pedidos en esta categoría.
               </CardContent>
             </Card>
+          ) : activeTab === "production" ? (
+            <div className="space-y-6">
+              {PRODUCTION_STAGE_GROUPS.map((stage) => {
+                const stageGroups = visibleGroups.filter(
+                  (g) => g.representative.production_status === stage.key
+                );
+                if (stageGroups.length === 0) return null;
+                return (
+                  <div key={stage.key} className="space-y-2">
+                    <div className="flex items-center gap-2 sticky top-0 bg-background/95 backdrop-blur py-1 z-10">
+                      <h3 className="text-sm font-semibold text-foreground">{stage.label}</h3>
+                      <Badge variant="secondary">{stageGroups.length}</Badge>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {stageGroups.map((g) => (
+                        <OrderGroupCard key={g.key} group={g} completionMap={completionMap} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+              {/* Cualquier pedido cuya etapa no esté listada */}
+              {(() => {
+                const known = new Set(PRODUCTION_STAGE_GROUPS.map((s) => s.key));
+                const others = visibleGroups.filter(
+                  (g) => !known.has(g.representative.production_status)
+                );
+                if (others.length === 0) return null;
+                return (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-foreground">Otros</h3>
+                      <Badge variant="secondary">{others.length}</Badge>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {others.map((g) => (
+                        <OrderGroupCard key={g.key} group={g} completionMap={completionMap} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               {visibleGroups.map((g) => (
