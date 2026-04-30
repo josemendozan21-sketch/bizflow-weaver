@@ -288,9 +288,16 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const productNames = useMemo(() => {
     const fromConfig = materialConfigs.map((c) => c.productName);
     const fromDB = inventoryStockItems
-      .filter((s) => s.brand === "magical" && s.category === "producto_terminado")
+      .filter(
+        (s) =>
+          s.brand === "magical" &&
+          (s.category === "producto_terminado" || s.category === "cuerpos_referencias")
+      )
       .map((s) => s.name);
-    const names = [...new Set([...fromConfig, ...fromDB])];
+    // Hardcoded fallback to guarantee key references always show up
+    // even if the database fetch hasn't completed or is filtered out.
+    const fallback = ["Tiroides"];
+    const names = [...new Set([...fromConfig, ...fromDB, ...fallback])];
     return names.sort((a, b) => a.localeCompare(b, "es"));
   }, [materialConfigs, inventoryStockItems]);
 
@@ -339,12 +346,17 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       .filter(
         (s) =>
           s.brand === "magical" &&
-          s.category === "producto_terminado" &&
+          (s.category === "producto_terminado" || s.category === "cuerpos_referencias") &&
           s.name === productName &&
           s.product_type
       )
       .map((s) => s.product_type as string);
-    return [...new Set([...fromConfig, ...fromDB])];
+    const merged = [...new Set([...fromConfig, ...fromDB])];
+    // Fallback for known references without local config (e.g. Tiroides)
+    if (merged.length === 0 && productName === "Tiroides") {
+      return ["Frío", "Térmico"];
+    }
+    return merged;
   };
 
   const getMatchedConfig = (productName: string, productType: string) => {
