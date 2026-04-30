@@ -83,11 +83,17 @@ export function useOrders() {
   return useQuery({
     queryKey: ["orders", user?.id, role],
     enabled: !!user && !!role,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    placeholderData: (prev) => prev,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("*")
-        .order("created_at", { ascending: false });
+      let query = supabase.from("orders").select("*").order("created_at", { ascending: false });
+      // Para asesores, filtramos explícitamente por advisor_id (coincide con RLS)
+      // y evitamos depender solo de las RLS, que pueden devolver [] si el token está rotando.
+      if (role === "asesor_comercial" && user?.id) {
+        query = query.eq("advisor_id", user.id);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data as Order[];
     },
