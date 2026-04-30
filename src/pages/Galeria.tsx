@@ -25,6 +25,10 @@ type GalleryItem = {
   uploaded_by: string;
   uploaded_by_name: string | null;
   created_at: string;
+  ink_color: string | null;
+  gel_color: string | null;
+  source_order_id: string | null;
+  source_production_order_id: string | null;
 };
 
 const BRANDS = [
@@ -42,6 +46,8 @@ export default function Galeria() {
   const [loading, setLoading] = useState(true);
   const [brandTab, setBrandTab] = useState<string>("all");
   const [productFilter, setProductFilter] = useState<string>("all");
+  const [inkFilter, setInkFilter] = useState<string>("all");
+  const [gelFilter, setGelFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
 
   const [open, setOpen] = useState(false);
@@ -91,18 +97,36 @@ export default function Galeria() {
     return Array.from(set).sort();
   }, [items, brandTab]);
 
+  const inkColors = useMemo(() => {
+    const set = new Set<string>();
+    items
+      .filter((i) => brandTab === "all" || i.brand === brandTab)
+      .forEach((i) => { if (i.ink_color) set.add(i.ink_color); });
+    return Array.from(set).sort();
+  }, [items, brandTab]);
+
+  const gelColors = useMemo(() => {
+    const set = new Set<string>();
+    items
+      .filter((i) => brandTab === "all" || i.brand === brandTab)
+      .forEach((i) => { if (i.gel_color) set.add(i.gel_color); });
+    return Array.from(set).sort();
+  }, [items, brandTab]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return items.filter((i) => {
       if (brandTab !== "all" && i.brand !== brandTab) return false;
       if (productFilter !== "all" && i.product_name !== productFilter) return false;
+      if (inkFilter !== "all" && (i.ink_color || "") !== inkFilter) return false;
+      if (gelFilter !== "all" && (i.gel_color || "") !== gelFilter) return false;
       if (q) {
-        const hay = `${i.product_name} ${i.client_name ?? ""} ${i.logo_reference ?? ""} ${i.notes ?? ""}`.toLowerCase();
+        const hay = `${i.product_name} ${i.client_name ?? ""} ${i.logo_reference ?? ""} ${i.notes ?? ""} ${i.ink_color ?? ""} ${i.gel_color ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
     });
-  }, [items, brandTab, productFilter, search]);
+  }, [items, brandTab, productFilter, inkFilter, gelFilter, search]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, GalleryItem[]>();
