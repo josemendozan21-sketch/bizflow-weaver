@@ -606,7 +606,7 @@ const COLOR_OPTIONS = [
 
 const LOCKED_STATUSES = ["despachado", "entregado"];
 
-function EditOrderDialog({ order }: { order: Order }) {
+function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const queryClient = useQueryClient();
@@ -692,7 +692,7 @@ function EditOrderDialog({ order }: { order: Order }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm" variant="outline" className="w-full">
-          <Pencil className="h-3.5 w-3.5 mr-1" /> Ver / Editar detalles
+          <Pencil className="h-3.5 w-3.5 mr-1" /> {label || "Ver / Editar detalles"}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
