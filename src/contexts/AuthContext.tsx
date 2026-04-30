@@ -40,26 +40,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
+    let roleRequestId = 0;
 
-    const applySession = async (nextSession: Session | null) => {
+    const applySession = (nextSession: Session | null) => {
+      const currentRequestId = ++roleRequestId;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
 
       if (nextSession?.user) {
-        const userRole = await fetchRole(nextSession.user.id);
-        if (!mounted) return;
-        setRole(userRole);
+        setLoading(true);
+        window.setTimeout(() => {
+          fetchRole(nextSession.user.id).then((userRole) => {
+            if (!mounted || currentRequestId !== roleRequestId) return;
+            setRole(userRole);
+            setLoading(false);
+          });
+        }, 0);
       } else {
         setRole(null);
+        setLoading(false);
       }
-
-      if (mounted) setLoading(false);
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setLoading(true);
-        await applySession(session);
+      (_event, session) => {
+        applySession(session);
       }
     );
 
