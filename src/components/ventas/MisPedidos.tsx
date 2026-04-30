@@ -478,9 +478,6 @@ function OrderGroupCard({
           <Progress value={progress} className="h-2" />
         </div>
 
-        {/* Línea de tiempo de etapas del pedido */}
-        <OrderStageTimeline status={rep.production_status} />
-
         {/* Líneas del pedido */}
         <div className="space-y-1.5 rounded-md border bg-muted/20 p-2">
           {group.items.map((it) => (
