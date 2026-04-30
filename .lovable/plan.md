@@ -1,83 +1,47 @@
+# Agregar nuevos moldes a Magical Warmers
 
-## Problema
+Se añadirán 7 referencias nuevas siguiendo exactamente el mismo patrón de los moldes existentes (ej. Hueso, Gato).
 
-Hoy "Mis Pedidos" muestra **todos** los pedidos del asesor en una sola lista (pendientes, en producción, listos, despachados, entregados, devueltos) ordenados solo por "necesita acción de pago primero". A medida que se acumulan pedidos, encontrar uno específico se vuelve difícil y la pantalla se vuelve abrumadora.
+## Moldes a agregar
+1. Tiroides
+2. Pie
+3. Mano
+4. Gota
+5. Cerebro
+6. Maxilofacial
+7. Gorro quimioterapia
 
-Además, cada **línea de producto se ve como una tarjeta independiente** (un pedido de 2 colores aparece como 2 tarjetas separadas), lo que duplica visualmente la cantidad de pedidos.
+Cada uno se creará en sus dos variantes: **Frío** y **Térmico** (14 referencias en total).
 
-## Propuesta
+## Cambios
 
-### 1. Pestañas por estado del pedido
+### 1. Base de datos (`stock_items`)
+Insertar para cada molde 4 filas (combinación de `product_type` × `category`):
 
-Reorganizar "Mis Pedidos" en 5 pestañas con contador en cada una:
+| brand | name | product_type | category | available | min_stock |
+|---|---|---|---|---|---|
+| magical | {molde} | Frío | cuerpos_referencias | 0 | 10 |
+| magical | {molde} | Térmico | cuerpos_referencias | 0 | 10 |
+| magical | {molde} | Frío | producto_terminado | 0 | 5 |
+| magical | {molde} | Térmico | producto_terminado | 0 | 5 |
 
-```
-[ Acción requerida (3) ] [ En producción (12) ] [ Listos (4) ] [ Despachados (8) ] [ Entregados (24) ]
-```
+Total: **28 filas nuevas** (7 moldes × 4 combinaciones). Mismos defaults que Hueso/Gato actuales.
 
-**Distribución:**
+### 2. Store local de inventario (`src/stores/inventoryStore.ts`)
+Añadir 14 entradas nuevas en `INITIAL_CONFIGS` (Frío + Térmico para cada molde) con `gramsPerUnit: 0` (puede ajustarse después en la sección "Materiales" de Inventarios). Esto los hace seleccionables en el formulario de Ventas Magical, en producción (cuerpos), y en estampación.
 
-- **Acción requerida** — pedidos `listo` de mayor sin `payment_complete` (necesitan que el asesor confirme el pago final). Aparece destacado y solo si hay alguno.
-- **En producción** — estados: `pendiente`, `diseno`, `produccion_cuerpos`, `estampacion`, `dosificacion`, `sellado`, `recorte`, `empaque`. Es donde el asesor más entra a ver progreso.
-- **Listos** — estado `listo` (ya con pago confirmado o detal). Esperando que logística despache.
-- **Despachados** — estado `despachado`. Mostrando guía y transportadora.
-- **Entregados** — estado `entregado` o `returned_at` no nulo. Histórico.
-
-La pestaña por defecto al entrar es **"En producción"** (donde está la mayor parte del trabajo activo).
-
-### 2. Agrupación por cliente
-
-Cuando un pedido tiene varias líneas (ej. Miriam Rojas con 2 muelas, Claudia Naranjo con Hueso + Gato), se agrupan en **una sola tarjeta** con el nombre del cliente arriba y las líneas listadas dentro. Total y abono se suman correctamente para ese cliente/grupo.
-
-Criterio de agrupación: mismo `client_name` + `client_city` + `sale_type` + `created_at` redondeado al minuto (mismo formulario de Ventas).
-
-### 3. Buscador y filtros
-
-Encima de las pestañas:
-
-- **Buscador** por nombre del cliente, NIT o producto
-- Filtro por **marca** (Magical Warmers / Sweatspot / Todas)
-- Filtro por **tipo de venta** (Mayor / Detal / Todas)
-
-### 4. Mejoras de orden
-
-Dentro de cada pestaña los pedidos se ordenan por **fecha de creación descendente** (más nuevos primero). En "En producción" además se puede mostrar la **fecha estimada de entrega** para priorizar visualmente los próximos a vencer.
-
-## Boceto visual
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ Mis Pedidos                                                 │
-│ ┌─────────────┐                                             │
-│ │ Buscar...   │  Marca: [Todas ▾]  Venta: [Todas ▾]        │
-│ └─────────────┘                                             │
-├─────────────────────────────────────────────────────────────┤
-│ [Acción (3)] [Producción (12)] [Listos (4)] [Despachados]  │
-├─────────────────────────────────────────────────────────────┤
-│ ┌──────────────────────────────────────────────────────┐   │
-│ │ Miriam Rojas · Magical · Mayor      [Producción]    │   │
-│ │ 300 und · entrega 17 may                             │   │
-│ │ • Muela (Frío) — 150 und                             │   │
-│ │ • Muela (Frío) — 150 und                             │   │
-│ │ Total: $1.614.900 · Saldo: $824.300                  │   │
-│ │ [Ver detalle]                                        │   │
-│ └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-```
+### 3. Verificación automática
+Ya **no** hay que tocar `Ventas.tsx` ni los componentes de producción: el formulario lee dinámicamente los nombres únicos desde `materialConfigs` (`productNames` en `MagicalMayorForm`), y producción/estampación leen desde `stock_items`. Al añadir las filas y las configs, los moldes aparecerán automáticamente.
 
 ## Detalles técnicos
 
-- Editar `src/components/ventas/MisPedidos.tsx`:
-  - Añadir estado `activeTab`, `searchQuery`, `brandFilter`, `saleTypeFilter`.
-  - Función `groupOrdersByClient(orders)` similar a la que ya existe en `Logistica.tsx` (líneas 86-124) para agrupar líneas hermanas en tarjetas únicas.
-  - Función `categorizeOrder(order)` que devuelve `"action" | "production" | "ready" | "dispatched" | "delivered"`.
-  - Reemplazar la grilla actual `grid md:grid-cols-2` por el componente `<Tabs>` de shadcn con los conteos en cada `TabsTrigger`.
-  - El componente de tarjeta ya existente se reutiliza, solo cambiando el `order` único por un grupo (mostrando líneas listadas).
-- No hay cambios de base de datos.
-- No afecta otros módulos (Logística, Producción, Contabilidad siguen igual).
+- IDs en el store local: `34`/`34b` para Tiroides, `35`/`35b` Pie, `36`/`36b` Mano, `37`/`37b` Gota, `38`/`38b` Cerebro, `39`/`39b` Maxilofacial, `40`/`40b` Gorro quimioterapia.
+- Las inserciones a BD se harán con la herramienta de inserción de datos (no migración) ya que solo es data, no schema.
+- Si más adelante se conoce el peso exacto en gramos por unidad, podrá editarse desde **Inventarios → Materiales**.
 
-## Lo que NO se cambia
+## Archivos modificados
+- `src/stores/inventoryStore.ts` (agregar 14 entradas en `INITIAL_CONFIGS`)
+- BD: `INSERT` de 28 filas en `public.stock_items`
 
-- La pestaña de "Aprobaciones de estampación" (`StampingApprovals`) sigue arriba, por encima de las pestañas, porque requiere acción inmediata.
-- La lógica de cálculo de saldos, abonos, pagos: se mantiene.
-- El formulario de creación de pedidos: sin cambios.
+## Pregunta opcional
+Si quieres que algún molde tenga un peso específico en gramos por unidad (gel) distinto de 0, dímelo antes de implementar. Si no, los dejo en 0 y los ajustas luego en Inventarios.
