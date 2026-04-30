@@ -85,6 +85,97 @@ export type Database = {
         }
         Relationships: []
       }
+      budget_entries: {
+        Row: {
+          amount: number
+          budget_id: string
+          category: string
+          created_at: string
+          description: string | null
+          entry_date: string
+          id: string
+          kind: string
+          proof_url: string | null
+          recorded_by: string | null
+          recorded_by_name: string | null
+        }
+        Insert: {
+          amount?: number
+          budget_id: string
+          category: string
+          created_at?: string
+          description?: string | null
+          entry_date?: string
+          id?: string
+          kind: string
+          proof_url?: string | null
+          recorded_by?: string | null
+          recorded_by_name?: string | null
+        }
+        Update: {
+          amount?: number
+          budget_id?: string
+          category?: string
+          created_at?: string
+          description?: string | null
+          entry_date?: string
+          id?: string
+          kind?: string
+          proof_url?: string | null
+          recorded_by?: string | null
+          recorded_by_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_entries_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_budgets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      budget_lines: {
+        Row: {
+          budget_id: string
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          kind: string
+          projected_amount: number
+          updated_at: string
+        }
+        Insert: {
+          budget_id: string
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind: string
+          projected_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          budget_id?: string
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind?: string
+          projected_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_lines_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_budgets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commission_rules: {
         Row: {
           active: boolean
@@ -570,6 +661,39 @@ export type Database = {
           product?: string
           status?: Database["public"]["Enums"]["logo_request_status"]
           updated_at?: string
+        }
+        Relationships: []
+      }
+      monthly_budgets: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          month: number
+          notes: string | null
+          status: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          month: number
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          month?: number
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          year?: number
         }
         Relationships: []
       }

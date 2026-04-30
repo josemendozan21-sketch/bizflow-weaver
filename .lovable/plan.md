@@ -1,56 +1,84 @@
+# Presupuesto mensual (sección independiente)
 
-## Objetivo
+Crear una **nueva sección** en el menú lateral llamada **"Presupuesto"** (ruta `/presupuesto`), visible **solo** para los roles `admin` y `contabilidad`. Será una página dedicada para proyectar el mes, registrar movimientos reales y visualizar gráficas comparativas.
 
-Permitir que al **crear una feria** desde el diálogo "Nueva feria", el admin pueda seleccionar de una lista desplegable los productos de **Magical Warmers** y **Sweatspot** que necesita llevar, indicando la cantidad de cada uno. Estos productos quedarán automáticamente asignados al inventario de la feria.
+## Página `/presupuesto`
 
-## Cambios
+### Encabezado
+- Selector de mes/año (« mes anterior · mes actual · mes siguiente »).
+- Botón **"Definir presupuesto del mes"** (abre formulario con todas las categorías para poner montos proyectados).
+- Botón **"Cerrar mes"** (deja el mes en solo lectura).
 
-### 1. `src/components/ferias/CreateFeriaDialog.tsx`
+### KPIs (4 tarjetas)
+- Ingresos: **proyectado vs real** + % cumplimiento.
+- Egresos: **proyectado vs real** + % cumplimiento.
+- Utilidad proyectada vs utilidad real.
+- Saldo del mes (proyectado − gastado a la fecha).
 
-Agregar una nueva sección **"Productos a llevar"** debajo de "Materiales necesarios", con:
+### Gráficas
+1. **Barras comparativas** ingresos vs egresos (proyectado vs real).
+2. **Barras por categoría de egresos** (proyectado vs real) — materia prima, nómina, seguridad social, gastos diarios, otros.
+3. **Donut de composición de ingresos reales** (asesores mayor, asesores menor, ferias, otros).
+4. **Línea histórica 12 meses**: utilidad real vs proyectada.
 
-- Dos bloques colapsables: **Magical Warmers** y **Sweatspot**.
-- Cada bloque muestra la lista de productos terminados disponibles (leídos del inventario vía `useInventory()`, filtrando `category === "producto_terminado"` por marca).
-  - Magical: `nombre (Frío|Térmico)` — misma lógica que `FeriaInventoryTab`.
-  - Sweatspot: `nombre - color` — misma lógica que `FeriaInventoryTab`.
-- Para cada producto: un **checkbox** para seleccionarlo y un input numérico (cantidad) que aparece al marcarlo.
-- Buscador (input) por marca para filtrar la lista cuando hay muchas referencias.
-- También un input opcional de **precio unitario** por producto (para no tener que entrarlo después en el inventario).
+### Tablas editables
+- **Ingresos**: categoría · descripción · proyectado · real · diferencia · % cumplimiento.
+   Categorías: Ventas asesores (mayor), Ventas asesores (menor), Ferias, Otros.
+- **Egresos**: categoría · descripción · proyectado · real · diferencia · % cumplimiento.
+   Categorías: Compra materia prima, Gastos diarios, Nómina, Seguridad social, Servicios, Arriendo, Otros.
 
-Estado interno nuevo:
-```ts
-selectedProducts: Array<{ brand: "magical" | "sweatspot"; product_name: string; quantity: number; unit_price: number }>
-```
+Cada fila tiene botón **"Agregar movimiento real"** → modal con monto, fecha, descripción y soporte opcional.
 
-### 2. Hook `useCreateFeria` en `src/hooks/useFerias.ts`
+### Auto-cálculo (lecturas automáticas)
+Para no duplicar trabajo, ciertos "reales" se leen del sistema:
+- **Ventas asesores reales** = `SUM(orders.total_amount)` del mes con `invoice_status='facturado'`, separado por `sale_type`.
+- **Ferias reales** = `SUM(feria_sales.total_amount)` del mes.
+- **Gastos diarios reales** = `SUM(petty_cash_expenses.amount)` del mes.
 
-Extender la mutación para aceptar opcionalmente un array `initial_inventory` y, después de insertar la feria, hacer un `insert` masivo en `feria_inventory` con esos productos (`quantity_assigned`, `quantity_dispatched: 0`, `dispatch_status: "pendiente"`).
+Aparecen como base, y los movimientos manuales se suman encima.
 
-```ts
-useCreateFeria.mutateAsync({
-  ...feriaFields,
-  initial_inventory: selectedProducts, // opcional
-});
-```
+## Cambios técnicos
 
-Si el insert de inventario falla, mostrar toast pero no eliminar la feria (la feria queda creada y se puede completar luego desde la pestaña Inventario).
+### Base de datos (migración)
+Tres tablas nuevas:
 
-### 3. Sin cambios de DB
+1. **`monthly_budgets`** — un registro por mes:
+   `id, year, month, status ('abierto'|'cerrado'), notes, created_by, created_at, updated_at`. Único por `(year, month)`.
 
-Se reutiliza la tabla existente `feria_inventory`. No se requieren migraciones.
+2. **`budget_lines`** — líneas presupuestadas (categorías):
+   `id, budget_id, kind ('ingreso'|'egreso'), category, description, projected_amount, created_at, updated_at`.
 
-## Flujo del usuario
+3. **`budget_entries`** — movimientos reales manuales:
+   `id, budget_id, kind, category, description, amount, entry_date, proof_url, recorded_by, recorded_by_name, created_at`.
 
-1. Admin abre "Nueva feria" desde `/ferias`.
-2. Llena datos básicos, costos, materiales (igual que hoy).
-3. En la nueva sección "Productos a llevar":
-   - Expande "Magical Warmers", marca los productos deseados y digita cantidades/precios.
-   - Hace lo mismo con "Sweatspot".
-4. Al pulsar "Crear feria": se crea la feria **y** se cargan automáticamente los productos seleccionados en el inventario de la feria.
-5. La pestaña **Inventario** de la feria ya muestra todo listo, y el admin/asesor puede pulsar "Enviar a logística" cuando quiera despachar.
+**RLS**: solo `admin` y `contabilidad` con SELECT/INSERT/UPDATE/DELETE en las tres.
 
-## Notas técnicas
+**Storage**: bucket privado `budget-receipts` con políticas para `admin` + `contabilidad`.
 
-- Sin cambios en RLS (el admin ya puede insertar en `feria_inventory`).
-- El diálogo de creación ya es scrollable (`max-h-[90vh] overflow-y-auto`), así que la sección extra no rompe el layout móvil.
-- La lógica de etiquetado de productos (Frío/Térmico, color) se extraerá a un pequeño helper compartido para evitar duplicar entre `CreateFeriaDialog` y `FeriaInventoryTab`.
+### Frontend
+- Nueva página `src/pages/Presupuesto.tsx`.
+- Componentes en `src/components/presupuesto/`:
+   - `BudgetKPIs.tsx`
+   - `BudgetCharts.tsx` (usa Recharts, ya disponible vía `@/components/ui/chart`)
+   - `BudgetIncomeTable.tsx`
+   - `BudgetExpenseTable.tsx`
+   - `DefineBudgetDialog.tsx`
+   - `AddEntryDialog.tsx`
+- Hook `src/hooks/useMonthlyBudget.ts` con queries/mutations.
+- Registrar la ruta en `src/App.tsx` dentro del `DashboardLayout`.
+- Agregar item al menú en `src/components/AppSidebar.tsx` (icono `PiggyBank` o `Wallet`).
+- Actualizar `src/lib/rolePermissions.ts`:
+   - `ROLE_ROUTES.admin` y `ROLE_ROUTES.contabilidad` incluyen `/presupuesto`.
+   - `ROLE_EDIT_SECTIONS.admin` y `ROLE_EDIT_SECTIONS.contabilidad` incluyen `/presupuesto`.
+- `RequireRoleRoute` (o equivalente) protege la ruta para que otros roles vean 404/redirect.
+
+## Visibilidad
+
+- **Admin** y **Contabilidad**: ven el ítem en el sidebar y entran a la página.
+- **Resto de roles**: el ítem no aparece (ya lo filtra `canAccessRoute`) y RLS bloquea las queries.
+
+## Fuera de alcance (futuro)
+
+- Notificaciones cuando un gasto supera el proyectado.
+- Exportar el presupuesto a Excel/PDF.
+- Flujo de aprobación de gastos.
