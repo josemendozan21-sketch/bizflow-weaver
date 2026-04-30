@@ -305,30 +305,15 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   }, [materialConfigs, inventoryStockItems]);
 
   const productOptions = useMemo(() => {
-    const tiroidesOptions = TIROIDES_TYPES.map((type) => ({
-      value: `${TIROIDES_OPTION_PREFIX}${type}`,
-      label: `Tiroides (${type})`,
-      product: "Tiroides",
-      type,
-    }));
-    const regularOptions = productNames
-      .filter((name) => name !== "Tiroides")
-      .map((name) => ({ value: name, label: name, product: name, type: "" }));
-    return [...tiroidesOptions, ...regularOptions];
+    // Single entry per product name (incl. Tiroides). Type is selected separately.
+    return productNames.map((name) => ({ value: name, label: name, product: name, type: "" }));
   }, [productNames]);
 
   const getProductSelectValue = (line: OrderLine) => {
-    if (line.product === "Tiroides" && TIROIDES_TYPES.includes(line.type as typeof TIROIDES_TYPES[number])) {
-      return `${TIROIDES_OPTION_PREFIX}${line.type}`;
-    }
     return line.product;
   };
 
   const handleProductSelect = (lineId: string, value: string) => {
-    if (value.startsWith(TIROIDES_OPTION_PREFIX)) {
-      updateLine(lineId, { product: "Tiroides", type: value.replace(TIROIDES_OPTION_PREFIX, "") });
-      return;
-    }
     updateLine(lineId, { product: value, type: "" });
   };
 
