@@ -131,17 +131,50 @@ export function useCreateFeria() {
   const qc = useQueryClient();
   const { user } = useAuth();
   return useMutation({
-    mutationFn: async (input: Omit<Feria, "id" | "created_at" | "updated_at" | "created_by">) => {
+    mutationFn: async (
+      input: Omit<Feria, "id" | "created_at" | "updated_at" | "created_by"> & {
+        initial_inventory?: Array<{
+          brand: string;
+          product_name: string;
+          quantity: number;
+          unit_price: number;
+        }>;
+      }
+    ) => {
+      const { initial_inventory, ...feriaFields } = input;
       const { data, error } = await supabase
         .from("ferias")
-        .insert({ ...input, created_by: user?.id })
+        .insert({ ...feriaFields, created_by: user?.id })
         .select()
         .single();
       if (error) throw error;
+
+      if (initial_inventory && initial_inventory.length > 0 && data?.id) {
+        const rows = initial_inventory
+          .filter((p) => p.quantity > 0)
+          .map((p) => ({
+            feria_id: data.id,
+            brand: p.brand,
+            product_name: p.product_name,
+            quantity_assigned: p.quantity,
+            quantity_returned: 0,
+            quantity_dispatched: 0,
+            dispatch_status: "pendiente",
+            unit_price: p.unit_price || 0,
+            notes: null,
+          }));
+        if (rows.length > 0) {
+          const { error: invErr } = await supabase.from("feria_inventory").insert(rows);
+          if (invErr) {
+            toast.error("Feria creada, pero falló la carga de productos: " + invErr.message);
+          }
+        }
+      }
       return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["ferias"] });
+      qc.invalidateQueries({ queryKey: ["feria_inventory"] });
       toast.success("Feria creada");
     },
     onError: (e: any) => toast.error(e.message),
