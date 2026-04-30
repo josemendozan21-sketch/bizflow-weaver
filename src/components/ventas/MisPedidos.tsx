@@ -17,6 +17,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { StampingApprovals } from "./StampingApprovals";
+import { useAuth } from "@/contexts/AuthContext";
 
 const STAGE_ORDER = [
   "pendiente",
@@ -151,6 +152,7 @@ function groupOrders(orders: Order[]): OrderGroup[] {
 }
 
 export function MisPedidos() {
+  const { user } = useAuth();
   const { data: orders = [], isLoading } = useOrders();
   const [activeTab, setActiveTab] = useState<OrderCategory>("production");
   const [search, setSearch] = useState("");
@@ -159,7 +161,8 @@ export function MisPedidos() {
 
   // Fetch production orders to get finished product photos
   const { data: productionOrders = [] } = useQuery({
-    queryKey: ["production_orders_for_advisor"],
+    queryKey: ["production_orders_for_advisor", user?.id],
+    enabled: !!user,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("production_orders")
