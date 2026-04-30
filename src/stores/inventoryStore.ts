@@ -115,6 +115,20 @@ const INITIAL_CONFIGS: MaterialConfig[] = [
   { id: "32b", productName: "Hueso", productType: "Térmico", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
   { id: "33", productName: "Gato", productType: "Frío", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
   { id: "33b", productName: "Gato", productType: "Térmico", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "34", productName: "Tiroides", productType: "Frío", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "34b", productName: "Tiroides", productType: "Térmico", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "35", productName: "Pie", productType: "Frío", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "35b", productName: "Pie", productType: "Térmico", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "36", productName: "Mano", productType: "Frío", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "36b", productName: "Mano", productType: "Térmico", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "37", productName: "Gota", productType: "Frío", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "37b", productName: "Gota", productType: "Térmico", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "38", productName: "Cerebro", productType: "Frío", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "38b", productName: "Cerebro", productType: "Térmico", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "39", productName: "Maxilofacial", productType: "Frío", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "39b", productName: "Maxilofacial", productType: "Térmico", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "40", productName: "Gorro quimioterapia", productType: "Frío", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "40b", productName: "Gorro quimioterapia", productType: "Térmico", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
 ];
 
 const INITIAL_GEL_STOCK: GelStock[] = [
