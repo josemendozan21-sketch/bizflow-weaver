@@ -60,6 +60,72 @@ function getFriendlyStageLabel(status: string, order: Order): string {
   return inProgressStages[status] || PRODUCTION_STATUS_LABELS[status] || status;
 }
 
+/** Línea de tiempo visual con todas las etapas del pedido */
+const TIMELINE_STAGES: { key: string; label: string }[] = [
+  { key: "pendiente", label: "Pendiente" },
+  { key: "diseno", label: "Diseño" },
+  { key: "produccion_cuerpos", label: "Cuerpos" },
+  { key: "estampacion", label: "Estampación" },
+  { key: "dosificacion", label: "Dosificación" },
+  { key: "sellado", label: "Sellado" },
+  { key: "recorte", label: "Recorte" },
+  { key: "empaque", label: "Empaque" },
+  { key: "listo", label: "Listo" },
+  { key: "despachado", label: "Despachado" },
+  { key: "entregado", label: "Entregado" },
+];
+
+function OrderStageTimeline({ status }: { status: string }) {
+  const currentIdx = TIMELINE_STAGES.findIndex((s) => s.key === status);
+  return (
+    <div className="rounded-md border bg-muted/20 p-2.5">
+      <div className="text-[11px] font-medium text-muted-foreground mb-2">Estado del pedido</div>
+      <div className="flex items-center gap-1 overflow-x-auto pb-1">
+        {TIMELINE_STAGES.map((stage, idx) => {
+          const isDone = currentIdx > -1 && idx < currentIdx;
+          const isCurrent = idx === currentIdx;
+          const isPending = currentIdx === -1 || idx > currentIdx;
+          return (
+            <div key={stage.key} className="flex items-center gap-1 shrink-0">
+              <div className="flex flex-col items-center gap-1 min-w-[48px]">
+                <div
+                  className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                    isDone
+                      ? "bg-primary text-primary-foreground"
+                      : isCurrent
+                      ? "bg-amber-500 text-white ring-2 ring-amber-300 animate-pulse"
+                      : "bg-muted text-muted-foreground border"
+                  }`}
+                >
+                  {isDone ? "✓" : idx + 1}
+                </div>
+                <span
+                  className={`text-[9px] text-center leading-tight ${
+                    isCurrent
+                      ? "font-semibold text-foreground"
+                      : isDone
+                      ? "text-foreground"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {stage.label}
+                </span>
+              </div>
+              {idx < TIMELINE_STAGES.length - 1 && (
+                <div
+                  className={`h-0.5 w-3 ${
+                    isDone ? "bg-primary" : "bg-muted"
+                  } -mt-4`}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 type OrderCategory = "action" | "production" | "ready" | "dispatched" | "delivered";
 
 function categorizeOrder(o: Order): OrderCategory {
