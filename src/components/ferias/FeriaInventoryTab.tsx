@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2, Plus, Send, CheckCircle2 } from "lucide-react";
 import { useFeriaInventory, useAddFeriaInventory, useDeleteFeriaInventory, useFeriaSales, useFeriaDispatchRequest, useCreateDispatchRequest } from "@/hooks/useFerias";
 import { useAuth } from "@/contexts/AuthContext";
-import { useInventoryStore } from "@/stores/inventoryStore";
+import { useInventory } from "@/hooks/useInventory";
 import { useMemo } from "react";
 
 export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
@@ -21,8 +21,7 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   const canSend = role === "admin" || role === "asesor_comercial";
   const add = useAddFeriaInventory();
   const del = useDeleteFeriaInventory();
-  const materialConfigs = useInventoryStore((s) => s.materialConfigs);
-  const stockItems = useInventoryStore((s) => s.stockItems);
+  const { stockItems } = useInventory();
 
   // Selection format: "magical|<name> (<Frío|Térmico>)"  or  "sweatspot|<name> - <color>"
   const [selectedKey, setSelectedKey] = useState("");
@@ -31,16 +30,18 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   const magicalOptions = useMemo(() => {
     const seen = new Set<string>();
     const opts: { value: string; label: string }[] = [];
-    materialConfigs.forEach((c) => {
-      const label = `${c.productName} (${c.productType})`;
-      const value = `magical|${label}`;
-      if (!seen.has(value)) {
-        seen.add(value);
-        opts.push({ value, label });
-      }
-    });
+    stockItems
+      .filter((it) => it.brand === "magical" && it.category === "producto_terminado")
+      .forEach((it) => {
+        const label = it.product_type ? `${it.name} (${it.product_type})` : it.name;
+        const value = `magical|${label}`;
+        if (!seen.has(value)) {
+          seen.add(value);
+          opts.push({ value, label });
+        }
+      });
     return opts.sort((a, b) => a.label.localeCompare(b.label, "es"));
-  }, [materialConfigs]);
+  }, [stockItems]);
 
   const sweatspotOptions = useMemo(() => {
     const seen = new Set<string>();
