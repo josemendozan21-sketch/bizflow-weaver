@@ -63,7 +63,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
+        // Ignorar TOKEN_REFRESHED si la sesión sigue siendo del mismo usuario:
+        // evita un re-fetch del rol que durante un instante deja role=null
+        // y hace que las consultas dependientes devuelvan vacío (parpadeo).
+        if (event === "TOKEN_REFRESHED" && session?.user) {
+          setSession(session);
+          setUser(session.user);
+          return;
+        }
         applySession(session);
       }
     );
