@@ -1004,10 +1004,42 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           />
 
           <div className="flex gap-3 pt-2">
-            <Button type="submit" disabled={isSubmitting}>Crear pedido</Button>
+            <Button
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => {
+                if (!formRef.current) return;
+                if (!formRef.current.reportValidity()) return;
+                setConfirmOpen(true);
+              }}
+            >
+              Revisar pedido
+            </Button>
             <Button type="button" variant="outline" onClick={onReset}>Cancelar</Button>
           </div>
         </form>
+        <OrderConfirmationDialog
+          open={confirmOpen}
+          onOpenChange={(o) => { if (!isSubmitting) setConfirmOpen(o); }}
+          isSubmitting={isSubmitting}
+          onConfirm={() => {
+            setConfirmOpen(false);
+            formRef.current?.requestSubmit();
+          }}
+          summary={buildMagicalMayorSummary({
+            form: formRef.current,
+            orderLines,
+            grandTotal,
+            abono,
+            estadoPago,
+            isRecompra,
+            noLogo,
+            dobleTinta,
+            escarcha,
+            costoAdicional,
+            paymentProofFile,
+          })}
+        />
       </CardContent>
     </Card>
   );
