@@ -706,7 +706,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         <CardDescription>Venta al por mayor</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
           <SmartPasteField
             brand="magical"
             onDataParsed={(data) => {
