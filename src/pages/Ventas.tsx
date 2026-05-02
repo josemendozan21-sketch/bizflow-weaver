@@ -2302,10 +2302,40 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Creando..." : "Crear pedido"}</Button>
+            <Button
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => {
+                if (!genericFormRef.current) return;
+                if (!genericFormRef.current.reportValidity()) return;
+                setGenericConfirmOpen(true);
+              }}
+            >
+              {isSubmitting ? "Creando..." : "Revisar pedido"}
+            </Button>
             <Button type="button" variant="outline" onClick={onReset}>Cancelar</Button>
           </div>
         </form>
+        <OrderConfirmationDialog
+          open={genericConfirmOpen}
+          onOpenChange={(o) => { if (!isSubmitting) setGenericConfirmOpen(o); }}
+          isSubmitting={isSubmitting}
+          onConfirm={() => {
+            setGenericConfirmOpen(false);
+            genericFormRef.current?.requestSubmit();
+          }}
+          summary={buildGenericRetailSummary({
+            brandLabel,
+            isMayor,
+            cliente: { nombre, telefono, cedula, email, ciudad, departamento, direccion },
+            productLines,
+            grandTotal,
+            shippingCost,
+            paymentMethod,
+            notas,
+            brand,
+          })}
+        />
       </CardContent>
     </Card>
   );
