@@ -283,6 +283,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [costoAdicional, setCostoAdicional] = usePersistedState("ventas:mw:costoAdicional", "");
   const formRef = useRef<HTMLFormElement>(null);
   useFormDraft(formRef, "ventas:mw:fields");
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   // Reset costo adicional si se desactivan ambas opciones
   useEffect(() => {
