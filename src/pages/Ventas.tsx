@@ -1315,6 +1315,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const [ssPaymentProofFile, setSsPaymentProofFile] = useState<File | null>(null);
   const ssFormRef = useRef<HTMLFormElement>(null);
   useFormDraft(ssFormRef, "ventas:ss:fields");
+  const [ssConfirmOpen, setSsConfirmOpen] = useState(false);
   const tamanos = ["150 ml", "250 ml", "250 ml juguetón", "500 ml"] as const;
 
   // Grand total across all lines
