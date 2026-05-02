@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Persiste/restaura los inputs no-controlados de un formulario en localStorage.
@@ -59,17 +59,14 @@ export function clearFormDraft(key: string) {
 }
 
 /** Hook para persistir/restaurar un valor de estado controlado */
-export function usePersistedState<T>(key: string, initial: T): [T, (v: T | ((p: T) => T)) => void] {
-  const ref = useRef<T>(initial);
-  // We use lazy init via React.useState pattern
-  const [val, setVal] = (require("react") as typeof import("react")).useState<T>(() => {
+export function usePersistedState<T>(key: string, initial: T): [T, React.Dispatch<React.SetStateAction<T>>] {
+  const [val, setVal] = useState<T>(() => {
     try {
       const raw = localStorage.getItem(key);
       if (raw != null) return JSON.parse(raw) as T;
     } catch {/* ignore */}
     return initial;
   });
-  ref.current = val;
   useEffect(() => {
     try { localStorage.setItem(key, JSON.stringify(val)); } catch {/* ignore */}
   }, [key, val]);
