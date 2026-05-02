@@ -269,17 +269,19 @@ function ColorSelect({
 function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [dobleTinta, setDobleTinta] = useState(false);
-  const [escarcha, setEscarcha] = useState(false);
-  const [isRecompra, setIsRecompra] = useState(false);
-  const [noLogo, setNoLogo] = useState(false);
-  const [needsLogoAdjustment, setNeedsLogoAdjustment] = useState(false);
-  const [orderLines, setOrderLines] = useState<OrderLine[]>([createEmptyLine()]);
-  const [abono, setAbono] = useState("");
-  const [estadoPago, setEstadoPago] = useState<"abono_inicial" | "pago_total" | "pendiente">("abono_inicial");
+  const [dobleTinta, setDobleTinta] = usePersistedState("ventas:mw:dobleTinta", false);
+  const [escarcha, setEscarcha] = usePersistedState("ventas:mw:escarcha", false);
+  const [isRecompra, setIsRecompra] = usePersistedState("ventas:mw:isRecompra", false);
+  const [noLogo, setNoLogo] = usePersistedState("ventas:mw:noLogo", false);
+  const [needsLogoAdjustment, setNeedsLogoAdjustment] = usePersistedState("ventas:mw:needsLogoAdjustment", false);
+  const [orderLines, setOrderLines] = usePersistedState<OrderLine[]>("ventas:mw:lines", [createEmptyLine()]);
+  const [abono, setAbono] = usePersistedState("ventas:mw:abono", "");
+  const [estadoPago, setEstadoPago] = usePersistedState<"abono_inicial" | "pago_total" | "pendiente">("ventas:mw:estadoPago", "abono_inicial");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
-  const [costoAdicional, setCostoAdicional] = useState("");
+  const [costoAdicional, setCostoAdicional] = usePersistedState("ventas:mw:costoAdicional", "");
+  const formRef = useRef<HTMLFormElement>(null);
+  useFormDraft(formRef, "ventas:mw:fields");
 
   // Reset costo adicional si se desactivan ambas opciones
   useEffect(() => {
