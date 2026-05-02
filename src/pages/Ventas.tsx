@@ -2159,7 +2159,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
         <CardDescription>{isMayor ? "Venta al por mayor" : "Venta al por menor"}</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form ref={genericFormRef} onSubmit={handleSubmit} className="space-y-5">
           <SmartPasteField brand={brand} onDataParsed={handleSmartPaste} />
 
            <fieldset className="space-y-4">
