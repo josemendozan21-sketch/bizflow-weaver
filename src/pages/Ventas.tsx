@@ -1857,10 +1857,39 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
           />
 
           <div className="flex gap-3 pt-2">
-            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Creando..." : "Crear pedido"}</Button>
+            <Button
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => {
+                if (!ssFormRef.current) return;
+                if (!ssFormRef.current.reportValidity()) return;
+                setSsConfirmOpen(true);
+              }}
+            >
+              {isSubmitting ? "Creando..." : "Revisar pedido"}
+            </Button>
             <Button type="button" variant="outline" onClick={onReset}>Cancelar</Button>
           </div>
         </form>
+        <OrderConfirmationDialog
+          open={ssConfirmOpen}
+          onOpenChange={(o) => { if (!isSubmitting) setSsConfirmOpen(o); }}
+          isSubmitting={isSubmitting}
+          onConfirm={() => {
+            setSsConfirmOpen(false);
+            ssFormRef.current?.requestSubmit();
+          }}
+          summary={buildSweatspotMayorSummary({
+            form: ssFormRef.current,
+            ssLines,
+            grandTotal,
+            ssAbono,
+            ssEstadoPago,
+            ssIsRecompra,
+            ssNoLogo,
+            ssPaymentProofFile,
+          })}
+        />
       </CardContent>
     </Card>
   );
