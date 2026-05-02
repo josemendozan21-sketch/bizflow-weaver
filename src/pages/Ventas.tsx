@@ -1350,6 +1350,11 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       });
     }
 
+    [
+      "ventas:ss:lines","ventas:ss:abono","ventas:ss:estadoPago",
+      "ventas:ss:isRecompra","ventas:ss:noLogo","ventas:ss:needsLogoAdjustment",
+      "ventas:ss:fields",
+    ].forEach(clearFormDraft);
     onReset();
   };
 
