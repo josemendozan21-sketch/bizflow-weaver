@@ -26,6 +26,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createOrderNotifications } from "@/hooks/useNotifications";
 import SmartPasteField, { type ParsedOrderData } from "@/components/ventas/SmartPasteField";
 import { useFormDraft, clearFormDraft, usePersistedState } from "@/hooks/useFormDraft";
+import { OrderConfirmationDialog, type OrderSummary } from "@/components/ventas/OrderConfirmationDialog";
 type Brand = "sweatspot" | "magical";
 type SaleType = "mayor" | "menor";
 
@@ -266,6 +267,232 @@ function ColorSelect({
   );
 }
 
+/* ---- Helpers para resumen de pedido ---- */
+
+const formatMoney = (n: number) =>
+  `$${(Math.round(n) || 0).toLocaleString("es-CO")}`;
+
+const resolveColorVal = (selected: string, custom: string) =>
+  selected === "otro" ? custom : selected;
+
+const getFieldVal = (form: HTMLFormElement | null, name: string): string => {
+  if (!form) return "";
+  const el = form.elements.namedItem(name) as HTMLInputElement | HTMLTextAreaElement | null;
+  return el?.value?.trim() || "";
+};
+
+const getFileName = (form: HTMLFormElement | null, name: string): string => {
+  if (!form) return "";
+  const el = form.elements.namedItem(name) as HTMLInputElement | null;
+  const f = el?.files?.[0];
+  return f ? f.name : "";
+};
+
+function buildMagicalMayorSummary(args: {
+  form: HTMLFormElement | null;
+  orderLines: OrderLine[];
+  grandTotal: number;
+  abono: string;
+  estadoPago: "abono_inicial" | "pago_total" | "pendiente";
+  isRecompra: boolean;
+  noLogo: boolean;
+  dobleTinta: boolean;
+  escarcha: boolean;
+  costoAdicional: string;
+  paymentProofFile: File | null;
+}): OrderSummary {
+  const { form, orderLines, grandTotal, abono, estadoPago, isRecompra, noLogo, dobleTinta, escarcha, costoAdicional, paymentProofFile } = args;
+  const abonoNum = estadoPago === "pago_total" ? grandTotal : (parseFloat(abono) || 0);
+  const saldo = Math.max(grandTotal - abonoNum, 0);
+  const estadoPagoLabel =
+    estadoPago === "pago_total" ? "Pago total recibido"
+    : estadoPago === "abono_inicial" ? "Abono inicial recibido"
+    : "Pago pendiente";
+
+  const opciones: Array<{ label: string; value: string }> = [];
+  if (isRecompra) opciones.push({ label: "Recompra", value: "Sí" });
+  if (noLogo) opciones.push({ label: "Sin logo", value: "Sí" });
+  if (dobleTinta) opciones.push({ label: "Doble tinta", value: "Sí" });
+  if (escarcha) opciones.push({ label: "Escarcha", value: "Sí" });
+  if ((dobleTinta || escarcha) && parseFloat(costoAdicional) > 0) {
+    opciones.push({ label: "Costo adicional", value: formatMoney(parseFloat(costoAdicional)) });
+  }
+
+  return {
+    brandLabel: "Magical Warmers",
+    saleTypeLabel: "Al por mayor",
+    cliente: [
+      { label: "Nombre", value: getFieldVal(form, "mw_nombre") },
+      { label: "Cédula/NIT", value: getFieldVal(form, "mw_cedulaNit") },
+      { label: "Contacto", value: getFieldVal(form, "mw_contacto") },
+      { label: "Email", value: getFieldVal(form, "mw_email") },
+      { label: "Dirección", value: getFieldVal(form, "mw_direccion") },
+      { label: "Ciudad", value: getFieldVal(form, "mw_ciudad") },
+      { label: "Departamento", value: getFieldVal(form, "mw_departamento") },
+    ],
+    productos: orderLines.map((line, idx) => {
+      const gel = resolveColorVal(line.gelColor, line.gelCustom);
+      const tinta = resolveColorVal(line.inkColor, line.inkCustom);
+      const qty = parseInt(line.units, 10) || 0;
+      const total = parseFloat(line.valorTotal) || 0;
+      const unit = parseFloat(line.valorUnitario) || 0;
+      return {
+        title: line.isGift ? `Obsequio: ${line.product || "—"} ${line.type ? `(${line.type})` : ""}` : `Producto ${idx + 1}: ${line.product || "—"} ${line.type ? `(${line.type})` : ""}`,
+        isGift: line.isGift,
+        details: [
+          { label: "Unidades", value: qty ? String(qty) : "—" },
+          { label: "Color gel", value: gel || "—" },
+          { label: "Color tinta", value: tinta || "—" },
+          ...(line.isGift ? [] : [
+            { label: "Valor unitario", value: unit ? formatMoney(unit) : "—" },
+            { label: "Valor total", value: total ? formatMoney(total) : "—" },
+          ]),
+        ],
+      };
+    }),
+    pago: [
+      { label: "Estado del pago", value: estadoPagoLabel },
+      { label: "Abono", value: formatMoney(abonoNum) },
+      { label: "Saldo pendiente", value: formatMoney(saldo) },
+      { label: "Soporte de pago", value: paymentProofFile ? paymentProofFile.name : "No adjuntado" },
+      { label: "Fecha requerida", value: getFieldVal(form, "mw_fechaRequerida") || "Sin definir" },
+    ],
+    opciones,
+    archivos: [
+      { label: "Logo", value: getFileName(form, "mw_logo") || (noLogo ? "No requiere" : "No adjuntado") },
+      { label: "Nombre del logo", value: getFieldVal(form, "mw_logo_nombre") || "—" },
+      { label: "RUT", value: getFileName(form, "mw_rut") || "No adjuntado" },
+    ],
+    observaciones: [getFieldVal(form, "mw_personalizacion"), getFieldVal(form, "mw_observaciones")].filter(Boolean).join("\n\n"),
+    totalLabel: "Total del pedido",
+    totalValue: formatMoney(grandTotal),
+  };
+}
+
+function buildSweatspotMayorSummary(args: {
+  form: HTMLFormElement | null;
+  ssLines: SweatspotOrderLine[];
+  grandTotal: number;
+  ssAbono: string;
+  ssEstadoPago: "abono_inicial" | "pago_total" | "pendiente";
+  ssIsRecompra: boolean;
+  ssNoLogo: boolean;
+  ssPaymentProofFile: File | null;
+}): OrderSummary {
+  const { form, ssLines, grandTotal, ssAbono, ssEstadoPago, ssIsRecompra, ssNoLogo, ssPaymentProofFile } = args;
+  const abonoNum = ssEstadoPago === "pago_total" ? grandTotal : (parseFloat(ssAbono) || 0);
+  const saldo = Math.max(grandTotal - abonoNum, 0);
+  const estadoPagoLabel =
+    ssEstadoPago === "pago_total" ? "Pago total recibido"
+    : ssEstadoPago === "abono_inicial" ? "Abono inicial recibido"
+    : "Pago pendiente";
+
+  const opciones: Array<{ label: string; value: string }> = [];
+  if (ssIsRecompra) opciones.push({ label: "Recompra", value: "Sí" });
+  if (ssNoLogo) opciones.push({ label: "Sin logo", value: "Sí" });
+
+  return {
+    brandLabel: "Sweatspot",
+    saleTypeLabel: "Al por mayor",
+    cliente: [
+      { label: "Nombre", value: getFieldVal(form, "ss_nombre") },
+      { label: "Cédula/NIT", value: getFieldVal(form, "ss_cedulaNit") },
+      { label: "Contacto", value: getFieldVal(form, "ss_contacto") },
+      { label: "Email", value: getFieldVal(form, "ss_email") },
+      { label: "Dirección", value: getFieldVal(form, "ss_direccion") },
+      { label: "Ciudad", value: getFieldVal(form, "ss_ciudad") },
+      { label: "Departamento", value: getFieldVal(form, "ss_departamento") },
+    ],
+    productos: ssLines.map((line, idx) => {
+      const qty = parseInt(line.units, 10) || 0;
+      const total = parseFloat(line.valorTotal) || 0;
+      const unit = parseFloat(line.valorUnitario) || 0;
+      return {
+        title: `Producto ${idx + 1}: ${line.referencia || "—"} ${line.tamano ? `· ${line.tamano}` : ""}`,
+        details: [
+          { label: "Unidades", value: qty ? String(qty) : "—" },
+          { label: "Tipo de logo", value: line.tipoLogo || (ssNoLogo ? "No requiere" : "—") },
+          { label: "Color silicona", value: line.colorSilicona || "—" },
+          { label: "Color tinta", value: line.colorTinta || "—" },
+          { label: "Valor unitario", value: unit ? formatMoney(unit) : "—" },
+          { label: "Valor total", value: total ? formatMoney(total) : "—" },
+        ],
+      };
+    }),
+    pago: [
+      { label: "Estado del pago", value: estadoPagoLabel },
+      { label: "Abono", value: formatMoney(abonoNum) },
+      { label: "Saldo pendiente", value: formatMoney(saldo) },
+      { label: "Soporte de pago", value: ssPaymentProofFile ? ssPaymentProofFile.name : "No adjuntado" },
+      { label: "Fecha requerida", value: getFieldVal(form, "ss_fechaRequerida") || "Sin definir" },
+    ],
+    opciones,
+    archivos: [
+      { label: "Logo", value: getFileName(form, "ss_logo") || (ssNoLogo ? "No requiere" : "No adjuntado") },
+      { label: "Nombre del logo", value: getFieldVal(form, "ss_logo_nombre") || "—" },
+      { label: "RUT", value: getFileName(form, "ss_rut") || "No adjuntado" },
+    ],
+    observaciones: [getFieldVal(form, "ss_personalizacion"), getFieldVal(form, "ss_observaciones")].filter(Boolean).join("\n\n"),
+    totalLabel: "Total del pedido",
+    totalValue: formatMoney(grandTotal),
+  };
+}
+
+function buildGenericRetailSummary(args: {
+  brandLabel: string;
+  isMayor: boolean;
+  cliente: { nombre: string; telefono: string; cedula: string; email: string; ciudad: string; departamento: string; direccion: string };
+  productLines: RetailProductLine[];
+  grandTotal: number;
+  shippingCost: string;
+  paymentMethod: "contra_entrega" | "pagado";
+  notas: string;
+  brand: Brand;
+}): OrderSummary {
+  const { brandLabel, isMayor, cliente, productLines, grandTotal, shippingCost, paymentMethod, notas, brand } = args;
+  const envio = parseFloat(shippingCost) || 0;
+  const total = grandTotal + envio;
+  const pagoLabel = paymentMethod === "pagado" ? "Ya pagado" : "Contra entrega";
+
+  return {
+    brandLabel,
+    saleTypeLabel: isMayor ? "Al por mayor" : "Al por menor",
+    cliente: [
+      { label: "Nombre", value: cliente.nombre },
+      { label: "Cédula/NIT", value: cliente.cedula },
+      { label: "Teléfono", value: cliente.telefono },
+      { label: "Email", value: cliente.email },
+      { label: "Dirección", value: cliente.direccion },
+      { label: "Ciudad", value: cliente.ciudad },
+      { label: "Departamento", value: cliente.departamento },
+    ],
+    productos: productLines.map((line, idx) => {
+      const qty = parseInt(line.cantidad, 10) || 0;
+      const price = parseFloat(line.retailPrice) || 0;
+      return {
+        title: line.isGift ? `Obsequio: ${line.selectedRef || "—"}` : `Producto ${idx + 1}: ${line.selectedRef || "—"}`,
+        isGift: line.isGift,
+        details: [
+          { label: "Cantidad", value: qty ? String(qty) : "—" },
+          ...(brand === "sweatspot" ? [{ label: "Color", value: line.colorProducto || "—" }] : []),
+          ...(line.isGift ? [] : [{ label: "Precio venta", value: price ? formatMoney(price) : "—" }]),
+        ],
+      };
+    }),
+    pago: !isMayor ? [
+      { label: "Método de pago", value: pagoLabel },
+      { label: "Costo de envío", value: formatMoney(envio) },
+      { label: "Total productos", value: formatMoney(grandTotal) },
+      ...(paymentMethod === "contra_entrega" ? [{ label: "A cobrar contra entrega", value: formatMoney(total) }] : []),
+    ] : [
+      { label: "Total", value: formatMoney(grandTotal) },
+    ],
+    observaciones: notas || undefined,
+    totalLabel: !isMayor && paymentMethod === "contra_entrega" ? "Total a cobrar (con envío)" : "Total del pedido",
+    totalValue: formatMoney(!isMayor ? total : grandTotal),
+  };
+}
+
 function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -282,6 +509,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [costoAdicional, setCostoAdicional] = usePersistedState("ventas:mw:costoAdicional", "");
   const formRef = useRef<HTMLFormElement>(null);
   useFormDraft(formRef, "ventas:mw:fields");
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   // Reset costo adicional si se desactivan ambas opciones
   useEffect(() => {
@@ -1002,10 +1230,42 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           />
 
           <div className="flex gap-3 pt-2">
-            <Button type="submit" disabled={isSubmitting}>Crear pedido</Button>
+            <Button
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => {
+                if (!formRef.current) return;
+                if (!formRef.current.reportValidity()) return;
+                setConfirmOpen(true);
+              }}
+            >
+              Revisar pedido
+            </Button>
             <Button type="button" variant="outline" onClick={onReset}>Cancelar</Button>
           </div>
         </form>
+        <OrderConfirmationDialog
+          open={confirmOpen}
+          onOpenChange={(o) => { if (!isSubmitting) setConfirmOpen(o); }}
+          isSubmitting={isSubmitting}
+          onConfirm={() => {
+            setConfirmOpen(false);
+            formRef.current?.requestSubmit();
+          }}
+          summary={buildMagicalMayorSummary({
+            form: formRef.current,
+            orderLines,
+            grandTotal,
+            abono,
+            estadoPago,
+            isRecompra,
+            noLogo,
+            dobleTinta,
+            escarcha,
+            costoAdicional,
+            paymentProofFile,
+          })}
+        />
       </CardContent>
     </Card>
   );
@@ -1055,6 +1315,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const [ssPaymentProofFile, setSsPaymentProofFile] = useState<File | null>(null);
   const ssFormRef = useRef<HTMLFormElement>(null);
   useFormDraft(ssFormRef, "ventas:ss:fields");
+  const [ssConfirmOpen, setSsConfirmOpen] = useState(false);
   const tamanos = ["150 ml", "250 ml", "250 ml juguetón", "500 ml"] as const;
 
   // Grand total across all lines
@@ -1596,10 +1857,39 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
           />
 
           <div className="flex gap-3 pt-2">
-            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Creando..." : "Crear pedido"}</Button>
+            <Button
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => {
+                if (!ssFormRef.current) return;
+                if (!ssFormRef.current.reportValidity()) return;
+                setSsConfirmOpen(true);
+              }}
+            >
+              {isSubmitting ? "Creando..." : "Revisar pedido"}
+            </Button>
             <Button type="button" variant="outline" onClick={onReset}>Cancelar</Button>
           </div>
         </form>
+        <OrderConfirmationDialog
+          open={ssConfirmOpen}
+          onOpenChange={(o) => { if (!isSubmitting) setSsConfirmOpen(o); }}
+          isSubmitting={isSubmitting}
+          onConfirm={() => {
+            setSsConfirmOpen(false);
+            ssFormRef.current?.requestSubmit();
+          }}
+          summary={buildSweatspotMayorSummary({
+            form: ssFormRef.current,
+            ssLines,
+            grandTotal,
+            ssAbono,
+            ssEstadoPago,
+            ssIsRecompra,
+            ssNoLogo,
+            ssPaymentProofFile,
+          })}
+        />
       </CardContent>
     </Card>
   );
@@ -1636,6 +1926,8 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [shippingCost, setShippingCost] = useState("");
   const { stockItems } = useInventory();
+  const genericFormRef = useRef<HTMLFormElement>(null);
+  const [genericConfirmOpen, setGenericConfirmOpen] = useState(false);
 
   // Multi-product lines
   const [productLines, setProductLines] = useState<RetailProductLine[]>([createEmptyRetailLine()]);
@@ -1867,7 +2159,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
         <CardDescription>{isMayor ? "Venta al por mayor" : "Venta al por menor"}</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form ref={genericFormRef} onSubmit={handleSubmit} className="space-y-5">
           <SmartPasteField brand={brand} onDataParsed={handleSmartPaste} />
 
            <fieldset className="space-y-4">
@@ -2010,10 +2302,40 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Creando..." : "Crear pedido"}</Button>
+            <Button
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => {
+                if (!genericFormRef.current) return;
+                if (!genericFormRef.current.reportValidity()) return;
+                setGenericConfirmOpen(true);
+              }}
+            >
+              {isSubmitting ? "Creando..." : "Revisar pedido"}
+            </Button>
             <Button type="button" variant="outline" onClick={onReset}>Cancelar</Button>
           </div>
         </form>
+        <OrderConfirmationDialog
+          open={genericConfirmOpen}
+          onOpenChange={(o) => { if (!isSubmitting) setGenericConfirmOpen(o); }}
+          isSubmitting={isSubmitting}
+          onConfirm={() => {
+            setGenericConfirmOpen(false);
+            genericFormRef.current?.requestSubmit();
+          }}
+          summary={buildGenericRetailSummary({
+            brandLabel,
+            isMayor,
+            cliente: { nombre, telefono, cedula, email, ciudad, departamento, direccion },
+            productLines,
+            grandTotal,
+            shippingCost,
+            paymentMethod,
+            notas,
+            brand,
+          })}
+        />
       </CardContent>
     </Card>
   );
