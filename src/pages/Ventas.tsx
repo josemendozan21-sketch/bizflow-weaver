@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,13 +25,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { createOrderNotifications } from "@/hooks/useNotifications";
 import SmartPasteField, { type ParsedOrderData } from "@/components/ventas/SmartPasteField";
+import { useFormDraft, clearFormDraft, usePersistedState } from "@/hooks/useFormDraft";
 type Brand = "sweatspot" | "magical";
 type SaleType = "mayor" | "menor";
 
 const Ventas = () => {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [brand, setBrand] = useState<Brand | null>(null);
-  const [saleType, setSaleType] = useState<SaleType | null>(null);
+  const [step, setStep] = usePersistedState<1 | 2 | 3>("ventas:step", 1);
+  const [brand, setBrand] = usePersistedState<Brand | null>("ventas:brand", null);
+  const [saleType, setSaleType] = usePersistedState<SaleType | null>("ventas:saleType", null);
 
   const handleBrandSelect = (b: Brand) => {
     setBrand(b);
@@ -268,17 +269,19 @@ function ColorSelect({
 function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [dobleTinta, setDobleTinta] = useState(false);
-  const [escarcha, setEscarcha] = useState(false);
-  const [isRecompra, setIsRecompra] = useState(false);
-  const [noLogo, setNoLogo] = useState(false);
-  const [needsLogoAdjustment, setNeedsLogoAdjustment] = useState(false);
-  const [orderLines, setOrderLines] = useState<OrderLine[]>([createEmptyLine()]);
-  const [abono, setAbono] = useState("");
-  const [estadoPago, setEstadoPago] = useState<"abono_inicial" | "pago_total" | "pendiente">("abono_inicial");
+  const [dobleTinta, setDobleTinta] = usePersistedState("ventas:mw:dobleTinta", false);
+  const [escarcha, setEscarcha] = usePersistedState("ventas:mw:escarcha", false);
+  const [isRecompra, setIsRecompra] = usePersistedState("ventas:mw:isRecompra", false);
+  const [noLogo, setNoLogo] = usePersistedState("ventas:mw:noLogo", false);
+  const [needsLogoAdjustment, setNeedsLogoAdjustment] = usePersistedState("ventas:mw:needsLogoAdjustment", false);
+  const [orderLines, setOrderLines] = usePersistedState<OrderLine[]>("ventas:mw:lines", [createEmptyLine()]);
+  const [abono, setAbono] = usePersistedState("ventas:mw:abono", "");
+  const [estadoPago, setEstadoPago] = usePersistedState<"abono_inicial" | "pago_total" | "pendiente">("ventas:mw:estadoPago", "abono_inicial");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
-  const [costoAdicional, setCostoAdicional] = useState("");
+  const [costoAdicional, setCostoAdicional] = usePersistedState("ventas:mw:costoAdicional", "");
+  const formRef = useRef<HTMLFormElement>(null);
+  useFormDraft(formRef, "ventas:mw:fields");
 
   // Reset costo adicional si se desactivan ambas opciones
   useEffect(() => {
@@ -693,6 +696,12 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       description: `${clientName} — ${summary}. Enviado a Producción y Contabilidad.`,
     });
 
+    [
+      "ventas:mw:lines","ventas:mw:abono","ventas:mw:estadoPago",
+      "ventas:mw:dobleTinta","ventas:mw:escarcha","ventas:mw:isRecompra",
+      "ventas:mw:noLogo","ventas:mw:needsLogoAdjustment","ventas:mw:costoAdicional",
+      "ventas:mw:fields",
+    ].forEach(clearFormDraft);
     onReset();
   };
 
@@ -703,7 +712,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         <CardDescription>Venta al por mayor</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
           <SmartPasteField
             brand="magical"
             onDataParsed={(data) => {
@@ -1036,14 +1045,16 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { reserveBodyStock: reserveBodyStockDB } = useInventory();
-  const [ssLines, setSsLines] = useState<SweatspotOrderLine[]>([createEmptySSLine()]);
-  const [ssAbono, setSsAbono] = useState("");
-  const [ssEstadoPago, setSsEstadoPago] = useState<"abono_inicial" | "pago_total" | "pendiente">("abono_inicial");
+  const [ssLines, setSsLines] = usePersistedState<SweatspotOrderLine[]>("ventas:ss:lines", [createEmptySSLine()]);
+  const [ssAbono, setSsAbono] = usePersistedState("ventas:ss:abono", "");
+  const [ssEstadoPago, setSsEstadoPago] = usePersistedState<"abono_inicial" | "pago_total" | "pendiente">("ventas:ss:estadoPago", "abono_inicial");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [ssIsRecompra, setSsIsRecompra] = useState(false);
-  const [ssNoLogo, setSsNoLogo] = useState(false);
-  const [ssNeedsLogoAdjustment, setSsNeedsLogoAdjustment] = useState(false);
+  const [ssIsRecompra, setSsIsRecompra] = usePersistedState("ventas:ss:isRecompra", false);
+  const [ssNoLogo, setSsNoLogo] = usePersistedState("ventas:ss:noLogo", false);
+  const [ssNeedsLogoAdjustment, setSsNeedsLogoAdjustment] = usePersistedState("ventas:ss:needsLogoAdjustment", false);
   const [ssPaymentProofFile, setSsPaymentProofFile] = useState<File | null>(null);
+  const ssFormRef = useRef<HTMLFormElement>(null);
+  useFormDraft(ssFormRef, "ventas:ss:fields");
   const tamanos = ["150 ml", "250 ml", "250 ml juguetón", "500 ml"] as const;
 
   // Grand total across all lines
@@ -1339,6 +1350,11 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       });
     }
 
+    [
+      "ventas:ss:lines","ventas:ss:abono","ventas:ss:estadoPago",
+      "ventas:ss:isRecompra","ventas:ss:noLogo","ventas:ss:needsLogoAdjustment",
+      "ventas:ss:fields",
+    ].forEach(clearFormDraft);
     onReset();
   };
 
@@ -1349,7 +1365,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         <CardDescription>Venta al por mayor</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form ref={ssFormRef} onSubmit={handleSubmit} className="space-y-6">
           <SmartPasteField
             brand="sweatspot"
             onDataParsed={(data) => {
