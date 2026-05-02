@@ -696,6 +696,12 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       description: `${clientName} — ${summary}. Enviado a Producción y Contabilidad.`,
     });
 
+    [
+      "ventas:mw:lines","ventas:mw:abono","ventas:mw:estadoPago",
+      "ventas:mw:dobleTinta","ventas:mw:escarcha","ventas:mw:isRecompra",
+      "ventas:mw:noLogo","ventas:mw:needsLogoAdjustment","ventas:mw:costoAdicional",
+      "ventas:mw:fields",
+    ].forEach(clearFormDraft);
     onReset();
   };
 
