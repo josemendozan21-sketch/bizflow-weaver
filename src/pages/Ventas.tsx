@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,13 +25,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { createOrderNotifications } from "@/hooks/useNotifications";
 import SmartPasteField, { type ParsedOrderData } from "@/components/ventas/SmartPasteField";
+import { useFormDraft, clearFormDraft, usePersistedState } from "@/hooks/useFormDraft";
 type Brand = "sweatspot" | "magical";
 type SaleType = "mayor" | "menor";
 
 const Ventas = () => {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [brand, setBrand] = useState<Brand | null>(null);
-  const [saleType, setSaleType] = useState<SaleType | null>(null);
+  const [step, setStep] = usePersistedState<1 | 2 | 3>("ventas:step", 1);
+  const [brand, setBrand] = usePersistedState<Brand | null>("ventas:brand", null);
+  const [saleType, setSaleType] = usePersistedState<SaleType | null>("ventas:saleType", null);
 
   const handleBrandSelect = (b: Brand) => {
     setBrand(b);
