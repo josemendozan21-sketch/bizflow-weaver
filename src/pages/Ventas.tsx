@@ -26,6 +26,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createOrderNotifications } from "@/hooks/useNotifications";
 import SmartPasteField, { type ParsedOrderData } from "@/components/ventas/SmartPasteField";
 import { useFormDraft, clearFormDraft, usePersistedState } from "@/hooks/useFormDraft";
+import { OrderConfirmationDialog, type OrderSummary } from "@/components/ventas/OrderConfirmationDialog";
 type Brand = "sweatspot" | "magical";
 type SaleType = "mayor" | "menor";
 
