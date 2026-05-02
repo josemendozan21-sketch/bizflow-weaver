@@ -1926,6 +1926,8 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [shippingCost, setShippingCost] = useState("");
   const { stockItems } = useInventory();
+  const genericFormRef = useRef<HTMLFormElement>(null);
+  const [genericConfirmOpen, setGenericConfirmOpen] = useState(false);
 
   // Multi-product lines
   const [productLines, setProductLines] = useState<RetailProductLine[]>([createEmptyRetailLine()]);
