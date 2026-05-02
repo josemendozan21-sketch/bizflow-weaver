@@ -1039,14 +1039,16 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { reserveBodyStock: reserveBodyStockDB } = useInventory();
-  const [ssLines, setSsLines] = useState<SweatspotOrderLine[]>([createEmptySSLine()]);
-  const [ssAbono, setSsAbono] = useState("");
-  const [ssEstadoPago, setSsEstadoPago] = useState<"abono_inicial" | "pago_total" | "pendiente">("abono_inicial");
+  const [ssLines, setSsLines] = usePersistedState<SweatspotOrderLine[]>("ventas:ss:lines", [createEmptySSLine()]);
+  const [ssAbono, setSsAbono] = usePersistedState("ventas:ss:abono", "");
+  const [ssEstadoPago, setSsEstadoPago] = usePersistedState<"abono_inicial" | "pago_total" | "pendiente">("ventas:ss:estadoPago", "abono_inicial");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [ssIsRecompra, setSsIsRecompra] = useState(false);
-  const [ssNoLogo, setSsNoLogo] = useState(false);
-  const [ssNeedsLogoAdjustment, setSsNeedsLogoAdjustment] = useState(false);
+  const [ssIsRecompra, setSsIsRecompra] = usePersistedState("ventas:ss:isRecompra", false);
+  const [ssNoLogo, setSsNoLogo] = usePersistedState("ventas:ss:noLogo", false);
+  const [ssNeedsLogoAdjustment, setSsNeedsLogoAdjustment] = usePersistedState("ventas:ss:needsLogoAdjustment", false);
   const [ssPaymentProofFile, setSsPaymentProofFile] = useState<File | null>(null);
+  const ssFormRef = useRef<HTMLFormElement>(null);
+  useFormDraft(ssFormRef, "ventas:ss:fields");
   const tamanos = ["150 ml", "250 ml", "250 ml juguetón", "500 ml"] as const;
 
   // Grand total across all lines
