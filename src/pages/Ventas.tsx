@@ -1354,7 +1354,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         <CardDescription>Venta al por mayor</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form ref={ssFormRef} onSubmit={handleSubmit} className="space-y-6">
           <SmartPasteField
             brand="sweatspot"
             onDataParsed={(data) => {
