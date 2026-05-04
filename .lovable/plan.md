@@ -1,84 +1,38 @@
-# Presupuesto mensual (sección independiente)
+## Objetivo
 
-Crear una **nueva sección** en el menú lateral llamada **"Presupuesto"** (ruta `/presupuesto`), visible **solo** para los roles `admin` y `contabilidad`. Será una página dedicada para proyectar el mes, registrar movimientos reales y visualizar gráficas comparativas.
+En la sección de Producción (Magical Warmers y Sweatspot), agrupar las órdenes activas por su etapa actual (Producción de cuerpos, Estampación, Dosificación, Sellado, Descristalización, Recorte, Empaque, etc.), mostrando cada grupo como una sección colapsable con el conteo de pedidos.
 
-## Página `/presupuesto`
+## Cambios
 
-### Encabezado
-- Selector de mes/año (« mes anterior · mes actual · mes siguiente »).
-- Botón **"Definir presupuesto del mes"** (abre formulario con todas las categorías para poner montos proyectados).
-- Botón **"Cerrar mes"** (deja el mes en solo lectura).
+### 1. `src/components/production/MagicalWarmersWorkflow.tsx`
+- Reemplazar el listado plano de `activeOrders` por un agrupamiento `Map<stage, ProductionOrder[]>` recorriendo `STAGE_ORDER` para mantener el orden del flujo.
+- Renderizar cada etapa que tenga ≥ 1 orden como una sección con:
+  - Encabezado: ícono de la etapa + nombre + badge con cantidad (`{n} pedido(s)`).
+  - `<details>` (abierto por defecto) o un acordeón simple con los `OrderCard` correspondientes.
+- Etapas sin órdenes no se renderizan (o se muestran apagadas).
+- No tocar la sección de "Producción de cuerpos" (tareas) ni la de "Órdenes completadas".
 
-### KPIs (4 tarjetas)
-- Ingresos: **proyectado vs real** + % cumplimiento.
-- Egresos: **proyectado vs real** + % cumplimiento.
-- Utilidad proyectada vs utilidad real.
-- Saldo del mes (proyectado − gastado a la fecha).
+### 2. `src/components/production/SweatspotWorkflow.tsx`
+- Mismo patrón: agrupar `activeOrders` por `current_stage` recorriendo `FULL_STAGE_ORDER`.
+- Cada grupo con encabezado (ícono + label + conteo) y los `OrderCard` adentro.
 
-### Gráficas
-1. **Barras comparativas** ingresos vs egresos (proyectado vs real).
-2. **Barras por categoría de egresos** (proyectado vs real) — materia prima, nómina, seguridad social, gastos diarios, otros.
-3. **Donut de composición de ingresos reales** (asesores mayor, asesores menor, ferias, otros).
-4. **Línea histórica 12 meses**: utilidad real vs proyectada.
+### 3. Detalles de UI
+- Usar `<details><summary>` nativo (ya se usa en el archivo) para la colapsabilidad ligera, o un acordeón con borde y `bg-muted/30`.
+- Mantener todo el comportamiento existente de seleccionar, iniciar y finalizar.
+- Mantener el "rail" superior de etapas tal cual.
 
-### Tablas editables
-- **Ingresos**: categoría · descripción · proyectado · real · diferencia · % cumplimiento.
-   Categorías: Ventas asesores (mayor), Ventas asesores (menor), Ferias, Otros.
-- **Egresos**: categoría · descripción · proyectado · real · diferencia · % cumplimiento.
-   Categorías: Compra materia prima, Gastos diarios, Nómina, Seguridad social, Servicios, Arriendo, Otros.
+### Diagrama
 
-Cada fila tiene botón **"Agregar movimiento real"** → modal con monto, fecha, descripción y soporte opcional.
+```text
+Órdenes de producción (12 activas)
+├─ ▸ Estampación (3)
+│    [OrderCard] [OrderCard] [OrderCard]
+├─ ▸ Dosificación (2)
+│    [OrderCard] [OrderCard]
+├─ ▸ Sellado (4)
+│    ...
+└─ ▸ Empaque (3)
+     ...
+```
 
-### Auto-cálculo (lecturas automáticas)
-Para no duplicar trabajo, ciertos "reales" se leen del sistema:
-- **Ventas asesores reales** = `SUM(orders.total_amount)` del mes con `invoice_status='facturado'`, separado por `sale_type`.
-- **Ferias reales** = `SUM(feria_sales.total_amount)` del mes.
-- **Gastos diarios reales** = `SUM(petty_cash_expenses.amount)` del mes.
-
-Aparecen como base, y los movimientos manuales se suman encima.
-
-## Cambios técnicos
-
-### Base de datos (migración)
-Tres tablas nuevas:
-
-1. **`monthly_budgets`** — un registro por mes:
-   `id, year, month, status ('abierto'|'cerrado'), notes, created_by, created_at, updated_at`. Único por `(year, month)`.
-
-2. **`budget_lines`** — líneas presupuestadas (categorías):
-   `id, budget_id, kind ('ingreso'|'egreso'), category, description, projected_amount, created_at, updated_at`.
-
-3. **`budget_entries`** — movimientos reales manuales:
-   `id, budget_id, kind, category, description, amount, entry_date, proof_url, recorded_by, recorded_by_name, created_at`.
-
-**RLS**: solo `admin` y `contabilidad` con SELECT/INSERT/UPDATE/DELETE en las tres.
-
-**Storage**: bucket privado `budget-receipts` con políticas para `admin` + `contabilidad`.
-
-### Frontend
-- Nueva página `src/pages/Presupuesto.tsx`.
-- Componentes en `src/components/presupuesto/`:
-   - `BudgetKPIs.tsx`
-   - `BudgetCharts.tsx` (usa Recharts, ya disponible vía `@/components/ui/chart`)
-   - `BudgetIncomeTable.tsx`
-   - `BudgetExpenseTable.tsx`
-   - `DefineBudgetDialog.tsx`
-   - `AddEntryDialog.tsx`
-- Hook `src/hooks/useMonthlyBudget.ts` con queries/mutations.
-- Registrar la ruta en `src/App.tsx` dentro del `DashboardLayout`.
-- Agregar item al menú en `src/components/AppSidebar.tsx` (icono `PiggyBank` o `Wallet`).
-- Actualizar `src/lib/rolePermissions.ts`:
-   - `ROLE_ROUTES.admin` y `ROLE_ROUTES.contabilidad` incluyen `/presupuesto`.
-   - `ROLE_EDIT_SECTIONS.admin` y `ROLE_EDIT_SECTIONS.contabilidad` incluyen `/presupuesto`.
-- `RequireRoleRoute` (o equivalente) protege la ruta para que otros roles vean 404/redirect.
-
-## Visibilidad
-
-- **Admin** y **Contabilidad**: ven el ítem en el sidebar y entran a la página.
-- **Resto de roles**: el ítem no aparece (ya lo filtra `canAccessRoute`) y RLS bloquea las queries.
-
-## Fuera de alcance (futuro)
-
-- Notificaciones cuando un gasto supera el proyectado.
-- Exportar el presupuesto a Excel/PDF.
-- Flujo de aprobación de gastos.
+No se requieren cambios en base de datos ni en hooks.
