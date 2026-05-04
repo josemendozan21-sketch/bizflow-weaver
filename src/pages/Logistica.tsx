@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { canEditSection } from "@/lib/rolePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { Package, Truck, CheckCircle2, Clock, AlertTriangle, CalendarDays, FileCheck, Download, FileImage, MapPin, PackageX, Undo2, Tent } from "lucide-react";
+import { Package, Truck, CheckCircle2, Clock, AlertTriangle, CalendarDays, FileCheck, Download, FileImage, MapPin, PackageX, Undo2, Tent, Pencil } from "lucide-react";
 import { FeriaDispatchTab } from "@/components/logistics/FeriaDispatchTab";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
@@ -84,7 +84,11 @@ export interface ShipmentGroup {
   observations: string[];
 }
 
-function groupOrdersByShipment(orders: Order[], extraKeyFn?: (o: Order) => string): ShipmentGroup[] {
+function groupOrdersByShipment(
+  orders: Order[],
+  extraKeyFn?: (o: Order) => string,
+  sortDesc = false,
+): ShipmentGroup[] {
   const map = new Map<string, ShipmentGroup>();
   for (const o of orders) {
     const baseKey = `${o.client_name || ""}|${o.client_city || ""}|${o.client_address || ""}|${o.sale_type || ""}`;
@@ -121,7 +125,22 @@ function groupOrdersByShipment(orders: Order[], extraKeyFn?: (o: Order) => strin
     if (o.created_at < group.oldestCreatedAt) group.oldestCreatedAt = o.created_at;
     if (o.observations && !group.observations.includes(o.observations)) group.observations.push(o.observations);
   }
-  return Array.from(map.values()).sort((a, b) => a.oldestCreatedAt.localeCompare(b.oldestCreatedAt));
+  const groups = Array.from(map.values());
+  if (sortDesc) {
+    // Sort by most recent dispatched_at across items (fallback to most recent created_at)
+    return groups.sort((a, b) => {
+      const aLast = a.items.reduce((max, it) => {
+        const v = it.dispatched_at || it.created_at;
+        return v > max ? v : max;
+      }, "");
+      const bLast = b.items.reduce((max, it) => {
+        const v = it.dispatched_at || it.created_at;
+        return v > max ? v : max;
+      }, "");
+      return bLast.localeCompare(aLast);
+    });
+  }
+  return groups.sort((a, b) => a.oldestCreatedAt.localeCompare(b.oldestCreatedAt));
 }
 
 function AdvisorsLine({ items }: { items: Order[] }) {
@@ -255,7 +274,12 @@ const Logistica = () => {
   const readyGroups = groupOrdersByShipment(readyOrders);
   const pendingGroups = groupOrdersByShipment(pendingOrders);
   // Dispatched: include guía in key so different shipments to same client stay separate
-  const dispatchedGroups = groupOrdersByShipment(dispatchedOrders, (o) => `${o.numero_guia || ""}|${o.dispatched_at || ""}`);
+  // Sort descending so the most recently dispatched appears first
+  const dispatchedGroups = groupOrdersByShipment(
+    dispatchedOrders,
+    (o) => `${o.numero_guia || ""}|${o.dispatched_at || ""}`,
+    true,
+  );
 
   const isGroupSelected = (g: ShipmentGroup) => selectedIds.has(g.key);
   const toggleGroup = (g: ShipmentGroup, checked: boolean) => {
@@ -380,14 +404,15 @@ const Logistica = () => {
                 <EmptyState icon={<CheckCircle2 className="h-12 w-12 mb-3 opacity-40" />} title="No hay pedidos despachados aún" subtitle="Los pedidos despachados aparecerán en este historial." />
               ) : (
                 <div className="space-y-3">
-                  {dispatchedGroups.map((g) => (
-                    <DispatchedGroupCard
-                      key={g.key}
-                      group={g}
-                      brandLabel={brandLabel}
-                      saleLabel={saleLabel}
-                    />
-                  ))}
+                   {dispatchedGroups.map((g) => (
+                     <DispatchedGroupCard
+                       key={g.key}
+                       group={g}
+                       brandLabel={brandLabel}
+                       saleLabel={saleLabel}
+                       canEdit={canEdit}
+                     />
+                   ))}
                 </div>
               )}
             </CardContent>
@@ -823,10 +848,12 @@ function DispatchedGroupCard({
   group,
   brandLabel,
   saleLabel,
+  canEdit,
 }: {
   group: ShipmentGroup;
   brandLabel: (b: string) => string;
   saleLabel: (t: string) => string;
+  canEdit: boolean;
 }) {
   const first = group.items[0];
   return (
@@ -850,9 +877,12 @@ function DispatchedGroupCard({
           </p>
           <AdvisorsLine items={group.items} />
         </div>
-        <div className="text-right text-xs space-y-0.5 shrink-0">
-          <p className="text-muted-foreground">{first?.transportadora || "—"}</p>
-          <p className="font-mono text-foreground">{first?.numero_guia || "—"}</p>
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <div className="text-right text-xs space-y-0.5">
+            <p className="text-muted-foreground">{first?.transportadora || "—"}</p>
+            <p className="font-mono text-foreground">{first?.numero_guia || "—"}</p>
+          </div>
+          {canEdit && <EditDispatchDialog group={group} />}
         </div>
       </div>
       <div className="p-4 pt-3 space-y-1">
@@ -888,6 +918,174 @@ function DispatchedGroupCard({
         )}
       </div>
     </div>
+  );
+}
+
+/* ---------- Edit dispatch dialog ---------- */
+
+function EditDispatchDialog({ group }: { group: ShipmentGroup }) {
+  const first = group.items[0];
+  const [open, setOpen] = useState(false);
+  const initialTransp =
+    TRANSPORTADORAS.find((t) => t.label === first?.transportadora)?.value || "";
+  const [transportadora, setTransportadora] = useState(initialTransp);
+  const [transportadoraCustom, setTransportadoraCustom] = useState(
+    initialTransp ? "" : first?.transportadora || "",
+  );
+  const [numeroGuia, setNumeroGuia] = useState(
+    first?.numero_guia && first.numero_guia !== "N/A - Bogoexpress" ? first.numero_guia : "",
+  );
+  const [dispatchNotes, setDispatchNotes] = useState(first?.dispatch_notes || "");
+  const [guiaFile, setGuiaFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
+
+  const isBogoexpress = transportadora === "bogoexpress";
+
+  const handleSave = async () => {
+    setSaving(true);
+    let extraNote = "";
+
+    if (guiaFile) {
+      const ext = guiaFile.name.split(".").pop();
+      const path = `guias/${group.allIds[0]}_${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("invoice-files")
+        .upload(path, guiaFile);
+      if (uploadError) {
+        toast.error("Error subiendo guía", { description: uploadError.message });
+        setSaving(false);
+        return;
+      }
+      const { data: urlData } = supabase.storage.from("invoice-files").getPublicUrl(path);
+      extraNote = `Guía adjunta: ${urlData.publicUrl}`;
+    }
+
+    const transpLabel =
+      TRANSPORTADORAS.find((t) => t.value === transportadora)?.label ||
+      transportadoraCustom.trim() ||
+      null;
+
+    const finalNotes = [dispatchNotes.trim(), extraNote].filter(Boolean).join(" | ") || null;
+
+    const { error } = await supabase
+      .from("orders")
+      .update({
+        transportadora: transpLabel,
+        numero_guia: isBogoexpress ? "N/A - Bogoexpress" : numeroGuia.trim() || null,
+        dispatch_notes: finalNotes,
+      })
+      .in("id", group.allIds);
+
+    setSaving(false);
+
+    if (error) {
+      toast.error("Error al actualizar", { description: error.message });
+      return;
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["orders"] });
+    toast.success("Despacho actualizado");
+    setOpen(false);
+    setGuiaFile(null);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
+          <Pencil className="h-3 w-3" /> Editar
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Editar despacho</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          Envío de <span className="font-semibold text-foreground">{group.clientName}</span> —{" "}
+          {group.allIds.length} pedido(s)
+        </p>
+        <div className="space-y-4 pt-2">
+          <div className="space-y-1.5">
+            <Label>Transportadora</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {TRANSPORTADORAS.map((t) => {
+                const active = transportadora === t.value;
+                return (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => {
+                      setTransportadora(t.value);
+                      setTransportadoraCustom("");
+                    }}
+                    className={`text-sm rounded-md border px-3 py-2 text-left transition-colors ${
+                      active
+                        ? "border-primary bg-primary/10 text-foreground font-medium ring-1 ring-primary"
+                        : "border-input bg-background text-foreground hover:bg-accent"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+            {!transportadora && (
+              <Input
+                value={transportadoraCustom}
+                onChange={(e) => setTransportadoraCustom(e.target.value)}
+                placeholder="Otra transportadora"
+                className="mt-2"
+              />
+            )}
+          </div>
+
+          {isBogoexpress ? (
+            <p className="text-sm text-muted-foreground bg-muted rounded-md px-3 py-2">
+              Bogoexpress no genera número de guía.
+            </p>
+          ) : (
+            <div className="space-y-1.5">
+              <Label>Número de guía</Label>
+              <Input
+                value={numeroGuia}
+                onChange={(e) => setNumeroGuia(e.target.value)}
+                placeholder="Ej: 123456789"
+              />
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <Label>Reemplazar/Adjuntar guía (PDF / imagen)</Label>
+            <Input
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,.webp"
+              onChange={(e) => setGuiaFile(e.target.files?.[0] || null)}
+              className="text-sm"
+            />
+            {guiaFile && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <FileCheck className="h-3.5 w-3.5 text-green-600" />
+                {guiaFile.name}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Notas de despacho</Label>
+            <Textarea
+              value={dispatchNotes}
+              onChange={(e) => setDispatchNotes(e.target.value)}
+              placeholder="Notas..."
+            />
+          </div>
+
+          <Button className="w-full" onClick={handleSave} disabled={saving}>
+            {saving ? "Guardando..." : "Guardar cambios"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
