@@ -40,6 +40,7 @@ export interface ProductionOrder {
   stamp_inkgel_status: string;
   stamp_inkgel_approved_at: string | null;
   stamp_advisor_feedback: string | null;
+  advisor_name?: string | null;
 }
 
 export interface BodyTask {
@@ -106,11 +107,17 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
   const ordersQuery = useQuery({
     queryKey: ["production_orders", brand],
     queryFn: async () => {
-      let q = supabase.from("production_orders").select("*").order("created_at", { ascending: false });
+      let q = supabase
+        .from("production_orders")
+        .select("*, orders(advisor_name)")
+        .order("created_at", { ascending: false });
       if (brand) q = q.eq("brand", brand);
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as ProductionOrder[];
+      return (data ?? []).map((row: any) => ({
+        ...row,
+        advisor_name: row.orders?.advisor_name ?? null,
+      })) as ProductionOrder[];
     },
   });
 
