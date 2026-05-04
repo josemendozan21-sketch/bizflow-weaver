@@ -707,6 +707,7 @@ function ShipmentGroupCard({
           <p className="text-xs text-muted-foreground mt-1">
             {group.items.length} item(s) · {group.totalUnits} unidades
           </p>
+          <AdvisorsLine items={group.items} />
         </div>
         <div className="flex gap-2 shrink-0">
           <ShippingLabelDialog clientName={group.clientName} />
