@@ -526,6 +526,12 @@ const TRANSPORTADORAS = [
   { value: "bogoexpress", label: "Bogoexpress" },
 ];
 
+function getErrorMessage(err: unknown) {
+  return err && typeof err === "object" && "message" in err
+    ? String((err as { message?: unknown }).message)
+    : "Error desconocido";
+}
+
 function GroupDispatchDialog({ group }: { group: ShipmentGroup }) {
   const [open, setOpen] = useState(false);
   const [transportadora, setTransportadora] = useState("");
@@ -583,7 +589,7 @@ function GroupDispatchDialog({ group }: { group: ShipmentGroup }) {
     // Notificar al asesor y a contabilidad
     try {
       const advisorIds = Array.from(
-        new Set(group.items.map((it: any) => it.advisor_id).filter(Boolean))
+        new Set(group.items.map((it) => it.advisor_id).filter(Boolean))
       );
       const totalUnits = group.totalUnits;
       const transpLabel =
@@ -594,7 +600,14 @@ function GroupDispatchDialog({ group }: { group: ShipmentGroup }) {
         ? `guía ${numeroGuia.trim()}`
         : "sin guía";
 
-      const notifs: any[] = [
+      const notifs: Array<{
+        target_role: "contabilidad" | "admin" | "asesor_comercial";
+        target_user_id?: string;
+        title: string;
+        message: string;
+        type: string;
+        reference_id: string;
+      }> = [
         {
           target_role: "contabilidad",
           title: "Pedido despachado",
