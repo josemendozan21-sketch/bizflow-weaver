@@ -736,9 +736,15 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       }
     }
 
-    const magicalStages = noLogo
-      ? ["produccion_cuerpos", "dosificacion", "sellado", "recorte", "empaque", "listo"]
-      : ["produccion_cuerpos", "estampacion", "dosificacion", "sellado", "recorte", "empaque", "listo"];
+    const buildMagicalStages = (isThermic: boolean) => {
+      const base = noLogo
+        ? ["produccion_cuerpos", "dosificacion", "sellado", "recorte", "empaque", "listo"]
+        : ["produccion_cuerpos", "estampacion", "dosificacion", "sellado", "recorte", "empaque", "listo"];
+      if (!isThermic) return base;
+      // Insert "descristalizacion" between "sellado" and "recorte"
+      const idx = base.indexOf("sellado");
+      return [...base.slice(0, idx + 1), "descristalizacion", ...base.slice(idx + 1)];
+    };
 
     // Process each line as a separate order
     const extraCost = (dobleTinta || escarcha) ? (parseFloat(costoAdicional) || 0) : 0;
