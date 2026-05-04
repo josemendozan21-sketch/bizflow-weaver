@@ -1172,8 +1172,8 @@ function ReturnOrderButton({ order }: { order: Order }) {
       });
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       setOpen(false);
-    } catch (err: any) {
-      toast.error("Error al marcar devolución", { description: err.message });
+    } catch (err: unknown) {
+      toast.error("Error al marcar devolución", { description: getErrorMessage(err) });
     } finally {
       setSaving(false);
     }
@@ -1190,8 +1190,8 @@ function ReturnOrderButton({ order }: { order: Order }) {
       if (error) throw error;
       toast.success("Devolución anulada");
       queryClient.invalidateQueries({ queryKey: ["orders"] });
-    } catch (err: any) {
-      toast.error("Error", { description: err.message });
+    } catch (err: unknown) {
+      toast.error("Error", { description: getErrorMessage(err) });
     } finally {
       setSaving(false);
     }
