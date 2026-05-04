@@ -890,7 +890,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           current_stage: initialStage,
           stage_status: "pendiente",
           workflow_type: "full",
-          stages: magicalStages,
+          stages: buildMagicalStages(line.type === "Térmico"),
           gel_color: gelColor,
           ink_color: inkColor,
           logo_file: logoNombre || logoFile?.name || null,
