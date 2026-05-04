@@ -379,6 +379,7 @@ export const MagicalWarmersWorkflow = () => {
                     <div>
                       <p className="font-medium text-sm">{order.client_name}</p>
                       <p className="text-xs text-muted-foreground">{order.molde || order.thermo_size} — {order.quantity} uds</p>
+                      <p className="text-xs text-muted-foreground">Asesor: {order.advisor_name || "—"}</p>
                     </div>
                     <Badge variant="outline" className="text-primary border-primary/30">
                       <Truck className="h-3 w-3 mr-1" /> Enviado a Logística
@@ -508,6 +509,7 @@ function OrderCard({ order, role, isAdmin, selected, onToggleSelect, onStart, on
             <div>
               <CardTitle className="text-base">{order.client_name}</CardTitle>
               <p className="text-xs text-muted-foreground">{order.molde} — {order.quantity} uds</p>
+              <p className="text-xs text-muted-foreground">Asesor: {order.advisor_name || "—"}</p>
             </div>
           </div>
           <Badge variant={badge.variant}>{badge.label}</Badge>
