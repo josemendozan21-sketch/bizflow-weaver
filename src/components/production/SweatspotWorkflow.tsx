@@ -125,29 +125,47 @@ export const SweatspotWorkflow = () => {
         <p className="text-sm text-muted-foreground text-center py-8">No hay órdenes activas. Las órdenes se generan desde Ventas.</p>
       )}
 
-      <div className="grid gap-4">
-        {activeOrders.map((order) => {
-          const stages = order.stages;
-          const currentIdx = stages.indexOf(order.current_stage);
-          const lastActionableIdx = stages.length - 2;
-          const isLastStage = currentIdx >= lastActionableIdx;
+      <div className="space-y-4">
+        {FULL_STAGE_ORDER.filter((s) => s !== "listo").map((stage) => {
+          const stageOrders = activeOrders.filter((o) => o.current_stage === stage);
+          if (stageOrders.length === 0) return null;
+          const StageIcon = STAGE_ICONS[stage] || Paintbrush;
           return (
-            <OrderCard
-              key={order.id}
-              order={order}
-              role={role}
-              isAdmin={isAdmin}
-              selected={selected.has(order.id)}
-              onToggleSelect={() => toggleSelect(order.id)}
-              onStart={() => updateStageStatus.mutate({ orderId: order.id, status: "en_proceso" })}
-              onFinish={() => {
-                if (isLastStage) {
-                  setCompletionOrder(order);
-                } else {
-                  advanceStage.mutate({ orderId: order.id });
-                }
-              }}
-            />
+            <details key={stage} open className="rounded-lg border bg-muted/30">
+              <summary className="flex items-center justify-between gap-2 cursor-pointer px-4 py-3 hover:bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <StageIcon className="h-4 w-4 text-primary" />
+                  <span className="font-semibold text-sm text-foreground">{SS_STAGE_LABELS[stage]}</span>
+                  <Badge variant="secondary">{stageOrders.length} pedido(s)</Badge>
+                </div>
+              </summary>
+              <div className="grid gap-4 p-3 pt-1">
+                {stageOrders.map((order) => {
+                  const stages = order.stages;
+                  const currentIdx = stages.indexOf(order.current_stage);
+                  const lastActionableIdx = stages.length - 2;
+                  const isLastStage = currentIdx >= lastActionableIdx;
+                  return (
+                    <OrderCard
+                      key={order.id}
+                      order={order}
+                      role={role}
+                      isAdmin={isAdmin}
+                      selected={selected.has(order.id)}
+                      onToggleSelect={() => toggleSelect(order.id)}
+                      onStart={() => updateStageStatus.mutate({ orderId: order.id, status: "en_proceso" })}
+                      onFinish={() => {
+                        if (isLastStage) {
+                          setCompletionOrder(order);
+                        } else {
+                          advanceStage.mutate({ orderId: order.id });
+                        }
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            </details>
           );
         })}
       </div>
