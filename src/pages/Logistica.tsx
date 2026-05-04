@@ -176,6 +176,16 @@ function AdvisorTag({ order }: { order: Order }) {
   );
 }
 
+function AdvisorHeaderBadge({ items }: { items: Order[] }) {
+  const names = getAdvisorNames(items);
+  return (
+    <Badge variant="outline" className="gap-1 border-primary/40 bg-primary/10 text-primary text-xs font-semibold">
+      <UserRound className="h-3 w-3" />
+      Asesor: {names.length > 0 ? names.join(", ") : "no asignado"}
+    </Badge>
+  );
+}
+
 function generateLabelsForGroups(groups: ShipmentGroup[]) {
   if (groups.length === 0) return;
   const labelsHtml = groups.map((g) => {
@@ -776,6 +786,7 @@ function ShipmentGroupCard({
             {group.brands.map((b) => (
               <Badge key={b} variant={b === "magical" ? "default" : "secondary"} className="text-xs">{brandLabel(b)}</Badge>
             ))}
+            <AdvisorHeaderBadge items={group.items} />
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {group.items.length} item(s) · {group.totalUnits} unidades
@@ -863,6 +874,7 @@ function PendingGroupCard({
             {group.brands.map((b) => (
               <Badge key={b} variant={b === "magical" ? "default" : "secondary"} className="text-xs">{brandLabel(b)}</Badge>
             ))}
+            <AdvisorHeaderBadge items={group.items} />
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {group.items.length} item(s) · {group.totalUnits} unidades · creado {format(oldestDate, "dd MMM yyyy", { locale: es })}
@@ -919,6 +931,7 @@ function DispatchedGroupCard({
             {group.brands.map((b) => (
               <Badge key={b} variant={b === "magical" ? "default" : "secondary"} className="text-xs">{brandLabel(b)}</Badge>
             ))}
+            <AdvisorHeaderBadge items={group.items} />
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {group.items.length} item(s) · {group.totalUnits} unidades · despachado {first?.dispatched_at || "—"}
