@@ -848,10 +848,12 @@ function DispatchedGroupCard({
   group,
   brandLabel,
   saleLabel,
+  canEdit,
 }: {
   group: ShipmentGroup;
   brandLabel: (b: string) => string;
   saleLabel: (t: string) => string;
+  canEdit: boolean;
 }) {
   const first = group.items[0];
   return (
@@ -875,9 +877,12 @@ function DispatchedGroupCard({
           </p>
           <AdvisorsLine items={group.items} />
         </div>
-        <div className="text-right text-xs space-y-0.5 shrink-0">
-          <p className="text-muted-foreground">{first?.transportadora || "—"}</p>
-          <p className="font-mono text-foreground">{first?.numero_guia || "—"}</p>
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <div className="text-right text-xs space-y-0.5">
+            <p className="text-muted-foreground">{first?.transportadora || "—"}</p>
+            <p className="font-mono text-foreground">{first?.numero_guia || "—"}</p>
+          </div>
+          {canEdit && <EditDispatchDialog group={group} />}
         </div>
       </div>
       <div className="p-4 pt-3 space-y-1">
