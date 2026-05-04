@@ -107,17 +107,22 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
   const ordersQuery = useQuery({
     queryKey: ["production_orders", brand],
     queryFn: async () => {
-      let q = supabase
-        .from("production_orders")
-        .select("*, orders(advisor_name)")
-        .order("created_at", { ascending: false });
+      let q = supabase.from("production_orders").select("*").order("created_at", { ascending: false });
       if (brand) q = q.eq("brand", brand);
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []).map((row: any) => ({
-        ...row,
-        advisor_name: row.orders?.advisor_name ?? null,
-      })) as ProductionOrder[];
+      const rows = (data ?? []) as ProductionOrder[];
+      // Enrich with advisor_name from profiles
+      const advisorIds = Array.from(new Set(rows.map((r) => r.advisor_id).filter(Boolean) as string[]));
+      if (advisorIds.length > 0) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("user_id, display_name, email")
+          .in("user_id", advisorIds);
+        const map = new Map((profs ?? []).map((p: any) => [p.user_id, p.display_name || p.email]));
+        rows.forEach((r) => { r.advisor_name = r.advisor_id ? (map.get(r.advisor_id) ?? null) : null; });
+      }
+      return rows;
     },
   });
 
