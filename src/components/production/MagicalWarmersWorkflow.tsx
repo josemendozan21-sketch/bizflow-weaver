@@ -295,21 +295,19 @@ export const MagicalWarmersWorkflow = () => {
         <p className="text-sm text-muted-foreground text-center py-8">No hay órdenes activas. Las órdenes se generan desde Ventas.</p>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         {STAGE_ORDER.filter((s) => s !== "listo").map((stage) => {
           const stageOrders = activeOrders.filter((o) => o.current_stage === stage);
           if (stageOrders.length === 0) return null;
           const StageIcon = STAGE_ICONS[stage] || Package;
           return (
-            <details key={stage} open className="rounded-lg border bg-muted/30">
-              <summary className="flex items-center justify-between gap-2 cursor-pointer px-4 py-3 hover:bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <StageIcon className="h-4 w-4 text-primary" />
-                  <span className="font-semibold text-sm text-foreground">{STAGE_LABELS[stage]}</span>
-                  <Badge variant="secondary">{stageOrders.length} pedido(s)</Badge>
-                </div>
-              </summary>
-              <div className="grid gap-4 p-3 pt-1">
+            <div key={stage} className="space-y-2">
+              <div className="flex items-center gap-2 border-b pb-1.5">
+                <StageIcon className="h-4 w-4 text-primary" />
+                <h4 className="text-sm font-semibold text-foreground">{STAGE_LABELS[stage]}</h4>
+                <Badge variant="secondary">{stageOrders.length}</Badge>
+              </div>
+              <div className="grid gap-4">
                 {stageOrders.map((order) => (
                   <OrderCard
                     key={order.id}
@@ -323,7 +321,7 @@ export const MagicalWarmersWorkflow = () => {
                   />
                 ))}
               </div>
-            </details>
+            </div>
           );
         })}
       </div>
