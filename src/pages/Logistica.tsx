@@ -143,10 +143,12 @@ function groupOrdersByShipment(
   return groups.sort((a, b) => a.oldestCreatedAt.localeCompare(b.oldestCreatedAt));
 }
 
+function getAdvisorNames(items: Order[]) {
+  return Array.from(new Set(items.map((it) => it.advisor_name).filter(Boolean) as string[]));
+}
+
 function AdvisorsLine({ items }: { items: Order[] }) {
-  const names = Array.from(
-    new Set(items.map((it) => it.advisor_name).filter(Boolean) as string[])
-  );
+  const names = getAdvisorNames(items);
   if (names.length === 0) {
     return (
       <p className="text-xs mt-1">
@@ -170,6 +172,7 @@ function generateLabelsForGroups(groups: ShipmentGroup[]) {
   const labelsHtml = groups.map((g) => {
     const saldo = g.totalAmount - g.totalAbono;
     const firstItem = g.items[0];
+    const advisorInfo = getAdvisorNames(g.items).join(", ") || "No asignado";
     let pagoInfo = "";
     if (g.saleType === "menor") {
       if (firstItem?.payment_method === "contra_entrega") {
@@ -191,6 +194,7 @@ function generateLabelsForGroups(groups: ShipmentGroup[]) {
         <div class="row"><span class="lbl">Ciudad:</span> <span class="val">${g.city || "—"}</span></div>
         <div class="row"><span class="lbl">Dirección:</span> <span class="val">${g.address || "—"}</span></div>
         <div class="row"><span class="lbl">Celular:</span> <span class="val">${g.clientPhone || "—"}</span></div>
+        <div class="row"><span class="lbl">Asesor:</span> <span class="val">${advisorInfo}</span></div>
         <div class="divider"></div>
         <div class="row"><span class="lbl">Contenido (${g.items.length} items, ${g.totalUnits} und):</span></div>
         <div class="items">${itemsHtml}</div>
@@ -757,7 +761,13 @@ function ShipmentGroupCard({
           <AdvisorsLine items={group.items} />
         </div>
         <div className="flex gap-2 shrink-0">
-          <ShippingLabelDialog clientName={group.clientName} />
+          <ShippingLabelDialog
+            clientName={group.clientName}
+            address={group.address || ""}
+            city={group.city || ""}
+            phone={group.clientPhone || ""}
+            advisorName={getAdvisorNames(group.items).join(", ") || "No asignado"}
+          />
           {canEdit && <GroupDispatchDialog group={group} />}
         </div>
       </div>

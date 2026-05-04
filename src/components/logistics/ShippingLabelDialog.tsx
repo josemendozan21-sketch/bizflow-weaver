@@ -14,17 +14,21 @@ import { FileText, Printer } from "lucide-react";
 
 interface ShippingLabelDialogProps {
   clientName?: string;
+  address?: string;
+  city?: string;
+  phone?: string;
+  advisorName?: string;
   trigger?: React.ReactNode;
 }
 
-const ShippingLabelDialog = ({ clientName = "", trigger }: ShippingLabelDialogProps) => {
+const ShippingLabelDialog = ({ clientName = "", address = "", city = "", phone = "", advisorName = "", trigger }: ShippingLabelDialogProps) => {
   const [open, setOpen] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [form, setForm] = useState({
     nombre: clientName,
-    direccion: "",
-    ciudad: "",
-    celular: "",
+    direccion: address,
+    ciudad: city,
+    celular: phone,
     observaciones: "",
   });
 
@@ -59,6 +63,7 @@ const ShippingLabelDialog = ({ clientName = "", trigger }: ShippingLabelDialogPr
         <div class="row"><div class="row-label">Ciudad</div><div class="row-value">${form.ciudad}</div></div>
         <div class="divider"></div>
         <div class="row"><div class="row-label">Celular</div><div class="row-value">${form.celular}</div></div>
+        ${advisorName ? `<div class="row"><div class="row-label">Asesor</div><div class="row-value">${advisorName}</div></div>` : ""}
         ${form.observaciones ? `<div class="divider"></div><div class="row"><div class="row-label">Observaciones</div><div class="row-value obs">${form.observaciones}</div></div>` : ""}
       </div>
       <script>window.onload=()=>{window.print();}</script>
@@ -72,7 +77,7 @@ const ShippingLabelDialog = ({ clientName = "", trigger }: ShippingLabelDialogPr
   const resetAndClose = () => {
     setOpen(false);
     setShowPreview(false);
-    setForm({ nombre: clientName, direccion: "", ciudad: "", celular: "", observaciones: "" });
+    setForm({ nombre: clientName, direccion: address, ciudad: city, celular: phone, observaciones: "" });
   };
 
   return (
@@ -141,6 +146,12 @@ const ShippingLabelDialog = ({ clientName = "", trigger }: ShippingLabelDialogPr
                 <p className="text-[11px] uppercase font-bold text-muted-foreground tracking-wide">Celular</p>
                 <p className="text-base font-semibold">{form.celular}</p>
               </div>
+              {advisorName && (
+                <div className="border-t border-dashed border-muted-foreground/40 pt-2">
+                  <p className="text-[11px] uppercase font-bold text-muted-foreground tracking-wide">Asesor</p>
+                  <p className="text-base font-semibold">{advisorName}</p>
+                </div>
+              )}
               {form.observaciones && (
                 <div className="border-t border-dashed border-muted-foreground/40 pt-2">
                   <p className="text-[11px] uppercase font-bold text-muted-foreground tracking-wide">Observaciones</p>
