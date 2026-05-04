@@ -151,17 +151,17 @@ function AdvisorsLine({ items }: { items: Order[] }) {
   const names = getAdvisorNames(items);
   if (names.length === 0) {
     return (
-      <p className="text-xs mt-1">
-        <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-muted-foreground">
-          Asesor: <span className="italic">no asignado</span>
+      <p className="text-sm mt-2">
+        <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-muted-foreground border border-dashed">
+          👤 Asesor: <span className="italic">no asignado</span>
         </span>
       </p>
     );
   }
   return (
-    <p className="text-xs mt-1">
-      <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 text-primary px-2 py-0.5 font-medium">
-        Asesor: {names.join(", ")}
+    <p className="text-sm mt-2">
+      <span className="inline-flex items-center gap-1 rounded-md bg-primary/15 text-primary px-2.5 py-1 font-semibold border border-primary/30">
+        👤 Asesor: {names.join(", ")}
       </span>
     </p>
   );
