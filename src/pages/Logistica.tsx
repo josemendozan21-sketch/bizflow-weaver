@@ -124,6 +124,18 @@ function groupOrdersByShipment(orders: Order[], extraKeyFn?: (o: Order) => strin
   return Array.from(map.values()).sort((a, b) => a.oldestCreatedAt.localeCompare(b.oldestCreatedAt));
 }
 
+function AdvisorsLine({ items }: { items: Order[] }) {
+  const names = Array.from(
+    new Set(items.map((it) => it.advisor_name).filter(Boolean) as string[])
+  );
+  if (names.length === 0) return null;
+  return (
+    <p className="text-xs text-muted-foreground mt-0.5">
+      Asesor: <span className="text-foreground font-medium">{names.join(", ")}</span>
+    </p>
+  );
+}
+
 function generateLabelsForGroups(groups: ShipmentGroup[]) {
   if (groups.length === 0) return;
   const labelsHtml = groups.map((g) => {
