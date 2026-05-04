@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { canEditSection } from "@/lib/rolePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { Package, Truck, CheckCircle2, Clock, AlertTriangle, CalendarDays, FileCheck, Download, FileImage, MapPin, PackageX, Undo2, Tent, Pencil } from "lucide-react";
+import { Package, Truck, CheckCircle2, Clock, AlertTriangle, CalendarDays, FileCheck, Download, FileImage, MapPin, PackageX, Undo2, Tent, Pencil, UserRound } from "lucide-react";
 import { FeriaDispatchTab } from "@/components/logistics/FeriaDispatchTab";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
@@ -153,7 +153,7 @@ function AdvisorsLine({ items }: { items: Order[] }) {
     return (
       <p className="text-sm mt-2">
         <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-muted-foreground border border-dashed">
-          👤 Asesor: <span className="italic">no asignado</span>
+          <UserRound className="h-3.5 w-3.5" /> Asesor: <span className="italic">no asignado</span>
         </span>
       </p>
     );
@@ -161,9 +161,18 @@ function AdvisorsLine({ items }: { items: Order[] }) {
   return (
     <p className="text-sm mt-2">
       <span className="inline-flex items-center gap-1 rounded-md bg-primary/15 text-primary px-2.5 py-1 font-semibold border border-primary/30">
-        👤 Asesor: {names.join(", ")}
+        <UserRound className="h-3.5 w-3.5" /> Asesor: {names.join(", ")}
       </span>
     </p>
+  );
+}
+
+function AdvisorTag({ order }: { order: Order }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 text-primary px-2 py-0.5 text-xs font-medium border border-primary/25 max-w-full">
+      <UserRound className="h-3 w-3 shrink-0" />
+      <span className="truncate">Asesor: {order.advisor_name || "no asignado"}</span>
+    </span>
   );
 }
 
@@ -517,6 +526,12 @@ const TRANSPORTADORAS = [
   { value: "bogoexpress", label: "Bogoexpress" },
 ];
 
+function getErrorMessage(err: unknown) {
+  return err && typeof err === "object" && "message" in err
+    ? String((err as { message?: unknown }).message)
+    : "Error desconocido";
+}
+
 function GroupDispatchDialog({ group }: { group: ShipmentGroup }) {
   const [open, setOpen] = useState(false);
   const [transportadora, setTransportadora] = useState("");
@@ -574,7 +589,7 @@ function GroupDispatchDialog({ group }: { group: ShipmentGroup }) {
     // Notificar al asesor y a contabilidad
     try {
       const advisorIds = Array.from(
-        new Set(group.items.map((it: any) => it.advisor_id).filter(Boolean))
+        new Set(group.items.map((it) => it.advisor_id).filter(Boolean))
       );
       const totalUnits = group.totalUnits;
       const transpLabel =
@@ -585,7 +600,14 @@ function GroupDispatchDialog({ group }: { group: ShipmentGroup }) {
         ? `guía ${numeroGuia.trim()}`
         : "sin guía";
 
-      const notifs: any[] = [
+      const notifs: Array<{
+        target_role: "contabilidad" | "admin" | "asesor_comercial";
+        target_user_id?: string;
+        title: string;
+        message: string;
+        type: string;
+        reference_id: string;
+      }> = [
         {
           target_role: "contabilidad",
           title: "Pedido despachado",
@@ -774,7 +796,10 @@ function ShipmentGroupCard({
       <div className="p-4 pt-3 space-y-1.5">
         {group.items.map((it) => (
           <div key={it.id} className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-foreground truncate">• {it.product}</span>
+            <span className="text-foreground truncate flex items-center gap-2 min-w-0">
+              <span className="truncate">• {it.product}</span>
+              <AdvisorTag order={it} />
+            </span>
             <div className="flex items-center gap-3 shrink-0">
               <span className="text-muted-foreground">{it.quantity} und</span>
               <PaymentBadge order={it} />
@@ -852,7 +877,10 @@ function PendingGroupCard({
       <div className="p-4 pt-3 space-y-1.5">
         {group.items.map((it) => (
           <div key={it.id} className="flex items-center justify-between gap-3 text-sm flex-wrap">
-            <span className="text-foreground truncate">• {it.product} <span className="text-muted-foreground">— {it.quantity} und</span></span>
+            <span className="text-foreground truncate flex items-center gap-2 min-w-0">
+              <span className="truncate">• {it.product} <span className="text-muted-foreground">— {it.quantity} und</span></span>
+              <AdvisorTag order={it} />
+            </span>
             <div className="flex items-center gap-2 shrink-0">
               <ProductionStatusBadge status={it.production_status} order={it} />
               <PaymentBadge order={it} />
@@ -908,8 +936,9 @@ function DispatchedGroupCard({
       <div className="p-4 pt-3 space-y-1">
         {group.items.map((it) => (
           <div key={it.id} className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-foreground truncate flex items-center gap-2">
-              • {it.product}
+            <span className="text-foreground truncate flex items-center gap-2 min-w-0">
+              <span className="truncate">• {it.product}</span>
+              <AdvisorTag order={it} />
               {it.returned_at && (
                 <Badge variant="destructive" className="text-[10px] gap-1">
                   <PackageX className="h-3 w-3" /> Devuelto
@@ -1143,8 +1172,8 @@ function ReturnOrderButton({ order }: { order: Order }) {
       });
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       setOpen(false);
-    } catch (err: any) {
-      toast.error("Error al marcar devolución", { description: err.message });
+    } catch (err: unknown) {
+      toast.error("Error al marcar devolución", { description: getErrorMessage(err) });
     } finally {
       setSaving(false);
     }
@@ -1161,8 +1190,8 @@ function ReturnOrderButton({ order }: { order: Order }) {
       if (error) throw error;
       toast.success("Devolución anulada");
       queryClient.invalidateQueries({ queryKey: ["orders"] });
-    } catch (err: any) {
-      toast.error("Error", { description: err.message });
+    } catch (err: unknown) {
+      toast.error("Error", { description: getErrorMessage(err) });
     } finally {
       setSaving(false);
     }
