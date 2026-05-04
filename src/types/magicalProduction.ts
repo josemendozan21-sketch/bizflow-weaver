@@ -3,6 +3,7 @@ export type MagicalProductionStage =
   | "estampacion"
   | "dosificacion"
   | "sellado"
+  | "descristalizacion"
   | "recorte"
   | "empaque"
   | "listo";
@@ -14,6 +15,7 @@ export const STAGE_ORDER: MagicalProductionStage[] = [
   "estampacion",
   "dosificacion",
   "sellado",
+  "descristalizacion",
   "recorte",
   "empaque",
   "listo",
@@ -24,6 +26,7 @@ export const STAGE_LABELS: Record<MagicalProductionStage, string> = {
   estampacion: "Estampación",
   dosificacion: "Dosificación",
   sellado: "Sellado",
+  descristalizacion: "Descristalización",
   recorte: "Recorte",
   empaque: "Empaque",
   listo: "Listo",
