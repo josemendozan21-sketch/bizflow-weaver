@@ -124,6 +124,18 @@ function groupOrdersByShipment(orders: Order[], extraKeyFn?: (o: Order) => strin
   return Array.from(map.values()).sort((a, b) => a.oldestCreatedAt.localeCompare(b.oldestCreatedAt));
 }
 
+function AdvisorsLine({ items }: { items: Order[] }) {
+  const names = Array.from(
+    new Set(items.map((it) => it.advisor_name).filter(Boolean) as string[])
+  );
+  if (names.length === 0) return null;
+  return (
+    <p className="text-xs text-muted-foreground mt-0.5">
+      Asesor: <span className="text-foreground font-medium">{names.join(", ")}</span>
+    </p>
+  );
+}
+
 function generateLabelsForGroups(groups: ShipmentGroup[]) {
   if (groups.length === 0) return;
   const labelsHtml = groups.map((g) => {
@@ -707,6 +719,7 @@ function ShipmentGroupCard({
           <p className="text-xs text-muted-foreground mt-1">
             {group.items.length} item(s) · {group.totalUnits} unidades
           </p>
+          <AdvisorsLine items={group.items} />
         </div>
         <div className="flex gap-2 shrink-0">
           <ShippingLabelDialog clientName={group.clientName} />
@@ -787,6 +800,7 @@ function PendingGroupCard({
               <> · entrega <span className="inline-flex items-center gap-0.5"><CalendarDays className="h-3 w-3" />{format(new Date(earliestDelivery), "dd MMM", { locale: es })}</span></>
             )}
           </p>
+          <AdvisorsLine items={group.items} />
         </div>
         <AgingBadge days={aging} />
       </div>
@@ -834,6 +848,7 @@ function DispatchedGroupCard({
           <p className="text-xs text-muted-foreground mt-1">
             {group.items.length} item(s) · {group.totalUnits} unidades · despachado {first?.dispatched_at || "—"}
           </p>
+          <AdvisorsLine items={group.items} />
         </div>
         <div className="text-right text-xs space-y-0.5 shrink-0">
           <p className="text-muted-foreground">{first?.transportadora || "—"}</p>
