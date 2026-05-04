@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { canEditSection } from "@/lib/rolePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { Package, Truck, CheckCircle2, Clock, AlertTriangle, CalendarDays, FileCheck, Download, FileImage, MapPin, PackageX, Undo2, Tent, Pencil } from "lucide-react";
+import { Package, Truck, CheckCircle2, Clock, AlertTriangle, CalendarDays, FileCheck, Download, FileImage, MapPin, PackageX, Undo2, Tent, Pencil, UserRound } from "lucide-react";
 import { FeriaDispatchTab } from "@/components/logistics/FeriaDispatchTab";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
@@ -153,7 +153,7 @@ function AdvisorsLine({ items }: { items: Order[] }) {
     return (
       <p className="text-sm mt-2">
         <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-muted-foreground border border-dashed">
-          👤 Asesor: <span className="italic">no asignado</span>
+          <UserRound className="h-3.5 w-3.5" /> Asesor: <span className="italic">no asignado</span>
         </span>
       </p>
     );
@@ -161,9 +161,18 @@ function AdvisorsLine({ items }: { items: Order[] }) {
   return (
     <p className="text-sm mt-2">
       <span className="inline-flex items-center gap-1 rounded-md bg-primary/15 text-primary px-2.5 py-1 font-semibold border border-primary/30">
-        👤 Asesor: {names.join(", ")}
+        <UserRound className="h-3.5 w-3.5" /> Asesor: {names.join(", ")}
       </span>
     </p>
+  );
+}
+
+function AdvisorTag({ order }: { order: Order }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 text-primary px-2 py-0.5 text-xs font-medium border border-primary/25 max-w-full">
+      <UserRound className="h-3 w-3 shrink-0" />
+      <span className="truncate">Asesor: {order.advisor_name || "no asignado"}</span>
+    </span>
   );
 }
 
