@@ -40,6 +40,7 @@ export interface ProductionOrder {
   stamp_inkgel_status: string;
   stamp_inkgel_approved_at: string | null;
   stamp_advisor_feedback: string | null;
+  advisor_name?: string | null;
 }
 
 export interface BodyTask {
@@ -110,7 +111,18 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
       if (brand) q = q.eq("brand", brand);
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as ProductionOrder[];
+      const rows = (data ?? []) as ProductionOrder[];
+      // Enrich with advisor_name from profiles
+      const advisorIds = Array.from(new Set(rows.map((r) => r.advisor_id).filter(Boolean) as string[]));
+      if (advisorIds.length > 0) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("user_id, display_name, email")
+          .in("user_id", advisorIds);
+        const map = new Map((profs ?? []).map((p: any) => [p.user_id, p.display_name || p.email]));
+        rows.forEach((r) => { r.advisor_name = r.advisor_id ? (map.get(r.advisor_id) ?? null) : null; });
+      }
+      return rows;
     },
   });
 
