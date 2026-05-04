@@ -786,6 +786,7 @@ function ShipmentGroupCard({
             {group.brands.map((b) => (
               <Badge key={b} variant={b === "magical" ? "default" : "secondary"} className="text-xs">{brandLabel(b)}</Badge>
             ))}
+            <AdvisorHeaderBadge items={group.items} />
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {group.items.length} item(s) · {group.totalUnits} unidades
@@ -873,6 +874,7 @@ function PendingGroupCard({
             {group.brands.map((b) => (
               <Badge key={b} variant={b === "magical" ? "default" : "secondary"} className="text-xs">{brandLabel(b)}</Badge>
             ))}
+            <AdvisorHeaderBadge items={group.items} />
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {group.items.length} item(s) · {group.totalUnits} unidades · creado {format(oldestDate, "dd MMM yyyy", { locale: es })}
@@ -929,6 +931,7 @@ function DispatchedGroupCard({
             {group.brands.map((b) => (
               <Badge key={b} variant={b === "magical" ? "default" : "secondary"} className="text-xs">{brandLabel(b)}</Badge>
             ))}
+            <AdvisorHeaderBadge items={group.items} />
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {group.items.length} item(s) · {group.totalUnits} unidades · despachado {first?.dispatched_at || "—"}
