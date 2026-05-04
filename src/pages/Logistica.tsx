@@ -84,7 +84,11 @@ export interface ShipmentGroup {
   observations: string[];
 }
 
-function groupOrdersByShipment(orders: Order[], extraKeyFn?: (o: Order) => string): ShipmentGroup[] {
+function groupOrdersByShipment(
+  orders: Order[],
+  extraKeyFn?: (o: Order) => string,
+  sortDesc = false,
+): ShipmentGroup[] {
   const map = new Map<string, ShipmentGroup>();
   for (const o of orders) {
     const baseKey = `${o.client_name || ""}|${o.client_city || ""}|${o.client_address || ""}|${o.sale_type || ""}`;
@@ -121,7 +125,22 @@ function groupOrdersByShipment(orders: Order[], extraKeyFn?: (o: Order) => strin
     if (o.created_at < group.oldestCreatedAt) group.oldestCreatedAt = o.created_at;
     if (o.observations && !group.observations.includes(o.observations)) group.observations.push(o.observations);
   }
-  return Array.from(map.values()).sort((a, b) => a.oldestCreatedAt.localeCompare(b.oldestCreatedAt));
+  const groups = Array.from(map.values());
+  if (sortDesc) {
+    // Sort by most recent dispatched_at across items (fallback to most recent created_at)
+    return groups.sort((a, b) => {
+      const aLast = a.items.reduce((max, it) => {
+        const v = it.dispatched_at || it.created_at;
+        return v > max ? v : max;
+      }, "");
+      const bLast = b.items.reduce((max, it) => {
+        const v = it.dispatched_at || it.created_at;
+        return v > max ? v : max;
+      }, "");
+      return bLast.localeCompare(aLast);
+    });
+  }
+  return groups.sort((a, b) => a.oldestCreatedAt.localeCompare(b.oldestCreatedAt));
 }
 
 function AdvisorsLine({ items }: { items: Order[] }) {
@@ -255,7 +274,12 @@ const Logistica = () => {
   const readyGroups = groupOrdersByShipment(readyOrders);
   const pendingGroups = groupOrdersByShipment(pendingOrders);
   // Dispatched: include guía in key so different shipments to same client stay separate
-  const dispatchedGroups = groupOrdersByShipment(dispatchedOrders, (o) => `${o.numero_guia || ""}|${o.dispatched_at || ""}`);
+  // Sort descending so the most recently dispatched appears first
+  const dispatchedGroups = groupOrdersByShipment(
+    dispatchedOrders,
+    (o) => `${o.numero_guia || ""}|${o.dispatched_at || ""}`,
+    true,
+  );
 
   const isGroupSelected = (g: ShipmentGroup) => selectedIds.has(g.key);
   const toggleGroup = (g: ShipmentGroup, checked: boolean) => {
