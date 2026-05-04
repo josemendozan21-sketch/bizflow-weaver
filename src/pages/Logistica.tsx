@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { canEditSection } from "@/lib/rolePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { Package, Truck, CheckCircle2, Clock, AlertTriangle, CalendarDays, FileCheck, Download, FileImage, MapPin, PackageX, Undo2, Tent } from "lucide-react";
+import { Package, Truck, CheckCircle2, Clock, AlertTriangle, CalendarDays, FileCheck, Download, FileImage, MapPin, PackageX, Undo2, Tent, Pencil } from "lucide-react";
 import { FeriaDispatchTab } from "@/components/logistics/FeriaDispatchTab";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
