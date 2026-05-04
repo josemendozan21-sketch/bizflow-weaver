@@ -761,7 +761,13 @@ function ShipmentGroupCard({
           <AdvisorsLine items={group.items} />
         </div>
         <div className="flex gap-2 shrink-0">
-          <ShippingLabelDialog clientName={group.clientName} />
+          <ShippingLabelDialog
+            clientName={group.clientName}
+            address={group.address || ""}
+            city={group.city || ""}
+            phone={group.clientPhone || ""}
+            advisorName={getAdvisorNames(group.items).join(", ") || "No asignado"}
+          />
           {canEdit && <GroupDispatchDialog group={group} />}
         </div>
       </div>
