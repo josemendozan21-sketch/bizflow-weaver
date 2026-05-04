@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useRef } from "react";
 import { CompletionDialog } from "./CompletionDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +32,7 @@ import {
   Thermometer,
   Snowflake,
   ShieldCheck,
+  Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useProductionOrders, type ProductionOrder, type BodyTask } from "@/hooks/useProductionOrders";
@@ -100,8 +101,30 @@ export const MagicalWarmersWorkflow = () => {
   // Completion dialog state for finishing empaque (last stage before listo)
   const [completionOrder, setCompletionOrder] = useState<ProductionOrder | null>(null);
 
-  const activeOrders = orders.filter((o) => o.current_stage !== "listo");
+  const [searchTerm, setSearchTerm] = useState("");
+  const stageRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const activeOrdersAll = orders.filter((o) => o.current_stage !== "listo");
   const completedOrders = orders.filter((o) => o.current_stage === "listo");
+  const activeOrders = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return activeOrdersAll;
+    return activeOrdersAll.filter((o) =>
+      (o.client_name || "").toLowerCase().includes(q) ||
+      (o.advisor_name || "").toLowerCase().includes(q) ||
+      (o.logo_file || "").toLowerCase().includes(q) ||
+      (o.molde || "").toLowerCase().includes(q) ||
+      (o.observations || "").toLowerCase().includes(q)
+    );
+  }, [activeOrdersAll, searchTerm]);
+  const stageCounts = useMemo(() => {
+    const m: Record<string, number> = {};
+    activeOrdersAll.forEach((o) => { m[o.current_stage] = (m[o.current_stage] || 0) + 1; });
+    return m;
+  }, [activeOrdersAll]);
+  const scrollToStage = (stage: string) => {
+    const el = stageRefs.current[stage];
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
   const activeBodyTasks = bodyTasks.filter((t) => t.status !== "finalizado");
   const completedBodyTasks = bodyTasks.filter((t) => t.status === "finalizado");
 
@@ -188,15 +211,33 @@ export const MagicalWarmersWorkflow = () => {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {STAGE_ORDER.map((stage) => {
+        {STAGE_ORDER.filter((s) => s !== "listo").map((stage) => {
           const Icon = STAGE_ICONS[stage];
+          const count = stageCounts[stage] || 0;
           return (
-            <div key={stage} className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+            <button
+              key={stage}
+              type="button"
+              onClick={() => scrollToStage(stage)}
+              disabled={count === 0}
+              className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${count > 0 ? "bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer" : "bg-muted text-muted-foreground cursor-default opacity-60"}`}
+            >
               <Icon className="h-3 w-3" />
               {STAGE_LABELS[stage]}
-            </div>
+              <Badge variant={count > 0 ? "default" : "secondary"} className="h-4 px-1.5 text-[10px]">{count}</Badge>
+            </button>
           );
         })}
+      </div>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por cliente, asesor, logo o molde..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-9"
+        />
       </div>
 
       {/* Body Production */}
@@ -301,7 +342,7 @@ export const MagicalWarmersWorkflow = () => {
           if (stageOrders.length === 0) return null;
           const StageIcon = STAGE_ICONS[stage] || Package;
           return (
-            <div key={stage} className="space-y-2">
+            <div key={stage} ref={(el) => { stageRefs.current[stage] = el; }} className="space-y-2 scroll-mt-4">
               <div className="flex items-center gap-2 border-b pb-1.5">
                 <StageIcon className="h-4 w-4 text-primary" />
                 <h4 className="text-sm font-semibold text-foreground">{STAGE_LABELS[stage]}</h4>
