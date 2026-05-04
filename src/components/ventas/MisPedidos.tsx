@@ -725,6 +725,18 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
 
       if (error) throw error;
 
+      // Propagar cambios al pedido de producción vinculado (si existe)
+      const { error: prodErr } = await supabase
+        .from("production_orders")
+        .update({
+          gel_color: gelColor || null,
+          ink_color: inkColor || null,
+          silicone_color: siliconeColor || null,
+          observations: finalObs || null,
+        })
+        .eq("order_id", order.id);
+      if (prodErr) console.warn("No se pudo sincronizar con producción:", prodErr.message);
+
       // Notify production so they see the updated specs
       await supabase.from("notifications").insert({
         target_role: "produccion",
@@ -735,6 +747,7 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
       });
 
       queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["production_orders"] });
       toast.success("Pedido actualizado", {
         description: "Se notificó al equipo de producción de los cambios.",
       });
