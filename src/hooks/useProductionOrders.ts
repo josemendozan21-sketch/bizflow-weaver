@@ -59,6 +59,7 @@ const MAGICAL_STAGE_LABELS: Record<string, string> = {
   estampacion: "Estampación",
   dosificacion: "Dosificación",
   sellado: "Sellado",
+  descristalizacion: "Descristalización",
   recorte: "Recorte",
   empaque: "Empaque",
   listo: "Listo",

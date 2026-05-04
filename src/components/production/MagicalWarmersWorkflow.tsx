@@ -37,10 +37,10 @@ import { toast } from "sonner";
 import { useProductionOrders, type ProductionOrder, type BodyTask } from "@/hooks/useProductionOrders";
 import { useAuth } from "@/contexts/AuthContext";
 
-type MagicalStage = "produccion_cuerpos" | "estampacion" | "dosificacion" | "sellado" | "recorte" | "empaque" | "listo";
+type MagicalStage = "produccion_cuerpos" | "estampacion" | "dosificacion" | "sellado" | "descristalizacion" | "recorte" | "empaque" | "listo";
 
 const STAGE_ORDER: MagicalStage[] = [
-  "produccion_cuerpos", "estampacion", "dosificacion", "sellado", "recorte", "empaque", "listo",
+  "produccion_cuerpos", "estampacion", "dosificacion", "sellado", "descristalizacion", "recorte", "empaque", "listo",
 ];
 
 const STAGE_LABELS: Record<string, string> = {
@@ -48,6 +48,7 @@ const STAGE_LABELS: Record<string, string> = {
   estampacion: "Estampación",
   dosificacion: "Dosificación",
   sellado: "Sellado",
+  descristalizacion: "Descristalización",
   recorte: "Recorte",
   empaque: "Empaque",
   listo: "Listo",
@@ -58,6 +59,7 @@ const STAGE_ICONS: Record<string, React.ElementType> = {
   estampacion: Paintbrush,
   dosificacion: Droplets,
   sellado: Stamp,
+  descristalizacion: Thermometer,
   recorte: Scissors,
   empaque: BoxSelect,
   listo: Truck,
