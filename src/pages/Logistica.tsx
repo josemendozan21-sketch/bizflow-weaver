@@ -783,7 +783,10 @@ function ShipmentGroupCard({
       <div className="p-4 pt-3 space-y-1.5">
         {group.items.map((it) => (
           <div key={it.id} className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-foreground truncate">• {it.product}</span>
+            <span className="text-foreground truncate flex items-center gap-2 min-w-0">
+              <span className="truncate">• {it.product}</span>
+              <AdvisorTag order={it} />
+            </span>
             <div className="flex items-center gap-3 shrink-0">
               <span className="text-muted-foreground">{it.quantity} und</span>
               <PaymentBadge order={it} />
@@ -861,7 +864,10 @@ function PendingGroupCard({
       <div className="p-4 pt-3 space-y-1.5">
         {group.items.map((it) => (
           <div key={it.id} className="flex items-center justify-between gap-3 text-sm flex-wrap">
-            <span className="text-foreground truncate">• {it.product} <span className="text-muted-foreground">— {it.quantity} und</span></span>
+            <span className="text-foreground truncate flex items-center gap-2 min-w-0">
+              <span className="truncate">• {it.product} <span className="text-muted-foreground">— {it.quantity} und</span></span>
+              <AdvisorTag order={it} />
+            </span>
             <div className="flex items-center gap-2 shrink-0">
               <ProductionStatusBadge status={it.production_status} order={it} />
               <PaymentBadge order={it} />
