@@ -151,38 +151,35 @@ function AdvisorsLine({ items }: { items: Order[] }) {
   const names = getAdvisorNames(items);
   if (names.length === 0) {
     return (
-      <p className="text-sm mt-2">
-        <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-muted-foreground border border-dashed">
-          <UserRound className="h-3.5 w-3.5" /> Asesor: <span className="italic">no asignado</span>
-        </span>
+      <p className="text-xs mt-1 inline-flex items-center gap-1 text-muted-foreground">
+        <UserRound className="h-3 w-3" /> <span className="italic">no asignado</span>
       </p>
     );
   }
   return (
-    <p className="text-sm mt-2">
-      <span className="inline-flex items-center gap-1 rounded-md bg-primary/15 text-primary px-2.5 py-1 font-semibold border border-primary/30">
-        <UserRound className="h-3.5 w-3.5" /> Asesor: {names.join(", ")}
-      </span>
+    <p className="text-xs mt-1 inline-flex items-center gap-1 text-muted-foreground">
+      <UserRound className="h-3 w-3" /> {names.join(", ")}
     </p>
   );
 }
 
 function AdvisorTag({ order }: { order: Order }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 text-primary px-2 py-0.5 text-xs font-medium border border-primary/25 max-w-full">
+    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground max-w-full">
       <UserRound className="h-3 w-3 shrink-0" />
-      <span className="truncate">Asesor: {order.advisor_name || "no asignado"}</span>
+      <span className="truncate">{order.advisor_name || "no asignado"}</span>
     </span>
   );
 }
 
 function AdvisorHeaderBadge({ items }: { items: Order[] }) {
   const names = getAdvisorNames(items);
+  const display = names.length > 0 ? names.join(", ") : "no asignado";
   return (
-    <Badge variant="outline" className="gap-1 border-primary/40 bg-primary/10 text-primary text-xs font-semibold">
+    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
       <UserRound className="h-3 w-3" />
-      Asesor: {names.length > 0 ? names.join(", ") : "no asignado"}
-    </Badge>
+      {display}
+    </span>
   );
 }
 
