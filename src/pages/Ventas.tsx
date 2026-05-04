@@ -1417,11 +1417,11 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     }
 
     const ssShortStages = ssNoLogo
-      ? ["produccion_cuerpos", "colocacion_boquilla", "listo"]
-      : ["produccion_cuerpos", "estampacion", "colocacion_boquilla", "listo"];
+      ? ["colocacion_boquilla", "listo"]
+      : ["estampacion", "colocacion_boquilla", "listo"];
     const ssFullStages = ssNoLogo
-      ? ["produccion_cuerpos", "produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"]
-      : ["produccion_cuerpos", "estampacion", "produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"];
+      ? ["produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"]
+      : ["estampacion", "produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"];
 
     // Process each line as a separate order
     // Calcular totales para prorratear el abono entre líneas (el abono es por el TOTAL del pedido).
@@ -1549,9 +1549,9 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
       const workflowType = ((ssNoLogo || logoType === "impresion_basica") && hasStock) ? "short" : "full";
       const ssStages = workflowType === "short" ? ssShortStages : ssFullStages;
-      const initialStage = needsCuerpos
-        ? "produccion_cuerpos"
-        : (ssNoLogo ? (workflowType === "short" ? "colocacion_boquilla" : "produccion_tubos") : "estampacion");
+      const initialStage = ssNoLogo
+        ? (workflowType === "short" ? "colocacion_boquilla" : "produccion_tubos")
+        : "estampacion";
 
       await supabase.from("orders")
         .update({ production_status: initialStage })
