@@ -1,0 +1,2 @@
+UPDATE production_orders SET current_stage = 'estampacion' WHERE brand = 'sweatspot' AND current_stage = 'produccion_cuerpos';
+UPDATE production_orders SET stages = array_remove(stages, 'produccion_cuerpos') WHERE brand = 'sweatspot' AND 'produccion_cuerpos' = ANY(stages);
