@@ -31,7 +31,7 @@ const items = [
   { title: "Contabilidad", url: "/contabilidad", icon: Calculator },
   { title: "Presupuesto", url: "/presupuesto", icon: PiggyBank },
   { title: "Costos", url: "/costos", icon: DollarSign },
-  { title: "Eventos", url: "/eventos", icon: CalendarDays },
+  { title: "Fechas de entrega", url: "/eventos", icon: CalendarDays },
   { title: "Ferias", url: "/ferias", icon: Tent },
   { title: "Feria POS", url: "/feria-pos", icon: Store },
   { title: "Galería", url: "/galeria", icon: Images },
