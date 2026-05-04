@@ -14,17 +14,21 @@ import { FileText, Printer } from "lucide-react";
 
 interface ShippingLabelDialogProps {
   clientName?: string;
+  address?: string;
+  city?: string;
+  phone?: string;
+  advisorName?: string;
   trigger?: React.ReactNode;
 }
 
-const ShippingLabelDialog = ({ clientName = "", trigger }: ShippingLabelDialogProps) => {
+const ShippingLabelDialog = ({ clientName = "", address = "", city = "", phone = "", advisorName = "", trigger }: ShippingLabelDialogProps) => {
   const [open, setOpen] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [form, setForm] = useState({
     nombre: clientName,
-    direccion: "",
-    ciudad: "",
-    celular: "",
+    direccion: address,
+    ciudad: city,
+    celular: phone,
     observaciones: "",
   });
 
