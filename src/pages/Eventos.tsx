@@ -263,8 +263,8 @@ const Eventos = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Eventos</h1>
-          <p className="text-muted-foreground">Calendario y planificación de eventos</p>
+          <h1 className="text-2xl font-bold text-foreground">Fechas de entrega</h1>
+          <p className="text-muted-foreground">Calendario y planificación de fechas de entrega</p>
         </div>
         {!isReadOnly && (
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -680,7 +680,7 @@ const Eventos = () => {
 
       {/* Delivery day detail dialog */}
       <Dialog open={deliveryDetailOpen} onOpenChange={setDeliveryDetailOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
           {selectedDayDeliveries && selectedDayDeliveries.length > 0 && (
             <>
               <DialogHeader>
@@ -689,7 +689,7 @@ const Eventos = () => {
                   Entregas — {format(new Date(selectedDayDeliveries[0].deliveryDate + "T12:00:00"), "dd 'de' MMMM yyyy", { locale: es })}
                 </DialogTitle>
               </DialogHeader>
-              <div className="space-y-3">
+              <div className="space-y-3 overflow-y-auto flex-1 pr-1 -mr-1">
                 {selectedDayDeliveries.map((entry) => {
                   const ac = getAdvisorColor(entry.advisorName);
                   return (
