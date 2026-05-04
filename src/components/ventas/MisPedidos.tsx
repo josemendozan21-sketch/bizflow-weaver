@@ -12,7 +12,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useOrders, PRODUCTION_STATUS_LABELS, PRODUCTION_STATUS_COLORS, type Order } from "@/hooks/useOrders";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { Loader2, Package, Calendar, DollarSign, MapPin, Upload, CheckCircle2, AlertTriangle, FileText, Camera, User, Pencil, Search } from "lucide-react";
+import { Loader2, Package, Calendar, DollarSign, MapPin, Upload, CheckCircle2, AlertTriangle, FileText, Camera, User, Pencil, Search, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
@@ -359,6 +359,8 @@ function OrderGroupCard({
   group: OrderGroup;
   completionMap: Map<string, { photoUrl: string | null; packagerName: string | null; finalCount: number | null }>;
 }) {
+  const { role } = useAuth();
+  const queryClient = useQueryClient();
   const rep = group.representative;
   const progress = getStageProgress(rep.production_status);
   const friendlyLabel = getFriendlyStageLabel(rep.production_status, rep);
@@ -370,6 +372,22 @@ function OrderGroupCard({
   const completionInfos = group.items
     .map((it) => completionMap.get(it.id))
     .filter((c): c is { photoUrl: string | null; packagerName: string | null; finalCount: number | null } => !!c);
+
+  const handleDeleteGroup = async () => {
+    const ids = group.items.map((it) => it.id);
+    const confirmMsg = ids.length > 1
+      ? `¿Eliminar ${ids.length} pedidos de ${group.clientName}? Esta acción no se puede deshacer.`
+      : `¿Eliminar el pedido de ${group.clientName}? Esta acción no se puede deshacer.`;
+    if (!confirm(confirmMsg)) return;
+    const { error } = await supabase.from("orders").delete().in("id", ids);
+    if (error) {
+      toast.error("No se pudo eliminar", { description: error.message });
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["orders"] });
+    queryClient.invalidateQueries({ queryKey: ["production_orders"] });
+    toast.success(ids.length > 1 ? "Pedidos eliminados" : "Pedido eliminado");
+  };
 
   return (
     <Card className={`overflow-hidden ${needsPaymentAction ? "ring-2 ring-amber-400" : ""}`}>
@@ -541,6 +559,18 @@ function OrderGroupCard({
           </div>
         ) : (
           <EditOrderDialog order={group.items[0]} />
+        )}
+
+        {role === "admin" && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={handleDeleteGroup}
+          >
+            <Trash2 className="h-3.5 w-3.5 mr-1" />
+            {isMultiLine ? `Eliminar pedidos (${group.items.length})` : "Eliminar pedido"}
+          </Button>
         )}
       </CardContent>
     </Card>
