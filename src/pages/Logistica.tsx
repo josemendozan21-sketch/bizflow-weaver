@@ -147,10 +147,20 @@ function AdvisorsLine({ items }: { items: Order[] }) {
   const names = Array.from(
     new Set(items.map((it) => it.advisor_name).filter(Boolean) as string[])
   );
-  if (names.length === 0) return null;
+  if (names.length === 0) {
+    return (
+      <p className="text-xs mt-1">
+        <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-muted-foreground">
+          Asesor: <span className="italic">no asignado</span>
+        </span>
+      </p>
+    );
+  }
   return (
-    <p className="text-xs text-muted-foreground mt-0.5">
-      Asesor: <span className="text-foreground font-medium">{names.join(", ")}</span>
+    <p className="text-xs mt-1">
+      <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 text-primary px-2 py-0.5 font-medium">
+        Asesor: {names.join(", ")}
+      </span>
     </p>
   );
 }
