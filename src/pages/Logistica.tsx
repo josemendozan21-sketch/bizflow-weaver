@@ -404,14 +404,15 @@ const Logistica = () => {
                 <EmptyState icon={<CheckCircle2 className="h-12 w-12 mb-3 opacity-40" />} title="No hay pedidos despachados aún" subtitle="Los pedidos despachados aparecerán en este historial." />
               ) : (
                 <div className="space-y-3">
-                  {dispatchedGroups.map((g) => (
-                    <DispatchedGroupCard
-                      key={g.key}
-                      group={g}
-                      brandLabel={brandLabel}
-                      saleLabel={saleLabel}
-                    />
-                  ))}
+                   {dispatchedGroups.map((g) => (
+                     <DispatchedGroupCard
+                       key={g.key}
+                       group={g}
+                       brandLabel={brandLabel}
+                       saleLabel={saleLabel}
+                       canEdit={canEdit}
+                     />
+                   ))}
                 </div>
               )}
             </CardContent>
