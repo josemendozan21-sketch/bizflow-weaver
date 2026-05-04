@@ -178,11 +178,12 @@ function AdvisorTag({ order }: { order: Order }) {
 
 function AdvisorHeaderBadge({ items }: { items: Order[] }) {
   const names = getAdvisorNames(items);
+  const display = names.length > 0 ? names.join(", ") : "no asignado";
   return (
-    <Badge variant="outline" className="gap-1 border-primary/40 bg-primary/10 text-primary text-xs font-semibold">
+    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
       <UserRound className="h-3 w-3" />
-      Asesor: {names.length > 0 ? names.join(", ") : "no asignado"}
-    </Badge>
+      {display}
+    </span>
   );
 }
 
