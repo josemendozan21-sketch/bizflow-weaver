@@ -215,6 +215,7 @@ function EstampacionOrderCard({
               <p className="text-xs text-muted-foreground">
                 {order.brand === "magical" ? "Magical Warmers" : "Sweatspot"}
               </p>
+              <p className="text-xs text-muted-foreground">Asesor: {order.advisor_name || "—"}</p>
             </div>
           </div>
           <Badge variant={badge.variant}>{badge.label}</Badge>
@@ -223,6 +224,7 @@ function EstampacionOrderCard({
       <CardContent className="space-y-3">
         <div className="rounded-md border p-3 text-xs space-y-1">
           <Row label="Cliente" value={order.client_name} />
+          <Row label="Asesor" value={order.advisor_name || "—"} />
           <Row label="Molde / Referencia" value={order.molde || order.thermo_size || "-"} />
           <Row label="Cantidad" value={`${order.quantity} uds`} />
           <Row label="Color de tinta" value={order.ink_color || "-"} />
