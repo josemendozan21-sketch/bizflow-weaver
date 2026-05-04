@@ -924,6 +924,7 @@ function DispatchedGroupCard({
 /* ---------- Return order button ---------- */
 
 function ReturnOrderButton({ order }: { order: Order }) {
+  // placeholder anchor
   const { role } = useAuth();
   const canReturn = role === "logistica" || role === "admin";
   const [open, setOpen] = useState(false);
