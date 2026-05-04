@@ -923,8 +923,9 @@ function DispatchedGroupCard({
       <div className="p-4 pt-3 space-y-1">
         {group.items.map((it) => (
           <div key={it.id} className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-foreground truncate flex items-center gap-2">
-              • {it.product}
+            <span className="text-foreground truncate flex items-center gap-2 min-w-0">
+              <span className="truncate">• {it.product}</span>
+              <AdvisorTag order={it} />
               {it.returned_at && (
                 <Badge variant="destructive" className="text-[10px] gap-1">
                   <PackageX className="h-3 w-3" /> Devuelto
