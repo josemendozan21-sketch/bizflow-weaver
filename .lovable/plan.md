@@ -1,19 +1,20 @@
-# Mostrar nombre/email del asesor en Producción
+## Objetivo
 
-El hook `useProductionOrders` ya enriquece cada orden con `advisor_name` (nombre del perfil o email como fallback). Solo falta mostrarlo en las tarjetas.
+En la pestaña de logística donde se reciben las solicitudes de feria, dejar más explícito que logística debe ingresar las **unidades reales que despacha** (puede ser distinto a lo solicitado por la feria), y mostrarlo como una columna claramente etiquetada.
 
 ## Cambios
 
-**`src/components/production/MagicalWarmersWorkflow.tsx`** (línea ~509)
-- En el `CardHeader` del `OrderCard`, debajo de `client_name`, añadir una línea pequeña:
-  `Asesor: {order.advisor_name || "—"}` con estilo `text-xs text-muted-foreground`.
-- Hacer lo mismo en la tarjeta compacta de "Órdenes completadas" (línea ~380).
+**Archivo:** `src/components/logistics/FeriaDispatchTab.tsx`
 
-**`src/components/production/SweatspotWorkflow.tsx`** (línea ~275)
-- Mismo cambio en el `CardHeader` del `OrderCard` y en la sección de completadas (línea ~223).
+1. Renombrar la columna `Despacha` → **`Unidades reales enviadas`** (encabezado más ancho y descriptivo).
+2. Cambiar el valor por defecto del input: en lugar de prellenar con la cantidad pedida, dejar el campo **vacío** para forzar a logística a digitar el número real que está alistando. Si lo deja vacío al confirmar, se interpreta como 0.
+3. Mantener la columna `Pedido` (lo que la feria solicitó) y `Faltante` (diferencia automática), de manera que el comparativo quede claro:
+   - Pedido → lo que pidió ventas/feria
+   - Unidades reales enviadas → lo que logística realmente alista y despacha
+   - Faltante → diferencia (resaltado en rojo si hay menos)
+4. Pequeño texto de ayuda arriba de la tabla: *"Indica las unidades que realmente estás enviando para esta feria. Pueden ser menos de las solicitadas si no hay stock suficiente."*
 
-**`src/components/production/EstampacionProductionView.tsx`** (línea ~214 y ~225)
-- Añadir `Asesor` debajo de `client_name` en el header.
-- Añadir una fila `<Row label="Asesor" value={order.advisor_name || "—"} />` dentro del bloque de detalles.
+## Notas
 
-No se requieren cambios en backend, hook ni tipos: `advisor_name` ya está disponible en `ProductionOrder`.
+- No hay cambios de base de datos: la columna `quantity_dispatched` ya existe en `feria_inventory` y es justo este campo.
+- En la vista de la feria (admin/asesor) ya se muestra "Despachado" con el valor confirmado por logística, así que el flujo queda consistente.

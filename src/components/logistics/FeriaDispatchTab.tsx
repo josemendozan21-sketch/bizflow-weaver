@@ -50,7 +50,7 @@ function FeriaDispatchCard({ feria, request }: { feria: any; request: any }) {
   const getQty = (it: any) => {
     if (isDispatched) return it.quantity_dispatched;
     if (quantities[it.id] !== undefined) return parseInt(quantities[it.id], 10) || 0;
-    return it.quantity_assigned; // default suggestion
+    return 0; // logística debe ingresar las unidades reales
   };
 
   const handleConfirm = async () => {
@@ -91,13 +91,18 @@ function FeriaDispatchCard({ feria, request }: { feria: any; request: any }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {!isDispatched && (
+          <p className="text-xs text-muted-foreground">
+            Indica las unidades que realmente estás enviando para esta feria. Pueden ser menos de las solicitadas si no hay stock suficiente.
+          </p>
+        )}
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Marca</TableHead>
               <TableHead>Producto</TableHead>
               <TableHead className="text-right">Pedido</TableHead>
-              <TableHead className="text-right w-32">Despacha</TableHead>
+              <TableHead className="text-right w-44">Unidades reales enviadas</TableHead>
               <TableHead className="text-right">Faltante</TableHead>
             </TableRow>
           </TableHeader>
@@ -120,7 +125,8 @@ function FeriaDispatchCard({ feria, request }: { feria: any; request: any }) {
                         type="number"
                         min={0}
                         max={it.quantity_assigned}
-                        value={quantities[it.id] ?? String(it.quantity_assigned)}
+                        placeholder="0"
+                        value={quantities[it.id] ?? ""}
                         onChange={(e) => setQuantities({ ...quantities, [it.id]: e.target.value })}
                         className="h-8 text-right"
                       />
