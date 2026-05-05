@@ -18,6 +18,7 @@ import {
   Upload,
   Camera,
   Loader2,
+  Search,
 } from "lucide-react";
 import { useProductionOrders, type ProductionOrder } from "@/hooks/useProductionOrders";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,7 +49,18 @@ const STATUS_BADGE: Record<string, { label: string; variant: "secondary" | "defa
 export const EstampacionProductionView = () => {
   const { orders: allOrders, isLoading, updateStageStatus, advanceStage } = useProductionOrders();
 
+  const [searchQuery, setSearchQuery] = useState("");
+
   const estampacionOrders = allOrders.filter((o) => o.current_stage === "estampacion");
+
+  const q = searchQuery.trim().toLowerCase();
+  const filteredOrders = q
+    ? estampacionOrders.filter((o) =>
+        [o.client_name, o.logo_file, o.advisor_name]
+          .filter(Boolean)
+          .some((v) => String(v).toLowerCase().includes(q))
+      )
+    : estampacionOrders;
 
   const bodyStockQuery = useQuery({
     queryKey: ["body_stock_estampacion"],
@@ -90,19 +102,28 @@ export const EstampacionProductionView = () => {
   return (
     <Tabs defaultValue="ordenes" className="space-y-4">
       <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="ordenes">Órdenes ({estampacionOrders.length})</TabsTrigger>
+        <TabsTrigger value="ordenes">Órdenes ({filteredOrders.length})</TabsTrigger>
         <TabsTrigger value="frios">Productos Fríos ({coldStock.length})</TabsTrigger>
         <TabsTrigger value="termicos">Productos Térmicos ({thermalStock.length})</TabsTrigger>
       </TabsList>
 
       <TabsContent value="ordenes" className="space-y-4">
-        {estampacionOrders.length === 0 ? (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por cliente, referencia de logo o asesor..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        {filteredOrders.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">
-            No hay órdenes en etapa de estampación actualmente.
+            {q ? "No se encontraron órdenes con ese criterio." : "No hay órdenes en etapa de estampación actualmente."}
           </p>
         ) : (
           <div className="grid gap-4">
-            {estampacionOrders.map((order) => (
+            {filteredOrders.map((order) => (
               <EstampacionOrderCard
                 key={order.id}
                 order={order}
