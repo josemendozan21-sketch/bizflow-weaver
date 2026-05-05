@@ -243,8 +243,12 @@ const Contabilidad = () => {
   // Realtime popup alerts for new orders
   useAccountingAlerts();
 
-  const pending = allOrders.filter((o) => o.invoice_status === "pendiente");
+  const READY_STATUSES = ["listo", "despachado", "entregado"];
+  const pendingAll = allOrders.filter((o) => o.invoice_status === "pendiente");
+  const toInvoice = pendingAll.filter((o) => READY_STATUSES.includes(o.production_status));
+  const pending = pendingAll.filter((o) => !READY_STATUSES.includes(o.production_status));
   const invoiced = allOrders.filter((o) => o.invoice_status === "facturado");
+  const [selectedToInvoice, setSelectedToInvoice] = useState<Set<string>>(new Set());
 
   const toggleSelection = (id: string, set: Set<string>, setter: React.Dispatch<React.SetStateAction<Set<string>>>) => {
     const next = new Set(set);
@@ -254,6 +258,10 @@ const Contabilidad = () => {
 
   const toggleAllPending = () => {
     setSelectedPending(selectedPending.size === pending.length ? new Set() : new Set(pending.map((o) => o.id)));
+  };
+
+  const toggleAllToInvoice = () => {
+    setSelectedToInvoice(selectedToInvoice.size === toInvoice.length ? new Set() : new Set(toInvoice.map((o) => o.id)));
   };
 
   const toggleAllInvoiced = () => {
@@ -335,6 +343,7 @@ const Contabilidad = () => {
           {!isReadOnly && <TabsTrigger value="analisis"><BarChart3 className="h-4 w-4 mr-1" />Análisis mensual</TabsTrigger>}
           {!isReadOnly && <TabsTrigger value="comisiones"><Percent className="h-4 w-4 mr-1" />Comisiones</TabsTrigger>}
           <TabsTrigger value="pendientes">Pendientes ({pending.length})</TabsTrigger>
+          <TabsTrigger value="facturar">Facturar ({toInvoice.length})</TabsTrigger>
           <TabsTrigger value="facturados">Facturados ({invoiced.length})</TabsTrigger>
           {!isReadOnly && <TabsTrigger value="caja_menor"><Wallet className="h-4 w-4 mr-1" />Caja menor</TabsTrigger>}
         </TabsList>
