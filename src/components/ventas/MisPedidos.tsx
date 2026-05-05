@@ -152,12 +152,24 @@ function groupOrders(orders: Order[]): OrderGroup[] {
 }
 
 export function MisPedidos() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const { data: orders = [], isLoading } = useOrders();
   const [activeTab, setActiveTab] = useState<OrderCategory>("production");
   const [search, setSearch] = useState("");
   const [brandFilter, setBrandFilter] = useState<string>("all");
   const [saleTypeFilter, setSaleTypeFilter] = useState<string>("all");
+  const [advisorFilter, setAdvisorFilter] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<string>("all"); // all | 30 | 90 | old
+
+  const isAdmin = role === "admin";
+
+  const advisorOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const o of orders) {
+      if (o.advisor_id && o.advisor_name) map.set(o.advisor_id, o.advisor_name);
+    }
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [orders]);
 
   // Fetch production orders to get finished product photos
   const { data: productionOrders = [] } = useQuery({
@@ -183,17 +195,28 @@ export function MisPedidos() {
   // Filtros + agrupación
   const filteredOrders = useMemo(() => {
     const q = search.trim().toLowerCase();
+    const now = Date.now();
+    const days = (n: number) => n * 24 * 60 * 60 * 1000;
     return orders.filter((o) => {
       if (brandFilter !== "all" && o.brand !== brandFilter) return false;
       if (saleTypeFilter !== "all" && o.sale_type !== saleTypeFilter) return false;
+      if (isAdmin && advisorFilter !== "all" && o.advisor_id !== advisorFilter) return false;
+      if (dateRange !== "all") {
+        const created = new Date(o.created_at).getTime();
+        const ageMs = now - created;
+        if (dateRange === "30" && ageMs > days(30)) return false;
+        if (dateRange === "90" && ageMs > days(90)) return false;
+        if (dateRange === "old" && ageMs <= days(90)) return false;
+      }
       if (!q) return true;
       return (
         (o.client_name || "").toLowerCase().includes(q) ||
         (o.client_nit || "").toLowerCase().includes(q) ||
-        (o.product || "").toLowerCase().includes(q)
+        (o.product || "").toLowerCase().includes(q) ||
+        (o.advisor_name || "").toLowerCase().includes(q)
       );
     });
-  }, [orders, search, brandFilter, saleTypeFilter]);
+  }, [orders, search, brandFilter, saleTypeFilter, advisorFilter, dateRange, isAdmin]);
 
   const groups = useMemo(() => groupOrders(filteredOrders), [filteredOrders]);
 
@@ -240,7 +263,7 @@ export function MisPedidos() {
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por cliente, NIT o producto..."
+            placeholder={isAdmin ? "Buscar por cliente, NIT, producto o asesor..." : "Buscar por cliente, NIT o producto..."}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-8"
@@ -260,6 +283,26 @@ export function MisPedidos() {
             <SelectItem value="all">Todas las ventas</SelectItem>
             <SelectItem value="mayor">Al por mayor</SelectItem>
             <SelectItem value="menor">Al por menor</SelectItem>
+          </SelectContent>
+        </Select>
+        {isAdmin && (
+          <Select value={advisorFilter} onValueChange={setAdvisorFilter}>
+            <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los asesores</SelectItem>
+              {advisorOptions.map(([id, name]) => (
+                <SelectItem key={id} value={id}>{name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        <Select value={dateRange} onValueChange={setDateRange}>
+          <SelectTrigger className="w-[170px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas las fechas</SelectItem>
+            <SelectItem value="30">Últimos 30 días</SelectItem>
+            <SelectItem value="90">Últimos 90 días</SelectItem>
+            <SelectItem value="old">Pedidos antiguos (+90 días)</SelectItem>
           </SelectContent>
         </Select>
       </div>
