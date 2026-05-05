@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Minus, Trash2, ShoppingCart, Check } from "lucide-react";
 import type { FeriaInventory, FeriaSale } from "@/hooks/useFerias";
@@ -27,6 +29,10 @@ export function QuickSaleGrid({
   const add = useAddFeriaSale();
   const [cart, setCart] = useState<CartLine[]>([]);
   const [paymentMethod, setPaymentMethod] = useState("efectivo");
+  const [discount, setDiscount] = useState("");
+  const [clientName, setClientName] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [clientDoc, setClientDoc] = useState("");
 
   const remainingMap = useMemo(() => {
     const map: Record<string, number> = {};
@@ -40,6 +46,8 @@ export function QuickSaleGrid({
   }, [inventory, sales]);
 
   const cartTotal = cart.reduce((s, l) => s + l.unit_price * l.quantity, 0);
+  const discountValue = Math.max(0, parseFloat(discount) || 0);
+  const finalTotal = Math.max(0, cartTotal - discountValue);
 
   const addToCart = (it: FeriaInventory) => {
     const inCart = cart.find((c) => c.inventory_id === it.id)?.quantity || 0;
@@ -67,20 +75,34 @@ export function QuickSaleGrid({
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
+    const totalUnits = cart.reduce((s, l) => s + l.quantity, 0);
+    const noteParts: string[] = [];
+    if (clientEmail) noteParts.push(`Email: ${clientEmail}`);
+    if (clientDoc) noteParts.push(`Doc: ${clientDoc}`);
+    if (discountValue > 0) noteParts.push(`Desc total: $${discountValue.toLocaleString()}`);
+    const baseNote = noteParts.join(" | ") || null;
     for (const line of cart) {
+      // Distribuir descuento proporcionalmente a cada línea
+      const lineSubtotal = line.unit_price * line.quantity;
+      const lineDiscount = cartTotal > 0 ? (discountValue * lineSubtotal) / cartTotal : 0;
+      const lineTotal = Math.max(0, lineSubtotal - lineDiscount);
       await add.mutateAsync({
         feria_id: feriaId,
         brand: line.brand,
         product_name: line.product_name,
         quantity: line.quantity,
         unit_price: line.unit_price,
-        total_amount: line.unit_price * line.quantity,
+        total_amount: lineTotal,
         payment_method: paymentMethod,
-        client_name: null,
-        notes: null,
+        client_name: clientName || null,
+        notes: baseNote,
       });
     }
     setCart([]);
+    setDiscount("");
+    setClientName("");
+    setClientEmail("");
+    setClientDoc("");
   };
 
   if (inventory.length === 0) {
@@ -142,16 +164,38 @@ export function QuickSaleGrid({
               </div>
             ))}
             <div className="border-t pt-3 mt-3 space-y-2">
-              <div className="flex justify-between font-semibold">
-                <span>Total</span>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Subtotal</span>
                 <span>${cartTotal.toLocaleString()}</span>
+              </div>
+              <div>
+                <Label className="text-xs">Descuento ($)</Label>
+                <Input type="number" min={0} value={discount} placeholder="0"
+                  onChange={(e) => setDiscount(e.target.value)} className="h-8" />
+              </div>
+              <div className="flex justify-between font-semibold text-base">
+                <span>Total</span>
+                <span>${finalTotal.toLocaleString()}</span>
+              </div>
+              <div>
+                <Label className="text-xs">Nombre cliente</Label>
+                <Input value={clientName} onChange={(e) => setClientName(e.target.value)} className="h-8" />
+              </div>
+              <div>
+                <Label className="text-xs">Email</Label>
+                <Input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className="h-8" />
+              </div>
+              <div>
+                <Label className="text-xs">Cédula / NIT</Label>
+                <Input value={clientDoc} onChange={(e) => setClientDoc(e.target.value)} className="h-8" />
               </div>
               <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="efectivo">Efectivo</SelectItem>
+                  <SelectItem value="tarjeta">Tarjeta</SelectItem>
+                  <SelectItem value="nequi">Nequi</SelectItem>
                   <SelectItem value="transferencia">Transferencia</SelectItem>
-                  <SelectItem value="datafono">Datáfono</SelectItem>
                   <SelectItem value="otro">Otro</SelectItem>
                 </SelectContent>
               </Select>
