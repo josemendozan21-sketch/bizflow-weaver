@@ -3,7 +3,6 @@ import { useLogoRequests } from "@/hooks/useLogoRequests";
 import { NuevasSolicitudes } from "@/components/diseno/NuevasSolicitudes";
 import { TrabajoDisenador } from "@/components/diseno/TrabajoDisenador";
 import { AprobacionAsesor } from "@/components/diseno/AprobacionAsesor";
-import { DisenosFinalizados } from "@/components/diseno/DisenosFinalizados";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useMemo } from "react";
@@ -67,7 +66,7 @@ const DisenoLogos = () => {
             <AprobacionAsesor requests={filteredForEstampacion} />
           </TabsContent>
           <TabsContent value="todos">
-            <DisenosFinalizados requests={historicList} />
+            <AprobacionAsesor requests={historicList.map((r) => ({ ...r, status: "aprobado" as any }))} />
           </TabsContent>
         </Tabs>
       </div>
