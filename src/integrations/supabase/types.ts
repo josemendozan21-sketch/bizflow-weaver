@@ -337,6 +337,7 @@ export type Database = {
           quantity_assigned: number
           quantity_dispatched: number
           quantity_returned: number | null
+          unit_cost: number
           unit_price: number | null
           updated_at: string
         }
@@ -351,6 +352,7 @@ export type Database = {
           quantity_assigned?: number
           quantity_dispatched?: number
           quantity_returned?: number | null
+          unit_cost?: number
           unit_price?: number | null
           updated_at?: string
         }
@@ -365,6 +367,7 @@ export type Database = {
           quantity_assigned?: number
           quantity_dispatched?: number
           quantity_returned?: number | null
+          unit_cost?: number
           unit_price?: number | null
           updated_at?: string
         }

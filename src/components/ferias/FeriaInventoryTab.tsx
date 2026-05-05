@@ -6,8 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Send, CheckCircle2 } from "lucide-react";
-import { useFeriaInventory, useAddFeriaInventory, useDeleteFeriaInventory, useFeriaSales, useFeriaDispatchRequest, useCreateDispatchRequest } from "@/hooks/useFerias";
+import { Trash2, Plus, Send, CheckCircle2, Pencil, Check, X } from "lucide-react";
+import { useFeriaInventory, useAddFeriaInventory, useDeleteFeriaInventory, useUpdateFeriaInventory, useFeriaSales, useFeriaDispatchRequest, useCreateDispatchRequest } from "@/hooks/useFerias";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInventory } from "@/hooks/useInventory";
 import { useMemo } from "react";
@@ -21,11 +21,14 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   const canSend = role === "admin" || role === "asesor_comercial";
   const add = useAddFeriaInventory();
   const del = useDeleteFeriaInventory();
+  const upd = useUpdateFeriaInventory();
   const { stockItems } = useInventory();
 
   // Selection format: "magical|<name> (<Frío|Térmico>)"  or  "sweatspot|<name> - <color>"
   const [selectedKey, setSelectedKey] = useState("");
-  const [form, setForm] = useState({ quantity_assigned: "", unit_price: "", notes: "" });
+  const [form, setForm] = useState({ quantity_assigned: "", unit_price: "", unit_cost: "", notes: "" });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ quantity_assigned: "", unit_price: "", unit_cost: "" });
 
   const magicalOptions = useMemo(() => {
     const seen = new Set<string>();
@@ -77,10 +80,11 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
       quantity_dispatched: 0,
       dispatch_status: "pendiente",
       unit_price: parseFloat(form.unit_price) || 0,
+      unit_cost: parseFloat(form.unit_cost) || 0,
       notes: form.notes || null,
     });
     setSelectedKey("");
-    setForm({ quantity_assigned: "", unit_price: "", notes: "" });
+    setForm({ quantity_assigned: "", unit_price: "", unit_cost: "", notes: "" });
   };
 
   return (
@@ -113,7 +117,7 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
             </Button>
           )}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
           <div className="md:col-span-2">
             <Label>Producto (Magical o Sweatspot)</Label>
             <Select value={selectedKey} onValueChange={setSelectedKey}>
@@ -135,8 +139,9 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
             </Select>
           </div>
           <div><Label>Cantidad</Label><Input type="number" value={form.quantity_assigned} onChange={(e) => setForm({ ...form, quantity_assigned: e.target.value })} /></div>
-          <div><Label>Precio unitario</Label><Input type="number" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} /></div>
-          <div className="md:col-span-4 flex justify-end">
+          <div><Label>Costo unitario</Label><Input type="number" value={form.unit_cost} onChange={(e) => setForm({ ...form, unit_cost: e.target.value })} /></div>
+          <div><Label>Precio venta</Label><Input type="number" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} /></div>
+          <div className="md:col-span-5 flex justify-end">
             <Button onClick={handleAdd} disabled={!selectedKey || !form.quantity_assigned}>
               <Plus className="mr-2 h-4 w-4" />Agregar referencia
             </Button>
@@ -154,22 +159,29 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
               <TableHead className="text-right">Despachado</TableHead>
               <TableHead className="text-right">Vendido</TableHead>
               <TableHead className="text-right">Restante</TableHead>
+              <TableHead className="text-right">Costo</TableHead>
               <TableHead className="text-right">Precio</TableHead>
               <TableHead></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {inventory.length === 0 ? (
-              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-6">Sin productos asignados</TableCell></TableRow>
+              <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-6">Sin productos asignados</TableCell></TableRow>
             ) : inventory.map((it) => {
               const sold = soldByProduct[`${it.brand}|${it.product_name}`] || 0;
               const base = it.dispatch_status === "despachado" ? it.quantity_dispatched : it.quantity_assigned;
               const remaining = base - sold;
+              const isEditing = editingId === it.id;
               return (
                 <TableRow key={it.id}>
                   <TableCell><Badge variant="outline" className="capitalize">{it.brand}</Badge></TableCell>
                   <TableCell>{it.product_name}</TableCell>
-                  <TableCell className="text-right">{it.quantity_assigned}</TableCell>
+                  <TableCell className="text-right">
+                    {isEditing ? (
+                      <Input type="number" className="h-7 w-20 ml-auto text-right" value={editForm.quantity_assigned}
+                        onChange={(e) => setEditForm({ ...editForm, quantity_assigned: e.target.value })} />
+                    ) : it.quantity_assigned}
+                  </TableCell>
                   <TableCell className="text-right">
                     {it.dispatch_status === "despachado" ? (
                       <span className="font-medium text-emerald-600">{it.quantity_dispatched}</span>
@@ -181,11 +193,49 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
                   <TableCell className="text-right">
                     <Badge variant={remaining < 0 ? "destructive" : remaining === 0 ? "secondary" : "default"}>{remaining}</Badge>
                   </TableCell>
-                  <TableCell className="text-right">${it.unit_price.toLocaleString()}</TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => del.mutate({ id: it.id, feria_id: feriaId })}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  <TableCell className="text-right">
+                    {isEditing ? (
+                      <Input type="number" className="h-7 w-24 ml-auto text-right" value={editForm.unit_cost}
+                        onChange={(e) => setEditForm({ ...editForm, unit_cost: e.target.value })} />
+                    ) : `$${(it.unit_cost || 0).toLocaleString()}`}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {isEditing ? (
+                      <Input type="number" className="h-7 w-24 ml-auto text-right" value={editForm.unit_price}
+                        onChange={(e) => setEditForm({ ...editForm, unit_price: e.target.value })} />
+                    ) : `$${it.unit_price.toLocaleString()}`}
+                  </TableCell>
+                  <TableCell className="text-right space-x-1 whitespace-nowrap">
+                    {isEditing ? (
+                      <>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={async () => {
+                          await upd.mutateAsync({
+                            id: it.id, feria_id: feriaId,
+                            quantity_assigned: parseInt(editForm.quantity_assigned, 10) || 0,
+                            unit_price: parseFloat(editForm.unit_price) || 0,
+                            unit_cost: parseFloat(editForm.unit_cost) || 0,
+                          });
+                          setEditingId(null);
+                        }}><Check className="h-4 w-4 text-primary" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingId(null)}>
+                          <X className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
+                          setEditingId(it.id);
+                          setEditForm({
+                            quantity_assigned: String(it.quantity_assigned),
+                            unit_price: String(it.unit_price || 0),
+                            unit_cost: String(it.unit_cost || 0),
+                          });
+                        }}><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => del.mutate({ id: it.id, feria_id: feriaId })}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
                   </TableCell>
                 </TableRow>
               );

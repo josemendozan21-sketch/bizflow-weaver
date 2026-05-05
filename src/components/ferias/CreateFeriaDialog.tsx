@@ -61,7 +61,7 @@ export function CreateFeriaDialog() {
   const [customMaterial, setCustomMaterial] = useState("");
 
   // Productos a llevar: key = "brand|product_name"
-  const [selectedProducts, setSelectedProducts] = usePersistedState<Record<string, { brand: string; product_name: string; quantity: number; unit_price: number }>>("draft:createFeria:products", {});
+  const [selectedProducts, setSelectedProducts] = usePersistedState<Record<string, { brand: string; product_name: string; quantity: number; unit_price: number; unit_cost: number }>>("draft:createFeria:products", {});
   const [magicalSearch, setMagicalSearch] = useState("");
   const [sweatspotSearch, setSweatspotSearch] = useState("");
   const [magicalOpen, setMagicalOpen] = useState(false);
@@ -106,12 +106,12 @@ export function CreateFeriaDialog() {
     setSelectedProducts((prev) => {
       const next = { ...prev };
       if (next[key]) delete next[key];
-      else next[key] = { brand, product_name, quantity: 1, unit_price: 0 };
+      else next[key] = { brand, product_name, quantity: 1, unit_price: 0, unit_cost: 0 };
       return next;
     });
   };
 
-  const updateProduct = (key: string, field: "quantity" | "unit_price", value: string) => {
+  const updateProduct = (key: string, field: "quantity" | "unit_price" | "unit_cost", value: string) => {
     setSelectedProducts((prev) => ({
       ...prev,
       [key]: { ...prev[key], [field]: parseFloat(value) || 0 },
@@ -302,6 +302,14 @@ export function CreateFeriaDialog() {
                             <Input
                               type="number"
                               min={0}
+                              placeholder="Costo"
+                              value={selectedProducts[o.key].unit_cost || ""}
+                              onChange={(e) => updateProduct(o.key, "unit_cost", e.target.value)}
+                              className="h-7 w-24 text-right text-sm"
+                            />
+                            <Input
+                              type="number"
+                              min={0}
                               placeholder="Precio"
                               value={selectedProducts[o.key].unit_price || ""}
                               onChange={(e) => updateProduct(o.key, "unit_price", e.target.value)}
@@ -352,6 +360,14 @@ export function CreateFeriaDialog() {
                               value={selectedProducts[o.key].quantity || ""}
                               onChange={(e) => updateProduct(o.key, "quantity", e.target.value)}
                               className="h-7 w-20 text-right text-sm"
+                            />
+                            <Input
+                              type="number"
+                              min={0}
+                              placeholder="Costo"
+                              value={selectedProducts[o.key].unit_cost || ""}
+                              onChange={(e) => updateProduct(o.key, "unit_cost", e.target.value)}
+                              className="h-7 w-24 text-right text-sm"
                             />
                             <Input
                               type="number"

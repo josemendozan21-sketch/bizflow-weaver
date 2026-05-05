@@ -49,6 +49,7 @@ export interface FeriaInventory {
   quantity_dispatched: number;
   dispatch_status: string;
   unit_price: number;
+  unit_cost: number;
   notes: string | null;
 }
 
@@ -138,6 +139,7 @@ export function useCreateFeria() {
           product_name: string;
           quantity: number;
           unit_price: number;
+          unit_cost?: number;
         }>;
       }
     ) => {
@@ -161,6 +163,7 @@ export function useCreateFeria() {
             quantity_dispatched: 0,
             dispatch_status: "pendiente",
             unit_price: p.unit_price || 0,
+            unit_cost: p.unit_cost || 0,
             notes: null,
           }));
         if (rows.length > 0) {
@@ -237,6 +240,22 @@ export function useDeleteFeriaInventory() {
     onSuccess: (feria_id) => {
       qc.invalidateQueries({ queryKey: ["feria_inventory", feria_id] });
       toast.success("Producto removido");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+}
+
+export function useUpdateFeriaInventory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, feria_id, ...updates }: { id: string; feria_id: string } & Partial<FeriaInventory>) => {
+      const { error } = await supabase.from("feria_inventory").update(updates).eq("id", id);
+      if (error) throw error;
+      return feria_id;
+    },
+    onSuccess: (feria_id) => {
+      qc.invalidateQueries({ queryKey: ["feria_inventory", feria_id] });
+      toast.success("Producto actualizado");
     },
     onError: (e: any) => toast.error(e.message),
   });

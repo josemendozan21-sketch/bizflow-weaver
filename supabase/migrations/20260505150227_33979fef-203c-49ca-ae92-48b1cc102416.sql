@@ -1,0 +1,1 @@
+ALTER TABLE public.feria_inventory ADD COLUMN IF NOT EXISTS unit_cost numeric NOT NULL DEFAULT 0;
