@@ -246,6 +246,9 @@ function EstampacionOrderCard({
         <div className="rounded-md border p-3 text-xs space-y-1">
           <Row label="Cliente" value={order.client_name} />
           <Row label="Asesor" value={order.advisor_name || "—"} />
+          {order.delivery_date && (
+            <Row label="Fecha de entrega" value={new Date(order.delivery_date).toLocaleDateString()} />
+          )}
           <Row label="Molde / Referencia" value={order.molde || order.thermo_size || "-"} />
           <Row label="Cantidad" value={`${order.quantity} uds`} />
           <Row label="Color de tinta" value={order.ink_color || "-"} />
