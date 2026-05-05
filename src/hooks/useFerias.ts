@@ -49,6 +49,7 @@ export interface FeriaInventory {
   quantity_dispatched: number;
   dispatch_status: string;
   unit_price: number;
+  unit_cost: number;
   notes: string | null;
 }
 
@@ -138,6 +139,7 @@ export function useCreateFeria() {
           product_name: string;
           quantity: number;
           unit_price: number;
+          unit_cost?: number;
         }>;
       }
     ) => {
@@ -161,6 +163,7 @@ export function useCreateFeria() {
             quantity_dispatched: 0,
             dispatch_status: "pendiente",
             unit_price: p.unit_price || 0,
+            unit_cost: p.unit_cost || 0,
             notes: null,
           }));
         if (rows.length > 0) {
