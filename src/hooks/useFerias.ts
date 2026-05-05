@@ -245,6 +245,22 @@ export function useDeleteFeriaInventory() {
   });
 }
 
+export function useUpdateFeriaInventory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, feria_id, ...updates }: { id: string; feria_id: string } & Partial<FeriaInventory>) => {
+      const { error } = await supabase.from("feria_inventory").update(updates).eq("id", id);
+      if (error) throw error;
+      return feria_id;
+    },
+    onSuccess: (feria_id) => {
+      qc.invalidateQueries({ queryKey: ["feria_inventory", feria_id] });
+      toast.success("Producto actualizado");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+}
+
 export function useAddFeriaSale() {
   const qc = useQueryClient();
   const { user } = useAuth();
