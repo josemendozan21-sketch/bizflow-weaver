@@ -899,6 +899,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           molde: referencia,
           observations: observaciones || null,
           advisor_id: user?.id || null,
+          delivery_date: fechaRequerida || null,
         });
       } catch (err: any) {
         console.error("Error creating production order:", err);
@@ -1582,6 +1583,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
           needs_cuerpos: !hasStock,
           observations: observaciones || null,
           advisor_id: user?.id || null,
+          delivery_date: fechaRequerida || null,
         });
       } catch (err: any) {
         console.error("Error creating production order:", err);
