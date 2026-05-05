@@ -19,6 +19,8 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   const sendToLogistics = useCreateDispatchRequest();
   const { role } = useAuth();
   const canSend = role === "admin" || role === "asesor_comercial";
+  const canManage = role === "admin" || role === "asesor_comercial";
+  const canSeeFinancials = role === "admin" || role === "asesor_comercial" || role === "contabilidad";
   const add = useAddFeriaInventory();
   const del = useDeleteFeriaInventory();
   const upd = useUpdateFeriaInventory();
@@ -107,6 +109,7 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
         </Card>
       )}
 
+      {canManage && (
       <Card className="p-4">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <h3 className="font-semibold">Asignar producto</h3>
@@ -148,6 +151,7 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
           </div>
         </div>
       </Card>
+      )}
 
       <Card>
         <Table>
@@ -159,9 +163,9 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
               <TableHead className="text-right">Despachado</TableHead>
               <TableHead className="text-right">Vendido</TableHead>
               <TableHead className="text-right">Restante</TableHead>
-              <TableHead className="text-right">Costo</TableHead>
-              <TableHead className="text-right">Precio</TableHead>
-              <TableHead></TableHead>
+              {canSeeFinancials && <TableHead className="text-right">Costo</TableHead>}
+              {canSeeFinancials && <TableHead className="text-right">Precio</TableHead>}
+              {canManage && <TableHead></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -193,19 +197,19 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
                   <TableCell className="text-right">
                     <Badge variant={remaining < 0 ? "destructive" : remaining === 0 ? "secondary" : "default"}>{remaining}</Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  {canSeeFinancials && <TableCell className="text-right">
                     {isEditing ? (
                       <Input type="number" className="h-7 w-24 ml-auto text-right" value={editForm.unit_cost}
                         onChange={(e) => setEditForm({ ...editForm, unit_cost: e.target.value })} />
                     ) : `$${(it.unit_cost || 0).toLocaleString()}`}
-                  </TableCell>
-                  <TableCell className="text-right">
+                  </TableCell>}
+                  {canSeeFinancials && <TableCell className="text-right">
                     {isEditing ? (
                       <Input type="number" className="h-7 w-24 ml-auto text-right" value={editForm.unit_price}
                         onChange={(e) => setEditForm({ ...editForm, unit_price: e.target.value })} />
                     ) : `$${it.unit_price.toLocaleString()}`}
-                  </TableCell>
-                  <TableCell className="text-right space-x-1 whitespace-nowrap">
+                  </TableCell>}
+                  {canManage && <TableCell className="text-right space-x-1 whitespace-nowrap">
                     {isEditing ? (
                       <>
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={async () => {
@@ -236,7 +240,7 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
                         </Button>
                       </>
                     )}
-                  </TableCell>
+                  </TableCell>}
                 </TableRow>
               );
             })}
