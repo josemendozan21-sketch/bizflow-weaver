@@ -41,6 +41,7 @@ export interface ProductionOrder {
   stamp_inkgel_approved_at: string | null;
   stamp_advisor_feedback: string | null;
   advisor_name?: string | null;
+  delivery_date?: string | null;
 }
 
 export interface BodyTask {

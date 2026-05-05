@@ -323,6 +323,9 @@ function OrderCard({ order, role, isAdmin, selected, onToggleSelect, onStart, on
         </div>
 
         <div className="rounded-md border p-3 text-xs space-y-1">
+          {order.delivery_date && (
+            <Row label="Fecha de entrega" value={new Date(order.delivery_date).toLocaleDateString()} />
+          )}
           <Row label="Tipo de logo" value={order.logo_type === "impresion_full" ? "Impresión full" : "Impresión básica"} />
           <Row label="Stock disponible" value={order.has_stock ? "Sí" : "No"} />
           <Row label="Tamaño" value={order.thermo_size || "-"} />

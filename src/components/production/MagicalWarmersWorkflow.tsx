@@ -556,6 +556,13 @@ function OrderCard({ order, role, isAdmin, selected, onToggleSelect, onStart, on
           <span className="text-xs text-muted-foreground">Creado: {new Date(order.created_at).toLocaleDateString()}</span>
         </div>
 
+        {order.delivery_date && (
+          <div className="rounded-md border border-primary/30 bg-primary/5 p-2 text-xs">
+            <span className="text-muted-foreground">Fecha de entrega: </span>
+            <span className="font-semibold text-foreground">{new Date(order.delivery_date).toLocaleDateString()}</span>
+          </div>
+        )}
+
         {order.current_stage === "estampacion" && (
           <div className="rounded-md border p-3 text-xs space-y-1">
             <Row label="Color de gel" value={order.gel_color || "-"} />
