@@ -8,6 +8,7 @@ import { type Feria, useFeriaSales, calcFeriaTotalCost } from "@/hooks/useFerias
 import { FeriaInventoryTab } from "./FeriaInventoryTab";
 import { FeriaSalesTab } from "./FeriaSalesTab";
 import { FeriaStaffTab } from "./FeriaStaffTab";
+import { EditFeriaDialog } from "./EditFeriaDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -37,6 +38,7 @@ export function FeriaDetail({ feria, onBack }: { feria: Feria; onBack: () => voi
   const { role } = useAuth();
   const canSeeFinancials = role === "admin" || role === "contabilidad";
   const canManageStaff = role === "admin" || role === "contabilidad" || role === "logistica";
+  const canEdit = role === "admin";
 
   const totalCosts = calcFeriaTotalCost(feria);
   const totalRevenue = useMemo(() => sales.reduce((s, x) => s + Number(x.total_amount), 0), [sales]);
@@ -56,6 +58,7 @@ export function FeriaDetail({ feria, onBack }: { feria: Feria; onBack: () => voi
             <MapPin className="h-3 w-3" /> {feria.city}{feria.venue ? ` · ${feria.venue}` : ""}
           </p>
         </div>
+        {canEdit && <EditFeriaDialog feria={feria} />}
       </div>
 
       <div className={`grid grid-cols-2 gap-3 ${canSeeFinancials ? "md:grid-cols-4" : "md:grid-cols-2"}`}>
