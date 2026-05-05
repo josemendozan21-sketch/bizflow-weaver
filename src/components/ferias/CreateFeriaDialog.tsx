@@ -6,11 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, X, Package } from "lucide-react";
+import { Plus, X, Package, RotateCcw } from "lucide-react";
 import { useCreateFeria } from "@/hooks/useFerias";
 import { useInventory } from "@/hooks/useInventory";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
+import { usePersistedState } from "@/hooks/useFormDraft";
 
 const PREDEFINED_MATERIALS = [
   "Malla exhibición",
@@ -48,18 +49,19 @@ export function CreateFeriaDialog() {
   const [open, setOpen] = useState(false);
   const create = useCreateFeria();
   const { stockItems } = useInventory();
-  const [form, setForm] = useState<any>({
+  const INITIAL_FORM = {
     name: "", city: "", venue: "", start_date: "", end_date: "", setup_date: "",
     stand_number: "", stand_size: "",
     stand_cost: "0", shipping_cost: "0", tickets_cost: "0", advertising_cost: "0",
     merchandise_cost: "0", employees_cost: "0", lodging_cost: "0", transport_cost: "0",
     food_cost: "0", other_costs: "0",
     materials_needed: [] as string[], status: "planificada", notes: "",
-  });
+  };
+  const [form, setForm] = usePersistedState<any>("draft:createFeria:form", INITIAL_FORM);
   const [customMaterial, setCustomMaterial] = useState("");
 
   // Productos a llevar: key = "brand|product_name"
-  const [selectedProducts, setSelectedProducts] = useState<Record<string, { brand: string; product_name: string; quantity: number; unit_price: number }>>({});
+  const [selectedProducts, setSelectedProducts] = usePersistedState<Record<string, { brand: string; product_name: string; quantity: number; unit_price: number }>>("draft:createFeria:products", {});
   const [magicalSearch, setMagicalSearch] = useState("");
   const [sweatspotSearch, setSweatspotSearch] = useState("");
   const [magicalOpen, setMagicalOpen] = useState(false);
@@ -164,7 +166,14 @@ export function CreateFeriaDialog() {
       initial_inventory: Object.values(selectedProducts).filter((p) => p.quantity > 0),
     });
     setOpen(false);
+    setForm(INITIAL_FORM);
     setSelectedProducts({});
+  };
+
+  const resetDraft = () => {
+    setForm(INITIAL_FORM);
+    setSelectedProducts({});
+    setCustomMaterial("");
   };
 
   return (
@@ -377,6 +386,9 @@ export function CreateFeriaDialog() {
           <div><Label>Notas</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
         </div>
         <DialogFooter>
+          <Button variant="ghost" onClick={resetDraft} type="button" title="Limpiar borrador">
+            <RotateCcw className="mr-2 h-4 w-4" />Limpiar
+          </Button>
           <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
           <Button onClick={handleSubmit} disabled={create.isPending}>Crear feria</Button>
         </DialogFooter>
