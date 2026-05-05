@@ -302,6 +302,14 @@ export function CreateFeriaDialog() {
                             <Input
                               type="number"
                               min={0}
+                              placeholder="Costo"
+                              value={selectedProducts[o.key].unit_cost || ""}
+                              onChange={(e) => updateProduct(o.key, "unit_cost", e.target.value)}
+                              className="h-7 w-24 text-right text-sm"
+                            />
+                            <Input
+                              type="number"
+                              min={0}
                               placeholder="Precio"
                               value={selectedProducts[o.key].unit_price || ""}
                               onChange={(e) => updateProduct(o.key, "unit_price", e.target.value)}
@@ -352,6 +360,14 @@ export function CreateFeriaDialog() {
                               value={selectedProducts[o.key].quantity || ""}
                               onChange={(e) => updateProduct(o.key, "quantity", e.target.value)}
                               className="h-7 w-20 text-right text-sm"
+                            />
+                            <Input
+                              type="number"
+                              min={0}
+                              placeholder="Costo"
+                              value={selectedProducts[o.key].unit_cost || ""}
+                              onChange={(e) => updateProduct(o.key, "unit_cost", e.target.value)}
+                              className="h-7 w-24 text-right text-sm"
                             />
                             <Input
                               type="number"
