@@ -1040,6 +1040,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           current_stage: string
+          delivery_date: string | null
           final_count: number | null
           finished_photo_url: string | null
           gel_color: string | null
@@ -1075,6 +1076,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           current_stage?: string
+          delivery_date?: string | null
           final_count?: number | null
           finished_photo_url?: string | null
           gel_color?: string | null
@@ -1110,6 +1112,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           current_stage?: string
+          delivery_date?: string | null
           final_count?: number | null
           finished_photo_url?: string | null
           gel_color?: string | null
