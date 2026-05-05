@@ -24,6 +24,9 @@ export function DetailedSaleForm({
     unit_price: "",
     payment_method: "efectivo",
     client_name: "",
+    client_email: "",
+    client_doc: "",
+    discount: "",
     notes: "",
   });
 
@@ -49,19 +52,27 @@ export function DetailedSaleForm({
     if (!selected) return;
     const qty = parseInt(form.quantity, 10) || 0;
     const price = parseFloat(form.unit_price) || 0;
+    const discount = Math.max(0, parseFloat(form.discount) || 0);
     if (qty <= 0) return;
+    const subtotal = qty * price;
+    const total = Math.max(0, subtotal - discount);
+    const noteParts: string[] = [];
+    if (form.client_email) noteParts.push(`Email: ${form.client_email}`);
+    if (form.client_doc) noteParts.push(`Doc: ${form.client_doc}`);
+    if (discount > 0) noteParts.push(`Desc: $${discount.toLocaleString()}`);
+    if (form.notes) noteParts.push(form.notes);
     await add.mutateAsync({
       feria_id: feriaId,
       brand: selected.brand,
       product_name: selected.product_name,
       quantity: qty,
       unit_price: price,
-      total_amount: qty * price,
+      total_amount: total,
       payment_method: form.payment_method,
       client_name: form.client_name || null,
-      notes: form.notes || null,
+      notes: noteParts.join(" | ") || null,
     });
-    setForm({ ...form, inventory_id: "", quantity: "1", unit_price: "", client_name: "", notes: "" });
+    setForm({ ...form, inventory_id: "", quantity: "1", unit_price: "", client_name: "", client_email: "", client_doc: "", discount: "", notes: "" });
   };
 
   return (
@@ -95,15 +106,28 @@ export function DetailedSaleForm({
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="efectivo">Efectivo</SelectItem>
+              <SelectItem value="tarjeta">Tarjeta</SelectItem>
+              <SelectItem value="nequi">Nequi</SelectItem>
               <SelectItem value="transferencia">Transferencia</SelectItem>
-              <SelectItem value="datafono">Datáfono</SelectItem>
               <SelectItem value="otro">Otro</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div>
-          <Label>Cliente (opcional)</Label>
+          <Label>Nombre cliente (opcional)</Label>
           <Input value={form.client_name} onChange={(e) => setForm({ ...form, client_name: e.target.value })} />
+        </div>
+        <div>
+          <Label>Email (opcional)</Label>
+          <Input type="email" value={form.client_email} onChange={(e) => setForm({ ...form, client_email: e.target.value })} />
+        </div>
+        <div>
+          <Label>Cédula / NIT (opcional)</Label>
+          <Input value={form.client_doc} onChange={(e) => setForm({ ...form, client_doc: e.target.value })} />
+        </div>
+        <div>
+          <Label>Descuento ($)</Label>
+          <Input type="number" min={0} value={form.discount} placeholder="0" onChange={(e) => setForm({ ...form, discount: e.target.value })} />
         </div>
         <div>
           <Label>Notas</Label>
