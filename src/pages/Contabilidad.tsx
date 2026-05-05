@@ -434,6 +434,71 @@ const Contabilidad = () => {
           )}
         </TabsContent>
 
+        <TabsContent value="facturar">
+          {toInvoice.length === 0 ? (
+            <Card><CardContent className="pt-6"><p className="text-muted-foreground text-center py-8">No hay pedidos listos para facturar (despachados o listos para entregar).</p></CardContent></Card>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={selectedToInvoice.size === toInvoice.length && toInvoice.length > 0} onCheckedChange={toggleAllToInvoice} />
+                  <span className="text-sm text-muted-foreground">{selectedToInvoice.size > 0 ? `${selectedToInvoice.size} seleccionado(s)` : "Seleccionar todos"}</span>
+                </div>
+                {selectedToInvoice.size > 0 && (
+                  <Button size="sm" variant="outline" onClick={() => handleExportSelected(selectedToInvoice, "facturar")}>
+                    <Download className="h-4 w-4 mr-1" />Exportar selección ({selectedToInvoice.size})
+                  </Button>
+                )}
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {toInvoice.map((order) => {
+                  const blocked = !canInvoice(order);
+                  const reason = getBlockReason(order);
+                  return (
+                    <div key={order.id} className="relative">
+                      <div className="absolute top-4 right-4 z-10">
+                        <Checkbox checked={selectedToInvoice.has(order.id)} onCheckedChange={() => toggleSelection(order.id, selectedToInvoice, setSelectedToInvoice)} />
+                      </div>
+                      <OrderCard
+                        order={order}
+                        actionSlot={
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 dark:text-emerald-300 rounded-md p-2">
+                              <FileText className="h-4 w-4 shrink-0" />
+                              <span>Estado: {order.production_status === "despachado" ? "Despachado" : order.production_status === "entregado" ? "Entregado" : "Listo para despacho"}</span>
+                            </div>
+                            {blocked && reason && (
+                              <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 rounded-md p-2">
+                                <Clock className="h-4 w-4 shrink-0" />
+                                <span>{reason}</span>
+                              </div>
+                            )}
+                            <div className="flex gap-2">
+                              {!isReadOnly && !blocked && (
+                                <div className="flex-1">
+                                  <UploadInvoiceButton order={order} onUploaded={refreshOrders} />
+                                </div>
+                              )}
+                              <Button size="sm" variant="outline" onClick={() => handleExportSingle(order)}>
+                                <Download className="h-4 w-4" />
+                              </Button>
+                              {role === "admin" && (
+                                <Button size="sm" variant="destructive" onClick={() => handleDeleteOrder(order.id)} title="Eliminar pedido">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        }
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </TabsContent>
+
         <TabsContent value="facturados">
           {invoiced.length === 0 ? (
             <Card><CardContent className="pt-6"><p className="text-muted-foreground text-center py-8">No hay pedidos facturados aún.</p></CardContent></Card>
