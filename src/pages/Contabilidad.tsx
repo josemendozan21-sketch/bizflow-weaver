@@ -189,6 +189,7 @@ const OrderCard = ({ order, actionSlot }: { order: Order; actionSlot?: React.Rea
           {order.client_nit && <div><span className="text-muted-foreground">{isMayor ? "RUT" : "Cédula"}: </span><span className="font-medium">{order.client_nit}</span></div>}
           {order.client_address && <div className="col-span-2"><span className="text-muted-foreground">Dirección: </span><span className="font-medium">{order.client_address}</span></div>}
           {order.client_city && <div><span className="text-muted-foreground">Ciudad: </span><span className="font-medium">{order.client_city}</span></div>}
+          {order.delivery_date && <div><span className="text-muted-foreground">Fecha de entrega: </span><span className="font-medium">{order.delivery_date}</span></div>}
           {(order as any).is_recompra && (
             <div className="col-span-2">
               <Badge variant="outline" className="border-primary text-primary">🔄 Recompra</Badge>
