@@ -507,6 +507,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [costoAdicional, setCostoAdicional] = usePersistedState("ventas:mw:costoAdicional", "");
+  const [logoFileState, setLogoFileState] = useState<File | null>(null);
+  const [rutFileState, setRutFileState] = useState<File | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   useFormDraft(formRef, "ventas:mw:fields");
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -658,10 +660,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const form = e.target as HTMLFormElement;
     const fd = new FormData(form);
     const clientName = fd.get("mw_nombre") as string;
-    const rutFile = fd.get("mw_rut") as File;
     const personalizacion = (fd.get("mw_personalizacion") as string) || "";
     const observaciones = (fd.get("mw_observaciones") as string) || "";
-    const logoFile = fd.get("mw_logo") as File;
+    const rutFile = rutFileState;
+    const logoFile = logoFileState;
     const logoNombre = ((fd.get("mw_logo_nombre") as string) || "").trim();
     const fechaRequerida = fd.get("mw_fechaRequerida") as string;
 
@@ -937,6 +939,9 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       "ventas:mw:noLogo","ventas:mw:needsLogoAdjustment","ventas:mw:costoAdicional",
       "ventas:mw:fields",
     ].forEach(clearFormDraft);
+    setLogoFileState(null);
+    setRutFileState(null);
+    setPaymentProofFile(null);
     onReset();
   };
 
@@ -1202,8 +1207,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Archivos adjuntos</legend>
             <div className="grid gap-4 sm:grid-cols-2">
-              <FileField label="Adjuntar logo" name="mw_logo" />
-              <FileField label="Adjuntar RUT de la empresa (opcional)" name="mw_rut" />
+              <FileField label="Adjuntar logo" name="mw_logo" value={logoFileState} onChange={setLogoFileState} accept="image/*,.pdf,.svg,.ai" />
+              <FileField label="Adjuntar RUT de la empresa (opcional)" name="mw_rut" value={rutFileState} onChange={setRutFileState} accept="image/*,.pdf" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="mw_logo_nombre">Nombre o referencia del logo</Label>
@@ -1320,6 +1325,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const [ssNoLogo, setSsNoLogo] = usePersistedState("ventas:ss:noLogo", false);
   const [ssNeedsLogoAdjustment, setSsNeedsLogoAdjustment] = usePersistedState("ventas:ss:needsLogoAdjustment", false);
   const [ssPaymentProofFile, setSsPaymentProofFile] = useState<File | null>(null);
+  const [ssLogoFileState, setSsLogoFileState] = useState<File | null>(null);
+  const [ssRutFileState, setSsRutFileState] = useState<File | null>(null);
   const ssFormRef = useRef<HTMLFormElement>(null);
   useFormDraft(ssFormRef, "ventas:ss:fields");
   const [ssConfirmOpen, setSsConfirmOpen] = useState(false);
@@ -1364,10 +1371,10 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     const form = e.target as HTMLFormElement;
     const fd = new FormData(form);
     const clientName = fd.get("ss_nombre") as string;
-    const rutFile = fd.get("ss_rut") as File;
     const personalizacion = (fd.get("ss_personalizacion") as string) || "";
     const observaciones = (fd.get("ss_observaciones") as string) || "";
-    const logoFile = fd.get("ss_logo") as File;
+    const rutFile = ssRutFileState;
+    const logoFile = ssLogoFileState;
     const logoNombre = ((fd.get("ss_logo_nombre") as string) || "").trim();
     const fechaRequerida = fd.get("ss_fechaRequerida") as string;
 
@@ -1624,6 +1631,9 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       "ventas:ss:isRecompra","ventas:ss:noLogo","ventas:ss:needsLogoAdjustment",
       "ventas:ss:fields",
     ].forEach(clearFormDraft);
+    setSsLogoFileState(null);
+    setSsRutFileState(null);
+    setSsPaymentProofFile(null);
     onReset();
   };
 
@@ -1830,8 +1840,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Archivos adjuntos</legend>
             <div className="grid gap-4 sm:grid-cols-2">
-              <FileField label="Adjuntar logo" name="ss_logo" />
-              <FileField label="Adjuntar RUT de la empresa (opcional)" name="ss_rut" />
+              <FileField label="Adjuntar logo" name="ss_logo" value={ssLogoFileState} onChange={setSsLogoFileState} accept="image/*,.pdf,.svg,.ai" />
+              <FileField label="Adjuntar RUT de la empresa (opcional)" name="ss_rut" value={ssRutFileState} onChange={setSsRutFileState} accept="image/*,.pdf" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="ss_logo_nombre">Nombre o referencia del logo</Label>
@@ -2410,12 +2420,36 @@ function Field({ label, name, type = "text", required }: { label: string; name: 
   );
 }
 
-function FileField({ label, name }: { label: string; name: string }) {
+function FileField({
+  label,
+  name,
+  value,
+  onChange,
+  accept,
+}: {
+  label: string;
+  name: string;
+  value?: File | null;
+  onChange?: (file: File | null) => void;
+  accept?: string;
+}) {
   return (
     <div className="space-y-1.5">
       <Label htmlFor={name}>{label}</Label>
       <div className="relative">
-        <Input id={name} name={name} type="file" className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary" />
+        <Input
+          id={name}
+          name={name}
+          type="file"
+          accept={accept}
+          onChange={(e) => onChange?.(e.target.files?.[0] || null)}
+          className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary"
+        />
+        {value && (
+          <p className="mt-1 text-xs text-muted-foreground truncate">
+            ✓ {value.name}
+          </p>
+        )}
       </div>
     </div>
   );
