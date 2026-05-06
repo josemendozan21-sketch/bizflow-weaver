@@ -1631,6 +1631,9 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       "ventas:ss:isRecompra","ventas:ss:noLogo","ventas:ss:needsLogoAdjustment",
       "ventas:ss:fields",
     ].forEach(clearFormDraft);
+    setSsLogoFileState(null);
+    setSsRutFileState(null);
+    setSsPaymentProofFile(null);
     onReset();
   };
 
