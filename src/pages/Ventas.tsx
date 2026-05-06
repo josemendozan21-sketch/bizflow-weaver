@@ -1940,25 +1940,27 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
   const queryClient = useQueryClient();
   const brandLabel = brand === "sweatspot" ? "Sweatspot" : "Magical Warmers";
   const isMayor = saleType === "mayor";
-  const [paymentMethod, setPaymentMethod] = useState<"contra_entrega" | "pagado">("contra_entrega");
+  const draftKey = `ventas:generic:${brand}:${saleType}`;
+  const [paymentMethod, setPaymentMethod] = usePersistedState<"contra_entrega" | "pagado">(`${draftKey}:paymentMethod`, "contra_entrega");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [shippingCost, setShippingCost] = useState("");
+  const [shippingCost, setShippingCost] = usePersistedState<string>(`${draftKey}:shippingCost`, "");
+  const [genericPaymentProofFile, setGenericPaymentProofFile] = useState<File | null>(null);
   const { stockItems } = useInventory();
   const genericFormRef = useRef<HTMLFormElement>(null);
   const [genericConfirmOpen, setGenericConfirmOpen] = useState(false);
 
   // Multi-product lines
-  const [productLines, setProductLines] = useState<RetailProductLine[]>([createEmptyRetailLine()]);
+  const [productLines, setProductLines] = usePersistedState<RetailProductLine[]>(`${draftKey}:productLines`, [createEmptyRetailLine()]);
 
   // Controlled fields for SmartPaste
-  const [nombre, setNombre] = useState("");
-  const [telefono, setTelefono] = useState("");
-  const [cedula, setCedula] = useState("");
-  const [email, setEmail] = useState("");
-  const [ciudad, setCiudad] = useState("");
-  const [departamento, setDepartamento] = useState("");
-  const [direccion, setDireccion] = useState("");
-  const [notas, setNotas] = useState("");
+  const [nombre, setNombre] = usePersistedState<string>(`${draftKey}:nombre`, "");
+  const [telefono, setTelefono] = usePersistedState<string>(`${draftKey}:telefono`, "");
+  const [cedula, setCedula] = usePersistedState<string>(`${draftKey}:cedula`, "");
+  const [email, setEmail] = usePersistedState<string>(`${draftKey}:email`, "");
+  const [ciudad, setCiudad] = usePersistedState<string>(`${draftKey}:ciudad`, "");
+  const [departamento, setDepartamento] = usePersistedState<string>(`${draftKey}:departamento`, "");
+  const [direccion, setDireccion] = usePersistedState<string>(`${draftKey}:direccion`, "");
+  const [notas, setNotas] = usePersistedState<string>(`${draftKey}:notas`, "");
 
   const handleSmartPaste = (data: ParsedOrderData) => {
     if (data.cliente?.nombre) setNombre(data.cliente.nombre);
