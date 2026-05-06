@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
  */
 export function useFormDraft(formRef: React.RefObject<HTMLFormElement>, key: string, ready = true) {
   const restored = useRef(false);
+  const [restoredTick, setRestoredTick] = useState(0);
 
   // Restore on mount
   useEffect(() => {
@@ -14,7 +15,7 @@ export function useFormDraft(formRef: React.RefObject<HTMLFormElement>, key: str
     if (!form) return;
     try {
       const raw = localStorage.getItem(key);
-      if (!raw) { restored.current = true; return; }
+      if (!raw) { restored.current = true; setRestoredTick((t) => t + 1); return; }
       const data = JSON.parse(raw) as Record<string, string>;
       // Defer one tick to ensure inputs are rendered
       requestAnimationFrame(() => {
@@ -25,13 +26,15 @@ export function useFormDraft(formRef: React.RefObject<HTMLFormElement>, key: str
           el.value = value;
           el.dispatchEvent(new Event("input", { bubbles: true }));
         });
+        restored.current = true;
+        setRestoredTick((t) => t + 1);
       });
     } catch {/* ignore */}
-    restored.current = true;
   }, [formRef, key, ready]);
 
   // Save on input
   useEffect(() => {
+    if (!restored.current) return; // never overwrite the draft before we restored it
     const form = formRef.current;
     if (!form) return;
     const handler = () => {
@@ -51,7 +54,7 @@ export function useFormDraft(formRef: React.RefObject<HTMLFormElement>, key: str
       form.removeEventListener("input", handler);
       form.removeEventListener("change", handler);
     };
-  }, [formRef, key]);
+  }, [formRef, key, restoredTick]);
 }
 
 export function clearFormDraft(key: string) {
