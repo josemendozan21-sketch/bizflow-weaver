@@ -507,6 +507,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [costoAdicional, setCostoAdicional] = usePersistedState("ventas:mw:costoAdicional", "");
+  const [logoFileState, setLogoFileState] = useState<File | null>(null);
+  const [rutFileState, setRutFileState] = useState<File | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   useFormDraft(formRef, "ventas:mw:fields");
   const [confirmOpen, setConfirmOpen] = useState(false);
