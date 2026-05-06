@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -41,11 +41,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
     let roleRequestId = 0;
+    const currentUserIdRef = { current: null as string | null };
 
     const applySession = (nextSession: Session | null) => {
       const currentRequestId = ++roleRequestId;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
+      currentUserIdRef.current = nextSession?.user?.id ?? null;
 
       if (nextSession?.user) {
         setLoading(true);
@@ -64,19 +66,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        // Si el usuario sigue siendo el mismo, NUNCA reiniciar loading ni refetch del rol.
-        // En móvil (Samsung Browser/Chrome) abrir el selector de archivos pausa la pestaña
-        // y al volver Supabase dispara SIGNED_IN/TOKEN_REFRESHED. Si entramos en applySession
-        // se desmontan páginas y formularios (se pierde el archivo cargado y el estado).
-        setUser((prevUser) => {
-          if (session?.user && prevUser && prevUser.id === session.user.id) {
-            setSession(session);
-            return session.user;
-          }
-          // Cambio real de sesión (login, logout, otro usuario): aplicar normalmente.
-          applySession(session);
-          return prevUser;
-        });
+        // Si el usuario sigue siendo el mismo, NO reiniciar loading ni refetch del rol.
+        // En móvil (Samsung Browser/Chrome) al abrir el selector de archivos la pestaña
+        // se pausa y al volver Supabase dispara SIGNED_IN/TOKEN_REFRESHED. Si entramos en
+        // applySession se desmonta toda la página (LoadingScreen) y se pierde el archivo
+        // y el estado del formulario.
+        if (session?.user && currentUserIdRef.current === session.user.id) {
+          setSession(session);
+          setUser(session.user);
+          return;
+        }
+        applySession(session);
       }
     );
 
