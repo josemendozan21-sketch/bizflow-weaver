@@ -939,6 +939,9 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       "ventas:mw:noLogo","ventas:mw:needsLogoAdjustment","ventas:mw:costoAdicional",
       "ventas:mw:fields",
     ].forEach(clearFormDraft);
+    setLogoFileState(null);
+    setRutFileState(null);
+    setPaymentProofFile(null);
     onReset();
   };
 
