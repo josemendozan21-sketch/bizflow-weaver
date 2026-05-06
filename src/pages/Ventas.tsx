@@ -1940,25 +1940,27 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
   const queryClient = useQueryClient();
   const brandLabel = brand === "sweatspot" ? "Sweatspot" : "Magical Warmers";
   const isMayor = saleType === "mayor";
-  const [paymentMethod, setPaymentMethod] = useState<"contra_entrega" | "pagado">("contra_entrega");
+  const draftKey = `ventas:generic:${brand}:${saleType}`;
+  const [paymentMethod, setPaymentMethod] = usePersistedState<"contra_entrega" | "pagado">(`${draftKey}:paymentMethod`, "contra_entrega");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [shippingCost, setShippingCost] = useState("");
+  const [shippingCost, setShippingCost] = usePersistedState<string>(`${draftKey}:shippingCost`, "");
+  const [genericPaymentProofFile, setGenericPaymentProofFile] = useState<File | null>(null);
   const { stockItems } = useInventory();
   const genericFormRef = useRef<HTMLFormElement>(null);
   const [genericConfirmOpen, setGenericConfirmOpen] = useState(false);
 
   // Multi-product lines
-  const [productLines, setProductLines] = useState<RetailProductLine[]>([createEmptyRetailLine()]);
+  const [productLines, setProductLines] = usePersistedState<RetailProductLine[]>(`${draftKey}:productLines`, [createEmptyRetailLine()]);
 
   // Controlled fields for SmartPaste
-  const [nombre, setNombre] = useState("");
-  const [telefono, setTelefono] = useState("");
-  const [cedula, setCedula] = useState("");
-  const [email, setEmail] = useState("");
-  const [ciudad, setCiudad] = useState("");
-  const [departamento, setDepartamento] = useState("");
-  const [direccion, setDireccion] = useState("");
-  const [notas, setNotas] = useState("");
+  const [nombre, setNombre] = usePersistedState<string>(`${draftKey}:nombre`, "");
+  const [telefono, setTelefono] = usePersistedState<string>(`${draftKey}:telefono`, "");
+  const [cedula, setCedula] = usePersistedState<string>(`${draftKey}:cedula`, "");
+  const [email, setEmail] = usePersistedState<string>(`${draftKey}:email`, "");
+  const [ciudad, setCiudad] = usePersistedState<string>(`${draftKey}:ciudad`, "");
+  const [departamento, setDepartamento] = usePersistedState<string>(`${draftKey}:departamento`, "");
+  const [direccion, setDireccion] = usePersistedState<string>(`${draftKey}:direccion`, "");
+  const [notas, setNotas] = usePersistedState<string>(`${draftKey}:notas`, "");
 
   const handleSmartPaste = (data: ParsedOrderData) => {
     if (data.cliente?.nombre) setNombre(data.cliente.nombre);
@@ -2043,7 +2045,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
 
       // Upload payment proof if provided
       let paymentProofUrl: string | null = null;
-      const paymentProofFile = fd.get("payment_proof") as File;
+      const paymentProofFile = genericPaymentProofFile;
       if (paymentProofFile && paymentProofFile.size > 0) {
         const ext = paymentProofFile.name.split(".").pop();
         const path = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`;
@@ -2164,6 +2166,13 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
       toast.success("Pedido al por menor creado", {
         description: `${displayName} — ${summary}`,
       });
+      // Clear draft on success
+      [
+        "paymentMethod","shippingCost","productLines","nombre","telefono","cedula","email","ciudad","departamento","direccion","notas",
+      ].forEach((k) => { try { localStorage.removeItem(`${draftKey}:${k}`); } catch {/* ignore */} });
+      setProductLines([createEmptyRetailLine()]);
+      setNombre(""); setTelefono(""); setCedula(""); setEmail(""); setCiudad(""); setDepartamento(""); setDireccion(""); setNotas("");
+      setShippingCost(""); setPaymentMethod("contra_entrega"); setGenericPaymentProofFile(null);
     }
 
     setIsSubmitting(false);
@@ -2310,7 +2319,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
                 </div>
               )}
 
-              <FileField label="Adjuntar soporte de pago (si aplica)" name="payment_proof" />
+              <FileField label="Adjuntar soporte de pago (si aplica)" name="payment_proof" value={genericPaymentProofFile} onChange={setGenericPaymentProofFile} />
             </fieldset>
           )}
 
