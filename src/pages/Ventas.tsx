@@ -1322,6 +1322,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const [ssNoLogo, setSsNoLogo] = usePersistedState("ventas:ss:noLogo", false);
   const [ssNeedsLogoAdjustment, setSsNeedsLogoAdjustment] = usePersistedState("ventas:ss:needsLogoAdjustment", false);
   const [ssPaymentProofFile, setSsPaymentProofFile] = useState<File | null>(null);
+  const [ssLogoFileState, setSsLogoFileState] = useState<File | null>(null);
+  const [ssRutFileState, setSsRutFileState] = useState<File | null>(null);
   const ssFormRef = useRef<HTMLFormElement>(null);
   useFormDraft(ssFormRef, "ventas:ss:fields");
   const [ssConfirmOpen, setSsConfirmOpen] = useState(false);
