@@ -2045,7 +2045,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
 
       // Upload payment proof if provided
       let paymentProofUrl: string | null = null;
-      const paymentProofFile = fd.get("payment_proof") as File;
+      const paymentProofFile = genericPaymentProofFile;
       if (paymentProofFile && paymentProofFile.size > 0) {
         const ext = paymentProofFile.name.split(".").pop();
         const path = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`;
@@ -2312,7 +2312,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
                 </div>
               )}
 
-              <FileField label="Adjuntar soporte de pago (si aplica)" name="payment_proof" />
+              <FileField label="Adjuntar soporte de pago (si aplica)" name="payment_proof" value={genericPaymentProofFile} onChange={setGenericPaymentProofFile} />
             </fieldset>
           )}
 
