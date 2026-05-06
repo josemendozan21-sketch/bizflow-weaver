@@ -660,10 +660,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const form = e.target as HTMLFormElement;
     const fd = new FormData(form);
     const clientName = fd.get("mw_nombre") as string;
-    const rutFile = fd.get("mw_rut") as File;
     const personalizacion = (fd.get("mw_personalizacion") as string) || "";
     const observaciones = (fd.get("mw_observaciones") as string) || "";
-    const logoFile = fd.get("mw_logo") as File;
+    const rutFile = rutFileState;
+    const logoFile = logoFileState;
     const logoNombre = ((fd.get("mw_logo_nombre") as string) || "").trim();
     const fechaRequerida = fd.get("mw_fechaRequerida") as string;
 
