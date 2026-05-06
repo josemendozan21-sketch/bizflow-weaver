@@ -2166,6 +2166,13 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
       toast.success("Pedido al por menor creado", {
         description: `${displayName} — ${summary}`,
       });
+      // Clear draft on success
+      [
+        "paymentMethod","shippingCost","productLines","nombre","telefono","cedula","email","ciudad","departamento","direccion","notas",
+      ].forEach((k) => { try { localStorage.removeItem(`${draftKey}:${k}`); } catch {/* ignore */} });
+      setProductLines([createEmptyRetailLine()]);
+      setNombre(""); setTelefono(""); setCedula(""); setEmail(""); setCiudad(""); setDepartamento(""); setDireccion(""); setNotas("");
+      setShippingCost(""); setPaymentMethod("contra_entrega"); setGenericPaymentProofFile(null);
     }
 
     setIsSubmitting(false);
