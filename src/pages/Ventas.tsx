@@ -1204,8 +1204,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Archivos adjuntos</legend>
             <div className="grid gap-4 sm:grid-cols-2">
-              <FileField label="Adjuntar logo" name="mw_logo" />
-              <FileField label="Adjuntar RUT de la empresa (opcional)" name="mw_rut" />
+              <FileField label="Adjuntar logo" name="mw_logo" value={logoFileState} onChange={setLogoFileState} accept="image/*,.pdf,.svg,.ai" />
+              <FileField label="Adjuntar RUT de la empresa (opcional)" name="mw_rut" value={rutFileState} onChange={setRutFileState} accept="image/*,.pdf" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="mw_logo_nombre">Nombre o referencia del logo</Label>
