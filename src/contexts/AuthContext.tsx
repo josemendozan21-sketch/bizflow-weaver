@@ -64,15 +64,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        // Ignorar TOKEN_REFRESHED si la sesión sigue siendo del mismo usuario:
-        // evita un re-fetch del rol que durante un instante deja role=null
-        // y hace que las consultas dependientes devuelvan vacío (parpadeo).
-        if (event === "TOKEN_REFRESHED" && session?.user) {
-          setSession(session);
-          setUser(session.user);
-          return;
-        }
-        applySession(session);
+        // Si el usuario sigue siendo el mismo, NUNCA reiniciar loading ni refetch del rol.
+        // En móvil (Samsung Browser/Chrome) abrir el selector de archivos pausa la pestaña
+        // y al volver Supabase dispara SIGNED_IN/TOKEN_REFRESHED. Si entramos en applySession
+        // se desmontan páginas y formularios (se pierde el archivo cargado y el estado).
+        setUser((prevUser) => {
+          if (session?.user && prevUser && prevUser.id === session.user.id) {
+            setSession(session);
+            return session.user;
+          }
+          // Cambio real de sesión (login, logout, otro usuario): aplicar normalmente.
+          applySession(session);
+          return prevUser;
+        });
       }
     );
 
