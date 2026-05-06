@@ -2410,12 +2410,36 @@ function Field({ label, name, type = "text", required }: { label: string; name: 
   );
 }
 
-function FileField({ label, name }: { label: string; name: string }) {
+function FileField({
+  label,
+  name,
+  value,
+  onChange,
+  accept,
+}: {
+  label: string;
+  name: string;
+  value?: File | null;
+  onChange?: (file: File | null) => void;
+  accept?: string;
+}) {
   return (
     <div className="space-y-1.5">
       <Label htmlFor={name}>{label}</Label>
       <div className="relative">
-        <Input id={name} name={name} type="file" className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary" />
+        <Input
+          id={name}
+          name={name}
+          type="file"
+          accept={accept}
+          onChange={(e) => onChange?.(e.target.files?.[0] || null)}
+          className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary"
+        />
+        {value && (
+          <p className="mt-1 text-xs text-muted-foreground truncate">
+            ✓ {value.name}
+          </p>
+        )}
       </div>
     </div>
   );
