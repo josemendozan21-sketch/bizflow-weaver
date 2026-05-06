@@ -1368,10 +1368,10 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     const form = e.target as HTMLFormElement;
     const fd = new FormData(form);
     const clientName = fd.get("ss_nombre") as string;
-    const rutFile = fd.get("ss_rut") as File;
     const personalizacion = (fd.get("ss_personalizacion") as string) || "";
     const observaciones = (fd.get("ss_observaciones") as string) || "";
-    const logoFile = fd.get("ss_logo") as File;
+    const rutFile = ssRutFileState;
+    const logoFile = ssLogoFileState;
     const logoNombre = ((fd.get("ss_logo_nombre") as string) || "").trim();
     const fechaRequerida = fd.get("ss_fechaRequerida") as string;
 
