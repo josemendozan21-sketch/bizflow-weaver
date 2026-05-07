@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Boxes, Inbox, ClipboardList } from "lucide-react";
+import { ArrowLeft, Boxes, Inbox } from "lucide-react";
 import BrandSelectionCards, { type InventoryNotification } from "@/components/inventory/BrandSelectionCards";
 import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
 import SupplyReceptionPanel from "@/components/inventory/SupplyReceptionPanel";
@@ -43,9 +43,6 @@ const InventariosRoleView = () => {
           <TabsTrigger value="stock" className="gap-1.5">
             <Boxes className="h-4 w-4" /> Inventario por marca
           </TabsTrigger>
-          <TabsTrigger value="solicitudes" className="gap-1.5">
-            <ClipboardList className="h-4 w-4" /> Solicitudes
-          </TabsTrigger>
           <TabsTrigger value="recepcion" className="gap-1.5">
             <Inbox className="h-4 w-4" /> Recepción de pedidos
           </TabsTrigger>
@@ -76,11 +73,8 @@ const InventariosRoleView = () => {
           )}
         </TabsContent>
 
-        <TabsContent value="solicitudes" className="mt-4">
+        <TabsContent value="recepcion" className="mt-4 space-y-6">
           <InventoryRequestsPanel />
-        </TabsContent>
-
-        <TabsContent value="recepcion" className="mt-4">
           <SupplyReceptionPanel />
         </TabsContent>
       </Tabs>
