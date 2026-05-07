@@ -19,6 +19,8 @@ import { toast } from "sonner";
 import { differenceInDays, format } from "date-fns";
 import { es } from "date-fns/locale";
 import ShippingLabelDialog from "@/components/logistics/ShippingLabelDialog";
+import CreateInventoryRequestDialog from "@/components/inventory/CreateInventoryRequestDialog";
+import InventoryRequestsPanel from "@/components/inventory/InventoryRequestsPanel";
 
 function exportOrdersToCSV(orders: Order[], brandLabel: (b: string) => string, saleLabel: (t: string) => string) {
   const headers = ["Cliente", "Cédula/NIT", "Teléfono", "Email", "Ciudad", "Dirección", "Marca", "Tipo", "Producto", "Unidades", "Método de pago", "Valor total", "Abono", "Saldo pendiente", "Costo envío", "Observaciones"];
@@ -322,9 +324,12 @@ const Logistica = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Logística</h1>
-        <p className="text-muted-foreground">Gestión de despachos y seguimiento de envíos</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Logística</h1>
+          <p className="text-muted-foreground">Gestión de despachos y seguimiento de envíos</p>
+        </div>
+        <CreateInventoryRequestDialog defaultCategory="producto_terminado" />
       </div>
 
       {/* Summary cards */}
