@@ -72,6 +72,7 @@ const Produccion = () => {
       ) : (
         <SweatspotWorkflow />
       )}
+      {!isReadOnly && <InventoryRequestsPanel />}
     </div>
   );
 };
