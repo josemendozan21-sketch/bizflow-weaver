@@ -7,10 +7,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CheckCircle2, MapPin, Calendar, Truck, Pencil } from "lucide-react";
+import { CheckCircle2, MapPin, Calendar, Truck, Pencil, Plus, X } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useFerias, useAllDispatchRequests, useFeriaInventory, useConfirmDispatch } from "@/hooks/useFerias";
+
+const MONTAJE_SUGERIDOS = [
+  "Mesa",
+  "Silla",
+  "Rack",
+  "Mantel",
+  "Exhibidor",
+  "Banner",
+  "Iluminación",
+  "Caja registradora",
+];
 
 export function FeriaDispatchTab() {
   const { data: ferias = [] } = useFerias();
@@ -45,8 +56,26 @@ function FeriaDispatchCard({ feria, request }: { feria: any; request: any }) {
 
   const [quantities, setQuantities] = useState<Record<string, string>>({});
   const [furniture, setFurniture] = useState(request.furniture_dispatched || false);
-  const [furnitureItems, setFurnitureItems] = useState((request.furniture_items || []).join(", "));
+  const initialItems: string[] = request.furniture_items || [];
+  const [selectedItems, setSelectedItems] = useState<string[]>(initialItems);
+  const [extraItem, setExtraItem] = useState("");
   const [notes, setNotes] = useState(request.dispatch_notes || "");
+
+  // Items personalizados que ya estaban guardados pero no son sugeridos
+  const customItems = selectedItems.filter((i) => !MONTAJE_SUGERIDOS.includes(i));
+
+  const toggleItem = (name: string) => {
+    setSelectedItems((prev) =>
+      prev.includes(name) ? prev.filter((i) => i !== name) : [...prev, name]
+    );
+  };
+
+  const addExtra = () => {
+    const v = extraItem.trim();
+    if (!v) return;
+    if (!selectedItems.includes(v)) setSelectedItems([...selectedItems, v]);
+    setExtraItem("");
+  };
 
   const getQty = (it: any) => {
     if (isDispatched) return it.quantity_dispatched;
@@ -60,10 +89,7 @@ function FeriaDispatchCard({ feria, request }: { feria: any; request: any }) {
       feria_id: feria.id,
       lines: inventory.map((it) => ({ id: it.id, quantity_dispatched: getQty(it) })),
       furniture_dispatched: furniture,
-      furniture_items: furnitureItems
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
+      furniture_items: selectedItems,
       dispatch_notes: notes,
     });
     setEditing(false);
@@ -82,15 +108,22 @@ function FeriaDispatchCard({ feria, request }: { feria: any; request: any }) {
               </span>
             </div>
           </div>
-          {request.status === "despachado" && !editing ? (
-            <Badge variant="outline" className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30">
-              <CheckCircle2 className="h-3 w-3 mr-1" /> Despachado
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30">
-              <Truck className="h-3 w-3 mr-1" /> {editing ? "Editando" : "Pendiente"}
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {request.status === "despachado" && !editing ? (
+              <Badge variant="outline" className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30">
+                <CheckCircle2 className="h-3 w-3 mr-1" /> Despachado
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30">
+                <Truck className="h-3 w-3 mr-1" /> {editing ? "Editando" : "Pendiente"}
+              </Badge>
+            )}
+            {request.status === "despachado" && !editing && (
+              <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+                <Pencil className="mr-2 h-4 w-4" /> Modificar despacho
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -148,23 +181,78 @@ function FeriaDispatchCard({ feria, request }: { feria: any; request: any }) {
           </TableBody>
         </Table>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Checkbox
                 checked={furniture}
                 onCheckedChange={(c) => setFurniture(!!c)}
                 disabled={isDispatched}
               />
-              <Label className="!mt-0">¿Despacha mobiliario?</Label>
+              <Label className="!mt-0">¿Despacha items de montaje?</Label>
             </div>
             {furniture && (
-              <Input
-                placeholder="mesa, silla, rack…"
-                value={furnitureItems}
-                onChange={(e) => setFurnitureItems(e.target.value)}
-                disabled={isDispatched}
-              />
+              <div className="space-y-3 rounded-md border p-3 bg-muted/30">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Marca los items de montaje que estás enviando con este despacho.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {MONTAJE_SUGERIDOS.map((item) => (
+                      <label key={item} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <Checkbox
+                          checked={selectedItems.includes(item)}
+                          onCheckedChange={() => toggleItem(item)}
+                          disabled={isDispatched}
+                        />
+                        <span>{item}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {customItems.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Items adicionales</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {customItems.map((item) => (
+                        <Badge key={item} variant="secondary" className="gap-1">
+                          {item}
+                          {!isDispatched && (
+                            <button
+                              type="button"
+                              onClick={() => toggleItem(item)}
+                              className="hover:text-destructive"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          )}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {!isDispatched && (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Agregar otro item adicional…"
+                      value={extraItem}
+                      onChange={(e) => setExtraItem(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addExtra();
+                        }
+                      }}
+                      className="h-8"
+                    />
+                    <Button type="button" size="sm" variant="outline" onClick={addExtra}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
           <div>
@@ -179,11 +267,6 @@ function FeriaDispatchCard({ feria, request }: { feria: any; request: any }) {
         </div>
 
         <div className="flex justify-end gap-2">
-          {request.status === "despachado" && !editing && (
-            <Button variant="outline" onClick={() => setEditing(true)}>
-              <Pencil className="mr-2 h-4 w-4" /> Editar despacho
-            </Button>
-          )}
           {editing && (
             <Button variant="ghost" onClick={() => { setEditing(false); setQuantities({}); }}>
               Cancelar
