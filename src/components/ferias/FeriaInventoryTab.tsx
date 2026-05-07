@@ -113,7 +113,7 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
       <Card className="p-4">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <h3 className="font-semibold">Asignar producto</h3>
-          {canSend && inventory.length > 0 && (!dispatchReq || dispatchReq.status === "pendiente") && (
+          {canSend && inventory.length > 0 && (
             <Button size="sm" onClick={() => sendToLogistics.mutate(feriaId)} disabled={sendToLogistics.isPending}>
               <Send className="mr-2 h-4 w-4" />
               {dispatchReq ? "Reenviar a logística" : "Enviar a logística"}

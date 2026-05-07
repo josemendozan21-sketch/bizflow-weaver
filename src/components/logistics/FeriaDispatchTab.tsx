@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CheckCircle2, MapPin, Calendar, Truck } from "lucide-react";
+import { CheckCircle2, MapPin, Calendar, Truck, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useFerias, useAllDispatchRequests, useFeriaInventory, useConfirmDispatch } from "@/hooks/useFerias";
@@ -40,7 +40,8 @@ export function FeriaDispatchTab() {
 function FeriaDispatchCard({ feria, request }: { feria: any; request: any }) {
   const { data: inventory = [] } = useFeriaInventory(feria.id);
   const confirm = useConfirmDispatch();
-  const isDispatched = request.status === "despachado";
+  const [editing, setEditing] = useState(false);
+  const isDispatched = request.status === "despachado" && !editing;
 
   const [quantities, setQuantities] = useState<Record<string, string>>({});
   const [furniture, setFurniture] = useState(request.furniture_dispatched || false);
@@ -50,6 +51,7 @@ function FeriaDispatchCard({ feria, request }: { feria: any; request: any }) {
   const getQty = (it: any) => {
     if (isDispatched) return it.quantity_dispatched;
     if (quantities[it.id] !== undefined) return parseInt(quantities[it.id], 10) || 0;
+    if (editing) return it.quantity_dispatched;
     return 0; // logística debe ingresar las unidades reales
   };
 
@@ -64,6 +66,7 @@ function FeriaDispatchCard({ feria, request }: { feria: any; request: any }) {
         .filter(Boolean),
       dispatch_notes: notes,
     });
+    setEditing(false);
   };
 
   return (
@@ -79,13 +82,13 @@ function FeriaDispatchCard({ feria, request }: { feria: any; request: any }) {
               </span>
             </div>
           </div>
-          {isDispatched ? (
+          {request.status === "despachado" && !editing ? (
             <Badge variant="outline" className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30">
               <CheckCircle2 className="h-3 w-3 mr-1" /> Despachado
             </Badge>
           ) : (
             <Badge variant="outline" className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30">
-              <Truck className="h-3 w-3 mr-1" /> Pendiente
+              <Truck className="h-3 w-3 mr-1" /> {editing ? "Editando" : "Pendiente"}
             </Badge>
           )}
         </div>
@@ -175,13 +178,23 @@ function FeriaDispatchCard({ feria, request }: { feria: any; request: any }) {
           </div>
         </div>
 
-        {!isDispatched && (
-          <div className="flex justify-end">
-            <Button onClick={handleConfirm} disabled={confirm.isPending || inventory.length === 0}>
-              <CheckCircle2 className="mr-2 h-4 w-4" /> Confirmar despacho
+        <div className="flex justify-end gap-2">
+          {request.status === "despachado" && !editing && (
+            <Button variant="outline" onClick={() => setEditing(true)}>
+              <Pencil className="mr-2 h-4 w-4" /> Editar despacho
             </Button>
-          </div>
-        )}
+          )}
+          {editing && (
+            <Button variant="ghost" onClick={() => { setEditing(false); setQuantities({}); }}>
+              Cancelar
+            </Button>
+          )}
+          {!isDispatched && (
+            <Button onClick={handleConfirm} disabled={confirm.isPending || inventory.length === 0}>
+              <CheckCircle2 className="mr-2 h-4 w-4" /> {editing ? "Guardar cambios" : "Confirmar despacho"}
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

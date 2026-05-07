@@ -336,7 +336,7 @@ export function useCreateDispatchRequest() {
       const { data, error } = await supabase
         .from("feria_dispatch_requests")
         .upsert(
-          { feria_id: feriaId, status: "pendiente", requested_by: user?.id },
+          { feria_id: feriaId, status: "pendiente", requested_by: user?.id, dispatched_at: null, dispatched_by: null },
           { onConflict: "feria_id" }
         )
         .select()
