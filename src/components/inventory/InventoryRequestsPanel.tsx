@@ -38,6 +38,25 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
 
 type RouteOption = "logistica" | "produccion" | "estampacion";
 
+type OriginFilter = "todas" | "detal" | "mayor" | "internos";
+
+const getOrigin = (r: InventoryRequest): { key: "detal" | "mayor" | "interno"; label: string; cls: string } => {
+  const reason = (r.reason || "").toLowerCase();
+  if (reason.includes("detal")) {
+    return { key: "detal", label: "Detal", cls: "bg-fuchsia-600 hover:bg-fuchsia-700 text-white" };
+  }
+  if (r.requester_area === "asesor_comercial") {
+    return { key: "mayor", label: "Mayor", cls: "bg-blue-600 hover:bg-blue-700 text-white" };
+  }
+  return { key: "interno", label: AREA_LABEL[r.requester_area] || r.requester_area, cls: "bg-slate-500 hover:bg-slate-600 text-white" };
+};
+
+const extractClient = (r: InventoryRequest): string | null => {
+  if (!r.reason) return null;
+  const m = r.reason.match(/Pedido al detal de\s+(.+)/i) || r.reason.match(/cliente:\s*(.+)/i);
+  return m ? m[1].trim() : null;
+};
+
 const InventoryRequestsPanel = () => {
   const { role } = useAuth();
   const isInventarios = role === "inventarios" || role === "admin";
@@ -47,9 +66,24 @@ const InventoryRequestsPanel = () => {
   const [rejectReason, setRejectReason] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [routes, setRoutes] = useState<Record<string, RouteOption>>({});
+  const [originFilter, setOriginFilter] = useState<OriginFilter>("todas");
 
-  const pendientes = requests.filter((r) => r.status === "pendiente");
-  const historial = requests.filter((r) => r.status !== "pendiente");
+  const matchesOrigin = (r: InventoryRequest) => {
+    if (originFilter === "todas") return true;
+    const o = getOrigin(r).key;
+    if (originFilter === "detal") return o === "detal";
+    if (originFilter === "mayor") return o === "mayor";
+    return o === "interno";
+  };
+  const pendientes = requests.filter((r) => r.status === "pendiente" && matchesOrigin(r));
+  const historial = requests.filter((r) => r.status !== "pendiente" && matchesOrigin(r));
+
+  const counts = {
+    todas: requests.filter((r) => r.status === "pendiente").length,
+    detal: requests.filter((r) => r.status === "pendiente" && getOrigin(r).key === "detal").length,
+    mayor: requests.filter((r) => r.status === "pendiente" && getOrigin(r).key === "mayor").length,
+    internos: requests.filter((r) => r.status === "pendiente" && getOrigin(r).key === "interno").length,
+  };
 
   const getStockFor = (r: InventoryRequest): number | null => {
     let item = r.stock_item_id ? stockItems.find((s) => s.id === r.stock_item_id) : undefined;
@@ -107,6 +141,8 @@ const InventoryRequestsPanel = () => {
   const renderRow = (r: InventoryRequest, showActions: boolean) => {
     const stock = getStockFor(r);
     const route = getRoute(r, stock);
+    const origin = getOrigin(r);
+    const client = extractClient(r);
     const qty = Number(r.quantity);
     const sufficient = stock !== null && stock >= qty;
     const partial = stock !== null && stock > 0 && stock < qty;
@@ -124,11 +160,17 @@ const InventoryRequestsPanel = () => {
     <TableRow key={r.id} className={mismatch ? "bg-destructive/5" : undefined}>
       <TableCell>
         <div className="flex flex-col">
-          <span className="font-medium flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5">
+            <Badge className={`${origin.cls} text-[10px]`}>{origin.label}</Badge>
+          </div>
+          <span className="font-medium flex items-center gap-1.5 mt-1">
             <UserIcon className="h-3 w-3 text-muted-foreground" />
             {r.requester_name}
           </span>
           <span className="text-xs text-muted-foreground">{AREA_LABEL[r.requester_area] || r.requester_area}</span>
+          {client && (
+            <span className="text-xs text-foreground mt-0.5">Cliente: <span className="font-medium">{client}</span></span>
+          )}
         </div>
       </TableCell>
       <TableCell>
@@ -204,7 +246,7 @@ const InventoryRequestsPanel = () => {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Solicitante</TableHead>
+          <TableHead>Origen / Solicitante</TableHead>
           <TableHead>Producto</TableHead>
           <TableHead className="text-right">Cantidad</TableHead>
           <TableHead className="text-center">Stock</TableHead>
@@ -238,6 +280,27 @@ const InventoryRequestsPanel = () => {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="pendientes">
+          {isInventarios && (
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {([
+                ["todas", "Todas", counts.todas],
+                ["detal", "Ventas al detal", counts.detal],
+                ["mayor", "Ventas al por mayor", counts.mayor],
+                ["internos", "Pedidos internos", counts.internos],
+              ] as const).map(([key, label, count]) => (
+                <Button
+                  key={key}
+                  size="sm"
+                  variant={originFilter === key ? "default" : "outline"}
+                  className="h-7 text-xs gap-1.5"
+                  onClick={() => setOriginFilter(key as OriginFilter)}
+                >
+                  {label}
+                  <Badge variant="secondary" className="text-[10px] px-1.5">{count}</Badge>
+                </Button>
+              ))}
+            </div>
+          )}
           <TabsList>
             <TabsTrigger value="pendientes" className="gap-1.5">
               <Clock className="h-4 w-4" /> Pendientes
