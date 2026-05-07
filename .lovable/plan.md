@@ -1,63 +1,39 @@
-## Nuevo rol: Inventarios
+## Actualizar referencias de cuerpos Magical Warmers
 
-Crear un rol dedicado al manejo de inventarios, separado de producción y asesores.
+Sincronizar el listado completo (49 referencias) en las dos tablas que usan los asesores y los paneles de inventario, agregando lo que falta y actualizando cantidades + stock mínimo de lo que ya existe.
 
-### 1. Base de datos (migración)
+### Listado a aplicar (fuente de verdad)
 
-- Agregar valor `inventarios` al enum `app_role`.
-- Actualizar políticas RLS para darle acceso a este rol en:
-  - `stock_items`: SELECT + INSERT + UPDATE (todas las marcas y categorías).
-  - `body_stock`: SELECT + UPDATE.
-  - `body_production_tasks`: SELECT + INSERT + UPDATE (para solicitar cuerpos a producción).
-  - `production_supply_orders`: SELECT + INSERT + UPDATE (para solicitar materia prima/cuerpos).
-  - `notifications`: poder crear notificaciones hacia `produccion`.
+49 referencias con `Disponible` y `Stock Mínimo` según la imagen compartida (Antifaz, Caracoles, Banda Cefálica, Cerebro, Cervical Frío/Térmico, Círculo 8/12 cm Frío/Térmico, Faja Post. Operatoria, Gafas grandes/pequeñas, Gato Frío/Térmico, Glúteos Pareja Frío/Térmico, Gorro, Gorro quimioterapia, Gota, Handy Frío/Térmico, Herbology, Hueso, Labios, Lumbar Frío/Térmico, Lumbar Mediana, Mano, Máscara Frío, Maxilofacial, Muela Frío/Térmico, Multiusos Frío/Térmico, Multiusos Grande, Multiusos Mediana, Pélvica, Pie, Pocket Frío/Térmico, Senos Pareja, Shoulder Frío/Térmico, Tiroides, Tapa Ojos, Orejas, Ojeras, Mariposas).
 
-### 2. Permisos en frontend (`src/lib/rolePermissions.ts`)
+### Tareas
 
-- Agregar `inventarios` al mapa de roles.
-- Rutas permitidas: solo `/inventarios`.
-- Secciones editables: `/inventarios`.
-- Etiqueta visible: "Inventarios".
+1. **Normalizar nombres en `stock_items` (Magical / cuerpos_referencias)**
+   - Renombrar registros existentes para que coincidan con el listado:
+     - `Caracol (Frío)` → `Caracoles`
+     - `Glúteos (Frío)` → `Glúteos Pareja (Frío)`
+     - `Glúteos (Térmico)` → `Gluteos Pareja termico`
+     - `Máscara (Frío)` → `MASCARA FRIO`
+     - `Senos (Frío)` → `Senos Pareja (Frío)`
+   - Eliminar duplicados/variantes que ya no aplican (p.ej. `Antifaz (Térmico)`, `Senos (Térmico)`, etc., que no están en el listado).
 
-### 3. Vista de Inventarios para el rol
+2. **Actualizar `available` y `min_stock`** de las 49 referencias en `stock_items` con los valores de la imagen. Asegurar `product_type` correcto (Frío / Térmico) y `category = cuerpos_referencias`, `brand = magical`.
 
-En `src/pages/Inventarios.tsx`, cuando el rol sea `inventarios`, mostrar una vista especializada con tres bloques:
+3. **Insertar las que faltan** en `stock_items` (ej. Orejas, Ojeras, Mariposas, Lumbar Mediana, Multiusos Grande/Mediana, Gorro quimioterapia, Gota, Mano, Pélvica, Pie, Faja Post. Operatoria, Tapa Ojos, etc. donde no exista).
 
-**a) Inventario por marca (Magical y Sweatspot)**
-- Reutilizar `BrandSelectionCards` + `CategorizedInventoryPanel` (ya soportan ambas marcas y todas las categorías: materia prima, cuerpos, producto terminado, importados).
-- El rol puede editar cantidades (ingresar materia prima, productos importados, producto terminado).
+4. **Limpiar y resincronizar `body_stock`** (la tabla que ven los asesores en el panel "Cuerpos disponibles"):
+   - Borrar todos los registros con `brand = magical` (hoy hay duplicados y referencias obsoletas como "Handy" sin tipo, "Corazones", "Flores", "Muela Grande").
+   - Insertar las 49 referencias del listado con su `available` correspondiente (un registro único por referencia).
 
-**b) Solicitar producción de cuerpos**
-- Botón / panel "Solicitar cuerpos a producción" que cree un registro en `body_production_tasks` con:
-  - tipo_plastico (frío/caliente)
-  - referencia (selector de cuerpos existentes por marca)
-  - unidades
-  - status: `pendiente`
-- Genera notificación automática al rol `produccion`.
+5. **Verificación** vía `read_query`: confirmar que tanto `stock_items` como `body_stock` tienen exactamente las 49 referencias con los valores correctos, y revisar visualmente en `/inventarios` y en la vista de asesor.
 
-**c) Recepción de pedidos desde producción**
-- Listado de `production_supply_orders` con `status` pendiente/en_proceso, donde el rol Inventarios puede marcar como recibido (status `completado`) e incrementar automáticamente el stock correspondiente en `stock_items` o `body_stock`.
-- Formulario rápido de "Ingresar materia prima / producto importado / producto terminado" que aumenta cantidades en `stock_items` (con selector de marca, categoría, ítem y cantidad).
+### Notas técnicas
 
-### 4. Sidebar y AuthContext
+- Toda la operación es de datos (no de esquema): se ejecuta con la herramienta de inserción/actualización SQL, sin migraciones.
+- No se toca código de UI: las vistas de asesor (`AsesorInventoryView`, `CategorizedInventoryPanel`) ya leen de estas tablas, así que los cambios se reflejan automáticamente.
+- El indicador de "Crítico / Bajo / OK" usa `min_stock`, por lo que actualizar ese campo basta para que aparezcan correctamente en la pestaña de críticos.
+- Sweatspot no se toca en este cambio.
 
-- `AppSidebar` ya filtra por `canAccessRoute`, así que sólo verá "Inventarios" automáticamente.
-- Asegurar que el `AuthContext` reconozca el nuevo rol (ya usa `get_user_role` genérico).
+### Pregunta abierta
 
-### 5. Asignación de usuarios
-
-- El admin podrá asignar el nuevo rol desde `/admin-usuarios` (ya usa el enum dinámicamente con `getRoleLabel`, sólo agregar la etiqueta).
-
-### Detalles técnicos
-
-- Enum update en Postgres requiere `ALTER TYPE app_role ADD VALUE 'inventarios';` (una sola sentencia, fuera de transacción si es necesario).
-- Tras actualizar el enum hay que añadir las policies nuevas en una segunda migración o en el mismo archivo separadas por `COMMIT`.
-- Reusar componentes existentes para evitar duplicar UI; sólo crear dos componentes nuevos:
-  - `src/components/inventory/RequestBodyProductionDialog.tsx`
-  - `src/components/inventory/SupplyReceptionPanel.tsx`
-- Vista contenedora: `src/components/inventory/InventariosRoleView.tsx` que orquesta los tres bloques en tabs.
-
-### Preguntas abiertas
-
-1. ¿El usuario con rol `inventarios` debe poder ver también las órdenes (pedidos de venta) para saber qué cuerpos producir, o sólo el inventario y las solicitudes a producción?
-2. Al recibir materia prima/importados, ¿debe quedar registro histórico (quién recibió, cuándo, cantidad) o basta con incrementar el stock?
+El listado solo trae cantidades únicas (no separa "al por mayor" vs "al por menor"). Asumo que ambos canales de venta consultan el mismo stock de cuerpos (que es como funciona hoy). Si quieres llevar inventarios separados por canal, dímelo y lo planteamos como un cambio aparte (requiere columna nueva en `stock_items`).
