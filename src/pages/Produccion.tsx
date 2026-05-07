@@ -8,6 +8,8 @@ import { MagicalWarmersWorkflow } from "@/components/production/MagicalWarmersWo
 import { SweatspotWorkflow } from "@/components/production/SweatspotWorkflow";
 import { EstampacionProductionView } from "@/components/production/EstampacionProductionView";
 import { useProductionAlerts } from "@/hooks/useProductionAlerts";
+import CreateInventoryRequestDialog from "@/components/inventory/CreateInventoryRequestDialog";
+import InventoryRequestsPanel from "@/components/inventory/InventoryRequestsPanel";
 
 const Produccion = () => {
   const { role } = useAuth();
@@ -22,38 +24,45 @@ const Produccion = () => {
   if (isEstampacion) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Estampación</h1>
-          <p className="text-muted-foreground">Órdenes en etapa de estampación</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Estampación</h1>
+            <p className="text-muted-foreground">Órdenes en etapa de estampación</p>
+          </div>
+          <CreateInventoryRequestDialog defaultCategory="cuerpos_referencias" />
         </div>
         <EstampacionProductionView />
+        <InventoryRequestsPanel />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        {selectedBrand && (
-          <Button variant="ghost" size="icon" onClick={() => setSelectedBrand(null)}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        )}
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-foreground">Producción</h1>
-            {isReadOnly && (
-              <Badge variant="secondary" className="gap-1">
-                <Eye className="h-3 w-3" /> Solo lectura
-              </Badge>
-            )}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div className="flex items-center gap-3">
+          {selectedBrand && (
+            <Button variant="ghost" size="icon" onClick={() => setSelectedBrand(null)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          )}
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-foreground">Producción</h1>
+              {isReadOnly && (
+                <Badge variant="secondary" className="gap-1">
+                  <Eye className="h-3 w-3" /> Solo lectura
+                </Badge>
+              )}
+            </div>
+            <p className="text-muted-foreground">
+              {selectedBrand
+                ? `Gestión de producción — ${selectedBrand === "magical_warmers" ? "Magical Warmers" : "Sweatspot"}`
+                : "Selecciona una marca para gestionar su producción"}
+            </p>
           </div>
-          <p className="text-muted-foreground">
-            {selectedBrand
-              ? `Gestión de producción — ${selectedBrand === "magical_warmers" ? "Magical Warmers" : "Sweatspot"}`
-              : "Selecciona una marca para gestionar su producción"}
-          </p>
         </div>
+        {!isReadOnly && <CreateInventoryRequestDialog defaultCategory="cuerpos_referencias" />}
       </div>
 
       {!selectedBrand ? (
