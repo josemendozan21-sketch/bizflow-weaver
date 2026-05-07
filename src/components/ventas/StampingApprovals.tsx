@@ -59,51 +59,75 @@ export function StampingApprovals() {
 
   if (pendingApprovals.length === 0) return null;
 
+  // Group by client+brand+step so each "logo" appears once even if it has
+  // multiple production order lines.
+  type Group = {
+    key: string;
+    step: "size" | "inkgel";
+    orderIds: string[];
+    representative: StampApproval;
+    totalQuantity: number;
+  };
+  const groupsMap = new Map<string, Group>();
+  for (const o of pendingApprovals) {
+    const step: "size" | "inkgel" =
+      o.stamp_size_status === "pendiente" && o.stamp_size_photo_url ? "size" : "inkgel";
+    const photoUrl = step === "size" ? o.stamp_size_photo_url : o.stamp_inkgel_photo_url;
+    const key = `${o.brand}|${o.client_name}|${step}|${photoUrl}`;
+    const g = groupsMap.get(key);
+    if (g) {
+      g.orderIds.push(o.id);
+      g.totalQuantity += o.quantity || 0;
+    } else {
+      groupsMap.set(key, {
+        key,
+        step,
+        orderIds: [o.id],
+        representative: o,
+        totalQuantity: o.quantity || 0,
+      });
+    }
+  }
+  const groups = Array.from(groupsMap.values());
+
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-semibold flex items-center gap-2 text-amber-700">
         <Camera className="h-4 w-4" />
-        Aprobaciones de estampación pendientes ({pendingApprovals.length})
+        Aprobaciones de estampación pendientes ({groups.length})
       </h3>
       <div className="grid gap-3">
-        {pendingApprovals.map((order) => {
-          // Determine which step needs approval
-          const needsSizeApproval = order.stamp_size_status === "pendiente" && !!order.stamp_size_photo_url;
-          const needsInkgelApproval = order.stamp_size_status === "aprobado" && order.stamp_inkgel_status === "pendiente" && !!order.stamp_inkgel_photo_url;
-
+        {groups.map((g) => {
+          const order = g.representative;
+          const isSize = g.step === "size";
+          const photoUrl = (isSize ? order.stamp_size_photo_url : order.stamp_inkgel_photo_url)!;
           return (
-            <Card key={order.id} className="ring-2 ring-amber-300">
+            <Card key={g.key} className="ring-2 ring-amber-300">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm">{order.client_name}</CardTitle>
                   <Badge variant="outline" className="text-xs bg-amber-50 text-amber-800 border-amber-200">
-                    {needsSizeApproval ? "Tamaño de logo" : "Tinta y gel"}
+                    {isSize ? "Tamaño de logo" : "Tinta y gel"}
                   </Badge>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {order.brand === "magical" ? "Magical Warmers" : "Sweatspot"} · {order.molde || "-"} · {order.quantity} uds
+                  {order.brand === "magical" ? "Magical Warmers" : "Sweatspot"} · {order.molde || "-"} · {g.totalQuantity} uds
+                  {g.orderIds.length > 1 && (
+                    <span className="ml-2 text-amber-700 font-medium">
+                      ({g.orderIds.length} líneas)
+                    </span>
+                  )}
                 </p>
               </CardHeader>
               <CardContent className="space-y-3">
-                {needsSizeApproval && (
-                  <ApprovalAction
-                    orderId={order.id}
-                    step="size"
-                    label="Aprobación de tamaño de logo"
-                    photoUrl={order.stamp_size_photo_url!}
-                    onDone={() => queryClient.invalidateQueries({ queryKey: ["stamping_approvals"] })}
-                  />
-                )}
-                {needsInkgelApproval && (
-                  <ApprovalAction
-                    orderId={order.id}
-                    step="inkgel"
-                    label="Aprobación de tinta y gel"
-                    photoUrl={order.stamp_inkgel_photo_url!}
-                    details={`Tinta: ${order.ink_color || "-"} · Gel: ${order.gel_color || "-"}`}
-                    onDone={() => queryClient.invalidateQueries({ queryKey: ["stamping_approvals"] })}
-                  />
-                )}
+                <ApprovalAction
+                  orderIds={g.orderIds}
+                  step={g.step}
+                  label={isSize ? "Aprobación de tamaño de logo" : "Aprobación de tinta y gel"}
+                  photoUrl={photoUrl}
+                  details={!isSize ? `Tinta: ${order.ink_color || "-"} · Gel: ${order.gel_color || "-"}` : undefined}
+                  onDone={() => queryClient.invalidateQueries({ queryKey: ["stamping_approvals"] })}
+                />
               </CardContent>
             </Card>
           );
@@ -114,14 +138,14 @@ export function StampingApprovals() {
 }
 
 function ApprovalAction({
-  orderId,
+  orderIds,
   step,
   label,
   photoUrl,
   details,
   onDone,
 }: {
-  orderId: string;
+  orderIds: string[];
   step: "size" | "inkgel";
   label: string;
   photoUrl: string;
@@ -134,6 +158,12 @@ function ApprovalAction({
   const queryClient = useQueryClient();
 
   const handleAction = async (approved: boolean) => {
+    if (!approved && !feedback.trim()) {
+      const ok = window.confirm(
+        "¿Rechazar sin escribir motivo? El equipo de estampación no sabrá qué corregir."
+      );
+      if (!ok) return;
+    }
     setSubmitting(true);
     try {
       const statusCol = step === "size" ? "stamp_size_status" : "stamp_inkgel_status";
@@ -147,7 +177,7 @@ function ApprovalAction({
         updates[approvedAtCol] = new Date().toISOString();
       }
 
-      if (!approved && feedback.trim()) {
+      if (feedback.trim()) {
         updates.stamp_advisor_feedback = feedback.trim();
       }
 
@@ -160,7 +190,7 @@ function ApprovalAction({
       const { error } = await supabase
         .from("production_orders")
         .update(updates as any)
-        .eq("id", orderId);
+        .in("id", orderIds);
       if (error) throw error;
 
       queryClient.invalidateQueries({ queryKey: ["production_orders"] });
@@ -169,7 +199,11 @@ function ApprovalAction({
 
       toast.success(
         approved ? "Aprobado" : "Rechazado",
-        { description: approved ? `${label} aprobado correctamente.` : "Se notificó al área de estampación." }
+        {
+          description: approved
+            ? `${label} aprobado para ${orderIds.length} línea(s).`
+            : `Se notificó al área de estampación (${orderIds.length} línea(s)).`,
+        }
       );
     } catch (err: any) {
       toast.error("Error", { description: err.message });
@@ -223,7 +257,7 @@ function ApprovalAction({
           size="sm"
           variant="destructive"
           onClick={() => handleAction(false)}
-          disabled={submitting || !feedback.trim()}
+          disabled={submitting}
           className="flex-1"
         >
           {submitting ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <XCircle className="h-3 w-3 mr-1" />}
