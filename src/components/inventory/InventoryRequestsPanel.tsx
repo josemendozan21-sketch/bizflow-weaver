@@ -10,7 +10,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, X, Clock, History, User as UserIcon, Send } from "lucide-react";
+import { Check, X, Clock, History, User as UserIcon, Send, AlertTriangle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useInventoryRequests, type InventoryRequest } from "@/hooks/useInventoryRequests";
 import { useInventory } from "@/hooks/useInventory";
@@ -107,15 +107,21 @@ const InventoryRequestsPanel = () => {
   const renderRow = (r: InventoryRequest, showActions: boolean) => {
     const stock = getStockFor(r);
     const route = getRoute(r, stock);
+    const qty = Number(r.quantity);
+    const sufficient = stock !== null && stock >= qty;
+    const partial = stock !== null && stock > 0 && stock < qty;
+    const none = stock !== null && stock <= 0;
+    const deficit = stock === null ? null : Math.max(0, qty - stock);
+    const mismatch = showActions && route === "logistica" && stock !== null && stock < qty;
     const stockBadge = stock === null
       ? <Badge variant="outline" className="text-[10px]">N/D</Badge>
-      : stock >= Number(r.quantity)
-        ? <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px]">{stock}</Badge>
-        : stock > 0
-          ? <Badge className="bg-amber-500 hover:bg-amber-600 text-white text-[10px]">{stock}</Badge>
-          : <Badge variant="destructive" className="text-[10px]">0</Badge>;
+      : sufficient
+        ? <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px]">{stock} / {qty}</Badge>
+        : partial
+          ? <Badge className="bg-amber-500 hover:bg-amber-600 text-white text-[10px]">{stock} / {qty}</Badge>
+          : <Badge variant="destructive" className="text-[10px]">0 / {qty}</Badge>;
     return (
-    <TableRow key={r.id}>
+    <TableRow key={r.id} className={mismatch ? "bg-destructive/5" : undefined}>
       <TableCell>
         <div className="flex flex-col">
           <span className="font-medium flex items-center gap-1.5">
@@ -132,7 +138,14 @@ const InventoryRequestsPanel = () => {
         </div>
       </TableCell>
       <TableCell className="text-right font-semibold">{Number(r.quantity).toLocaleString("es-CO")}</TableCell>
-      <TableCell className="text-center">{stockBadge}</TableCell>
+      <TableCell className="text-center">
+        <div className="flex flex-col items-center gap-0.5">
+          {stockBadge}
+          {deficit !== null && deficit > 0 && (
+            <span className="text-[10px] text-destructive">Faltan {deficit}</span>
+          )}
+        </div>
+      </TableCell>
       <TableCell className="max-w-[180px] text-xs text-muted-foreground">
         {r.reason || "—"}
         {r.rejection_reason && (
@@ -154,13 +167,21 @@ const InventoryRequestsPanel = () => {
         <>
           <TableCell>
             <Select value={route} onValueChange={(v) => setRoutes((p) => ({ ...p, [r.id]: v as RouteOption }))}>
-              <SelectTrigger className="h-8 text-xs w-[140px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className={`h-8 text-xs w-[160px] ${mismatch ? "border-destructive text-destructive" : ""}`}>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="logistica">Entregar a Logística</SelectItem>
                 <SelectItem value="produccion">Pasar a Producción</SelectItem>
                 <SelectItem value="estampacion">Pasar a Estampación</SelectItem>
               </SelectContent>
             </Select>
+            {mismatch && (
+              <div className="flex items-center gap-1 mt-1 text-[10px] text-destructive">
+                <AlertTriangle className="h-3 w-3" />
+                Stock insuficiente
+              </div>
+            )}
           </TableCell>
           <TableCell className="text-right space-x-1 whitespace-nowrap">
             <Button size="sm" variant="default" disabled={busy === r.id}
