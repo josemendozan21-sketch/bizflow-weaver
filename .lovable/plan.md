@@ -1,62 +1,63 @@
-# Mejoras al Feria POS
+## Nuevo rol: Inventarios
 
-Voy a mejorar la pantalla de Feria Punto de Venta para que el equipo pueda capturar más datos en cada venta, ver totales por medio de pago en tiempo real y consultar el inventario real (despachado vs vendido vs disponible).
+Crear un rol dedicado al manejo de inventarios, separado de producción y asesores.
 
-## 1. Medios de pago actualizados
-Reemplazar las opciones actuales (efectivo, transferencia, datáfono, otro) por las que usan en feria:
-- **Efectivo**
-- **Tarjeta** (datáfono)
-- **Nequi**
-- **Transferencia**
-- **Otro**
+### 1. Base de datos (migración)
 
-Esto se aplica tanto en la venta rápida (carrito) como en la venta con detalle.
+- Agregar valor `inventarios` al enum `app_role`.
+- Actualizar políticas RLS para darle acceso a este rol en:
+  - `stock_items`: SELECT + INSERT + UPDATE (todas las marcas y categorías).
+  - `body_stock`: SELECT + UPDATE.
+  - `body_production_tasks`: SELECT + INSERT + UPDATE (para solicitar cuerpos a producción).
+  - `production_supply_orders`: SELECT + INSERT + UPDATE (para solicitar materia prima/cuerpos).
+  - `notifications`: poder crear notificaciones hacia `produccion`.
 
-## 2. Carrito con datos completos del cliente y descuento
-En el panel del Carrito (`QuickSaleGrid`) agregar antes del botón "Cobrar":
-- Medio de pago (con las opciones nuevas)
-- **Descuento** (valor en pesos, opcional) — se resta del subtotal
-- **Nombre del cliente** (opcional)
-- **Email** (opcional)
-- **Cédula / NIT** (opcional)
+### 2. Permisos en frontend (`src/lib/rolePermissions.ts`)
 
-El total mostrado se calcula como: subtotal − descuento. Las unidades y la venta total se ven siempre arriba.
+- Agregar `inventarios` al mapa de roles.
+- Rutas permitidas: solo `/inventarios`.
+- Secciones editables: `/inventarios`.
+- Etiqueta visible: "Inventarios".
 
-Estos datos se guardan en cada `feria_sales` creado al cobrar (notes guardará email/documento/descuento ya que la tabla no tiene columnas dedicadas a esos campos — ver sección técnica).
+### 3. Vista de Inventarios para el rol
 
-## 3. Barra superior con totales en tiempo real
-En `FeriaPOS.tsx`, debajo de la tarjeta de la feria, agregar una fila de tarjetas resumen con los totales del día/feria:
-- **Ventas totales** (suma de `total_amount` de todas las ventas de la feria)
-- **Unidades vendidas**
-- **Efectivo**
-- **Tarjeta**
-- **Nequi**
-- **Transferencia / Otro** (agrupado)
+En `src/pages/Inventarios.tsx`, cuando el rol sea `inventarios`, mostrar una vista especializada con tres bloques:
 
-Se calcula desde `sales` ya disponible en el componente — actualización automática al registrar una venta.
+**a) Inventario por marca (Magical y Sweatspot)**
+- Reutilizar `BrandSelectionCards` + `CategorizedInventoryPanel` (ya soportan ambas marcas y todas las categorías: materia prima, cuerpos, producto terminado, importados).
+- El rol puede editar cantidades (ingresar materia prima, productos importados, producto terminado).
 
-## 4. Nueva pestaña "Inventario en feria"
-Agregar una pestaña adicional (`Tabs`) llamada **"Inventario"** que muestre, por producto despachado:
+**b) Solicitar producción de cuerpos**
+- Botón / panel "Solicitar cuerpos a producción" que cree un registro en `body_production_tasks` con:
+  - tipo_plastico (frío/caliente)
+  - referencia (selector de cuerpos existentes por marca)
+  - unidades
+  - status: `pendiente`
+- Genera notificación automática al rol `produccion`.
 
-| Producto | Marca | Despachado | Vendido | Disponible | Ingreso generado |
-|----------|-------|-----------:|--------:|-----------:|----------------:|
-| Magical Warmer | Magical | 50 | 12 | 38 | $480.000 |
+**c) Recepción de pedidos desde producción**
+- Listado de `production_supply_orders` con `status` pendiente/en_proceso, donde el rol Inventarios puede marcar como recibido (status `completado`) e incrementar automáticamente el stock correspondiente en `stock_items` o `body_stock`.
+- Formulario rápido de "Ingresar materia prima / producto importado / producto terminado" que aumenta cantidades en `stock_items` (con selector de marca, categoría, ítem y cantidad).
 
-Visible para todos los roles que entran al POS (incluido `feria_pos`), para que sepan exactamente qué les queda y cuánto han facturado por producto.
+### 4. Sidebar y AuthContext
 
-## 5. Detalles técnicos
+- `AppSidebar` ya filtra por `canAccessRoute`, así que sólo verá "Inventarios" automáticamente.
+- Asegurar que el `AuthContext` reconozca el nuevo rol (ya usa `get_user_role` genérico).
 
-**Archivos a modificar:**
-- `src/components/feria-pos/QuickSaleGrid.tsx` — agregar inputs de descuento, cliente, email, documento; nuevas opciones de pago; descontar del total.
-- `src/components/feria-pos/DetailedSaleForm.tsx` — agregar email, documento, descuento; nuevas opciones de pago.
-- `src/pages/FeriaPOS.tsx` — barra superior de totales por medio de pago + nueva pestaña "Inventario".
-- Nuevo: `src/components/feria-pos/FeriaInventoryStatus.tsx` — tabla de inventario real con cálculo despachado − vendido.
+### 5. Asignación de usuarios
 
-**Almacenamiento de email/documento/descuento:**  
-La tabla `feria_sales` no tiene columnas para email, documento ni descuento. Para no requerir migración, se guardarán dentro del campo `notes` con un formato estructurado: `Cliente: Juan | Doc: 123 | Email: x@y.com | Desc: $5000`. Si después prefieres columnas dedicadas, podemos agregar una migración (`client_email`, `client_document`, `discount_amount`) — dime y lo hacemos.
+- El admin podrá asignar el nuevo rol desde `/admin-usuarios` (ya usa el enum dinámicamente con `getRoleLabel`, sólo agregar la etiqueta).
 
-**Cálculo de inventario disponible:** ya existe la lógica en `QuickSaleGrid` (`quantity_dispatched − sum(sales.quantity)`); se reutiliza en el nuevo componente.
+### Detalles técnicos
 
-**Sin cambios en base de datos** en esta iteración.
+- Enum update en Postgres requiere `ALTER TYPE app_role ADD VALUE 'inventarios';` (una sola sentencia, fuera de transacción si es necesario).
+- Tras actualizar el enum hay que añadir las policies nuevas en una segunda migración o en el mismo archivo separadas por `COMMIT`.
+- Reusar componentes existentes para evitar duplicar UI; sólo crear dos componentes nuevos:
+  - `src/components/inventory/RequestBodyProductionDialog.tsx`
+  - `src/components/inventory/SupplyReceptionPanel.tsx`
+- Vista contenedora: `src/components/inventory/InventariosRoleView.tsx` que orquesta los tres bloques en tabs.
 
-¿Apruebas el plan así, o prefieres que también agregue las columnas dedicadas en la base de datos para email / documento / descuento?
+### Preguntas abiertas
+
+1. ¿El usuario con rol `inventarios` debe poder ver también las órdenes (pedidos de venta) para saber qué cuerpos producir, o sólo el inventario y las solicitudes a producción?
+2. Al recibir materia prima/importados, ¿debe quedar registro histórico (quién recibió, cuándo, cantidad) o basta con incrementar el stock?
