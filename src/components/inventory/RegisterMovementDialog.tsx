@@ -23,7 +23,8 @@ const AREAS: { value: MovementArea; label: string }[] = [
 const RegisterMovementDialog = () => {
   const [open, setOpen] = useState(false);
   const { stockItems } = useInventory();
-  const { ferias } = useFerias();
+  const feriasQuery = useFerias();
+  const ferias = feriasQuery.data ?? [];
   const { createMovement } = useInventoryMovements();
 
   const [direction, setDirection] = useState<MovementDirection>("entrega");
