@@ -25,7 +25,17 @@ import NotFound from "./pages/NotFound";
 import Install from "./pages/Install";
 import { ReactNode } from "react";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // En móvil (Samsung Browser/Chrome) al abrir el selector de archivos la
+      // pestaña se pausa; al volver, refetchOnWindowFocus disparaba refetches
+      // que reemplazaban los props del card y al diseñador se le perdía el
+      // archivo recién seleccionado. Lo desactivamos globalmente.
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function getDefaultRoute(role: Parameters<typeof getAllowedRoutes>[0]): string {
   if (!role) return "/";
