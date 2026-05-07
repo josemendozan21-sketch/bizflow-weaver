@@ -127,6 +127,32 @@ function FeriaDispatchCard({ feria, request }: { feria: any; request: any }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 rounded-md border bg-muted/30 p-3 text-sm">
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Stand</p>
+            <p>N°: <span className="text-muted-foreground">{feria.stand_number || "a definir"}</span></p>
+            <p>Tamaño: <span className="text-muted-foreground">{feria.stand_size || "—"}</span></p>
+          </div>
+          <div className="md:col-span-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Materiales requeridos</p>
+            <div className="flex flex-wrap gap-1">
+              {(feria.materials_needed || []).length === 0 ? (
+                <span className="text-muted-foreground text-xs">Sin materiales solicitados</span>
+              ) : (
+                feria.materials_needed.map((m: string, i: number) => (
+                  <Badge key={i} variant="outline">{m}</Badge>
+                ))
+              )}
+            </div>
+          </div>
+          {feria.notes && (
+            <div className="md:col-span-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Notas del asesor</p>
+              <p className="text-muted-foreground whitespace-pre-wrap text-sm">{feria.notes}</p>
+            </div>
+          )}
+        </div>
+
         {!isDispatched && (
           <p className="text-xs text-muted-foreground">
             Indica las unidades que realmente estás enviando para esta feria. Pueden ser menos de las solicitadas si no hay stock suficiente.
