@@ -141,6 +141,8 @@ const InventoryRequestsPanel = () => {
   const renderRow = (r: InventoryRequest, showActions: boolean) => {
     const stock = getStockFor(r);
     const route = getRoute(r, stock);
+    const origin = getOrigin(r);
+    const client = extractClient(r);
     const qty = Number(r.quantity);
     const sufficient = stock !== null && stock >= qty;
     const partial = stock !== null && stock > 0 && stock < qty;
@@ -158,11 +160,17 @@ const InventoryRequestsPanel = () => {
     <TableRow key={r.id} className={mismatch ? "bg-destructive/5" : undefined}>
       <TableCell>
         <div className="flex flex-col">
-          <span className="font-medium flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5">
+            <Badge className={`${origin.cls} text-[10px]`}>{origin.label}</Badge>
+          </div>
+          <span className="font-medium flex items-center gap-1.5 mt-1">
             <UserIcon className="h-3 w-3 text-muted-foreground" />
             {r.requester_name}
           </span>
           <span className="text-xs text-muted-foreground">{AREA_LABEL[r.requester_area] || r.requester_area}</span>
+          {client && (
+            <span className="text-xs text-foreground mt-0.5">Cliente: <span className="font-medium">{client}</span></span>
+          )}
         </div>
       </TableCell>
       <TableCell>
@@ -238,7 +246,7 @@ const InventoryRequestsPanel = () => {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Solicitante</TableHead>
+          <TableHead>Origen / Solicitante</TableHead>
           <TableHead>Producto</TableHead>
           <TableHead className="text-right">Cantidad</TableHead>
           <TableHead className="text-center">Stock</TableHead>
@@ -272,6 +280,27 @@ const InventoryRequestsPanel = () => {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="pendientes">
+          {isInventarios && (
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {([
+                ["todas", "Todas", counts.todas],
+                ["detal", "Ventas al detal", counts.detal],
+                ["mayor", "Ventas al por mayor", counts.mayor],
+                ["internos", "Pedidos internos", counts.internos],
+              ] as const).map(([key, label, count]) => (
+                <Button
+                  key={key}
+                  size="sm"
+                  variant={originFilter === key ? "default" : "outline"}
+                  className="h-7 text-xs gap-1.5"
+                  onClick={() => setOriginFilter(key as OriginFilter)}
+                >
+                  {label}
+                  <Badge variant="secondary" className="text-[10px] px-1.5">{count}</Badge>
+                </Button>
+              ))}
+            </div>
+          )}
           <TabsList>
             <TabsTrigger value="pendientes" className="gap-1.5">
               <Clock className="h-4 w-4" /> Pendientes
