@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import BrandSelectionCards, { type InventoryNotification } from "@/components/inventory/BrandSelectionCards";
 import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
 import AsesorInventoryView from "@/components/inventory/AsesorInventoryView";
+import InventariosRoleView from "@/components/inventory/InventariosRoleView";
 import type { InventoryBrand, InventoryCategory } from "@/stores/inventoryStore";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -64,6 +65,10 @@ const Inventarios = () => {
 
   if (role === "asesor_comercial") {
     return <AsesorInventoryView />;
+  }
+
+  if (role === "inventarios") {
+    return <InventariosRoleView />;
   }
 
   return <FullInventoryView />;
