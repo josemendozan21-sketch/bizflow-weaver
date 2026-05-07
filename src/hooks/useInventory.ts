@@ -64,7 +64,7 @@ export function useInventory() {
   // Subscribe to realtime changes
   useEffect(() => {
     const channel = supabase
-      .channel("inventory-realtime")
+      .channel(`inventory-realtime-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "stock_items" },
