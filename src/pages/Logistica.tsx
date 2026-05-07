@@ -463,6 +463,7 @@ const Logistica = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      <InventoryRequestsPanel />
     </div>
   );
 };
