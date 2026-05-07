@@ -604,6 +604,69 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_requests: {
+        Row: {
+          brand: string
+          category: string
+          created_at: string
+          id: string
+          item_name: string
+          order_id: string | null
+          quantity: number
+          reason: string | null
+          rejection_reason: string | null
+          requester_area: string
+          requester_id: string
+          requester_name: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewed_by_name: string | null
+          status: string
+          stock_item_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          brand: string
+          category: string
+          created_at?: string
+          id?: string
+          item_name: string
+          order_id?: string | null
+          quantity: number
+          reason?: string | null
+          rejection_reason?: string | null
+          requester_area: string
+          requester_id: string
+          requester_name: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_name?: string | null
+          status?: string
+          stock_item_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          brand?: string
+          category?: string
+          created_at?: string
+          id?: string
+          item_name?: string
+          order_id?: string | null
+          quantity?: number
+          reason?: string | null
+          rejection_reason?: string | null
+          requester_area?: string
+          requester_id?: string
+          requester_name?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_name?: string | null
+          status?: string
+          stock_item_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       logo_requests: {
         Row: {
           additional_instructions: string | null

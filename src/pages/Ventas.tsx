@@ -2085,14 +2085,21 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
         const matchedItem = matchedItems?.[0];
 
         if (matchedItem) {
-          const newAvailable = matchedItem.available - quantity;
-          await supabase
-            .from("stock_items")
-            .update({ available: newAvailable })
-            .eq("id", matchedItem.id);
-          if (newAvailable < 0) {
-            toast.warning("Stock negativo", { description: `"${referencia}" quedó con stock negativo (${newAvailable}). Reabastecer.` });
-          }
+          // Crear solicitud a inventarios (no descontar directamente)
+          await supabase.from("inventory_requests" as any).insert({
+            requester_id: user?.id || "",
+            requester_name: user?.email || "Asesor",
+            requester_area: "asesor_comercial",
+            brand: dbBrand,
+            category: "producto_terminado",
+            stock_item_id: matchedItem.id,
+            item_name: matchedItem.name,
+            quantity,
+            reason: `Pedido al detal de ${displayName}`,
+          } as any);
+          toast.info("Solicitud enviada a inventarios", {
+            description: `Inventarios revisará la entrega de ${quantity} uds de "${referencia}".`,
+          });
         } else {
           toast.warning("Sin registro de inventario", { description: `"${referencia}" no encontrado en inventario.` });
         }
