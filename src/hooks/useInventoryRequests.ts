@@ -13,7 +13,9 @@ export interface InventoryRequest {
   item_name: string;
   quantity: number;
   reason: string | null;
-  status: "pendiente" | "aprobada" | "rechazada";
+  status: "pendiente" | "aprobada" | "rechazada" | "en_produccion" | "en_estampacion";
+  routed_to: string | null;
+  routed_at: string | null;
   reviewed_by: string | null;
   reviewed_by_name: string | null;
   reviewed_at: string | null;
@@ -120,5 +122,24 @@ export function useInventoryRequests() {
     [user],
   );
 
-  return { requests, isLoading, refetch: fetchAll, createRequest, approve, reject };
+  const routeTo = useCallback(
+    async (id: string, target: "produccion" | "estampacion") => {
+      if (!user) return { success: false, message: "No autenticado" };
+      const newStatus = target === "produccion" ? "en_produccion" : "en_estampacion";
+      const { error } = await supabase
+        .from("inventory_requests" as any)
+        .update({
+          status: newStatus,
+          routed_to: target,
+          reviewed_by: user.id,
+          reviewed_by_name: user.email || "Inventarios",
+        } as any)
+        .eq("id", id);
+      if (error) return { success: false, message: error.message };
+      return { success: true, message: target === "produccion" ? "Enviada a producción" : "Enviada a estampación" };
+    },
+    [user],
+  );
+
+  return { requests, isLoading, refetch: fetchAll, createRequest, approve, reject, routeTo };
 }

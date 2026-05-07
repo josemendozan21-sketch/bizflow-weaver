@@ -10,8 +10,10 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, X, Clock, History, User as UserIcon } from "lucide-react";
+import { Check, X, Clock, History, User as UserIcon, Send } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useInventoryRequests, type InventoryRequest } from "@/hooks/useInventoryRequests";
+import { useInventory } from "@/hooks/useInventory";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
@@ -30,18 +32,44 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
   pendiente: "default",
   aprobada: "secondary",
   rechazada: "destructive",
+  en_produccion: "outline",
+  en_estampacion: "outline",
 };
+
+type RouteOption = "logistica" | "produccion" | "estampacion";
 
 const InventoryRequestsPanel = () => {
   const { role } = useAuth();
   const isInventarios = role === "inventarios" || role === "admin";
-  const { requests, isLoading, approve, reject } = useInventoryRequests();
+  const { requests, isLoading, approve, reject, routeTo } = useInventoryRequests();
+  const { stockItems } = useInventory();
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [routes, setRoutes] = useState<Record<string, RouteOption>>({});
 
   const pendientes = requests.filter((r) => r.status === "pendiente");
   const historial = requests.filter((r) => r.status !== "pendiente");
+
+  const getStockFor = (r: InventoryRequest): number | null => {
+    let item = r.stock_item_id ? stockItems.find((s) => s.id === r.stock_item_id) : undefined;
+    if (!item) {
+      item = stockItems.find(
+        (s) => s.brand === r.brand && s.category === r.category &&
+          s.name.toLowerCase() === r.item_name.toLowerCase()
+      );
+    }
+    return item ? Number(item.available) : null;
+  };
+
+  const suggestRoute = (r: InventoryRequest, stock: number | null): RouteOption => {
+    if (stock !== null && stock >= Number(r.quantity)) return "logistica";
+    if (r.category === "producto_terminado" && r.order_id) return "estampacion";
+    return "produccion";
+  };
+
+  const getRoute = (r: InventoryRequest, stock: number | null): RouteOption =>
+    routes[r.id] || suggestRoute(r, stock);
 
   const handleApprove = async (r: InventoryRequest) => {
     setBusy(r.id);
@@ -49,6 +77,17 @@ const InventoryRequestsPanel = () => {
     setBusy(null);
     if (!res.success) toast.error(res.message);
     else toast.success(`Aprobada: ${r.quantity} uds de "${r.item_name}"`);
+  };
+
+  const handleProcess = async (r: InventoryRequest, stock: number | null) => {
+    const route = getRoute(r, stock);
+    setBusy(r.id);
+    let res;
+    if (route === "logistica") res = await approve(r.id);
+    else res = await routeTo(r.id, route);
+    setBusy(null);
+    if (!res.success) toast.error(res.message);
+    else toast.success(res.message);
   };
 
   const handleReject = async () => {
@@ -65,7 +104,17 @@ const InventoryRequestsPanel = () => {
     }
   };
 
-  const renderRow = (r: InventoryRequest, showActions: boolean) => (
+  const renderRow = (r: InventoryRequest, showActions: boolean) => {
+    const stock = getStockFor(r);
+    const route = getRoute(r, stock);
+    const stockBadge = stock === null
+      ? <Badge variant="outline" className="text-[10px]">N/D</Badge>
+      : stock >= Number(r.quantity)
+        ? <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px]">{stock}</Badge>
+        : stock > 0
+          ? <Badge className="bg-amber-500 hover:bg-amber-600 text-white text-[10px]">{stock}</Badge>
+          : <Badge variant="destructive" className="text-[10px]">0</Badge>;
+    return (
     <TableRow key={r.id}>
       <TableCell>
         <div className="flex flex-col">
@@ -83,6 +132,7 @@ const InventoryRequestsPanel = () => {
         </div>
       </TableCell>
       <TableCell className="text-right font-semibold">{Number(r.quantity).toLocaleString("es-CO")}</TableCell>
+      <TableCell className="text-center">{stockBadge}</TableCell>
       <TableCell className="max-w-[180px] text-xs text-muted-foreground">
         {r.reason || "—"}
         {r.rejection_reason && (
@@ -93,22 +143,41 @@ const InventoryRequestsPanel = () => {
         {formatDistanceToNow(new Date(r.created_at), { addSuffix: true, locale: es })}
       </TableCell>
       <TableCell className="text-center">
-        <Badge variant={STATUS_VARIANT[r.status]} className="text-[10px] capitalize">{r.status}</Badge>
+        <Badge variant={STATUS_VARIANT[r.status]} className="text-[10px] capitalize">
+          {r.status.replace("_", " ")}
+        </Badge>
+        {!showActions && r.routed_to && (
+          <div className="text-[10px] text-muted-foreground mt-0.5">→ {AREA_LABEL[r.routed_to] || r.routed_to}</div>
+        )}
       </TableCell>
       {showActions && (
-        <TableCell className="text-right space-x-1">
-          <Button size="sm" variant="default" disabled={busy === r.id}
-            onClick={() => handleApprove(r)} className="gap-1">
-            <Check className="h-3.5 w-3.5" /> Aprobar
-          </Button>
-          <Button size="sm" variant="outline" disabled={busy === r.id}
-            onClick={() => { setRejectingId(r.id); setRejectReason(""); }} className="gap-1">
-            <X className="h-3.5 w-3.5" /> Rechazar
-          </Button>
-        </TableCell>
+        <>
+          <TableCell>
+            <Select value={route} onValueChange={(v) => setRoutes((p) => ({ ...p, [r.id]: v as RouteOption }))}>
+              <SelectTrigger className="h-8 text-xs w-[140px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="logistica">Entregar a Logística</SelectItem>
+                <SelectItem value="produccion">Pasar a Producción</SelectItem>
+                <SelectItem value="estampacion">Pasar a Estampación</SelectItem>
+              </SelectContent>
+            </Select>
+          </TableCell>
+          <TableCell className="text-right space-x-1 whitespace-nowrap">
+            <Button size="sm" variant="default" disabled={busy === r.id}
+              onClick={() => handleProcess(r, stock)} className="gap-1">
+              {route === "logistica" ? <Check className="h-3.5 w-3.5" /> : <Send className="h-3.5 w-3.5" />}
+              Procesar
+            </Button>
+            <Button size="sm" variant="outline" disabled={busy === r.id}
+              onClick={() => { setRejectingId(r.id); setRejectReason(""); }} className="gap-1">
+              <X className="h-3.5 w-3.5" /> Rechazar
+            </Button>
+          </TableCell>
+        </>
       )}
     </TableRow>
-  );
+    );
+  };
 
   const renderTable = (rows: InventoryRequest[], showActions: boolean) => (
     <Table>
@@ -117,16 +186,18 @@ const InventoryRequestsPanel = () => {
           <TableHead>Solicitante</TableHead>
           <TableHead>Producto</TableHead>
           <TableHead className="text-right">Cantidad</TableHead>
+          <TableHead className="text-center">Stock</TableHead>
           <TableHead>Motivo</TableHead>
           <TableHead>Fecha</TableHead>
           <TableHead className="text-center">Estado</TableHead>
+          {showActions && <TableHead>Ruteo</TableHead>}
           {showActions && <TableHead className="text-right">Acciones</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
         {rows.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={showActions ? 7 : 6} className="text-center text-muted-foreground py-6 text-sm">
+            <TableCell colSpan={showActions ? 9 : 7} className="text-center text-muted-foreground py-6 text-sm">
               Sin solicitudes
             </TableCell>
           </TableRow>

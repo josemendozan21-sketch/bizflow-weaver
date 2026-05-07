@@ -1,104 +1,82 @@
 ## Objetivo
 
-Reemplazar el ajuste manual de stock por un **flujo de solicitudes** donde otras áreas piden cuerpos o producto terminado a inventarios, e inventarios **aprueba o rechaza**. Al aprobar, se descuenta automáticamente del stock. Para ingresos, inventarios puede sumar manualmente (entrada de producción/devoluciones).
+Cambiar el panel de **Solicitudes de inventario** para que reciba **todos los pedidos** (mayoristas y al detal) y muestre, por cada fila, el **stock disponible** del producto + un selector de **ruteo** (Producción / Estampación / Logística) para que inventarios decida con criterio objetivo.
 
 ---
 
-## Flujo de salidas (descuentos)
+## Cambios en el flujo
 
-**Quién puede solicitar:**
-- Producción
-- Estampación
-- Logística
-- Asesores comerciales (de forma automática al confirmar un pedido de venta de producto terminado)
+1. **Ventas al detal y mayorista crean siempre la solicitud**
+   - Hoy el detal ya crea `inventory_requests`. Mantener ese comportamiento.
+   - Asegurar que los mayoristas también generen una solicitud al confirmar pedido (revisar si hoy se hace; si no, agregarlo) con `category = producto_terminado` y `order_id` para trazabilidad.
+   - Ya **no se bloquea** la creación por falta de stock — entran todas. Inventarios decide qué hacer en función del stock visible.
 
-**Qué se solicita:** una referencia de `cuerpos_referencias` o `producto_terminado` + cantidad + motivo opcional.
+2. **Panel de Solicitudes (inventarios)**
+   En `InventoryRequestsPanel.tsx`, en la tabla de **Pendientes**, agregar dos columnas nuevas:
+   - **Stock disponible**: lee `stock_items.available` por `stock_item_id` (fallback a `name + brand + category`). Se muestra con badge:
+     - verde si `disponible >= cantidad solicitada`
+     - ámbar si `0 < disponible < cantidad`
+     - rojo si `disponible = 0`
+   - **Ruteo**: selector con tres opciones:
+     - **Entregar a Logística** (caso normal: hay stock → aprobar y descontar)
+     - **Pasar a Producción** (no hay stock → genera tarea en `body_production_tasks` o `production_supply_orders` según categoría, y la solicitud queda en estado `en_produccion`)
+     - **Pasar a Estampación** (hay cuerpos pero falta personalización para pedidos con logo → crea/actualiza `production_orders` ligado al `order_id`)
 
-**Estados de la solicitud:** `pendiente` → `aprobada` (descuenta stock) | `rechazada` (con motivo).
+3. **Botón principal por fila**: "Procesar" — usa el ruteo seleccionado:
+   - Logística → status `aprobada` (descuenta stock como hoy vía trigger).
+   - Producción → status nuevo `en_produccion` + insert en `body_production_tasks` (cuerpos) o `production_supply_orders` (producto terminado), notificación a producción.
+   - Estampación → status nuevo `en_estampacion` + insert/update en `production_orders` con `current_stage = 'estampacion'`, notificación a estampación.
+   - Mantener botón **Rechazar** (con motivo) por si el pedido no procede.
 
-**Quién aprueba:** rol `inventarios` (y `admin`).
-
-### Caso especial — Asesores (ventas)
-Cuando un asesor crea un pedido en Ventas que incluye producto terminado existente en stock, se genera automáticamente una solicitud de salida hacia inventarios con:
-- Solicitante = nombre del asesor
-- Referencia = producto del pedido
-- Cantidad = cantidad del pedido
-- Referencia al `order_id` para trazabilidad
-
-Si inventarios rechaza, el pedido queda marcado y produce notificación al asesor para reabastecer vía producción.
-
-### Caso producción / estampación / logística
-Desde su propia vista (o un botón "Solicitar a inventarios" en el panel correspondiente) crean la solicitud. Se les muestra el catálogo filtrado y eligen referencia + cantidad.
-
----
-
-## Flujo de entradas (ingresos)
-
-Inventarios puede:
-1. **Recibir órdenes de producción terminadas** (ya existe parcialmente con `body_production_tasks` y la pestaña "Recepción de pedidos") → al marcar como recibido, suma al stock.
-2. **Sumar manualmente** desde la fila del ítem (botón **+ Ingresar**) con motivo: devolución, ajuste, ingreso externo. Esto sí queda como acción directa de inventarios.
+4. **Sugerencia automática del ruteo**
+   Al cargar la fila, preseleccionar la opción más razonable:
+   - `disponible >= cantidad` → Logística
+   - `cuerpos_referencias` sin stock → Producción
+   - `producto_terminado` sin stock pero con `order_id` que requiere logo/estampado → Estampación
+   - en otro caso → Producción
 
 ---
 
-## Vista de inventarios — qué cambia
+## Cambios técnicos
 
-En `InventariosRoleView.tsx` agregar una nueva pestaña **Solicitudes** con dos secciones:
+### Base de datos (migración)
+- Ampliar el check/valores de `inventory_requests.status` para aceptar: `pendiente`, `aprobada`, `rechazada`, `en_produccion`, `en_estampacion`, `entregada`.
+- Agregar columna `routed_to text` (nullable: `produccion` | `estampacion` | `logistica`) y `routed_at timestamptz`.
+- Trigger `process_inventory_request_approval` actualizado:
+  - Solo descuenta stock cuando pasa a `aprobada` (o `entregada`), igual que hoy.
+  - Cuando pasa a `en_produccion` o `en_estampacion`: no descuenta, solo notifica al rol correspondiente.
+- Mantener notificación al solicitante en cada cambio.
 
-- **Pendientes** — lista de solicitudes con: solicitante (nombre + área), referencia, cantidad, fecha, motivo. Botones **Aprobar** y **Rechazar** (rechazar pide motivo).
-- **Historial** — solicitudes aprobadas/rechazadas recientes, con filtro por área y referencia.
+### Frontend
+- `useInventoryRequests.ts`: nuevos métodos `routeToProduction(id, payload)`, `routeToStamping(id, payload)`, además de `approve` (logística).
+- `InventoryRequestsPanel.tsx`:
+  - Cargar `stockItems` con `useInventory()` y mapear por id/name+brand+category para mostrar stock por fila.
+  - Nuevas columnas: **Stock** (badge con color) y **Ruteo** (Select).
+  - Botón "Procesar" ejecuta la acción según el Select.
+  - Historial conserva las nuevas columnas como informativas.
+- `Ventas.tsx` (mayoristas): si hoy no se crea solicitud al confirmar pedido mayorista de producto terminado, agregar la creación análoga al detal con `requester_area = 'asesor_comercial'` y `order_id`.
 
-En `CategorizedInventoryPanel.tsx` (cuando el rol es inventarios y la categoría es cuerpos o producto terminado):
-- Mantener el botón de **editar** existente para correcciones.
-- Agregar botón **+ Ingresar** por fila (suma directa con motivo).
-- **No** agregar botón de restar — las salidas siempre pasan por solicitud.
-
----
-
-## Vistas de los solicitantes
-
-- **Producción / Estampación / Logística**: nuevo botón "Solicitar a inventarios" que abre diálogo con selector de marca + categoría (cuerpos o producto terminado) + referencia + cantidad + motivo.
-- **Asesores comerciales**: la solicitud se genera **automáticamente** al confirmar un pedido cuyo producto exista en stock terminado. No requieren botón nuevo.
-
-Todos ven el estado de sus solicitudes (pendiente / aprobada / rechazada) en una sección "Mis solicitudes".
-
----
-
-## Modelo de datos (nueva tabla)
-
-`inventory_requests`:
-- `id`, `created_at`, `updated_at`
-- `requester_id` (uuid), `requester_name` (text), `requester_area` (text: `produccion` | `estampacion` | `logistica` | `asesor_comercial`)
-- `brand` (text), `category` (text: `cuerpos_referencias` | `producto_terminado`)
-- `stock_item_id` (uuid, referencia a `stock_items`)
-- `item_name` (text, snapshot)
-- `quantity` (numeric)
-- `reason` (text, nullable)
-- `status` (text: `pendiente` | `aprobada` | `rechazada`)
-- `reviewed_by` (uuid, nullable), `reviewed_by_name` (text, nullable), `reviewed_at` (timestamptz, nullable)
-- `rejection_reason` (text, nullable)
-- `order_id` (uuid, nullable — para solicitudes auto-generadas desde Ventas)
-
-**RLS:**
-- Inventarios y admin: gestionan todo (insert/update/select)
-- Producción, estampación, logística, asesor: pueden insertar (con `requester_id = auth.uid()`) y ver las suyas
-- Inventarios actualiza estado y dispara el descuento de stock al aprobar
-
-**Lógica de aprobación:** al pasar a `aprobada`, un trigger `BEFORE UPDATE` valida stock disponible y descuenta `stock_items.available` (y `body_stock` cuando aplique para magical/cuerpos). Si no hay stock suficiente, lanza excepción y la aprobación falla con toast claro.
-
-Opcional: tabla `stock_movements` para historial de todas las entradas/salidas (incluye ingresos manuales y aprobaciones), pero con `inventory_requests` ya queda trazabilidad de las salidas.
+### Sin cambios
+- `CategorizedInventoryPanel.tsx`, `SupplyReceptionPanel.tsx` y la pestaña "Recepción de pedidos" (esa sigue siendo solo para entradas desde producción a inventario, no se mezcla con las solicitudes de salida).
 
 ---
 
-## Notificaciones
+## UX resultante
 
-- Al crear solicitud → notificación al rol `inventarios`.
-- Al aprobar/rechazar → notificación al solicitante (`target_user_id`).
-- Si rechazo viene de pedido de asesor → también notificar a producción para considerar reabastecer.
+En la pestaña **Solicitudes → Pendientes** inventarios verá una tabla así:
+
+```text
+Solicitante | Producto         | Cant. | Stock | Motivo        | Ruteo            | Acciones
+Asesor X    | Cervical (Frío)  |  20   |  30   | Pedido #123   | [Logística ▼]    | Procesar  Rechazar
+Producción  | Antifaz (Frío)   | 100   |  12   | Reabastecer   | [Producción ▼]   | Procesar  Rechazar
+Asesor Y    | Sweatshirt M     |  10   |   0   | Pedido #128   | [Estampación ▼]  | Procesar  Rechazar
+```
+
+Esto cumple lo que pediste: todos los pedidos llegan completos y al frente se decide ruteo viendo el stock real.
 
 ---
 
-## Preguntas antes de implementar
+## Confirmaciones que necesito antes de implementar
 
-1. Para los pedidos de **asesores**, ¿la solicitud se genera al **crear el pedido** o solo al **confirmar/aprobar el pedido**? (Hoy los pedidos pasan por estados; quiero saber en cuál disparar la solicitud).
-2. Si inventarios **rechaza** una solicitud de un asesor, ¿el pedido de venta queda **bloqueado** esperando producción, o el asesor decide qué hacer?
-3. Para los **ingresos manuales** (botón + en la fila), ¿basta con cantidad + motivo libre, o quieres opciones predefinidas (devolución, ajuste, producción externa)?
+1. ¿Confirmas los **tres destinos de ruteo** (Producción, Estampación, Logística) o agregamos algún otro estado (ej. "Reservado parcial")?
+2. Cuando se rutea a **Producción/Estampación**, ¿la solicitud debe quedar visible en "Pendientes" hasta que esa área la complete y entonces vuelva como `entregada`, o pasa directamente a Historial al rutearse?

@@ -621,6 +621,8 @@ export type Database = {
           reviewed_at: string | null
           reviewed_by: string | null
           reviewed_by_name: string | null
+          routed_at: string | null
+          routed_to: string | null
           status: string
           stock_item_id: string | null
           updated_at: string
@@ -641,6 +643,8 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           reviewed_by_name?: string | null
+          routed_at?: string | null
+          routed_to?: string | null
           status?: string
           stock_item_id?: string | null
           updated_at?: string
@@ -661,6 +665,8 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           reviewed_by_name?: string | null
+          routed_at?: string | null
+          routed_to?: string | null
           status?: string
           stock_item_id?: string | null
           updated_at?: string
