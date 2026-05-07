@@ -1,39 +1,104 @@
-## Actualizar referencias de cuerpos Magical Warmers
+## Objetivo
 
-Sincronizar el listado completo (49 referencias) en las dos tablas que usan los asesores y los paneles de inventario, agregando lo que falta y actualizando cantidades + stock mínimo de lo que ya existe.
+Reemplazar el ajuste manual de stock por un **flujo de solicitudes** donde otras áreas piden cuerpos o producto terminado a inventarios, e inventarios **aprueba o rechaza**. Al aprobar, se descuenta automáticamente del stock. Para ingresos, inventarios puede sumar manualmente (entrada de producción/devoluciones).
 
-### Listado a aplicar (fuente de verdad)
+---
 
-49 referencias con `Disponible` y `Stock Mínimo` según la imagen compartida (Antifaz, Caracoles, Banda Cefálica, Cerebro, Cervical Frío/Térmico, Círculo 8/12 cm Frío/Térmico, Faja Post. Operatoria, Gafas grandes/pequeñas, Gato Frío/Térmico, Glúteos Pareja Frío/Térmico, Gorro, Gorro quimioterapia, Gota, Handy Frío/Térmico, Herbology, Hueso, Labios, Lumbar Frío/Térmico, Lumbar Mediana, Mano, Máscara Frío, Maxilofacial, Muela Frío/Térmico, Multiusos Frío/Térmico, Multiusos Grande, Multiusos Mediana, Pélvica, Pie, Pocket Frío/Térmico, Senos Pareja, Shoulder Frío/Térmico, Tiroides, Tapa Ojos, Orejas, Ojeras, Mariposas).
+## Flujo de salidas (descuentos)
 
-### Tareas
+**Quién puede solicitar:**
+- Producción
+- Estampación
+- Logística
+- Asesores comerciales (de forma automática al confirmar un pedido de venta de producto terminado)
 
-1. **Normalizar nombres en `stock_items` (Magical / cuerpos_referencias)**
-   - Renombrar registros existentes para que coincidan con el listado:
-     - `Caracol (Frío)` → `Caracoles`
-     - `Glúteos (Frío)` → `Glúteos Pareja (Frío)`
-     - `Glúteos (Térmico)` → `Gluteos Pareja termico`
-     - `Máscara (Frío)` → `MASCARA FRIO`
-     - `Senos (Frío)` → `Senos Pareja (Frío)`
-   - Eliminar duplicados/variantes que ya no aplican (p.ej. `Antifaz (Térmico)`, `Senos (Térmico)`, etc., que no están en el listado).
+**Qué se solicita:** una referencia de `cuerpos_referencias` o `producto_terminado` + cantidad + motivo opcional.
 
-2. **Actualizar `available` y `min_stock`** de las 49 referencias en `stock_items` con los valores de la imagen. Asegurar `product_type` correcto (Frío / Térmico) y `category = cuerpos_referencias`, `brand = magical`.
+**Estados de la solicitud:** `pendiente` → `aprobada` (descuenta stock) | `rechazada` (con motivo).
 
-3. **Insertar las que faltan** en `stock_items` (ej. Orejas, Ojeras, Mariposas, Lumbar Mediana, Multiusos Grande/Mediana, Gorro quimioterapia, Gota, Mano, Pélvica, Pie, Faja Post. Operatoria, Tapa Ojos, etc. donde no exista).
+**Quién aprueba:** rol `inventarios` (y `admin`).
 
-4. **Limpiar y resincronizar `body_stock`** (la tabla que ven los asesores en el panel "Cuerpos disponibles"):
-   - Borrar todos los registros con `brand = magical` (hoy hay duplicados y referencias obsoletas como "Handy" sin tipo, "Corazones", "Flores", "Muela Grande").
-   - Insertar las 49 referencias del listado con su `available` correspondiente (un registro único por referencia).
+### Caso especial — Asesores (ventas)
+Cuando un asesor crea un pedido en Ventas que incluye producto terminado existente en stock, se genera automáticamente una solicitud de salida hacia inventarios con:
+- Solicitante = nombre del asesor
+- Referencia = producto del pedido
+- Cantidad = cantidad del pedido
+- Referencia al `order_id` para trazabilidad
 
-5. **Verificación** vía `read_query`: confirmar que tanto `stock_items` como `body_stock` tienen exactamente las 49 referencias con los valores correctos, y revisar visualmente en `/inventarios` y en la vista de asesor.
+Si inventarios rechaza, el pedido queda marcado y produce notificación al asesor para reabastecer vía producción.
 
-### Notas técnicas
+### Caso producción / estampación / logística
+Desde su propia vista (o un botón "Solicitar a inventarios" en el panel correspondiente) crean la solicitud. Se les muestra el catálogo filtrado y eligen referencia + cantidad.
 
-- Toda la operación es de datos (no de esquema): se ejecuta con la herramienta de inserción/actualización SQL, sin migraciones.
-- No se toca código de UI: las vistas de asesor (`AsesorInventoryView`, `CategorizedInventoryPanel`) ya leen de estas tablas, así que los cambios se reflejan automáticamente.
-- El indicador de "Crítico / Bajo / OK" usa `min_stock`, por lo que actualizar ese campo basta para que aparezcan correctamente en la pestaña de críticos.
-- Sweatspot no se toca en este cambio.
+---
 
-### Pregunta abierta
+## Flujo de entradas (ingresos)
 
-El listado solo trae cantidades únicas (no separa "al por mayor" vs "al por menor"). Asumo que ambos canales de venta consultan el mismo stock de cuerpos (que es como funciona hoy). Si quieres llevar inventarios separados por canal, dímelo y lo planteamos como un cambio aparte (requiere columna nueva en `stock_items`).
+Inventarios puede:
+1. **Recibir órdenes de producción terminadas** (ya existe parcialmente con `body_production_tasks` y la pestaña "Recepción de pedidos") → al marcar como recibido, suma al stock.
+2. **Sumar manualmente** desde la fila del ítem (botón **+ Ingresar**) con motivo: devolución, ajuste, ingreso externo. Esto sí queda como acción directa de inventarios.
+
+---
+
+## Vista de inventarios — qué cambia
+
+En `InventariosRoleView.tsx` agregar una nueva pestaña **Solicitudes** con dos secciones:
+
+- **Pendientes** — lista de solicitudes con: solicitante (nombre + área), referencia, cantidad, fecha, motivo. Botones **Aprobar** y **Rechazar** (rechazar pide motivo).
+- **Historial** — solicitudes aprobadas/rechazadas recientes, con filtro por área y referencia.
+
+En `CategorizedInventoryPanel.tsx` (cuando el rol es inventarios y la categoría es cuerpos o producto terminado):
+- Mantener el botón de **editar** existente para correcciones.
+- Agregar botón **+ Ingresar** por fila (suma directa con motivo).
+- **No** agregar botón de restar — las salidas siempre pasan por solicitud.
+
+---
+
+## Vistas de los solicitantes
+
+- **Producción / Estampación / Logística**: nuevo botón "Solicitar a inventarios" que abre diálogo con selector de marca + categoría (cuerpos o producto terminado) + referencia + cantidad + motivo.
+- **Asesores comerciales**: la solicitud se genera **automáticamente** al confirmar un pedido cuyo producto exista en stock terminado. No requieren botón nuevo.
+
+Todos ven el estado de sus solicitudes (pendiente / aprobada / rechazada) en una sección "Mis solicitudes".
+
+---
+
+## Modelo de datos (nueva tabla)
+
+`inventory_requests`:
+- `id`, `created_at`, `updated_at`
+- `requester_id` (uuid), `requester_name` (text), `requester_area` (text: `produccion` | `estampacion` | `logistica` | `asesor_comercial`)
+- `brand` (text), `category` (text: `cuerpos_referencias` | `producto_terminado`)
+- `stock_item_id` (uuid, referencia a `stock_items`)
+- `item_name` (text, snapshot)
+- `quantity` (numeric)
+- `reason` (text, nullable)
+- `status` (text: `pendiente` | `aprobada` | `rechazada`)
+- `reviewed_by` (uuid, nullable), `reviewed_by_name` (text, nullable), `reviewed_at` (timestamptz, nullable)
+- `rejection_reason` (text, nullable)
+- `order_id` (uuid, nullable — para solicitudes auto-generadas desde Ventas)
+
+**RLS:**
+- Inventarios y admin: gestionan todo (insert/update/select)
+- Producción, estampación, logística, asesor: pueden insertar (con `requester_id = auth.uid()`) y ver las suyas
+- Inventarios actualiza estado y dispara el descuento de stock al aprobar
+
+**Lógica de aprobación:** al pasar a `aprobada`, un trigger `BEFORE UPDATE` valida stock disponible y descuenta `stock_items.available` (y `body_stock` cuando aplique para magical/cuerpos). Si no hay stock suficiente, lanza excepción y la aprobación falla con toast claro.
+
+Opcional: tabla `stock_movements` para historial de todas las entradas/salidas (incluye ingresos manuales y aprobaciones), pero con `inventory_requests` ya queda trazabilidad de las salidas.
+
+---
+
+## Notificaciones
+
+- Al crear solicitud → notificación al rol `inventarios`.
+- Al aprobar/rechazar → notificación al solicitante (`target_user_id`).
+- Si rechazo viene de pedido de asesor → también notificar a producción para considerar reabastecer.
+
+---
+
+## Preguntas antes de implementar
+
+1. Para los pedidos de **asesores**, ¿la solicitud se genera al **crear el pedido** o solo al **confirmar/aprobar el pedido**? (Hoy los pedidos pasan por estados; quiero saber en cuál disparar la solicitud).
+2. Si inventarios **rechaza** una solicitud de un asesor, ¿el pedido de venta queda **bloqueado** esperando producción, o el asesor decide qué hacer?
+3. Para los **ingresos manuales** (botón + en la fila), ¿basta con cantidad + motivo libre, o quieres opciones predefinidas (devolución, ajuste, producción externa)?
