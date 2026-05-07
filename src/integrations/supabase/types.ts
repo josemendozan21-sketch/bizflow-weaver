@@ -604,6 +604,68 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_movements: {
+        Row: {
+          area: string
+          brand: string
+          category: string
+          created_at: string
+          direction: string
+          feria_id: string | null
+          id: string
+          item_name: string
+          order_id: string | null
+          quantity: number
+          reason: string | null
+          recorded_at: string
+          recorded_by: string | null
+          recorded_by_name: string | null
+          stock_item_id: string | null
+        }
+        Insert: {
+          area: string
+          brand: string
+          category: string
+          created_at?: string
+          direction: string
+          feria_id?: string | null
+          id?: string
+          item_name: string
+          order_id?: string | null
+          quantity: number
+          reason?: string | null
+          recorded_at?: string
+          recorded_by?: string | null
+          recorded_by_name?: string | null
+          stock_item_id?: string | null
+        }
+        Update: {
+          area?: string
+          brand?: string
+          category?: string
+          created_at?: string
+          direction?: string
+          feria_id?: string | null
+          id?: string
+          item_name?: string
+          order_id?: string | null
+          quantity?: number
+          reason?: string | null
+          recorded_at?: string
+          recorded_by?: string | null
+          recorded_by_name?: string | null
+          stock_item_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_movements_stock_item_id_fkey"
+            columns: ["stock_item_id"]
+            isOneToOne: false
+            referencedRelation: "stock_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_requests: {
         Row: {
           brand: string
