@@ -38,6 +38,25 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
 
 type RouteOption = "logistica" | "produccion" | "estampacion";
 
+type OriginFilter = "todas" | "detal" | "mayor" | "internos";
+
+const getOrigin = (r: InventoryRequest): { key: "detal" | "mayor" | "interno"; label: string; cls: string } => {
+  const reason = (r.reason || "").toLowerCase();
+  if (reason.includes("detal")) {
+    return { key: "detal", label: "Detal", cls: "bg-fuchsia-600 hover:bg-fuchsia-700 text-white" };
+  }
+  if (r.requester_area === "asesor_comercial") {
+    return { key: "mayor", label: "Mayor", cls: "bg-blue-600 hover:bg-blue-700 text-white" };
+  }
+  return { key: "interno", label: AREA_LABEL[r.requester_area] || r.requester_area, cls: "bg-slate-500 hover:bg-slate-600 text-white" };
+};
+
+const extractClient = (r: InventoryRequest): string | null => {
+  if (!r.reason) return null;
+  const m = r.reason.match(/Pedido al detal de\s+(.+)/i) || r.reason.match(/cliente:\s*(.+)/i);
+  return m ? m[1].trim() : null;
+};
+
 const InventoryRequestsPanel = () => {
   const { role } = useAuth();
   const isInventarios = role === "inventarios" || role === "admin";
@@ -47,9 +66,24 @@ const InventoryRequestsPanel = () => {
   const [rejectReason, setRejectReason] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [routes, setRoutes] = useState<Record<string, RouteOption>>({});
+  const [originFilter, setOriginFilter] = useState<OriginFilter>("todas");
 
-  const pendientes = requests.filter((r) => r.status === "pendiente");
-  const historial = requests.filter((r) => r.status !== "pendiente");
+  const matchesOrigin = (r: InventoryRequest) => {
+    if (originFilter === "todas") return true;
+    const o = getOrigin(r).key;
+    if (originFilter === "detal") return o === "detal";
+    if (originFilter === "mayor") return o === "mayor";
+    return o === "interno";
+  };
+  const pendientes = requests.filter((r) => r.status === "pendiente" && matchesOrigin(r));
+  const historial = requests.filter((r) => r.status !== "pendiente" && matchesOrigin(r));
+
+  const counts = {
+    todas: requests.filter((r) => r.status === "pendiente").length,
+    detal: requests.filter((r) => r.status === "pendiente" && getOrigin(r).key === "detal").length,
+    mayor: requests.filter((r) => r.status === "pendiente" && getOrigin(r).key === "mayor").length,
+    internos: requests.filter((r) => r.status === "pendiente" && getOrigin(r).key === "interno").length,
+  };
 
   const getStockFor = (r: InventoryRequest): number | null => {
     let item = r.stock_item_id ? stockItems.find((s) => s.id === r.stock_item_id) : undefined;
