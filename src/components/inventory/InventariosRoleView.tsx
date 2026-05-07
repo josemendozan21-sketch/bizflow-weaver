@@ -7,6 +7,7 @@ import CategorizedInventoryPanel from "@/components/inventory/CategorizedInvento
 import SupplyReceptionPanel from "@/components/inventory/SupplyReceptionPanel";
 import RequestBodyProductionDialog from "@/components/inventory/RequestBodyProductionDialog";
 import InventoryRequestsPanel from "@/components/inventory/InventoryRequestsPanel";
+import InventoryMovementsPanel from "@/components/inventory/InventoryMovementsPanel";
 import type { InventoryBrand, InventoryCategory } from "@/stores/inventoryStore";
 
 const InventariosRoleView = () => {
@@ -75,6 +76,7 @@ const InventariosRoleView = () => {
 
         <TabsContent value="recepcion" className="mt-4 space-y-6">
           <InventoryRequestsPanel />
+          <InventoryMovementsPanel />
           <SupplyReceptionPanel />
         </TabsContent>
       </Tabs>
