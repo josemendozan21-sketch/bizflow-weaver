@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { startOfMonth, endOfMonth, isWithinInterval, format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import type { Order } from "@/hooks/useOrders";
@@ -19,7 +21,11 @@ export default function AdvisorSalesPanel({ orders }: Props) {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth()); // 0-based
-  const [scope, setScope] = useState<"mes" | "todo">("mes");
+  const [scope, setScope] = useState<"mes" | "rango" | "todo">("mes");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
+  const [advisorFilter, setAdvisorFilter] = useState<string>("__all__");
+  const [paymentFilter, setPaymentFilter] = useState<"todos" | "pagados" | "pendientes">("todos");
 
   const years = useMemo(() => {
     const set = new Set<number>();
@@ -31,17 +37,50 @@ export default function AdvisorSalesPanel({ orders }: Props) {
     return Array.from(set).sort((a, b) => b - a);
   }, [orders]);
 
-  const filtered = useMemo(() => {
-    if (scope === "todo") return orders;
-    const start = startOfMonth(new Date(year, month, 1));
-    const end = endOfMonth(new Date(year, month, 1));
-    return orders.filter((o) => {
-      const ref = o.invoice_date || o.created_at;
-      if (!ref) return false;
-      const d = typeof ref === "string" ? parseISO(ref) : new Date(ref);
-      return isWithinInterval(d, { start, end });
+  const advisors = useMemo(() => {
+    const map = new Map<string, string>();
+    orders.forEach((o) => {
+      const id = o.advisor_id || "—";
+      if (!map.has(id)) map.set(id, o.advisor_name || "Sin asesor");
     });
-  }, [orders, year, month, scope]);
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [orders]);
+
+  const filtered = useMemo(() => {
+    let list = orders;
+
+    if (scope === "mes") {
+      const start = startOfMonth(new Date(year, month, 1));
+      const end = endOfMonth(new Date(year, month, 1));
+      list = list.filter((o) => {
+        const ref = o.invoice_date || o.created_at;
+        if (!ref) return false;
+        const d = typeof ref === "string" ? parseISO(ref) : new Date(ref);
+        return isWithinInterval(d, { start, end });
+      });
+    } else if (scope === "rango" && (dateFrom || dateTo)) {
+      const start = dateFrom ? parseISO(dateFrom) : new Date(0);
+      const end = dateTo ? parseISO(dateTo + "T23:59:59") : new Date(8640000000000000);
+      list = list.filter((o) => {
+        const ref = o.invoice_date || o.created_at;
+        if (!ref) return false;
+        const d = typeof ref === "string" ? parseISO(ref) : new Date(ref);
+        return d >= start && d <= end;
+      });
+    }
+
+    if (advisorFilter !== "__all__") {
+      list = list.filter((o) => (o.advisor_id || "—") === advisorFilter);
+    }
+
+    if (paymentFilter === "pagados") {
+      list = list.filter((o) => o.payment_complete === true);
+    } else if (paymentFilter === "pendientes") {
+      list = list.filter((o) => !o.payment_complete);
+    }
+
+    return list;
+  }, [orders, year, month, scope, dateFrom, dateTo, advisorFilter, paymentFilter]);
 
   const summary = useMemo(() => {
     const map = new Map<
@@ -116,14 +155,17 @@ export default function AdvisorSalesPanel({ orders }: Props) {
               <p className="text-xs text-muted-foreground mt-1">
                 {scope === "mes"
                   ? `Periodo: ${format(new Date(year, month, 1), "MMMM yyyy", { locale: es })}`
+                  : scope === "rango"
+                  ? `Periodo: ${dateFrom || "inicio"} → ${dateTo || "hoy"}`
                   : "Periodo: Todos los pedidos"}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Select value={scope} onValueChange={(v) => setScope(v as "mes" | "todo")}>
+              <Select value={scope} onValueChange={(v) => setScope(v as "mes" | "rango" | "todo")}>
                 <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="mes">Por mes</SelectItem>
+                  <SelectItem value="rango">Rango fechas</SelectItem>
                   <SelectItem value="todo">Histórico</SelectItem>
                 </SelectContent>
               </Select>
@@ -148,6 +190,53 @@ export default function AdvisorSalesPanel({ orders }: Props) {
                     </SelectContent>
                   </Select>
                 </>
+              )}
+              {scope === "rango" && (
+                <>
+                  <Input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="w-[150px]"
+                  />
+                  <Input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="w-[150px]"
+                  />
+                </>
+              )}
+              <Select value={advisorFilter} onValueChange={setAdvisorFilter}>
+                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Asesor" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Todos los asesores</SelectItem>
+                  {advisors.map(([id, name]) => (
+                    <SelectItem key={id} value={id}>{name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as any)}>
+                <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos los pagos</SelectItem>
+                  <SelectItem value="pagados">Pagados</SelectItem>
+                  <SelectItem value="pendientes">Pendientes por pagar</SelectItem>
+                </SelectContent>
+              </Select>
+              {(advisorFilter !== "__all__" || paymentFilter !== "todos" || dateFrom || dateTo) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setAdvisorFilter("__all__");
+                    setPaymentFilter("todos");
+                    setDateFrom("");
+                    setDateTo("");
+                  }}
+                >
+                  Limpiar
+                </Button>
               )}
             </div>
           </div>
