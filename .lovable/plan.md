@@ -1,60 +1,57 @@
-## Movimientos de inventario entre áreas
+## Objetivo
 
-Registrar entregas, devoluciones y retornos de producto/insumos entre Inventarios y las demás áreas, **sin saldos acumulados** — solo historial cronológico que descuenta o suma al stock central de Inventarios.
+Hoy en Inventarios hay dos paneles separados:
+- **Solicitudes de inventario** (cuando producción/estampación/asesor pide cuerpos o producto terminado).
+- **Movimientos entre áreas** (entregas/retornos manuales).
 
-## Modelo de datos
+Cuando un área pide algo, Inventarios tiene que aprobar en uno y luego registrar la entrega en el otro. Vamos a unificar esto: **aprobar una solicitud = entregar a esa área**, y queda registrado automáticamente en el historial de movimientos.
 
-Nueva tabla `inventory_movements`:
+## Cómo va a quedar
 
-- `stock_item_id` (referencia al item de `stock_items`)
-- `item_name`, `brand`, `category` (snapshot legible)
-- `quantity` (numeric, > 0)
-- `direction`: `entrega` | `retorno` (entrega = sale del stock central; retorno = vuelve al stock central)
-- `area`: `produccion` | `estampacion` | `logistica` | `asesor_comercial` | `feria`
-- `feria_id` (uuid, opcional — solo cuando `area = feria`)
-- `reason` (texto libre)
-- `order_id` (opcional — para ligar a un pedido)
-- `recorded_by`, `recorded_by_name`, `recorded_at`
+### 1. En "Solicitudes de inventario" (pendientes)
 
-**Trigger `process_inventory_movement()`** (BEFORE INSERT):
-- Si `direction = entrega`: valida `stock_items.available >= quantity` y descuenta.
-- Si `direction = retorno`: suma a `stock_items.available`.
-- Notifica al área destino (al área que recibe la entrega, o a Inventarios cuando es retorno).
+Cada fila de pedido pendiente va a tener un botón principal claro:
 
-**RLS**: solo `inventarios` y `admin` pueden insertar / ver / actualizar. (Las demás áreas ven el efecto en sus notificaciones, no en la tabla).
+```
+[ Entregar X uds a Producción ]   [ Pasar a Producción ]   [ Rechazar ]
+```
 
-## UI — nuevo panel
+- El texto del botón cambia según quién pide (Producción, Estampación, Logística, Asesor, o "Detal" si viene de venta al detal).
+- Al darle clic:
+  1. La solicitud pasa a estado **aprobada**.
+  2. Se descuenta del stock central.
+  3. Se crea automáticamente un **movimiento de entrega** al área del solicitante, con:
+     - Cantidad e ítem de la solicitud.
+     - Motivo: el motivo original de la solicitud (ej: "Pedido al detal de Juan Pérez", "Cliente XYZ — pedido #123").
+     - Pedido relacionado si la solicitud venía con `order_id`.
+  4. Le llega notificación al área receptora: "Inventarios entregó X uds de Y".
 
-`InventoryMovementsPanel.tsx`, dentro del tab **Recepción de pedidos** del rol Inventarios, debajo de Solicitudes y Suministros.
+### 2. En "Movimientos entre áreas"
 
-Contiene:
+Sigue funcionando igual:
+- Mantiene el botón **Registrar movimiento** para entregas/retornos manuales (ej: ferias, retornos de producción).
+- El historial ahora muestra **todas** las entregas, incluidas las que vinieron de aprobar solicitudes.
+- Filtros existentes (área, tipo, marca, búsqueda) cubren ambas fuentes.
 
-1. **Botón "Registrar movimiento"** → diálogo con:
-   - Tipo: Entrega / Retorno (radio)
-   - Área destino: Producción · Estampación · Logística · Asesor · **Feria** (al elegir Feria, aparece un selector de feria activa)
-   - Marca + ítem (autocomplete sobre `stock_items`, muestra disponible actual)
-   - Cantidad
-   - Motivo (texto)
-   - Pedido relacionado (opcional)
-2. **Tabla de historial** (últimas 100, scroll y filtros):
-   - Columnas: Fecha · Tipo (badge entrega/retorno) · Área · Ítem · Cantidad · Motivo · Registrado por
-   - Filtros rápidos: por área, por tipo, por marca, búsqueda por ítem.
-3. **Sin columna de "saldo por área"** — se omite por decisión del usuario.
+### 3. Retornos desde otras áreas
 
-## Caso especial Ferias
-
-Inventarios entrega producto a Logística para una feria → se registra como movimiento `entrega` al área `logistica` con el `feria_id` indicado en el motivo / campo. Logística sigue siendo quien dispacha físicamente; este movimiento solo deja constancia y descuenta el stock central. **No se duplica con `feria_inventory`** — esa tabla la sigue manejando Logística.
-
-## Archivos a crear / tocar
-
-- **Migración**: tabla `inventory_movements` + trigger + RLS.
-- **Nuevo**: `src/components/inventory/InventoryMovementsPanel.tsx`
-- **Nuevo**: `src/components/inventory/RegisterMovementDialog.tsx`
-- **Nuevo**: `src/hooks/useInventoryMovements.ts`
-- **Editar**: `src/components/inventory/InventariosRoleView.tsx` — agregar `<InventoryMovementsPanel />` en el tab "Recepción".
+Cuando producción, estampación o un asesor quieran devolver producto a inventarios:
+- Igual que hoy, lo hace Inventarios desde "Registrar movimiento" → tipo Retorno.
+- (En una segunda fase podemos dar a esas áreas un botón propio, pero por ahora lo registra Inventarios para mantener control.)
 
 ## Lo que NO cambia
 
-- Flujo actual de `inventory_requests` (solicitudes) sigue igual; este panel es complementario.
-- `feria_inventory` y dispatch de Logística sin cambios.
-- Stock por área no se calcula ni se almacena.
+- Las áreas siguen pidiendo igual (con el diálogo de "Solicitar a inventario").
+- "Pasar a Producción" y "Pasar a Estampación" siguen funcionando como hoy (rutea sin entregar).
+- Solicitudes de feria siguen el flujo de Logística.
+- Costos y stock se calculan igual.
+
+## Detalle técnico (para tu referencia)
+
+- Se modifica el trigger `process_inventory_request_approval()`: cuando una solicitud pasa a `aprobada`, además de descontar stock, inserta una fila en `inventory_movements` con `direction='entrega'` y `area = requester_area` (mapeando `inventarios`/`admin` → `logistica` por defecto si aplica).
+- Para evitar doble notificación, el trigger de `process_inventory_movement` puede saltar la notificación cuando el movimiento se creó por una solicitud (campo `order_id` o un flag opcional). Alternativa: dejar la notificación de "solicitud aprobada" como única y suprimir la del movimiento automático.
+- En `InventoryRequestsPanel.tsx`: relabelar el botón "Procesar" cuando la ruta es "logistica" → mostrar "Entregar a {área del solicitante}" para que sea claro que es una entrega directa al área que pidió, no a logística.
+
+## Pregunta antes de implementar
+
+¿Cuando Producción o Estampación piden cuerpos/producto terminado y tú apruebas, quieres que la entrega quede registrada **directamente al área que pidió** (Producción/Estampación), o **siempre a Logística** que es quien lo mueve físicamente?

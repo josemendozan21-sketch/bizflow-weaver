@@ -229,7 +229,9 @@ const InventoryRequestsPanel = () => {
             <Button size="sm" variant="default" disabled={busy === r.id}
               onClick={() => handleProcess(r, stock)} className="gap-1">
               {route === "logistica" ? <Check className="h-3.5 w-3.5" /> : <Send className="h-3.5 w-3.5" />}
-              Procesar
+              {route === "logistica"
+                ? `Entregar a ${AREA_LABEL[r.requester_area] || r.requester_area}`
+                : "Rutear"}
             </Button>
             <Button size="sm" variant="outline" disabled={busy === r.id}
               onClick={() => { setRejectingId(r.id); setRejectReason(""); }} className="gap-1">
