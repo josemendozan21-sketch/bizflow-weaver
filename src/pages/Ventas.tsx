@@ -1469,9 +1469,9 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       }
       const logoType = tipoLogo === "Impresión básica" ? "impresion_basica" as const : "impresion_full" as const;
 
-      // Sweatspot solo produce termos (150/250/500 ml). El resto (canguros, chalecos,
-      // imanes, etc.) son productos importados/finalizados y van directo a Logística.
-      const isImportedProduct = !/termo/i.test(referencia);
+      // Por defecto todos los productos Sweatspot pasan por producción.
+      // El listado de productos realmente importados se definirá manualmente.
+      const isImportedProduct = false;
 
       useAccountingStore.getState().addOrder({
         clientName,
@@ -1723,11 +1723,6 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                 <div className="space-y-1.5">
                   <Label>Referencia o molde</Label>
                   <Input value={line.referencia} onChange={(e) => updateSSLine(line.id, { referencia: e.target.value })} required />
-                  {line.referencia && !/termo/i.test(line.referencia) && (
-                    <p className="text-xs text-muted-foreground bg-muted/50 rounded-md p-2">
-                      ℹ️ Producto importado (no es termo): pasará directo a Logística sin producción.
-                    </p>
-                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label>Tamaño</Label>
