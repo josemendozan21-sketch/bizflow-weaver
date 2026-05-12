@@ -21,11 +21,13 @@ import {
   Info,
   ShieldCheck,
   Search,
+  Package,
 } from "lucide-react";
 import { useProductionOrders, type ProductionOrder } from "@/hooks/useProductionOrders";
 import { useAuth } from "@/contexts/AuthContext";
 
 const STAGE_ICONS: Record<string, React.ElementType> = {
+  produccion_cuerpos: Package,
   estampacion: Paintbrush,
   produccion_tubos: Cylinder,
   ensamble_cuello: CircleDot,
@@ -36,6 +38,7 @@ const STAGE_ICONS: Record<string, React.ElementType> = {
 };
 
 const SS_STAGE_LABELS: Record<string, string> = {
+  produccion_cuerpos: "Producción de cuerpos",
   estampacion: "Estampación",
   produccion_tubos: "Producción de tubos",
   ensamble_cuello: "Ensamble de cuello",
@@ -45,7 +48,7 @@ const SS_STAGE_LABELS: Record<string, string> = {
   listo: "Listo",
 };
 
-const FULL_STAGE_ORDER = ["estampacion", "produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"];
+const FULL_STAGE_ORDER = ["produccion_cuerpos", "estampacion", "produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"];
 
 const STATUS_BADGE: Record<string, { label: string; variant: "secondary" | "default" | "outline" }> = {
   pendiente: { label: "Pendiente", variant: "secondary" },
