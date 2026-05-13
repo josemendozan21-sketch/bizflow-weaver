@@ -413,7 +413,7 @@ function OrderGroupCard({
   const friendlyLabel = getFriendlyStageLabel(rep.production_status, rep);
   const needsPaymentAction = group.category === "action";
   const isMultiLine = group.items.length > 1;
-  const saldo = group.totalAmount - group.totalAbono;
+  const saldo = Math.max(group.totalAmount - group.totalAbono, 0);
 
   // Foto(s) de producto finalizado para cualquier línea del grupo
   const completionInfos = group.items
@@ -468,7 +468,7 @@ function OrderGroupCard({
             </div>
             {/* Una confirmación de pago por línea pendiente */}
             {group.items
-              .filter((o) => o.production_status === "listo" && o.sale_type === "mayor" && !o.payment_complete)
+              .filter((o) => o.production_status === "listo" && o.sale_type === "mayor" && !isOrderFullyPaid(o))
               .map((o) => (
                 <PaymentConfirmDialog key={o.id} order={o} />
               ))}
@@ -476,7 +476,7 @@ function OrderGroupCard({
         )}
 
         {/* Already confirmed badge */}
-        {!needsPaymentAction && rep.production_status === "listo" && rep.sale_type === "mayor" && rep.payment_complete && (
+        {!needsPaymentAction && rep.production_status === "listo" && rep.sale_type === "mayor" && isOrderFullyPaid(rep) && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-2 flex items-center gap-2 text-green-800 text-sm">
             <CheckCircle2 className="h-4 w-4" />
             Pago confirmado — Listo para despacho por logística
@@ -674,7 +674,7 @@ function PaymentConfirmDialog({ order }: { order: Order }) {
     }
   };
 
-  const saldo = (Number(order.total_amount) || 0) - (Number(order.abono) || 0);
+  const saldo = getOrderBalance(order);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
