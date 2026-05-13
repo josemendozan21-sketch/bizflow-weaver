@@ -10,7 +10,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Inbox, Package, Truck, Paintbrush, Calendar, User as UserIcon } from "lucide-react";
+import { Inbox, Package, Truck, Paintbrush, Factory, Calendar, User as UserIcon, ShoppingBag } from "lucide-react";
 import { useInventory } from "@/hooks/useInventory";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -35,7 +35,13 @@ const ACTIVE_STATUSES = [
   "dosificacion", "sellado", "recorte", "empaque", "listo",
 ];
 
-type Target = "estampacion" | "logistica";
+type Target = "estampacion" | "produccion" | "logistica";
+
+const TARGET_LABEL: Record<Target, string> = {
+  estampacion: "Estampación",
+  produccion: "Producción",
+  logistica: "Logística",
+};
 
 const WholesaleOrdersInbox = () => {
   const { user } = useAuth();
@@ -53,6 +59,21 @@ const WholesaleOrdersInbox = () => {
         .from("orders")
         .select("id,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations")
         .eq("sale_type", "mayor")
+        .in("production_status", ACTIVE_STATUSES)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || []) as MayorOrder[];
+    },
+    refetchInterval: 15_000,
+  });
+
+  const { data: retailOrders = [], isLoading: loadingRetail } = useQuery({
+    queryKey: ["detal-orders-inbox"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("id,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations")
+        .eq("sale_type", "detal")
         .in("production_status", ACTIVE_STATUSES)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -119,13 +140,14 @@ const WholesaleOrdersInbox = () => {
       toast.error(error.message);
       return;
     }
-    toast.success(`Entregado ${quantity} uds a ${target === "estampacion" ? "Estampación" : "Logística"}`);
+    toast.success(`Entregado ${quantity} uds a ${TARGET_LABEL[target]}`);
     setDelivering(null);
     qc.invalidateQueries({ queryKey: ["mayor-orders-inbox"] });
+    qc.invalidateQueries({ queryKey: ["detal-orders-inbox"] });
     qc.invalidateQueries({ queryKey: ["mayor-orders-delivered"] });
   };
 
-  const renderCard = (o: MayorOrder, isDelivered: boolean) => {
+  const renderCard = (o: MayorOrder, isDelivered: boolean, kind: "mayor" | "detal" = "mayor") => {
     const item = findStockItem(o);
     const stock = item ? Number(item.available) : null;
     const enough = stock !== null && stock >= o.quantity;
@@ -143,7 +165,9 @@ const WholesaleOrdersInbox = () => {
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <Badge className="bg-blue-600 hover:bg-blue-700 text-white">Mayor</Badge>
+                {kind === "mayor"
+                  ? <Badge className="bg-blue-600 hover:bg-blue-700 text-white">Mayor</Badge>
+                  : <Badge className="bg-purple-600 hover:bg-purple-700 text-white">Detal</Badge>}
                 <Badge variant="outline" className="capitalize">{o.brand}</Badge>
                 {isDelivered && <Badge variant="secondary">Entregado</Badge>}
               </div>
@@ -175,21 +199,36 @@ const WholesaleOrdersInbox = () => {
           )}
 
           {!isDelivered && (
-            <div className="flex gap-2 pt-1">
-              <Button size="sm" variant="outline" className="flex-1 gap-1.5"
-                onClick={() => openDeliver(o, "estampacion")}>
-                <Paintbrush className="h-3.5 w-3.5" /> Entregar a Estampación
-              </Button>
-              <Button size="sm" variant="default" className="flex-1 gap-1.5"
-                onClick={() => openDeliver(o, "logistica")}>
-                <Truck className="h-3.5 w-3.5" /> Entregar a Logística
-              </Button>
-            </div>
+            kind === "detal" ? (
+              <div className="pt-1">
+                <Button size="sm" variant="default" className="w-full gap-1.5"
+                  onClick={() => openDeliver(o, "logistica")}>
+                  <Truck className="h-3.5 w-3.5" /> Entregar a Logística
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button size="sm" variant="outline" className="flex-1 min-w-[140px] gap-1.5"
+                  onClick={() => openDeliver(o, "estampacion")}>
+                  <Paintbrush className="h-3.5 w-3.5" /> Estampación
+                </Button>
+                <Button size="sm" variant="outline" className="flex-1 min-w-[140px] gap-1.5"
+                  onClick={() => openDeliver(o, "produccion")}>
+                  <Factory className="h-3.5 w-3.5" /> Producción
+                </Button>
+                <Button size="sm" variant="default" className="flex-1 min-w-[140px] gap-1.5"
+                  onClick={() => openDeliver(o, "logistica")}>
+                  <Truck className="h-3.5 w-3.5" /> Logística
+                </Button>
+              </div>
+            )
           )}
         </CardContent>
       </Card>
     );
   };
+
+  const pendingRetail = useMemo(() => retailOrders.filter((o) => !deliveredIds.has(o.id)), [retailOrders, deliveredIds]);
 
   return (
     <div className="space-y-4">
@@ -217,6 +256,30 @@ const WholesaleOrdersInbox = () => {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <ShoppingBag className="h-4 w-4" />
+            Pedidos al detal
+            <Badge variant="secondary">{pendingRetail.length} pendientes</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loadingRetail ? (
+            <p className="text-center text-sm text-muted-foreground py-6">Cargando…</p>
+          ) : pendingRetail.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No hay pedidos al detal pendientes.</p>
+            </div>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2">
+              {pendingRetail.map((o) => renderCard(o, false, "detal"))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {delivered.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
@@ -234,7 +297,7 @@ const WholesaleOrdersInbox = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Entregar a {delivering?.target === "estampacion" ? "Estampación" : "Logística"}
+              Entregar a {delivering ? TARGET_LABEL[delivering.target] : ""}
             </DialogTitle>
             <DialogDescription>
               {delivering && `${delivering.order.product} — Pedido de ${delivering.order.client_name}`}
