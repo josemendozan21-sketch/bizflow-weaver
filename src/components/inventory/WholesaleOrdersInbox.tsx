@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Inbox, Package, Truck, Paintbrush, Factory, Calendar, User as UserIcon, ShoppingBag } from "lucide-react";
+import { Inbox, Package, Truck, Paintbrush, Factory, Calendar, User as UserIcon, ShoppingBag, ArrowLeft } from "lucide-react";
 import { useInventory } from "@/hooks/useInventory";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -44,10 +44,13 @@ const TARGET_LABEL: Record<Target, string> = {
   logistica: "Logística",
 };
 
+type BandejaView = "menu" | "mayor" | "detal";
+
 const WholesaleOrdersInbox = () => {
   const { user } = useAuth();
   const qc = useQueryClient();
   const { stockItems } = useInventory();
+  const [view, setView] = useState<BandejaView>("menu");
   const [delivering, setDelivering] = useState<{ order: MayorOrder; target: Target } | null>(null);
   const [qty, setQty] = useState<string>("");
   const [obs, setObs] = useState<string>("");
@@ -152,7 +155,6 @@ const WholesaleOrdersInbox = () => {
     setBusy(true);
 
     if (target === "produccion") {
-      // Generate body production task; bodies will return to inventory when finished
       const { error } = await supabase.from("body_production_tasks").insert({
         referencia: order.product,
         unidades: quantity,
@@ -277,11 +279,76 @@ const WholesaleOrdersInbox = () => {
   };
 
   const pendingRetail = useMemo(() => retailOrders.filter((o) => !deliveredIds.has(o.id)), [retailOrders, deliveredIds]);
+  const deliveredRetail = useMemo(() => retailOrders.filter((o) => deliveredIds.has(o.id)), [retailOrders, deliveredIds]);
 
-  return (
-    <div className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Pedidos al detal — arriba/izquierda */}
+  if (view === "menu") {
+    return (
+      <div className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-2">
+          <button onClick={() => setView("detal")} className="text-left">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <ShoppingBag className="h-5 w-5 text-purple-600" />
+                  Pedidos al detal
+                  <Badge variant="secondary">{pendingRetail.length} pendientes</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-sm text-muted-foreground">Entregar productos terminados a Logística para despacho.</p>
+                {pendingRetail.length > 0 && (
+                  <div className="text-xs text-muted-foreground">
+                    Último: {pendingRetail[0]?.client_name} — {pendingRetail[0]?.quantity} × {pendingRetail[0]?.product}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </button>
+
+          <button onClick={() => setView("mayor")} className="text-left">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Inbox className="h-5 w-5 text-blue-600" />
+                  Pedidos al por mayor
+                  <Badge variant="secondary">{pending.length} pendientes</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-sm text-muted-foreground">Entregar a Estampación o solicitar producción de cuerpos.</p>
+                {pending.length > 0 && (
+                  <div className="text-xs text-muted-foreground">
+                    Último: {pending[0]?.client_name} — {pending[0]?.quantity.toLocaleString("es-CO")} × {pending[0]?.product}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </button>
+        </div>
+
+        {(delivered.length > 0 || deliveredRetail.length > 0) && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm text-muted-foreground">Entregados recientes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3 md:grid-cols-2">
+                {deliveredRetail.slice(0, 3).map((o) => renderCard(o, true, "detal"))}
+                {delivered.slice(0, 3).map((o) => renderCard(o, true))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  }
+
+  if (view === "detal") {
+    return (
+      <div className="space-y-4">
+        <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setView("menu")}>
+          <ArrowLeft className="h-4 w-4" /> Volver
+        </Button>
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
@@ -299,38 +366,101 @@ const WholesaleOrdersInbox = () => {
                 <p className="text-sm">No hay pedidos al detal pendientes.</p>
               </div>
             ) : (
-              <div className="grid gap-3">
+              <div className="grid gap-3 md:grid-cols-2">
                 {pendingRetail.map((o) => renderCard(o, false, "detal"))}
               </div>
             )}
           </CardContent>
         </Card>
+        {deliveredRetail.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm text-muted-foreground">Entregados recientes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3 md:grid-cols-2">
+                {deliveredRetail.slice(0, 6).map((o) => renderCard(o, true, "detal"))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-        {/* Pedidos al por mayor — al lado/derecha */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Inbox className="h-4 w-4" />
-              Bandeja de pedidos al por mayor
-              <Badge variant="secondary">{pending.length} pendientes</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <p className="text-center text-sm text-muted-foreground py-6">Cargando…</p>
-            ) : pending.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No hay pedidos al por mayor pendientes de entrega.</p>
+        <Dialog open={!!delivering} onOpenChange={(o) => !o && setDelivering(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {delivering?.target === "produccion"
+                  ? "Solicitar producción de cuerpos"
+                  : `Entregar a ${delivering ? TARGET_LABEL[delivering.target] : ""}`}
+              </DialogTitle>
+              <DialogDescription>
+                {delivering && `${delivering.order.product} — Pedido de ${delivering.order.client_name}`}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div>
+                <Label>{delivering?.target === "produccion" ? "Cantidad a producir" : "Cantidad a entregar"}</Label>
+                <Input type="number" value={qty} onChange={(e) => setQty(e.target.value)} min="1" />
               </div>
-            ) : (
-              <div className="grid gap-3">
-                {pending.map((o) => renderCard(o, false))}
+              {delivering?.target === "produccion" && (
+                <div>
+                  <Label>Tipo de plástico</Label>
+                  <Select value={plastico} onValueChange={(v) => setPlastico(v as "frio" | "calor")}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="frio">Frío</SelectItem>
+                      <SelectItem value="calor">Calor</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div>
+                <Label>Observación (opcional)</Label>
+                <Textarea value={obs} onChange={(e) => setObs(e.target.value)}
+                  placeholder="Ej: pendiente sticker, falta sello..." rows={2} />
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setDelivering(null)}>Cancelar</Button>
+              <Button onClick={confirmDeliver} disabled={busy}>
+                {delivering?.target === "produccion" ? "Crear orden de producción" : "Confirmar entrega"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
+    );
+  }
+
+  // view === "mayor"
+  return (
+    <div className="space-y-4">
+      <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setView("menu")}>
+        <ArrowLeft className="h-4 w-4" /> Volver
+      </Button>
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Inbox className="h-4 w-4" />
+            Bandeja de pedidos al por mayor
+            <Badge variant="secondary">{pending.length} pendientes</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <p className="text-center text-sm text-muted-foreground py-6">Cargando…</p>
+          ) : pending.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No hay pedidos al por mayor pendientes de entrega.</p>
+            </div>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2">
+              {pending.map((o) => renderCard(o, false))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {delivered.length > 0 && (
         <Card>
