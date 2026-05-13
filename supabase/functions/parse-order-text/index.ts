@@ -27,9 +27,16 @@ Extrae la siguiente información y devuélvela usando la herramienta proporciona
 
 Marca actual: ${brand === "sweatspot" ? "Sweatspot" : "Magical Warmers"}
 
-Notas importantes:
+${brand === "sweatspot" ? `Notas específicas para Sweatspot:
+- Los productos son termos. NO hay referencia ni molde.
+- El tamaño del termo es lo importante: puede ser "150 ml", "250 ml", "250 ml juguetón" o "500 ml". Extrae el tamaño en el campo "tamano".
+- El campo "producto" dentro de cada línea debe contener el tamaño del termo (ej: "Termo 500 ml").
+- Los colores de silicona y tinta son importantes.
+- El tipo de logo puede ser "full" o "básica"` : `Notas específicas para Magical Warmers:
 - "producto" se refiere a la referencia del producto (ej: "Thermo sport", "Mug", "Botella 500ml")
-- "tipo" es la variante del producto (ej: "frío", "calor", "sublimación")
+- "tipo" es la variante del producto (ej: "frío", "calor", "sublimación")`}
+
+Notas generales:
 - Los colores de gel y tinta pueden estar como "gel azul" o "tinta rosada"
 - El NIT/cédula puede venir como "NIT: 900123456-7" o "CC 1234567"
 - Si ves múltiples productos/líneas, inclúyelos todos en el array "productos"
@@ -72,20 +79,20 @@ Notas importantes:
                     items: {
                       type: "object",
                       properties: {
-                        producto: { type: "string", description: "Nombre/referencia del producto" },
-                        tipo: { type: "string", description: "Tipo o variante del producto" },
+                        producto: { type: "string", description: "Nombre del producto (Magical Warmers: referencia; Sweatspot: tamaño del termo)" },
+                        tipo: { type: "string", description: "Tipo o variante del producto (Magical Warmers: frío/calor; Sweatspot: tamaño del termo si no está en producto)" },
                         color_gel: { type: "string", description: "Color del gel" },
                         color_tinta: { type: "string", description: "Color de la tinta" },
                         unidades: { type: "number", description: "Cantidad de unidades" },
                         valor_unitario: { type: "number", description: "Precio unitario" },
                         valor_total: { type: "number", description: "Valor total de la línea" },
+                        tamano: { type: "string", description: "Tamaño del termo (Sweatspot: 150 ml, 250 ml, 250 ml juguetón, 500 ml)" },
                       },
                     },
                   },
                   color_silicona: { type: "string", description: "Color de silicona (Sweatspot)" },
                   tamano: { type: "string", description: "Tamaño (Sweatspot: 150ml, 250ml, etc)" },
                   tipo_logo: { type: "string", description: "Tipo de impresión (full o básica)" },
-                  referencia: { type: "string", description: "Referencia o molde (Sweatspot)" },
                   personalizacion: { type: "string", description: "Instrucciones de personalización del logo" },
                   observaciones: { type: "string", description: "Notas u observaciones generales" },
                   abono: { type: "number", description: "Monto del abono inicial" },
