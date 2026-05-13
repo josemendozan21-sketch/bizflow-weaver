@@ -61,7 +61,7 @@ export function SalesCalendar() {
       abonado += getOrderPaidAmount(o);
       if (o.payment_method === "contra_entrega") contraEntrega += 1;
     }
-    return { count: list.length, total, abonado, saldo: total - abonado, contraEntrega, list };
+    return { count: list.length, total, abonado, saldo: Math.max(total - abonado, 0), contraEntrega, list };
   };
 
   const monthStats = useMemo(() => {
@@ -77,7 +77,7 @@ export function SalesCalendar() {
       abonado += getOrderPaidAmount(o);
       if (o.payment_method === "contra_entrega") contraEntrega += 1;
     }
-    return { total, abonado, saldo: total - abonado, contraEntrega, pedidos };
+    return { total, abonado, saldo: Math.max(total - abonado, 0), contraEntrega, pedidos };
   }, [orders, monthStart, monthEnd]);
 
   const selectedStats = dayStats(selected);
