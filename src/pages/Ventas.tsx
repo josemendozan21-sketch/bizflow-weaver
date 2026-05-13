@@ -1380,7 +1380,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
     // Validate all lines
     for (const line of ssLines) {
-      if (!line.referencia || !line.tamano || !line.colorSilicona || !line.colorTinta || !line.units) {
+      if (!line.tamano || !line.colorSilicona || !line.colorTinta || !line.units) {
         toast.error("Datos incompletos", { description: "Complete todos los campos en cada producto." });
         setIsSubmitting(false);
         return;
@@ -1721,15 +1721,11 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                   </div>
                 )}
                 <div className="space-y-1.5">
-                  <Label>Referencia o molde</Label>
-                  <Input value={line.referencia} onChange={(e) => updateSSLine(line.id, { referencia: e.target.value })} required />
-                </div>
-                <div className="space-y-1.5">
                   <Label>Tamaño</Label>
                   <div className="grid grid-cols-2 gap-2">
                     {tamanos.map((t) => (
                       <label key={t} className="flex items-center gap-2 rounded-md border border-input p-3 cursor-pointer hover:bg-accent transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                        <input type="radio" name={`ss_tamano_${line.id}`} value={t} checked={line.tamano === t} onChange={() => updateSSLine(line.id, { tamano: t })} className="accent-primary h-4 w-4" />
+                        <input type="radio" name={`ss_tamano_${line.id}`} value={t} checked={line.tamano === t} onChange={() => updateSSLine(line.id, { tamano: t, referencia: `Termo ${t}` })} className="accent-primary h-4 w-4" />
                         <span className="text-sm text-foreground">{t}</span>
                       </label>
                     ))}
