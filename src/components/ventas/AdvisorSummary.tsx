@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { useOrders } from "@/hooks/useOrders";
+import { getOrderBalance, getOrderPaidAmount, isOrderFullyPaid, useOrders } from "@/hooks/useOrders";
 import { Loader2, DollarSign, CreditCard, Truck, Clock } from "lucide-react";
 import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { es } from "date-fns/locale";
@@ -23,7 +23,7 @@ export function AdvisorSummary() {
     );
 
     const pedidosPorPagar = orders.filter(
-      (o) => !o.payment_complete && o.sale_type === "mayor" && o.production_status !== "entregado"
+      (o) => !isOrderFullyPaid(o) && o.sale_type === "mayor" && o.production_status !== "entregado"
     );
 
     const contraEntrega = orders.filter(
@@ -31,10 +31,7 @@ export function AdvisorSummary() {
     );
 
     const saldoPendiente = orders.reduce((sum, o) => {
-      if (o.payment_complete) return sum;
-      const total = Number(o.total_amount) || 0;
-      const abono = Number(o.abono) || 0;
-      return sum + (total - abono);
+      return sum + getOrderBalance(o);
     }, 0);
 
     return {
@@ -111,7 +108,7 @@ export function AdvisorSummary() {
       </div>
 
       {/* Detail table of pending balances */}
-      {orders.filter((o) => !o.payment_complete && (Number(o.total_amount) || 0) - (Number(o.abono) || 0) > 0).length > 0 && (
+      {orders.filter((o) => getOrderBalance(o) > 0).length > 0 && (
         <Card>
           <CardContent className="p-4">
             <h3 className="font-semibold text-sm mb-3">Saldos pendientes por cliente</h3>
@@ -129,10 +126,11 @@ export function AdvisorSummary() {
                 </thead>
                 <tbody>
                   {orders
-                    .filter((o) => !o.payment_complete && (Number(o.total_amount) || 0) - (Number(o.abono) || 0) > 0)
+                    .filter((o) => getOrderBalance(o) > 0)
                     .map((o) => {
                       const total = Number(o.total_amount) || 0;
-                      const abono = Number(o.abono) || 0;
+                      const abono = getOrderPaidAmount(o);
+                      const saldo = getOrderBalance(o);
                       return (
                         <tr key={o.id} className="border-b last:border-0">
                           <td className="py-2">{o.client_name}</td>
@@ -140,7 +138,7 @@ export function AdvisorSummary() {
                           <td className="py-2 text-right">${total.toLocaleString("es-CO")}</td>
                           <td className="py-2 text-right">${abono.toLocaleString("es-CO")}</td>
                           <td className="py-2 text-right font-medium text-destructive">
-                            ${(total - abono).toLocaleString("es-CO")}
+                            ${saldo.toLocaleString("es-CO")}
                           </td>
                           <td className="py-2 text-xs text-muted-foreground">{o.production_status}</td>
                         </tr>
