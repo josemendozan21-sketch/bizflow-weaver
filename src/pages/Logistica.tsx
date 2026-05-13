@@ -865,7 +865,7 @@ function PendingGroupCard({
 }) {
   const oldestDate = new Date(group.oldestCreatedAt);
   const aging = differenceInDays(new Date(), oldestDate);
-  const allPaid = group.items.every((o) => o.payment_complete || (o.total_amount && o.abono && Number(o.abono) >= Number(o.total_amount)));
+  const allPaid = group.items.every(isOrderFullyPaid);
   const earliestDelivery = group.items
     .map((o) => o.delivery_date)
     .filter(Boolean)
