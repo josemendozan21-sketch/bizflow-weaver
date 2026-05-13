@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useOrders } from "@/hooks/useOrders";
+import { getOrderBalance, getOrderPaidAmount, useOrders } from "@/hooks/useOrders";
 import {
   format,
   startOfMonth,
@@ -58,7 +58,7 @@ export function SalesCalendar() {
       contraEntrega = 0;
     for (const o of list) {
       total += Number(o.total_amount || 0);
-      abonado += Number(o.abono || 0);
+      abonado += getOrderPaidAmount(o);
       if (o.payment_method === "contra_entrega") contraEntrega += 1;
     }
     return { count: list.length, total, abonado, saldo: total - abonado, contraEntrega, list };
@@ -74,7 +74,7 @@ export function SalesCalendar() {
       if (d < monthStart || d > monthEnd) continue;
       pedidos += 1;
       total += Number(o.total_amount || 0);
-      abonado += Number(o.abono || 0);
+      abonado += getOrderPaidAmount(o);
       if (o.payment_method === "contra_entrega") contraEntrega += 1;
     }
     return { total, abonado, saldo: total - abonado, contraEntrega, pedidos };
@@ -228,8 +228,8 @@ export function SalesCalendar() {
                 <tbody>
                   {selectedStats.list.map((o) => {
                     const total = Number(o.total_amount || 0);
-                    const abono = Number(o.abono || 0);
-                    const saldo = total - abono;
+                    const abono = getOrderPaidAmount(o);
+                    const saldo = getOrderBalance(o);
                     const isCE = o.payment_method === "contra_entrega";
                     return (
                       <tr key={o.id} className="border-b last:border-0">
