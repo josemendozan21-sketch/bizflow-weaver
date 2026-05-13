@@ -283,7 +283,7 @@ const Logistica = () => {
     }
     // Wholesale: must be in "listo" stage AND payment complete
     const productionDone = o.production_status === "listo";
-    const paid = o.payment_complete === true || (o.total_amount && o.abono && Number(o.abono) >= Number(o.total_amount));
+    const paid = isOrderFullyPaid(o);
     return productionDone && paid;
   });
 
@@ -293,7 +293,7 @@ const Logistica = () => {
     if (o.dispatched_at) return false;
     if (o.production_status === "despachado" || o.production_status === "entregado") return false;
     const productionDone = o.production_status === "listo";
-    const paid = o.payment_complete === true || (o.total_amount && o.abono && Number(o.abono) >= Number(o.total_amount));
+    const paid = isOrderFullyPaid(o);
     return !(productionDone && paid);
   });
 
@@ -505,7 +505,7 @@ function PaymentBadge({ order }: { order: Order }) {
   if (order.sale_type === "menor") {
     if (order.payment_method === "pagado") return <Badge className="bg-green-600 hover:bg-green-700">Pagado</Badge>;
     if (order.payment_method === "contra_entrega") {
-      const saldo = (Number(order.total_amount) || 0) - (Number(order.abono) || 0);
+      const saldo = getOrderBalance(order);
       const aCobrar = saldo + (Number(order.shipping_cost) || 0);
       return (
         <Badge variant="outline" className="border-amber-400 text-amber-700">
@@ -515,15 +515,15 @@ function PaymentBadge({ order }: { order: Order }) {
     }
     return <Badge variant="outline">N/A</Badge>;
   }
-  const paid = order.payment_complete || (order.total_amount && order.abono && Number(order.abono) >= Number(order.total_amount));
+  const paid = isOrderFullyPaid(order);
   if (paid) return <Badge className="bg-green-600 hover:bg-green-700">Pago completo</Badge>;
-  const saldo = (Number(order.total_amount) || 0) - (Number(order.abono) || 0);
+  const saldo = getOrderBalance(order);
   return <Badge variant="destructive">Saldo: ${saldo.toLocaleString("es-CO")}</Badge>;
 }
 
 function ProductionStatusBadge({ status, order }: { status: string; order?: Order }) {
   // If production is done but payment not confirmed by advisor
-  if (status === "listo" && order && !order.payment_complete) {
+  if (status === "listo" && order && !isOrderFullyPaid(order)) {
     return <Badge variant="outline" className="border-amber-400 text-amber-700">Esperando pago del asesor</Badge>;
   }
   const labels: Record<string, string> = {
