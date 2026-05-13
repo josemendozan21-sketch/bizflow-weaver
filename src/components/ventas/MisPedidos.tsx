@@ -130,8 +130,14 @@ function groupOrders(orders: Order[]): OrderGroup[] {
     }
     g.items.push(o);
     g.totalUnits += Number(o.quantity) || 0;
-    g.totalAmount += Number(o.total_amount) || 0;
-    g.totalAbono += Number(o.abono) || 0;
+    const lineTotal = Number(o.total_amount) || 0;
+    g.totalAmount += lineTotal;
+    // Si el pedido está marcado como pagado pero el abono está en 0/incompleto,
+    // tratamos el total como abonado para no mostrar saldo pendiente fantasma.
+    const lineAbono = o.payment_complete
+      ? lineTotal
+      : Number(o.abono) || 0;
+    g.totalAbono += lineAbono;
     if (o.created_at < g.oldestCreatedAt) g.oldestCreatedAt = o.created_at;
     if (o.created_at > g.newestCreatedAt) g.newestCreatedAt = o.created_at;
   }
