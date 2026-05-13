@@ -57,10 +57,18 @@ const extractClient = (r: InventoryRequest): string | null => {
   return m ? m[1].trim() : null;
 };
 
-const InventoryRequestsPanel = () => {
+interface InventoryRequestsPanelProps {
+  /** Hide retail orders ("Pedido al detal"). Useful in Producción where finished-product retail requests are handled by Inventarios, not Producción. */
+  hideRetail?: boolean;
+}
+
+const InventoryRequestsPanel = ({ hideRetail = false }: InventoryRequestsPanelProps) => {
   const { role } = useAuth();
   const isInventarios = role === "inventarios" || role === "admin";
-  const { requests, isLoading, approve, reject, routeTo } = useInventoryRequests();
+  const { requests: allRequests, isLoading, approve, reject, routeTo } = useInventoryRequests();
+  const requests = hideRetail
+    ? allRequests.filter((r) => getOrigin(r).key !== "detal")
+    : allRequests;
   const { stockItems } = useInventory();
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
