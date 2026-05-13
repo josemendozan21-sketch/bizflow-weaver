@@ -27,9 +27,16 @@ Extrae la siguiente información y devuélvela usando la herramienta proporciona
 
 Marca actual: ${brand === "sweatspot" ? "Sweatspot" : "Magical Warmers"}
 
-Notas importantes:
+${brand === "sweatspot" ? `Notas específicas para Sweatspot:
+- Los productos son termos. NO hay referencia ni molde.
+- El tamaño del termo es lo importante: puede ser "150 ml", "250 ml", "250 ml juguetón" o "500 ml". Extrae el tamaño en el campo "tamano".
+- El campo "producto" dentro de cada línea debe contener el tamaño del termo (ej: "Termo 500 ml").
+- Los colores de silicona y tinta son importantes.
+- El tipo de logo puede ser "full" o "básica"` : `Notas específicas para Magical Warmers:
 - "producto" se refiere a la referencia del producto (ej: "Thermo sport", "Mug", "Botella 500ml")
-- "tipo" es la variante del producto (ej: "frío", "calor", "sublimación")
+- "tipo" es la variante del producto (ej: "frío", "calor", "sublimación")`}
+
+Notas generales:
 - Los colores de gel y tinta pueden estar como "gel azul" o "tinta rosada"
 - El NIT/cédula puede venir como "NIT: 900123456-7" o "CC 1234567"
 - Si ves múltiples productos/líneas, inclúyelos todos en el array "productos"
