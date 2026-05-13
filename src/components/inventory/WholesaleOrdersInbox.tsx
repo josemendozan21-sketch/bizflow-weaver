@@ -280,53 +280,57 @@ const WholesaleOrdersInbox = () => {
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Inbox className="h-4 w-4" />
-            Bandeja de pedidos al por mayor
-            <Badge variant="secondary">{pending.length} pendientes</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <p className="text-center text-sm text-muted-foreground py-6">Cargando…</p>
-          ) : pending.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No hay pedidos al por mayor pendientes de entrega.</p>
-            </div>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2">
-              {pending.map((o) => renderCard(o, false))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Pedidos al detal — arriba/izquierda */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <ShoppingBag className="h-4 w-4" />
+              Pedidos al detal
+              <Badge variant="secondary">{pendingRetail.length} pendientes</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingRetail ? (
+              <p className="text-center text-sm text-muted-foreground py-6">Cargando…</p>
+            ) : pendingRetail.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No hay pedidos al detal pendientes.</p>
+              </div>
+            ) : (
+              <div className="grid gap-3">
+                {pendingRetail.map((o) => renderCard(o, false, "detal"))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <ShoppingBag className="h-4 w-4" />
-            Pedidos al detal
-            <Badge variant="secondary">{pendingRetail.length} pendientes</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loadingRetail ? (
-            <p className="text-center text-sm text-muted-foreground py-6">Cargando…</p>
-          ) : pendingRetail.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No hay pedidos al detal pendientes.</p>
-            </div>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2">
-              {pendingRetail.map((o) => renderCard(o, false, "detal"))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        {/* Pedidos al por mayor — al lado/derecha */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Inbox className="h-4 w-4" />
+              Bandeja de pedidos al por mayor
+              <Badge variant="secondary">{pending.length} pendientes</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <p className="text-center text-sm text-muted-foreground py-6">Cargando…</p>
+            ) : pending.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No hay pedidos al por mayor pendientes de entrega.</p>
+              </div>
+            ) : (
+              <div className="grid gap-3">
+                {pending.map((o) => renderCard(o, false))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {delivered.length > 0 && (
         <Card>
