@@ -1,13 +1,10 @@
 import { useState, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Boxes, Inbox, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Boxes, ShoppingBag } from "lucide-react";
 import BrandSelectionCards, { type InventoryNotification } from "@/components/inventory/BrandSelectionCards";
 import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
-import SupplyReceptionPanel from "@/components/inventory/SupplyReceptionPanel";
 import RequestBodyProductionDialog from "@/components/inventory/RequestBodyProductionDialog";
-import InventoryRequestsPanel from "@/components/inventory/InventoryRequestsPanel";
-import InventoryMovementsPanel from "@/components/inventory/InventoryMovementsPanel";
 import WholesaleOrdersInbox from "@/components/inventory/WholesaleOrdersInbox";
 import type { InventoryBrand, InventoryCategory } from "@/stores/inventoryStore";
 
@@ -48,9 +45,6 @@ const InventariosRoleView = () => {
           <TabsTrigger value="stock" className="gap-1.5">
             <Boxes className="h-4 w-4" /> Inventario por marca
           </TabsTrigger>
-          <TabsTrigger value="recepcion" className="gap-1.5">
-            <Inbox className="h-4 w-4" /> Solicitudes y entradas
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="bandeja" className="mt-4">
@@ -80,12 +74,6 @@ const InventariosRoleView = () => {
               />
             </>
           )}
-        </TabsContent>
-
-        <TabsContent value="recepcion" className="mt-4 space-y-6">
-          <InventoryRequestsPanel />
-          <InventoryMovementsPanel />
-          <SupplyReceptionPanel />
         </TabsContent>
       </Tabs>
     </div>
