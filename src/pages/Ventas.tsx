@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, AlertTriangle, CheckCircle2, FileText, ShoppingCart, ClipboardList, Plus, Trash2, BarChart3 } from "lucide-react";
+import { ArrowLeft, AlertTriangle, CheckCircle2, FileText, ShoppingCart, ClipboardList, Plus, Trash2, BarChart3, CalendarDays } from "lucide-react";
 import { useLogisticsStore } from "@/stores/logisticsStore";
 import { useInventoryStore } from "@/stores/inventoryStore";
 import { useInventory } from "@/hooks/useInventory";
@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import QuotationGenerator from "@/components/ventas/QuotationGenerator";
 import { MisPedidos } from "@/components/ventas/MisPedidos";
 import { AdvisorSummary } from "@/components/ventas/AdvisorSummary";
+import { SalesCalendar } from "@/components/ventas/SalesCalendar";
 import { createLogoRequestFromOrder } from "@/lib/createLogoRequestFromOrder";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -82,6 +83,9 @@ const Ventas = () => {
           <TabsTrigger value="resumen" className="gap-1.5">
             <BarChart3 className="h-4 w-4" /> Resumen
           </TabsTrigger>
+          <TabsTrigger value="calendario" className="gap-1.5">
+            <CalendarDays className="h-4 w-4" /> Calendario
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pedidos" className="space-y-6 mt-4">
@@ -129,6 +133,10 @@ const Ventas = () => {
 
         <TabsContent value="resumen" className="mt-4">
           <AdvisorSummary />
+        </TabsContent>
+
+        <TabsContent value="calendario" className="mt-4">
+          <SalesCalendar />
         </TabsContent>
       </Tabs>
     </div>
