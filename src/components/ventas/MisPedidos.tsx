@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useOrders, PRODUCTION_STATUS_LABELS, PRODUCTION_STATUS_COLORS, type Order } from "@/hooks/useOrders";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -283,14 +284,16 @@ export function MisPedidos() {
             <SelectItem value="sweatspot">Sweatspot</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={saleTypeFilter} onValueChange={setSaleTypeFilter}>
-          <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas las ventas</SelectItem>
-            <SelectItem value="mayor">Al por mayor</SelectItem>
-            <SelectItem value="menor">Al por menor</SelectItem>
-          </SelectContent>
-        </Select>
+        <ToggleGroup
+          type="single"
+          value={saleTypeFilter}
+          onValueChange={(v) => v && setSaleTypeFilter(v)}
+          className="bg-muted rounded-md p-1 h-9"
+        >
+          <ToggleGroupItem value="all" className="text-xs h-7 px-3">Todas</ToggleGroupItem>
+          <ToggleGroupItem value="mayor" className="text-xs h-7 px-3">Al por mayor</ToggleGroupItem>
+          <ToggleGroupItem value="menor" className="text-xs h-7 px-3">Al detal</ToggleGroupItem>
+        </ToggleGroup>
         {isAdmin && (
           <Select value={advisorFilter} onValueChange={setAdvisorFilter}>
             <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
