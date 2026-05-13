@@ -10,6 +10,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Inbox, Package, Truck, Paintbrush, Factory, Calendar, User as UserIcon, ShoppingBag } from "lucide-react";
 import { useInventory } from "@/hooks/useInventory";
 import { useAuth } from "@/contexts/AuthContext";
@@ -50,6 +51,7 @@ const WholesaleOrdersInbox = () => {
   const [delivering, setDelivering] = useState<{ order: MayorOrder; target: Target } | null>(null);
   const [qty, setQty] = useState<string>("");
   const [obs, setObs] = useState<string>("");
+  const [plastico, setPlastico] = useState<"frio" | "calor">("frio");
   const [busy, setBusy] = useState(false);
 
   const { data: orders = [], isLoading } = useQuery({
@@ -82,16 +84,20 @@ const WholesaleOrdersInbox = () => {
     refetchInterval: 15_000,
   });
 
-  // Fetch which orders already had a delivery movement (to dim them)
+  // Fetch which orders already had a delivery movement OR a body production task (to dim them)
   const { data: deliveredIds = new Set<string>() } = useQuery({
     queryKey: ["mayor-orders-delivered"],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("inventory_movements")
-        .select("order_id")
-        .eq("direction", "entrega")
-        .not("order_id", "is", null);
-      return new Set((data || []).map((m: any) => m.order_id as string));
+      const [mov, tasks] = await Promise.all([
+        supabase.from("inventory_movements").select("order_id")
+          .eq("direction", "entrega").not("order_id", "is", null),
+        supabase.from("body_production_tasks").select("order_id" as any)
+          .not("order_id", "is", null),
+      ]);
+      const set = new Set<string>();
+      (mov.data || []).forEach((m: any) => m.order_id && set.add(m.order_id));
+      (tasks.data || []).forEach((t: any) => t.order_id && set.add(t.order_id));
+      return set;
     },
     refetchInterval: 15_000,
   });
@@ -110,6 +116,7 @@ const WholesaleOrdersInbox = () => {
     setDelivering({ order, target });
     setQty(String(order.quantity));
     setObs("");
+    setPlastico("frio");
   };
 
   const confirmDeliver = async () => {
@@ -120,27 +127,50 @@ const WholesaleOrdersInbox = () => {
       toast.error("Cantidad inválida");
       return;
     }
-    const item = findStockItem(order);
     setBusy(true);
-    const { error } = await supabase.from("inventory_movements").insert({
-      stock_item_id: item?.id ?? null,
-      item_name: order.product,
-      brand: order.brand,
-      category: "producto_terminado",
-      quantity,
-      direction: "entrega",
-      area: target,
-      reason: `Pedido al por mayor de ${order.client_name}` + (obs ? ` — ${obs}` : ""),
-      order_id: order.id,
-      recorded_by: user.id,
-      recorded_by_name: user.email || "Inventarios",
-    } as any);
-    setBusy(false);
-    if (error) {
-      toast.error(error.message);
-      return;
+
+    if (target === "produccion") {
+      // Generate body production task; bodies will return to inventory when finished
+      const { error } = await supabase.from("body_production_tasks").insert({
+        referencia: order.product,
+        unidades: quantity,
+        tipo_plastico: plastico,
+        status: "pendiente",
+        order_id: order.id,
+      } as any);
+      if (!error) {
+        await supabase.from("notifications").insert({
+          target_role: "produccion",
+          title: "Nueva orden de producción de cuerpos",
+          message: `Inventarios solicita producir ${quantity} uds de "${order.product}" (${plastico}) para pedido de ${order.client_name}.`
+            + (obs ? ` Obs: ${obs}` : ""),
+          type: "info",
+          reference_id: order.id,
+        });
+      }
+      setBusy(false);
+      if (error) { toast.error(error.message); return; }
+      toast.success(`Orden de producción creada (${quantity} uds). Los cuerpos volverán a inventario al terminar.`);
+    } else {
+      const item = findStockItem(order);
+      const { error } = await supabase.from("inventory_movements").insert({
+        stock_item_id: item?.id ?? null,
+        item_name: order.product,
+        brand: order.brand,
+        category: "producto_terminado",
+        quantity,
+        direction: "entrega",
+        area: target,
+        reason: `Pedido al por mayor de ${order.client_name}` + (obs ? ` — ${obs}` : ""),
+        order_id: order.id,
+        recorded_by: user.id,
+        recorded_by_name: user.email || "Inventarios",
+      } as any);
+      setBusy(false);
+      if (error) { toast.error(error.message); return; }
+      toast.success(`Entregado ${quantity} uds a ${TARGET_LABEL[target]}`);
     }
-    toast.success(`Entregado ${quantity} uds a ${TARGET_LABEL[target]}`);
+
     setDelivering(null);
     qc.invalidateQueries({ queryKey: ["mayor-orders-inbox"] });
     qc.invalidateQueries({ queryKey: ["detal-orders-inbox"] });
@@ -210,15 +240,11 @@ const WholesaleOrdersInbox = () => {
               <div className="flex flex-wrap gap-2 pt-1">
                 <Button size="sm" variant="outline" className="flex-1 min-w-[140px] gap-1.5"
                   onClick={() => openDeliver(o, "estampacion")}>
-                  <Paintbrush className="h-3.5 w-3.5" /> Estampación
-                </Button>
-                <Button size="sm" variant="outline" className="flex-1 min-w-[140px] gap-1.5"
-                  onClick={() => openDeliver(o, "produccion")}>
-                  <Factory className="h-3.5 w-3.5" /> Producción
+                  <Paintbrush className="h-3.5 w-3.5" /> Entregar a Estampación
                 </Button>
                 <Button size="sm" variant="default" className="flex-1 min-w-[140px] gap-1.5"
-                  onClick={() => openDeliver(o, "logistica")}>
-                  <Truck className="h-3.5 w-3.5" /> Logística
+                  onClick={() => openDeliver(o, "produccion")}>
+                  <Factory className="h-3.5 w-3.5" /> Producir cuerpos
                 </Button>
               </div>
             )
@@ -297,7 +323,9 @@ const WholesaleOrdersInbox = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Entregar a {delivering ? TARGET_LABEL[delivering.target] : ""}
+              {delivering?.target === "produccion"
+                ? "Solicitar producción de cuerpos"
+                : `Entregar a ${delivering ? TARGET_LABEL[delivering.target] : ""}`}
             </DialogTitle>
             <DialogDescription>
               {delivering && `${delivering.order.product} — Pedido de ${delivering.order.client_name}`}
@@ -305,9 +333,21 @@ const WholesaleOrdersInbox = () => {
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label>Cantidad a entregar</Label>
+              <Label>{delivering?.target === "produccion" ? "Cantidad a producir" : "Cantidad a entregar"}</Label>
               <Input type="number" value={qty} onChange={(e) => setQty(e.target.value)} min="1" />
             </div>
+            {delivering?.target === "produccion" && (
+              <div>
+                <Label>Tipo de plástico</Label>
+                <Select value={plastico} onValueChange={(v) => setPlastico(v as "frio" | "calor")}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="frio">Frío</SelectItem>
+                    <SelectItem value="calor">Calor</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div>
               <Label>Observación (opcional)</Label>
               <Textarea value={obs} onChange={(e) => setObs(e.target.value)}
@@ -316,7 +356,9 @@ const WholesaleOrdersInbox = () => {
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setDelivering(null)}>Cancelar</Button>
-            <Button onClick={confirmDeliver} disabled={busy}>Confirmar entrega</Button>
+            <Button onClick={confirmDeliver} disabled={busy}>
+              {delivering?.target === "produccion" ? "Crear orden de producción" : "Confirmar entrega"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
