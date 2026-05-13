@@ -504,7 +504,15 @@ function AgingBadge({ days }: { days: number }) {
 function PaymentBadge({ order }: { order: Order }) {
   if (order.sale_type === "menor") {
     if (order.payment_method === "pagado") return <Badge className="bg-green-600 hover:bg-green-700">Pagado</Badge>;
-    if (order.payment_method === "contra_entrega") return <Badge variant="outline">Contra entrega</Badge>;
+    if (order.payment_method === "contra_entrega") {
+      const saldo = (Number(order.total_amount) || 0) - (Number(order.abono) || 0);
+      const aCobrar = saldo + (Number(order.shipping_cost) || 0);
+      return (
+        <Badge variant="outline" className="border-amber-400 text-amber-700">
+          Contra entrega: ${aCobrar.toLocaleString("es-CO")}
+        </Badge>
+      );
+    }
     return <Badge variant="outline">N/A</Badge>;
   }
   const paid = order.payment_complete || (order.total_amount && order.abono && Number(order.abono) >= Number(order.total_amount));
