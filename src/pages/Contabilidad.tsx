@@ -12,7 +12,7 @@ import MonthlyAnalysis from "@/components/contabilidad/MonthlyAnalysis";
 import CajaMenor from "@/components/contabilidad/CajaMenor";
 import CommissionsPanel from "@/components/contabilidad/CommissionsPanel";
 import AdvisorSalesPanel from "@/components/contabilidad/AdvisorSalesPanel";
-import { useOrders, type Order } from "@/hooks/useOrders";
+import { getOrderPaidAmount, isOrderFullyPaid, useOrders, type Order } from "@/hooks/useOrders";
 import { supabase } from "@/integrations/supabase/client";
 import { exportOrdersToExcel } from "@/lib/exportSiigo";
 import { toast } from "sonner";
@@ -31,7 +31,7 @@ function toAccountingOrder(o: Order): AccountingOrder {
     clientType: o.sale_type === "mayor" ? "Cliente empresa" : "Venta mostrador",
     createdAt: o.created_at?.slice(0, 10) ?? "",
     totalAmount: o.total_amount ?? undefined,
-    abono: o.abono ?? undefined,
+    abono: getOrderPaidAmount(o) || undefined,
     hasRut: !!o.client_nit,
     email: o.client_email ?? undefined,
     cedula: o.client_nit ?? undefined,
@@ -50,13 +50,13 @@ function toAccountingOrder(o: Order): AccountingOrder {
 }
 
 function canInvoice(o: Order): boolean {
-  if (o.sale_type === "menor") return !!o.payment_complete;
+  if (o.sale_type === "menor") return isOrderFullyPaid(o);
   if (o.sale_type === "mayor") return !!o.client_nit;
   return false;
 }
 
 function getBlockReason(o: Order): string | null {
-  if (o.sale_type === "menor" && !o.payment_complete) return "Pendiente de pago completo";
+  if (o.sale_type === "menor" && !isOrderFullyPaid(o)) return "Pendiente de pago completo";
   if (o.sale_type === "mayor" && !o.client_nit) return "Falta adjuntar RUT del cliente";
   return null;
 }

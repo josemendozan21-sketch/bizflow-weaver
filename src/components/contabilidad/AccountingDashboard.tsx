@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DollarSign, Users, Clock, TrendingUp } from "lucide-react";
-import type { Order } from "@/hooks/useOrders";
+import { getOrderBalance, getOrderPaidAmount, isOrderFullyPaid, type Order } from "@/hooks/useOrders";
 import { startOfMonth, endOfMonth, isWithinInterval, differenceInDays } from "date-fns";
 
 interface Props {
@@ -29,8 +29,8 @@ const AccountingDashboard = ({ orders }: Props) => {
 
     const ventasTotales = orders.reduce((s, o) => s + Number(o.total_amount || 0), 0);
     const ventasMes = thisMonth.reduce((s, o) => s + Number(o.total_amount || 0), 0);
-    const totalCobrado = orders.reduce((s, o) => s + Number(o.abono || 0), 0);
-    const saldoPendiente = ventasTotales - totalCobrado;
+    const totalCobrado = orders.reduce((s, o) => s + getOrderPaidAmount(o), 0);
+    const saldoPendiente = orders.reduce((s, o) => s + getOrderBalance(o), 0);
 
     // Per-advisor breakdown
     const byAdvisor = new Map<string, { name: string; total: number; cobrado: number; count: number }>();
@@ -38,14 +38,14 @@ const AccountingDashboard = ({ orders }: Props) => {
       const key = o.advisor_id;
       const prev = byAdvisor.get(key) || { name: o.advisor_name, total: 0, cobrado: 0, count: 0 };
       prev.total += Number(o.total_amount || 0);
-      prev.cobrado += Number(o.abono || 0);
+      prev.cobrado += getOrderPaidAmount(o);
       prev.count += 1;
       byAdvisor.set(key, prev);
     }
 
     // Order aging for unpaid orders
     const aging = orders
-      .filter((o) => !o.payment_complete)
+      .filter((o) => getOrderBalance(o) > 0 && !isOrderFullyPaid(o))
       .map((o) => ({
         ...o,
         days: differenceInDays(now, new Date(o.created_at)),
@@ -152,14 +152,15 @@ const AccountingDashboard = ({ orders }: Props) => {
               <TableBody>
                 {metrics.aging.slice(0, 50).map((o) => {
                   const { label, color } = getAgingLabel(o.days);
-                  const saldo = Number(o.total_amount || 0) - Number(o.abono || 0);
+                  const abono = getOrderPaidAmount(o);
+                  const saldo = getOrderBalance(o);
                   return (
                     <TableRow key={o.id}>
                       <TableCell className="font-medium">{o.client_name}</TableCell>
                       <TableCell>{o.advisor_name}</TableCell>
                       <TableCell>{o.product}</TableCell>
                       <TableCell className="text-right">${Number(o.total_amount || 0).toLocaleString()}</TableCell>
-                      <TableCell className="text-right">${Number(o.abono || 0).toLocaleString()}</TableCell>
+                      <TableCell className="text-right">${abono.toLocaleString()}</TableCell>
                       <TableCell className="text-right font-semibold text-amber-600">${saldo.toLocaleString()}</TableCell>
                       <TableCell className="text-sm">{o.created_at?.slice(0, 10)}</TableCell>
                       <TableCell><Badge className={color}>{label}</Badge></TableCell>

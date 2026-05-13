@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { useOrders, PRODUCTION_STATUS_LABELS, PRODUCTION_STATUS_COLORS, type Order } from "@/hooks/useOrders";
+import { getOrderBalance, getOrderPaidAmount, isOrderFullyPaid, useOrders, PRODUCTION_STATUS_LABELS, PRODUCTION_STATUS_COLORS, type Order } from "@/hooks/useOrders";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Loader2, Package, Calendar, DollarSign, MapPin, Upload, CheckCircle2, AlertTriangle, FileText, Camera, User, Pencil, Search, Trash2 } from "lucide-react";
@@ -41,7 +41,7 @@ function getStageProgress(status: string): number {
 }
 
 function getFriendlyStageLabel(status: string, order: Order): string {
-  if (status === "listo" && order.sale_type === "mayor" && !order.payment_complete) {
+  if (status === "listo" && order.sale_type === "mayor" && !isOrderFullyPaid(order)) {
     return "Listo — Pendiente aprobación de pago";
   }
 
@@ -83,7 +83,7 @@ function categorizeOrder(o: Order): OrderCategory {
   if (o.production_status === "despachado") return "dispatched";
   if (o.production_status === "listo") {
     // Mayor sin pago confirmado => acción del asesor
-    if (o.sale_type === "mayor" && !o.payment_complete) return "action";
+    if (o.sale_type === "mayor" && !isOrderFullyPaid(o)) return "action";
     return "ready";
   }
   return "production";
@@ -133,12 +133,7 @@ function groupOrders(orders: Order[]): OrderGroup[] {
     g.totalUnits += Number(o.quantity) || 0;
     const lineTotal = Number(o.total_amount) || 0;
     g.totalAmount += lineTotal;
-    // Si el pedido está marcado como pagado pero el abono está en 0/incompleto,
-    // tratamos el total como abonado para no mostrar saldo pendiente fantasma.
-    const lineAbono = o.payment_complete
-      ? lineTotal
-      : Number(o.abono) || 0;
-    g.totalAbono += lineAbono;
+    g.totalAbono += getOrderPaidAmount(o);
     if (o.created_at < g.oldestCreatedAt) g.oldestCreatedAt = o.created_at;
     if (o.created_at > g.newestCreatedAt) g.newestCreatedAt = o.created_at;
   }
@@ -418,7 +413,7 @@ function OrderGroupCard({
   const friendlyLabel = getFriendlyStageLabel(rep.production_status, rep);
   const needsPaymentAction = group.category === "action";
   const isMultiLine = group.items.length > 1;
-  const saldo = group.totalAmount - group.totalAbono;
+  const saldo = Math.max(group.totalAmount - group.totalAbono, 0);
 
   // Foto(s) de producto finalizado para cualquier línea del grupo
   const completionInfos = group.items
@@ -473,7 +468,7 @@ function OrderGroupCard({
             </div>
             {/* Una confirmación de pago por línea pendiente */}
             {group.items
-              .filter((o) => o.production_status === "listo" && o.sale_type === "mayor" && !o.payment_complete)
+              .filter((o) => o.production_status === "listo" && o.sale_type === "mayor" && !isOrderFullyPaid(o))
               .map((o) => (
                 <PaymentConfirmDialog key={o.id} order={o} />
               ))}
@@ -481,7 +476,7 @@ function OrderGroupCard({
         )}
 
         {/* Already confirmed badge */}
-        {!needsPaymentAction && rep.production_status === "listo" && rep.sale_type === "mayor" && rep.payment_complete && (
+        {!needsPaymentAction && rep.production_status === "listo" && rep.sale_type === "mayor" && isOrderFullyPaid(rep) && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-2 flex items-center gap-2 text-green-800 text-sm">
             <CheckCircle2 className="h-4 w-4" />
             Pago confirmado — Listo para despacho por logística
@@ -679,7 +674,7 @@ function PaymentConfirmDialog({ order }: { order: Order }) {
     }
   };
 
-  const saldo = (Number(order.total_amount) || 0) - (Number(order.abono) || 0);
+  const saldo = getOrderBalance(order);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

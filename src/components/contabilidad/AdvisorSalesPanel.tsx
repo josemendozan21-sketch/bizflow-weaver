@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { startOfMonth, endOfMonth, isWithinInterval, format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import type { Order } from "@/hooks/useOrders";
+import { getOrderBalance, getOrderPaidAmount, isOrderFullyPaid, type Order } from "@/hooks/useOrders";
 
 interface Props {
   orders: Order[];
@@ -74,9 +74,9 @@ export default function AdvisorSalesPanel({ orders }: Props) {
     }
 
     if (paymentFilter === "pagados") {
-      list = list.filter((o) => o.payment_complete === true);
+      list = list.filter(isOrderFullyPaid);
     } else if (paymentFilter === "pendientes") {
-      list = list.filter((o) => !o.payment_complete);
+      list = list.filter((o) => getOrderBalance(o) > 0 && !isOrderFullyPaid(o));
     }
 
     return list;
@@ -102,7 +102,7 @@ export default function AdvisorSalesPanel({ orders }: Props) {
     for (const o of filtered) {
       const key = o.advisor_id || "—";
       const total = Number(o.total_amount || 0);
-      const abono = Number(o.abono || 0);
+      const abono = getOrderPaidAmount(o);
       const cur = map.get(key) || {
         advisorId: key,
         advisorName: o.advisor_name || "Sin asesor",
@@ -122,7 +122,7 @@ export default function AdvisorSalesPanel({ orders }: Props) {
         cur.invoicedCount += 1;
         cur.totalInvoiced += Number(o.invoice_amount || total);
       }
-      if (!o.payment_complete) cur.saldoPendiente += Math.max(total - abono, 0);
+      cur.saldoPendiente += getOrderBalance(o);
       if (o.sale_type === "mayor") cur.ventaMayor += total;
       else cur.ventaMenor += total;
       map.set(key, cur);
