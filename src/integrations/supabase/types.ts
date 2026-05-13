@@ -611,16 +611,19 @@ export type Database = {
           category: string
           created_at: string
           direction: string
+          entry_type: string | null
           feria_id: string | null
           id: string
           item_name: string
           order_id: string | null
+          proof_url: string | null
           quantity: number
           reason: string | null
           recorded_at: string
           recorded_by: string | null
           recorded_by_name: string | null
           stock_item_id: string | null
+          supplier: string | null
         }
         Insert: {
           area: string
@@ -628,16 +631,19 @@ export type Database = {
           category: string
           created_at?: string
           direction: string
+          entry_type?: string | null
           feria_id?: string | null
           id?: string
           item_name: string
           order_id?: string | null
+          proof_url?: string | null
           quantity: number
           reason?: string | null
           recorded_at?: string
           recorded_by?: string | null
           recorded_by_name?: string | null
           stock_item_id?: string | null
+          supplier?: string | null
         }
         Update: {
           area?: string
@@ -645,16 +651,19 @@ export type Database = {
           category?: string
           created_at?: string
           direction?: string
+          entry_type?: string | null
           feria_id?: string | null
           id?: string
           item_name?: string
           order_id?: string | null
+          proof_url?: string | null
           quantity?: number
           reason?: string | null
           recorded_at?: string
           recorded_by?: string | null
           recorded_by_name?: string | null
           stock_item_id?: string | null
+          supplier?: string | null
         }
         Relationships: [
           {
@@ -673,6 +682,7 @@ export type Database = {
           created_at: string
           id: string
           item_name: string
+          item_type: string | null
           order_id: string | null
           quantity: number
           reason: string | null
@@ -680,6 +690,7 @@ export type Database = {
           requester_area: string
           requester_id: string
           requester_name: string
+          requester_person: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           reviewed_by_name: string | null
@@ -688,6 +699,7 @@ export type Database = {
           status: string
           stock_item_id: string | null
           updated_at: string
+          urgency: string
         }
         Insert: {
           brand: string
@@ -695,6 +707,7 @@ export type Database = {
           created_at?: string
           id?: string
           item_name: string
+          item_type?: string | null
           order_id?: string | null
           quantity: number
           reason?: string | null
@@ -702,6 +715,7 @@ export type Database = {
           requester_area: string
           requester_id: string
           requester_name: string
+          requester_person?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           reviewed_by_name?: string | null
@@ -710,6 +724,7 @@ export type Database = {
           status?: string
           stock_item_id?: string | null
           updated_at?: string
+          urgency?: string
         }
         Update: {
           brand?: string
@@ -717,6 +732,7 @@ export type Database = {
           created_at?: string
           id?: string
           item_name?: string
+          item_type?: string | null
           order_id?: string | null
           quantity?: number
           reason?: string | null
@@ -724,6 +740,7 @@ export type Database = {
           requester_area?: string
           requester_id?: string
           requester_name?: string
+          requester_person?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           reviewed_by_name?: string | null
@@ -732,6 +749,7 @@ export type Database = {
           status?: string
           stock_item_id?: string | null
           updated_at?: string
+          urgency?: string
         }
         Relationships: []
       }
