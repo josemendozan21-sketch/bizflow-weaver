@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,6 +53,28 @@ const WholesaleOrdersInbox = () => {
   const [obs, setObs] = useState<string>("");
   const [plastico, setPlastico] = useState<"frio" | "calor">("frio");
   const [busy, setBusy] = useState(false);
+
+  // Realtime: pop up toast + refetch when a new order arrives
+  useEffect(() => {
+    const channel = supabase
+      .channel("inventory-orders-inbox")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "orders" },
+        (payload) => {
+          const o: any = payload.new;
+          const tipo = o.sale_type === "detal" ? "al detal" : "al por mayor";
+          toast.success(`Nuevo pedido ${tipo}`, {
+            description: `${o.client_name} — ${Number(o.quantity || 0).toLocaleString("es-CO")} × ${o.product}`,
+            duration: 8000,
+          });
+          qc.invalidateQueries({ queryKey: ["mayor-orders-inbox"] });
+          qc.invalidateQueries({ queryKey: ["detal-orders-inbox"] });
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [qc]);
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["mayor-orders-inbox"],
