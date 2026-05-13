@@ -1663,18 +1663,31 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
               // Fill product lines
               if (data.productos && data.productos.length > 0) {
-                const newLines: SweatspotOrderLine[] = data.productos.map((p: any) => ({
-                  id: crypto.randomUUID(),
-                  referencia: data.referencia || p.producto || "",
-                  tamano: "",
-                  tipoLogo: "",
-                  colorSilicona: data.color_silicona || "",
-                  colorTinta: p.color_tinta || "",
-                  units: String(p.unidades || ""),
-                  valorUnitario: String(p.valor_unitario || ""),
-                  valorTotal: String(p.valor_total || ""),
-                  autoCalc: !p.valor_total,
-                }));
+                const normalizeTamano = (raw: string): SweatspotOrderLine["tamano"] => {
+                  const lower = (raw || "").toLowerCase().replace(/\s+/g, " ").trim();
+                  if (lower.includes("150")) return "150 ml";
+                  if (lower.includes("250") && lower.includes("juguet")) return "250 ml juguetón";
+                  if (lower.includes("250")) return "250 ml";
+                  if (lower.includes("500")) return "500 ml";
+                  return "";
+                };
+                const newLines: SweatspotOrderLine[] = data.productos.map((p: any) => {
+                  const tamanoRaw = p.tamano || p.tipo || p.producto || data.tamano || "";
+                  const tamano = normalizeTamano(tamanoRaw);
+                  const referencia = tamano ? `Termo ${tamano}` : "";
+                  return {
+                    id: crypto.randomUUID(),
+                    referencia,
+                    tamano,
+                    tipoLogo: "",
+                    colorSilicona: data.color_silicona || "",
+                    colorTinta: p.color_tinta || "",
+                    units: String(p.unidades || ""),
+                    valorUnitario: String(p.valor_unitario || ""),
+                    valorTotal: String(p.valor_total || ""),
+                    autoCalc: !p.valor_total,
+                  };
+                });
                 setSsLines(newLines);
               }
 
