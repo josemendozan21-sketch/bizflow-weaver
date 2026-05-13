@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import QuotationGenerator from "@/components/ventas/QuotationGenerator";
 import { MisPedidos } from "@/components/ventas/MisPedidos";
 import { AdvisorSummary } from "@/components/ventas/AdvisorSummary";
+import { SalesCalendar } from "@/components/ventas/SalesCalendar";
 import { createLogoRequestFromOrder } from "@/lib/createLogoRequestFromOrder";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
