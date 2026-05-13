@@ -1,13 +1,14 @@
 import { useState, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Boxes, Inbox } from "lucide-react";
+import { ArrowLeft, Boxes, Inbox, ShoppingBag } from "lucide-react";
 import BrandSelectionCards, { type InventoryNotification } from "@/components/inventory/BrandSelectionCards";
 import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
 import SupplyReceptionPanel from "@/components/inventory/SupplyReceptionPanel";
 import RequestBodyProductionDialog from "@/components/inventory/RequestBodyProductionDialog";
 import InventoryRequestsPanel from "@/components/inventory/InventoryRequestsPanel";
 import InventoryMovementsPanel from "@/components/inventory/InventoryMovementsPanel";
+import WholesaleOrdersInbox from "@/components/inventory/WholesaleOrdersInbox";
 import type { InventoryBrand, InventoryCategory } from "@/stores/inventoryStore";
 
 const InventariosRoleView = () => {
@@ -39,15 +40,22 @@ const InventariosRoleView = () => {
         <RequestBodyProductionDialog />
       </div>
 
-      <Tabs defaultValue="stock" className="w-full">
+      <Tabs defaultValue="bandeja" className="w-full">
         <TabsList>
+          <TabsTrigger value="bandeja" className="gap-1.5">
+            <ShoppingBag className="h-4 w-4" /> Bandeja de pedidos
+          </TabsTrigger>
           <TabsTrigger value="stock" className="gap-1.5">
             <Boxes className="h-4 w-4" /> Inventario por marca
           </TabsTrigger>
           <TabsTrigger value="recepcion" className="gap-1.5">
-            <Inbox className="h-4 w-4" /> Recepción de pedidos
+            <Inbox className="h-4 w-4" /> Solicitudes y entradas
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="bandeja" className="mt-4">
+          <WholesaleOrdersInbox />
+        </TabsContent>
 
         <TabsContent value="stock" className="space-y-4 mt-4">
           {!selectedBrand ? (
