@@ -19,6 +19,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           id: string
+          order_id: string | null
           production_order_id: string | null
           referencia: string
           status: string
@@ -30,6 +31,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           id?: string
+          order_id?: string | null
           production_order_id?: string | null
           referencia: string
           status?: string
@@ -41,6 +43,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           id?: string
+          order_id?: string | null
           production_order_id?: string | null
           referencia?: string
           status?: string
