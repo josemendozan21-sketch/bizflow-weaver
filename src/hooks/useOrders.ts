@@ -49,6 +49,28 @@ export interface Order {
   return_notes: string | null;
 }
 
+type PaymentFields = Pick<Order, "sale_type" | "total_amount" | "abono" | "payment_method" | "payment_complete" | "payment_proof_url">;
+
+export function isOrderFullyPaid(order: PaymentFields): boolean {
+  return Boolean(
+    order.payment_complete ||
+      order.payment_method === "pagado" ||
+      order.payment_method === "obsequio" ||
+      (order.sale_type === "menor" && order.payment_proof_url)
+  );
+}
+
+export function getOrderPaidAmount(order: PaymentFields): number {
+  const total = Number(order.total_amount) || 0;
+  if (isOrderFullyPaid(order)) return total;
+  return Math.min(Number(order.abono) || 0, total);
+}
+
+export function getOrderBalance(order: PaymentFields): number {
+  const total = Number(order.total_amount) || 0;
+  return Math.max(total - getOrderPaidAmount(order), 0);
+}
+
 export const PRODUCTION_STATUS_LABELS: Record<string, string> = {
   pendiente: "Pendiente",
   diseno: "En diseño",
