@@ -32,7 +32,7 @@ const Produccion = () => {
           <CreateInventoryRequestDialog defaultCategory="cuerpos_referencias" />
         </div>
         <EstampacionProductionView />
-        <InventoryRequestsPanel />
+        <InventoryRequestsPanel hideRetail />
       </div>
     );
   }
@@ -72,7 +72,7 @@ const Produccion = () => {
       ) : (
         <SweatspotWorkflow />
       )}
-      {!isReadOnly && <InventoryRequestsPanel />}
+      {!isReadOnly && <InventoryRequestsPanel hideRetail />}
     </div>
   );
 };
