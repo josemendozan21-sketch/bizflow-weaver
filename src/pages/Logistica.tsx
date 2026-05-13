@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { useOrders, type Order } from "@/hooks/useOrders";
+import { getOrderBalance, getOrderPaidAmount, isOrderFullyPaid, useOrders, type Order } from "@/hooks/useOrders";
 import { useAuth } from "@/contexts/AuthContext";
 import { canEditSection } from "@/lib/rolePermissions";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,8 +26,8 @@ function exportOrdersToCSV(orders: Order[], brandLabel: (b: string) => string, s
   const headers = ["Cliente", "Cédula/NIT", "Teléfono", "Email", "Ciudad", "Dirección", "Marca", "Tipo", "Producto", "Unidades", "Método de pago", "Valor total", "Abono", "Saldo pendiente", "Costo envío", "Observaciones"];
   const rows = orders.map((o) => {
     const total = Number(o.total_amount) || 0;
-    const abono = Number(o.abono) || 0;
-    const saldo = total - abono;
+    const abono = getOrderPaidAmount(o);
+    const saldo = getOrderBalance(o);
     const shippingCost = Number(o.shipping_cost) || 0;
     let metodo = "N/A";
     if (o.sale_type === "menor") {
@@ -121,7 +121,7 @@ function groupOrdersByShipment(
     group.allIds.push(o.id);
     group.totalUnits += Number(o.quantity) || 0;
     group.totalAmount += Number(o.total_amount) || 0;
-    group.totalAbono += Number(o.abono) || 0;
+    group.totalAbono += getOrderPaidAmount(o);
     group.totalShipping += Number(o.shipping_cost) || 0;
     if (!group.brands.includes(o.brand)) group.brands.push(o.brand);
     if (o.created_at < group.oldestCreatedAt) group.oldestCreatedAt = o.created_at;
@@ -188,7 +188,7 @@ function AdvisorHeaderBadge({ items }: { items: Order[] }) {
 function generateLabelsForGroups(groups: ShipmentGroup[]) {
   if (groups.length === 0) return;
   const labelsHtml = groups.map((g) => {
-    const saldo = g.totalAmount - g.totalAbono;
+    const saldo = Math.max(g.totalAmount - g.totalAbono, 0);
     const firstItem = g.items[0];
     const advisorInfo = getAdvisorNames(g.items).join(", ") || "No asignado";
     let pagoInfo = "";
