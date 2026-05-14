@@ -1094,6 +1094,60 @@ export type Database = {
         }
         Relationships: []
       }
+      pos_cash_withdrawals: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          approved_by_name: string | null
+          concept: string
+          created_at: string
+          id: string
+          location_id: string
+          notes: string | null
+          proof_url: string | null
+          rejection_reason: string | null
+          requested_by: string
+          requested_by_name: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_by_name?: string | null
+          concept: string
+          created_at?: string
+          id?: string
+          location_id: string
+          notes?: string | null
+          proof_url?: string | null
+          rejection_reason?: string | null
+          requested_by: string
+          requested_by_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_by_name?: string | null
+          concept?: string
+          created_at?: string
+          id?: string
+          location_id?: string
+          notes?: string | null
+          proof_url?: string | null
+          rejection_reason?: string | null
+          requested_by?: string
+          requested_by_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pos_central_transfers: {
         Row: {
           brand: string | null
