@@ -405,6 +405,9 @@ export function MisPedidos() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Stamping approval requests */}
+      <StampingApprovals />
     </div>
   );
 }
