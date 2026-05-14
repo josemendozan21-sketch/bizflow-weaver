@@ -7,11 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Users, Tent } from "lucide-react";
+import { Shield, Users, Tent, Store } from "lucide-react";
 import { toast } from "sonner";
 import { Navigate } from "react-router-dom";
 import type { Database } from "@/integrations/supabase/types";
 import { useFerias, useAllPosAssignments, useAssignPosUser } from "@/hooks/useFerias";
+import { usePosLocations } from "@/hooks/usePuntosVenta";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -30,6 +32,28 @@ const AdminUsuarios = () => {
   const { data: ferias = [] } = useFerias();
   const { data: posAssignments = [] } = useAllPosAssignments();
   const assignPos = useAssignPosUser();
+  const { data: posLocations = [] } = usePosLocations();
+  const qc = useQueryClient();
+  const { data: locationAssignments = [] } = useQuery({
+    queryKey: ["pos_all_location_assignments"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("pos_location_assignments").select("user_id, location_id");
+      if (error) throw error;
+      return data as { user_id: string; location_id: string }[];
+    },
+  });
+  const assignPosLocation = useMutation({
+    mutationFn: async ({ user_id, location_id }: { user_id: string; location_id: string }) => {
+      await supabase.from("pos_location_assignments").delete().eq("user_id", user_id);
+      const { error } = await supabase.from("pos_location_assignments").insert({ user_id, location_id });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pos_all_location_assignments"] });
+      toast.success("Punto asignado");
+    },
+    onError: (e: any) => toast.error(e.message ?? "Error al asignar punto"),
+  });
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -139,6 +163,7 @@ const AdminUsuarios = () => {
                           <SelectItem value="estampacion">Estampación</SelectItem>
                           <SelectItem value="usuario_visual">Usuario Visual</SelectItem>
                           <SelectItem value="feria_pos">Feria Punto de Venta</SelectItem>
+                          <SelectItem value="pos_punto">Asesor Punto de Venta</SelectItem>
                         </SelectContent>
                       </Select>
                       {u.role === "feria_pos" && (
@@ -154,6 +179,24 @@ const AdminUsuarios = () => {
                             <SelectContent>
                               {ferias.map((f) => (
                                 <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      {u.role === "pos_punto" && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <Store className="h-3 w-3 text-muted-foreground" />
+                          <Select
+                            value={locationAssignments.find((a) => a.user_id === u.user_id)?.location_id ?? ""}
+                            onValueChange={(location_id) => assignPosLocation.mutate({ user_id: u.user_id, location_id })}
+                          >
+                            <SelectTrigger className="w-[200px] h-8 text-xs">
+                              <SelectValue placeholder="Asignar punto" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {posLocations.map((l) => (
+                                <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>

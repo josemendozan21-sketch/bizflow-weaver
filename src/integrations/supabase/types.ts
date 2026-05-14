@@ -1094,6 +1094,390 @@ export type Database = {
         }
         Relationships: []
       }
+      pos_central_transfers: {
+        Row: {
+          brand: string | null
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          dispatched_at: string | null
+          dispatched_by: string | null
+          id: string
+          item_name: string
+          location_id: string
+          notes: string | null
+          pos_product_id: string | null
+          quantity: number
+          received_at: string | null
+          received_by: string | null
+          status: string
+          stock_item_id: string | null
+          unit_cost: number
+          updated_at: string
+        }
+        Insert: {
+          brand?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          dispatched_at?: string | null
+          dispatched_by?: string | null
+          id?: string
+          item_name: string
+          location_id: string
+          notes?: string | null
+          pos_product_id?: string | null
+          quantity: number
+          received_at?: string | null
+          received_by?: string | null
+          status?: string
+          stock_item_id?: string | null
+          unit_cost?: number
+          updated_at?: string
+        }
+        Update: {
+          brand?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          dispatched_at?: string | null
+          dispatched_by?: string | null
+          id?: string
+          item_name?: string
+          location_id?: string
+          notes?: string | null
+          pos_product_id?: string | null
+          quantity?: number
+          received_at?: string | null
+          received_by?: string | null
+          status?: string
+          stock_item_id?: string | null
+          unit_cost?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_central_transfers_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "pos_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_central_transfers_pos_product_id_fkey"
+            columns: ["pos_product_id"]
+            isOneToOne: false
+            referencedRelation: "pos_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pos_inventory_movements: {
+        Row: {
+          created_at: string
+          direction: string
+          id: string
+          location_id: string
+          notes: string | null
+          pos_product_id: string | null
+          product_name: string
+          quantity: number
+          recorded_by: string | null
+          recorded_by_name: string | null
+          reference_id: string | null
+          source: string
+          supplier: string | null
+          unit_cost: number | null
+          unit_price: number | null
+        }
+        Insert: {
+          created_at?: string
+          direction: string
+          id?: string
+          location_id: string
+          notes?: string | null
+          pos_product_id?: string | null
+          product_name: string
+          quantity: number
+          recorded_by?: string | null
+          recorded_by_name?: string | null
+          reference_id?: string | null
+          source: string
+          supplier?: string | null
+          unit_cost?: number | null
+          unit_price?: number | null
+        }
+        Update: {
+          created_at?: string
+          direction?: string
+          id?: string
+          location_id?: string
+          notes?: string | null
+          pos_product_id?: string | null
+          product_name?: string
+          quantity?: number
+          recorded_by?: string | null
+          recorded_by_name?: string | null
+          reference_id?: string | null
+          source?: string
+          supplier?: string | null
+          unit_cost?: number | null
+          unit_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_inventory_movements_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "pos_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_inventory_movements_pos_product_id_fkey"
+            columns: ["pos_product_id"]
+            isOneToOne: false
+            referencedRelation: "pos_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pos_location_assignments: {
+        Row: {
+          assigned_at: string
+          created_at: string
+          id: string
+          location_id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          created_at?: string
+          id?: string
+          location_id: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          created_at?: string
+          id?: string
+          location_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_location_assignments_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "pos_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pos_locations: {
+        Row: {
+          address: string | null
+          city: string
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          city: string
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          city?: string
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pos_products: {
+        Row: {
+          active: boolean
+          available: number
+          avg_cost: number
+          brand: string | null
+          category: string | null
+          created_at: string
+          id: string
+          location_id: string
+          min_stock: number
+          name: string
+          notes: string | null
+          photo_url: string | null
+          sale_price: number
+          supplier: string | null
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          available?: number
+          avg_cost?: number
+          brand?: string | null
+          category?: string | null
+          created_at?: string
+          id?: string
+          location_id: string
+          min_stock?: number
+          name: string
+          notes?: string | null
+          photo_url?: string | null
+          sale_price?: number
+          supplier?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          available?: number
+          avg_cost?: number
+          brand?: string | null
+          category?: string | null
+          created_at?: string
+          id?: string
+          location_id?: string
+          min_stock?: number
+          name?: string
+          notes?: string | null
+          photo_url?: string | null
+          sale_price?: number
+          supplier?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_products_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "pos_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pos_sale_items: {
+        Row: {
+          brand: string | null
+          created_at: string
+          id: string
+          line_total: number
+          pos_product_id: string | null
+          product_name: string
+          quantity: number
+          sale_id: string
+          unit_cost: number
+          unit_price: number
+        }
+        Insert: {
+          brand?: string | null
+          created_at?: string
+          id?: string
+          line_total: number
+          pos_product_id?: string | null
+          product_name: string
+          quantity: number
+          sale_id: string
+          unit_cost?: number
+          unit_price: number
+        }
+        Update: {
+          brand?: string | null
+          created_at?: string
+          id?: string
+          line_total?: number
+          pos_product_id?: string | null
+          product_name?: string
+          quantity?: number
+          sale_id?: string
+          unit_cost?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_sale_items_pos_product_id_fkey"
+            columns: ["pos_product_id"]
+            isOneToOne: false
+            referencedRelation: "pos_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "pos_sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pos_sales: {
+        Row: {
+          client_name: string | null
+          client_phone: string | null
+          created_at: string
+          id: string
+          location_id: string
+          notes: string | null
+          payment_method: string | null
+          recorded_by: string
+          recorded_by_name: string | null
+          sale_date: string
+          total_amount: number
+          total_cost: number
+        }
+        Insert: {
+          client_name?: string | null
+          client_phone?: string | null
+          created_at?: string
+          id?: string
+          location_id: string
+          notes?: string | null
+          payment_method?: string | null
+          recorded_by: string
+          recorded_by_name?: string | null
+          sale_date?: string
+          total_amount?: number
+          total_cost?: number
+        }
+        Update: {
+          client_name?: string | null
+          client_phone?: string | null
+          created_at?: string
+          id?: string
+          location_id?: string
+          notes?: string | null
+          payment_method?: string | null
+          recorded_by?: string
+          recorded_by_name?: string | null
+          sale_date?: string
+          total_amount?: number
+          total_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_sales_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "pos_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_costs: {
         Row: {
           brand: string
@@ -1478,6 +1862,7 @@ export type Database = {
         Returns: boolean
       }
       is_pos_for_feria: { Args: { _feria_id: string }; Returns: boolean }
+      is_pos_for_location: { Args: { _location_id: string }; Returns: boolean }
     }
     Enums: {
       app_role:
@@ -1491,6 +1876,7 @@ export type Database = {
         | "logistica"
         | "feria_pos"
         | "inventarios"
+        | "pos_punto"
       event_type: "feria" | "carrera" | "activacion"
       logo_request_status:
         | "pendiente_diseno"
@@ -1638,6 +2024,7 @@ export const Constants = {
         "logistica",
         "feria_pos",
         "inventarios",
+        "pos_punto",
       ],
       event_type: ["feria", "carrera", "activacion"],
       logo_request_status: [
