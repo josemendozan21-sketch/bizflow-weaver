@@ -2,6 +2,23 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
+export const CONSUMIDOR_FINAL = {
+  client_name: "Consumidor Final",
+  client_document: "222222222222",
+  client_email: "",
+};
+
+export async function uploadPosProductPhoto(file: File, locationId: string) {
+  const ext = file.name.split(".").pop() || "jpg";
+  const path = `${locationId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await supabase.storage
+    .from("pos-product-photos")
+    .upload(path, file, { upsert: false, contentType: file.type });
+  if (error) throw error;
+  const { data } = supabase.storage.from("pos-product-photos").getPublicUrl(path);
+  return data.publicUrl;
+}
+
 export type PosLocation = {
   id: string;
   name: string;
