@@ -6,7 +6,7 @@ interface OrderLogoData {
   product: string;
   advisorId: string;
   advisorName: string;
-  logoFile: File;
+  logoFile?: File | null;
   clientComments?: string;
   additionalInstructions?: string;
 }
@@ -17,19 +17,30 @@ interface OrderLogoData {
  */
 export async function createLogoRequestFromOrder(data: OrderLogoData): Promise<{ success: boolean; message: string; logoUrl?: string }> {
   try {
-    // 1. Upload logo to storage
-    const ext = data.logoFile.name.split(".").pop();
-    const path = `originals/${crypto.randomUUID()}.${ext}`;
-    const { error: uploadError } = await supabase.storage
-      .from("logo-files")
-      .upload(path, data.logoFile);
+    // 1. Upload logo to storage if a file was provided.
+    // If only personalization text exists (no file), we still create a design
+    // request so the design team can build the artwork from scratch.
+    let publicUrl = "";
+    if (data.logoFile && data.logoFile.size > 0) {
+      const ext = data.logoFile.name.split(".").pop();
+      const path = `originals/${crypto.randomUUID()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("logo-files")
+        .upload(path, data.logoFile);
 
-    if (uploadError) {
-      console.error("Error uploading logo:", uploadError);
-      return { success: false, message: `Error al subir el logo: ${uploadError.message}` };
+      if (uploadError) {
+        console.error("Error uploading logo:", uploadError);
+        return { success: false, message: `Error al subir el logo: ${uploadError.message}` };
+      }
+
+      const { data: urlData } = supabase.storage.from("logo-files").getPublicUrl(path);
+      publicUrl = urlData.publicUrl;
+    } else {
+      // Sentinel value used when no original artwork is provided. The design
+      // team will see this request and build the logo based on the
+      // personalization text / instructions.
+      publicUrl = "PENDIENTE_DISENO_DESDE_CERO";
     }
-
-    const { data: urlData } = supabase.storage.from("logo-files").getPublicUrl(path);
 
     // 2. Create logo request
     const { error: insertError } = await supabase.from("logo_requests").insert({
@@ -38,7 +49,7 @@ export async function createLogoRequestFromOrder(data: OrderLogoData): Promise<{
       product: data.product,
       advisor_id: data.advisorId,
       advisor_name: data.advisorName,
-      original_logo_url: urlData.publicUrl,
+      original_logo_url: publicUrl,
       client_comments: data.clientComments || null,
       additional_instructions: data.additionalInstructions || null,
       status: "pendiente_diseno",
@@ -46,10 +57,13 @@ export async function createLogoRequestFromOrder(data: OrderLogoData): Promise<{
 
     if (insertError) {
       console.error("Error creating logo request:", insertError);
-      return { success: false, message: `Error al crear solicitud de diseño: ${insertError.message}`, logoUrl: urlData.publicUrl };
+      return { success: false, message: `Error al crear solicitud de diseño: ${insertError.message}`, logoUrl: publicUrl };
     }
 
-    return { success: true, message: "Solicitud de diseño creada automáticamente.", logoUrl: urlData.publicUrl };
+    const message = data.logoFile && data.logoFile.size > 0
+      ? "Solicitud de diseño creada automáticamente."
+      : "Solicitud de diseño creada (sin logo: el equipo lo construirá desde la personalización).";
+    return { success: true, message, logoUrl: publicUrl };
   } catch (err: any) {
     console.error("Unexpected error creating logo request:", err);
     return { success: false, message: err.message || "Error inesperado" };
