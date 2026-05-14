@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Store, ShoppingCart, Package, ArrowDownToLine, BarChart3 } from "lucide-react";
+import { Store, ShoppingCart, Package, ArrowDownToLine, BarChart3, Receipt } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   usePosLocations,
@@ -15,6 +15,7 @@ import {
 import { PuntoInventario } from "@/components/puntos-venta/PuntoInventario";
 import { PuntoEntradaForm } from "@/components/puntos-venta/PuntoEntradaForm";
 import { PuntoVentaPOS } from "@/components/puntos-venta/PuntoVentaPOS";
+import { PuntoVentaDetalle } from "@/components/puntos-venta/PuntoVentaDetalle";
 import { PuntoReportes } from "@/components/puntos-venta/PuntoReportes";
 
 export default function PuntosVenta() {
@@ -107,7 +108,20 @@ export default function PuntosVenta() {
 
         {!readOnly && (
           <TabsContent value="vender">
-            {locationId && <PuntoVentaPOS locationId={locationId} products={products} />}
+            {locationId && (
+              <Tabs defaultValue="rapido" className="space-y-3">
+                <TabsList>
+                  <TabsTrigger value="rapido"><ShoppingCart className="h-4 w-4 mr-1" /> Venta rápida</TabsTrigger>
+                  <TabsTrigger value="detalle"><Receipt className="h-4 w-4 mr-1" /> Venta con detalle</TabsTrigger>
+                </TabsList>
+                <TabsContent value="rapido">
+                  <PuntoVentaPOS locationId={locationId} products={products} />
+                </TabsContent>
+                <TabsContent value="detalle">
+                  <PuntoVentaDetalle locationId={locationId} products={products} />
+                </TabsContent>
+              </Tabs>
+            )}
           </TabsContent>
         )}
 
