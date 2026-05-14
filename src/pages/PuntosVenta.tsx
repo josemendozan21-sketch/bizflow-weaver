@@ -136,7 +136,15 @@ export default function PuntosVenta() {
         )}
 
         <TabsContent value="reportes">
-          <PuntoReportes sales={sales} movements={movements} products={products} />
+          {locationId && location && (
+            <PuntoReportes
+              sales={sales}
+              movements={movements}
+              products={products}
+              locationId={locationId}
+              location={{ name: location.name, city: location.city, address: location.address }}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </div>
