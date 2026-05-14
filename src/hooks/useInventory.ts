@@ -210,9 +210,12 @@ export function useInventory() {
         };
       }
 
-      const toDiscount = qty;
-      const remaining = 0;
-      const newAvailable = item.available - qty;
+      // Clamp: never reserve more than what's available. If stock is 0 or negative,
+      // discount nothing and request the full quantity from production.
+      const currentAvailable = Math.max(item.available, 0);
+      const toDiscount = Math.min(currentAvailable, qty);
+      const remaining = qty - toDiscount;
+      const newAvailable = item.available - toDiscount;
 
       const { error } = await supabase
         .from("body_stock")
@@ -264,7 +267,7 @@ export function useInventory() {
 
       if (remaining > 0) {
         return {
-          available: true,
+          available: toDiscount > 0,
           discounted: toDiscount,
           message: `Stock parcial de "${referencia}". Descontados: ${toDiscount}, faltan: ${remaining} uds.`,
         };
