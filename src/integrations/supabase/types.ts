@@ -53,6 +53,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "body_production_tasks_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "body_production_tasks_production_order_id_fkey"
             columns: ["production_order_id"]
             isOneToOne: false
