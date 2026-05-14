@@ -82,12 +82,14 @@ function ApprovedCard({ request: req, role }: { request: LogoRequest; role: stri
         ? format(new Date(req.approved_at), "d 'de' MMMM yyyy", { locale: es })
         : "—";
 
+      const esc = (s: any) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
       printWindow.document.write(`
         <!DOCTYPE html>
         <html lang="es">
         <head>
           <meta charset="UTF-8">
-          <title>Orden de Estampado — ${req.client_name}</title>
+          <title>Orden de Estampado — ${esc(req.client_name)}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
@@ -110,23 +112,23 @@ function ApprovedCard({ request: req, role }: { request: LogoRequest; role: stri
             <p>Documento generado para el área de producción</p>
           </div>
           <div class="logo-container">
-            <img src="${req.adjusted_logo_url || req.original_logo_url}" alt="Logo para estampar" />
+            <img src="${esc(req.adjusted_logo_url || req.original_logo_url)}" alt="Logo para estampar" />
           </div>
           <p class="section-title">Información del pedido</p>
           <table>
-            <tr><th>Cliente</th><td>${req.client_name}</td></tr>
-            <tr><th>Marca</th><td>${req.brand}</td></tr>
-            <tr><th>Producto</th><td>${req.product}</td></tr>
-            <tr><th>Molde / Referencia</th><td>${prod?.molde || prod?.thermo_size || "—"}</td></tr>
-            <tr><th>Color de tinta</th><td>${prod?.ink_color || "—"}</td></tr>
-            <tr><th>Color de gel / silicona</th><td>${prod?.gel_color || prod?.silicone_color || "—"}</td></tr>
-            <tr><th>Unidades a estampar</th><td>${prod?.quantity || "—"}</td></tr>
-            <tr><th>Fecha de aprobación</th><td>${approvedDate}</td></tr>
-            <tr><th>Asesor responsable</th><td>${req.advisor_name}</td></tr>
-            ${req.design_notes ? `<tr><th>Notas del diseñador</th><td>${req.design_notes}</td></tr>` : ""}
-            ${prod?.observations ? `<tr><th>Observaciones</th><td>${prod.observations}</td></tr>` : ""}
+            <tr><th>Cliente</th><td>${esc(req.client_name)}</td></tr>
+            <tr><th>Marca</th><td>${esc(req.brand)}</td></tr>
+            <tr><th>Producto</th><td>${esc(req.product)}</td></tr>
+            <tr><th>Molde / Referencia</th><td>${esc(prod?.molde || prod?.thermo_size || "—")}</td></tr>
+            <tr><th>Color de tinta</th><td>${esc(prod?.ink_color || "—")}</td></tr>
+            <tr><th>Color de gel / silicona</th><td>${esc(prod?.gel_color || prod?.silicone_color || "—")}</td></tr>
+            <tr><th>Unidades a estampar</th><td>${esc(prod?.quantity || "—")}</td></tr>
+            <tr><th>Fecha de aprobación</th><td>${esc(approvedDate)}</td></tr>
+            <tr><th>Asesor responsable</th><td>${esc(req.advisor_name)}</td></tr>
+            ${req.design_notes ? `<tr><th>Notas del diseñador</th><td>${esc(req.design_notes)}</td></tr>` : ""}
+            ${prod?.observations ? `<tr><th>Observaciones</th><td>${esc(prod.observations)}</td></tr>` : ""}
           </table>
-          <div class="footer">Generado el ${today}</div>
+          <div class="footer">Generado el ${esc(today)}</div>
           <script>
             window.onload = function() { window.print(); };
           </script>

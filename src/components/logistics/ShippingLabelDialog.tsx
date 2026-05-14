@@ -12,6 +12,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FileText, Printer } from "lucide-react";
 
+const esc = (s: string) =>
+  String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
 interface ShippingLabelDialogProps {
   clientName?: string;
   address?: string;
@@ -58,13 +66,13 @@ const ShippingLabelDialog = ({ clientName = "", address = "", city = "", phone =
       </style></head><body>
       <div class="label">
         <div class="header">Rótulo de Envío</div>
-        <div class="row"><div class="row-label">Destinatario</div><div class="row-value">${form.nombre}</div></div>
-        <div class="row"><div class="row-label">Dirección</div><div class="row-value">${form.direccion}</div></div>
-        <div class="row"><div class="row-label">Ciudad</div><div class="row-value">${form.ciudad}</div></div>
+        <div class="row"><div class="row-label">Destinatario</div><div class="row-value">${esc(form.nombre)}</div></div>
+        <div class="row"><div class="row-label">Dirección</div><div class="row-value">${esc(form.direccion)}</div></div>
+        <div class="row"><div class="row-label">Ciudad</div><div class="row-value">${esc(form.ciudad)}</div></div>
         <div class="divider"></div>
-        <div class="row"><div class="row-label">Celular</div><div class="row-value">${form.celular}</div></div>
-        ${advisorName ? `<div class="row"><div class="row-label">Asesor</div><div class="row-value">${advisorName}</div></div>` : ""}
-        ${form.observaciones ? `<div class="divider"></div><div class="row"><div class="row-label">Observaciones</div><div class="row-value obs">${form.observaciones}</div></div>` : ""}
+        <div class="row"><div class="row-label">Celular</div><div class="row-value">${esc(form.celular)}</div></div>
+        ${advisorName ? `<div class="row"><div class="row-label">Asesor</div><div class="row-value">${esc(advisorName)}</div></div>` : ""}
+        ${form.observaciones ? `<div class="divider"></div><div class="row"><div class="row-label">Observaciones</div><div class="row-value obs">${esc(form.observaciones)}</div></div>` : ""}
       </div>
       <script>window.onload=()=>{window.print();}</script>
       </body></html>
