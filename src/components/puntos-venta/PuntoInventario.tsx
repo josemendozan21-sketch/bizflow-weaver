@@ -19,7 +19,34 @@ type Props = {
 export function PuntoInventario({ locationId, products, canEdit }: Props) {
   const [editing, setEditing] = useState<PosProduct | null>(null);
   const [open, setOpen] = useState(false);
+  const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const upsert = useUpsertPosProduct(locationId);
+
+  const brands = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const p of products) {
+      const b = (p.brand ?? "Sin marca").trim();
+      map.set(b, (map.get(b) || 0) + 1);
+    }
+    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [products]);
+
+  const filtered = useMemo(() => {
+    let list = products;
+    if (selectedBrand) {
+      list = list.filter((p) => (p.brand ?? "Sin marca").trim() === selectedBrand);
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((p) =>
+        p.name.toLowerCase().includes(q) ||
+        (p.brand ?? "").toLowerCase().includes(q) ||
+        (p.category ?? "").toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [products, selectedBrand, search]);
 
   const handleSave = async (form: Partial<PosProduct> & { name: string; sale_price: number }) => {
     try {
@@ -55,56 +82,100 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
             Aún no hay productos en este punto. {canEdit ? "Crea el primero." : ""}
           </p>
         ) : (
-          <div className="space-y-2">
-            {products.map((p) => {
-              const lowStock = Number(p.available) <= Number(p.min_stock) && Number(p.min_stock) > 0;
-              return (
-                <div key={p.id} className="flex items-center justify-between gap-3 p-3 rounded-md border">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start gap-3">
-                      <div className="h-12 w-12 rounded bg-muted overflow-hidden flex items-center justify-center flex-shrink-0">
-                        {p.photo_url ? (
-                          <img src={p.photo_url} alt={p.name} className="w-full h-full object-cover" loading="lazy" />
-                        ) : (
-                          <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
+          <div className="space-y-4">
+            {/* Brand selector */}
+            {!selectedBrand ? (
+              <div>
+                <p className="text-sm font-medium mb-2">Selecciona una marca</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {brands.map(([brand, count]) => (
+                    <button
+                      key={brand}
+                      onClick={() => setSelectedBrand(brand)}
+                      className="rounded-lg border p-4 text-left transition hover:bg-accent hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Tag className="h-4 w-4 text-primary" />
+                        <span className="font-semibold text-sm truncate">{brand}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">{count} producto{count !== 1 ? "s" : ""}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => { setSelectedBrand(null); setSearch(""); }}>
+                      ← Todas las marcas
+                    </Button>
+                    <Badge variant="outline" className="text-sm">{selectedBrand}</Badge>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{filtered.length} producto{filtered.length !== 1 ? "s" : ""}</span>
+                </div>
+                <Input
+                  placeholder="Buscar producto…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="max-w-sm"
+                />
+                <div className="space-y-2">
+                  {filtered.map((p) => {
+                    const lowStock = Number(p.available) <= Number(p.min_stock) && Number(p.min_stock) > 0;
+                    return (
+                      <div key={p.id} className="flex items-center justify-between gap-3 p-3 rounded-md border">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start gap-3">
+                            <div className="h-12 w-12 rounded bg-muted overflow-hidden flex items-center justify-center flex-shrink-0">
+                              {p.photo_url ? (
+                                <img src={p.photo_url} alt={p.name} className="w-full h-full object-cover" loading="lazy" />
+                              ) : (
+                                <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-medium truncate">{p.name}</p>
+                                {p.brand && <Badge variant="outline" className="text-xs">{p.brand}</Badge>}
+                                {p.supplier && <Badge variant="secondary" className="text-xs">{p.supplier}</Badge>}
+                                {lowStock && (
+                                  <Badge variant="destructive" className="text-xs gap-1">
+                                    <AlertTriangle className="h-3 w-3" /> Bajo
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {p.category ?? "Sin categoría"} · Costo prom: ${Number(p.avg_cost).toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold">${Number(p.sale_price).toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground">{Number(p.available)} {p.unit}</p>
+                        </div>
+                        {canEdit && (
+                          <Dialog open={open && editing?.id === p.id} onOpenChange={(v) => { setOpen(v); if (!v) setEditing(null); }}>
+                            <DialogTrigger asChild>
+                              <Button size="icon" variant="ghost" onClick={() => { setEditing(p); setOpen(true); }}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            {editing?.id === p.id && (
+                              <ProductDialog product={editing} onSave={handleSave} loading={upsert.isPending} locationId={locationId} />
+                            )}
+                          </Dialog>
                         )}
                       </div>
-                      <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium truncate">{p.name}</p>
-                      {p.brand && <Badge variant="outline" className="text-xs">{p.brand}</Badge>}
-                      {p.supplier && <Badge variant="secondary" className="text-xs">{p.supplier}</Badge>}
-                      {lowStock && (
-                        <Badge variant="destructive" className="text-xs gap-1">
-                          <AlertTriangle className="h-3 w-3" /> Bajo
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {p.category ?? "Sin categoría"} · Costo prom: ${Number(p.avg_cost).toLocaleString()}
-                    </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold">${Number(p.sale_price).toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">{Number(p.available)} {p.unit}</p>
-                  </div>
-                  {canEdit && (
-                    <Dialog open={open && editing?.id === p.id} onOpenChange={(v) => { setOpen(v); if (!v) setEditing(null); }}>
-                      <DialogTrigger asChild>
-                        <Button size="icon" variant="ghost" onClick={() => { setEditing(p); setOpen(true); }}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </DialogTrigger>
-                      {editing?.id === p.id && (
-                        <ProductDialog product={editing} onSave={handleSave} loading={upsert.isPending} locationId={locationId} />
-                      )}
-                    </Dialog>
+                    );
+                  })}
+                  {filtered.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-6">No hay productos que coincidan con la búsqueda.</p>
                   )}
                 </div>
-              );
-            })}
+              </div>
+            )}
           </div>
         )}
       </CardContent>
