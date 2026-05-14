@@ -11,7 +11,15 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Plus, UserCheck, Search } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Plus, UserCheck, Search, Check } from "lucide-react";
 import { CONSUMIDOR_FINAL, PosProduct, useRegisterPosSale } from "@/hooks/usePuntosVenta";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
