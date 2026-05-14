@@ -2069,6 +2069,13 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
         if (!uploadError) {
           const { data: urlData } = supabase.storage.from("payment-proofs").getPublicUrl(path);
           paymentProofUrl = urlData.publicUrl;
+        } else {
+          console.error("[Ventas retail] Error subiendo soporte de pago:", uploadError);
+          toast.error("No se pudo subir el soporte de pago", {
+            description: uploadError.message + ". El pedido no fue creado. Intente de nuevo.",
+          });
+          setIsSubmitting(false);
+          return;
         }
       }
 

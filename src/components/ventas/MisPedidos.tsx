@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -157,6 +157,7 @@ export function MisPedidos() {
   const { user, role } = useAuth();
   const { data: orders = [], isLoading } = useOrders();
   const [activeTab, setActiveTab] = useState<OrderCategory>("production");
+  const [hasUserSelectedTab, setHasUserSelectedTab] = useState(false);
   const [search, setSearch] = useState("");
   const [brandFilter, setBrandFilter] = useState<string>("all");
   const [saleTypeFilter, setSaleTypeFilter] = useState<string>("all");
@@ -227,6 +228,18 @@ export function MisPedidos() {
     for (const g of groups) c[g.category]++;
     return c;
   }, [groups]);
+
+  // Auto-seleccionar la primera pestaña con items para que el asesor vea sus pedidos
+  // recién creados (p. ej. ventas al detal entran como "Listos") sin tener que adivinar.
+  useEffect(() => {
+    if (hasUserSelectedTab) return;
+    if (counts[activeTab] > 0) return;
+    const order: OrderCategory[] = ["action", "production", "ready", "dispatched", "delivered"];
+    const firstWithItems = order.find((c) => counts[c] > 0);
+    if (firstWithItems && firstWithItems !== activeTab) {
+      setActiveTab(firstWithItems);
+    }
+  }, [counts, activeTab, hasUserSelectedTab]);
 
   // Pestaña por defecto: si hay acción requerida, abrir esa; si no, producción.
   // (solo en el render inicial; no se cambia automáticamente después)
@@ -311,7 +324,7 @@ export function MisPedidos() {
         </Select>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as OrderCategory)}>
+      <Tabs value={activeTab} onValueChange={(v) => { setHasUserSelectedTab(true); setActiveTab(v as OrderCategory); }}>
         <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="action" className="gap-1.5">
             <AlertTriangle className="h-3.5 w-3.5" />
