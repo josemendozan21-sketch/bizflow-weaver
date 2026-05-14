@@ -60,16 +60,16 @@ export default function PuntosVenta() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold">Puntos de Venta</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-lg font-semibold leading-tight">Puntos de Venta</h1>
+          <p className="text-xs text-muted-foreground">
             Tiendas físicas con inventario y ventas independientes de casa matriz
           </p>
         </div>
         {!isPos && eligible.length > 1 && (
           <Select value={locationId} onValueChange={setLocationId}>
-            <SelectTrigger className="w-[280px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[240px] h-8 text-sm"><SelectValue /></SelectTrigger>
             <SelectContent>
               {eligible.map((l) => (
                 <SelectItem key={l.id} value={l.id}>{l.name} — {l.city}</SelectItem>
@@ -80,18 +80,15 @@ export default function PuntosVenta() {
       </div>
 
       {location && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Store className="h-5 w-5 text-primary" /> {location.name}
-              <Badge variant="outline" className="ml-2 capitalize">{location.status}</Badge>
-              {readOnly && <Badge variant="secondary" className="ml-1">Solo lectura</Badge>}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            {location.city}{location.address ? ` · ${location.address}` : ""}
-          </CardContent>
-        </Card>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border bg-card text-sm">
+          <Store className="h-4 w-4 text-primary shrink-0" />
+          <span className="font-medium">{location.name}</span>
+          <Badge variant="outline" className="capitalize text-[10px] px-1.5 py-0">{location.status}</Badge>
+          {readOnly && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Solo lectura</Badge>}
+          <span className="text-xs text-muted-foreground ml-1 truncate">
+            · {location.city}{location.address ? ` · ${location.address}` : ""}
+          </span>
+        </div>
       )}
 
       <Tabs defaultValue={readOnly ? "reportes" : "vender"}>
