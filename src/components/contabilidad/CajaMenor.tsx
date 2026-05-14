@@ -18,6 +18,7 @@ import {
 import { Wallet, Plus, DollarSign, FileText, Upload, Loader2, Camera, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { openSignedUrl } from "@/lib/signedUrl";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";

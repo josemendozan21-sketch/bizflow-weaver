@@ -15,6 +15,7 @@ import {
 } from "@/hooks/usePuntosVenta";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { openSignedUrl } from "@/lib/signedUrl";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Props = { locationId: string };

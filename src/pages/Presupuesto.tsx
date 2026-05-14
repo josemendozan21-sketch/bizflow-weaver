@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Settings2, Lock, Unlock, Plus, Trash2, FileText } from "lucide-react";
+import { openSignedUrl } from "@/lib/signedUrl";
 import {
   useMonthlyBudget,
   useBudgetLines,
