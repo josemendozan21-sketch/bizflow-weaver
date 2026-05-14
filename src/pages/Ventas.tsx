@@ -1298,7 +1298,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 interface SweatspotOrderLine {
   id: string;
   referencia: string;
-  tamano: "150 ml" | "250 ml" | "250 ml juguetón" | "500 ml" | "";
+  tamano: "150 ml" | "250 ml" | "250 ml juguetón" | "250 ml con correa" | "500 ml" | "500 ml con correa" | "";
   tipoLogo: "Impresión full" | "Impresión básica" | "";
   colorSilicona: string;
   colorTinta: string;
@@ -1340,7 +1340,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const ssFormRef = useRef<HTMLFormElement>(null);
   useFormDraft(ssFormRef, "ventas:ss:fields");
   const [ssConfirmOpen, setSsConfirmOpen] = useState(false);
-  const tamanos = ["150 ml", "250 ml", "250 ml juguetón", "500 ml"] as const;
+  const tamanos = ["150 ml", "250 ml", "250 ml juguetón", "250 ml con correa", "500 ml", "500 ml con correa"] as const;
 
   // Grand total across all lines
   const grandTotal = useMemo(() => {
@@ -1464,7 +1464,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       const referencia = line.referencia;
       const inkColor = line.colorTinta;
       const siliconeColor = line.colorSilicona;
-      const thermoSize = line.tamano as "150 ml" | "250 ml" | "250 ml juguetón" | "500 ml";
+      const thermoSize = line.tamano as "150 ml" | "250 ml" | "250 ml juguetón" | "250 ml con correa" | "500 ml" | "500 ml con correa";
       const tipoLogo = line.tipoLogo;
       const lineTotal = parseFloat(line.valorTotal) || 0;
       // Prorratear el abono según el peso de la línea sobre el total del pedido.
@@ -1679,7 +1679,9 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                   const lower = (raw || "").toLowerCase().replace(/\s+/g, " ").trim();
                   if (lower.includes("150")) return "150 ml";
                   if (lower.includes("250") && lower.includes("juguet")) return "250 ml juguetón";
+                  if (lower.includes("250") && lower.includes("correa")) return "250 ml con correa";
                   if (lower.includes("250")) return "250 ml";
+                  if (lower.includes("500") && lower.includes("correa")) return "500 ml con correa";
                   if (lower.includes("500")) return "500 ml";
                   return "";
                 };

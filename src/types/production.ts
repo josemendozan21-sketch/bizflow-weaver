@@ -27,7 +27,7 @@ export interface MagicalStampingTask extends StampingTaskBase {
 
 export interface SweatspotStampingTask extends StampingTaskBase {
   brand: "sweatspot";
-  thermoSize: "150 ml" | "250 ml" | "250 ml juguetón" | "500 ml";
+  thermoSize: "150 ml" | "250 ml" | "250 ml juguetón" | "250 ml con correa" | "500 ml" | "500 ml con correa";
   siliconeColor: string;
 }
 
