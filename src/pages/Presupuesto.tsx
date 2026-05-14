@@ -448,9 +448,9 @@ export default function Presupuesto() {
                     </TableCell>
                     <TableCell>
                       {e.proof_url ? (
-                        <a href={e.proof_url} target="_blank" rel="noopener noreferrer">
-                          <Button size="sm" variant="ghost"><FileText className="h-3 w-3" /></Button>
-                        </a>
+                        <Button size="sm" variant="ghost" onClick={() => openSignedUrl(e.proof_url!)}>
+                          <FileText className="h-3 w-3" />
+                        </Button>
                       ) : "—"}
                     </TableCell>
                     <TableCell>

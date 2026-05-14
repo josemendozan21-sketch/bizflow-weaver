@@ -174,10 +174,10 @@ export function PuntoRetiros({ locationId }: Props) {
                   {w.rejection_reason && <div className="text-xs text-destructive">Motivo: {w.rejection_reason}</div>}
                 </div>
                 {w.proof_url && (
-                  <a href={w.proof_url} target="_blank" rel="noreferrer"
+                  <button type="button" onClick={() => openSignedUrl(w.proof_url!)}
                     className="text-xs inline-flex items-center gap-1 text-primary hover:underline">
                     <Paperclip className="h-3 w-3" /> Soporte
-                  </a>
+                  </button>
                 )}
                 {isAdmin && w.status === "pendiente" && (
                   <div className="flex gap-1">
