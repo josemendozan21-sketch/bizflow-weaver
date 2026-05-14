@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ShoppingCart, Plus, Minus, Trash2, Search, UserCheck, ImageIcon } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Search, UserCheck, ImageIcon, Tag } from "lucide-react";
 import { CartItem, CONSUMIDOR_FINAL, PosProduct, useRegisterPosSale } from "@/hooks/usePuntosVenta";
 import { toast } from "sonner";
 
@@ -14,6 +14,7 @@ type Props = { locationId: string; products: PosProduct[] };
 
 export function PuntoVentaPOS({ locationId, products }: Props) {
   const [search, setSearch] = useState("");
+  const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState("efectivo");
   const [clientName, setClientName] = useState("");
@@ -22,17 +23,31 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
   const [notes, setNotes] = useState("");
   const sale = useRegisterPosSale(locationId);
 
+  const available = useMemo(
+    () => products.filter((p) => p.active && Number(p.available) > 0),
+    [products]
+  );
+
+  const brands = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const p of available) {
+      const b = (p.brand ?? "Sin marca").trim();
+      map.set(b, (map.get(b) || 0) + 1);
+    }
+    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [available]);
+
   const filtered = useMemo(
     () =>
-      products
-        .filter((p) => p.active && Number(p.available) > 0)
+      available
+        .filter((p) => !selectedBrand || (p.brand ?? "Sin marca").trim() === selectedBrand)
         .filter(
           (p) =>
             !search ||
             p.name.toLowerCase().includes(search.toLowerCase()) ||
             (p.brand ?? "").toLowerCase().includes(search.toLowerCase())
         ),
-    [products, search]
+    [available, selectedBrand, search]
   );
 
   const total = cart.reduce((a, b) => a + Number(b.product.sale_price) * b.quantity, 0);
@@ -108,18 +123,46 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Productos disponibles</CardTitle>
-          <div className="relative mt-2">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar producto o marca…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-8"
-            />
-          </div>
+          {selectedBrand && (
+            <div className="flex items-center gap-2 mt-2">
+              <Button variant="outline" size="sm" onClick={() => { setSelectedBrand(null); setSearch(""); }}>
+                ← Marcas
+              </Button>
+              <Badge variant="outline">{selectedBrand}</Badge>
+              <div className="relative flex-1">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar producto…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
-          {filtered.length === 0 ? (
+          {!selectedBrand ? (
+            available.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">No hay productos disponibles.</p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {brands.map(([brand, count]) => (
+                  <button
+                    key={brand}
+                    onClick={() => setSelectedBrand(brand)}
+                    className="rounded-lg border p-4 text-left transition hover:bg-accent hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Tag className="h-4 w-4 text-primary" />
+                      <span className="font-semibold text-sm truncate">{brand}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{count} producto{count !== 1 ? "s" : ""}</p>
+                  </button>
+                ))}
+              </div>
+            )
+          ) : filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
               No hay productos disponibles.
             </p>
