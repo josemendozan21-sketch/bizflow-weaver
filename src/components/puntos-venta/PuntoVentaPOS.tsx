@@ -6,8 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ShoppingCart, Plus, Minus, Trash2, Search } from "lucide-react";
-import { CartItem, PosProduct, useRegisterPosSale } from "@/hooks/usePuntosVenta";
+import { ShoppingCart, Plus, Minus, Trash2, Search, UserCheck, ImageIcon } from "lucide-react";
+import { CartItem, CONSUMIDOR_FINAL, PosProduct, useRegisterPosSale } from "@/hooks/usePuntosVenta";
 import { toast } from "sonner";
 
 type Props = { locationId: string; products: PosProduct[] };
@@ -17,6 +17,8 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState("efectivo");
   const [clientName, setClientName] = useState("");
+  const [clientDoc, setClientDoc] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
   const [notes, setNotes] = useState("");
   const sale = useRegisterPosSale(locationId);
 
@@ -79,15 +81,26 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
         items: cart,
         payment_method: paymentMethod,
         client_name: clientName || undefined,
+        client_document: clientDoc || undefined,
+        client_email: clientEmail || undefined,
         notes: notes || undefined,
       });
       toast.success(`Venta registrada por $${total.toLocaleString()}`);
       setCart([]);
       setClientName("");
+      setClientDoc("");
+      setClientEmail("");
       setNotes("");
     } catch (e: any) {
       toast.error(e.message ?? "Error al registrar venta");
     }
+  };
+
+  const setConsumidorFinal = () => {
+    setClientName(CONSUMIDOR_FINAL.client_name);
+    setClientDoc(CONSUMIDOR_FINAL.client_document);
+    setClientEmail(CONSUMIDOR_FINAL.client_email);
+    toast.success("Datos de Consumidor Final cargados");
   };
 
   return (
@@ -118,6 +131,13 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
                   onClick={() => addToCart(p)}
                   className="text-left p-3 rounded-md border hover:border-primary hover:bg-accent transition"
                 >
+                  <div className="aspect-square w-full mb-2 rounded bg-muted overflow-hidden flex items-center justify-center">
+                    {p.photo_url ? (
+                      <img src={p.photo_url} alt={p.name} className="w-full h-full object-cover" loading="lazy" />
+                    ) : (
+                      <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+                    )}
+                  </div>
                   <p className="font-medium text-sm truncate">{p.name}</p>
                   {p.brand && <p className="text-xs text-muted-foreground truncate">{p.brand}</p>}
                   <div className="flex items-center justify-between mt-2">
@@ -172,7 +192,22 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
 
           <div>
             <Label>Cliente (opcional)</Label>
-            <Input value={clientName} onChange={(e) => setClientName(e.target.value)} />
+            <div className="flex gap-2">
+              <Input value={clientName} onChange={(e) => setClientName(e.target.value)} />
+              <Button type="button" size="sm" variant="outline" onClick={setConsumidorFinal} title="Consumidor final">
+                <UserCheck className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label>Cédula / NIT</Label>
+              <Input value={clientDoc} onChange={(e) => setClientDoc(e.target.value)} />
+            </div>
+            <div>
+              <Label>Email</Label>
+              <Input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} />
+            </div>
           </div>
           <div>
             <Label>Método de pago</Label>
