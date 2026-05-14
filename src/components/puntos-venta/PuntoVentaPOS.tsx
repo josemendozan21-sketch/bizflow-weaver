@@ -51,6 +51,13 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
   );
 
   const total = cart.reduce((a, b) => a + Number(b.product.sale_price) * b.quantity, 0);
+  const totalUnits = cart.reduce((a, b) => a + b.quantity, 0);
+  // Precios incluyen IVA 19% — desglosamos base e IVA
+  const ivaRate = 0.19;
+  const base = total / (1 + ivaRate);
+  const iva = total - base;
+  const fmt = (n: number) =>
+    `$${Math.round(n).toLocaleString("es-CO")}`;
 
   const addToCart = (p: PosProduct) => {
     setCart((prev) => {
@@ -234,33 +241,52 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
           {cart.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">Sin items</p>
           ) : (
-            <div className="space-y-2 max-h-[300px] overflow-y-auto">
-              {cart.map((c) => (
-                <div key={c.product.id} className="flex items-center gap-2 p-2 rounded-md border">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{c.product.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      ${Number(c.product.sale_price).toLocaleString()} × {c.quantity}
-                    </p>
+            <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+              {cart.map((c) => {
+                const lineTotal = Number(c.product.sale_price) * c.quantity;
+                return (
+                  <div key={c.product.id} className="flex items-center gap-2 p-2 rounded-md border bg-card">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{c.product.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {fmt(Number(c.product.sale_price))} c/u · Subtotal {fmt(lineTotal)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => updateQty(c.product.id, -1)}>
+                        <Minus className="h-3 w-3" />
+                      </Button>
+                      <span className="text-sm w-6 text-center font-semibold">{c.quantity}</span>
+                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => updateQty(c.product.id, 1)}>
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => removeItem(c.product.id)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
-                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => updateQty(c.product.id, -1)}>
-                    <Minus className="h-3 w-3" />
-                  </Button>
-                  <span className="text-sm w-6 text-center">{c.quantity}</span>
-                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => updateQty(c.product.id, 1)}>
-                    <Plus className="h-3 w-3" />
-                  </Button>
-                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => removeItem(c.product.id)}>
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
-          <div className="flex justify-between items-center border-t pt-3">
-            <span className="text-sm text-muted-foreground">Total</span>
-            <span className="text-2xl font-bold">${total.toLocaleString()}</span>
+          <div className="border-t pt-3 space-y-1.5">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Items</span>
+              <span className="font-medium">{totalUnits}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Subtotal (sin IVA)</span>
+              <span className="font-medium">{fmt(base)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">IVA 19%</span>
+              <span className="font-medium">{fmt(iva)}</span>
+            </div>
+            <div className="flex justify-between items-center pt-1.5 border-t">
+              <span className="text-sm font-semibold">Total a pagar</span>
+              <span className="text-2xl font-bold">{fmt(total)}</span>
+            </div>
           </div>
 
           <div>
@@ -300,7 +326,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
           </div>
           <Button onClick={handleConfirm} disabled={sale.isPending || cart.length === 0} className="w-full">
-            {sale.isPending ? "Registrando..." : `Cobrar $${total.toLocaleString()}`}
+            {sale.isPending ? "Registrando..." : `Cobrar ${fmt(total)}`}
           </Button>
         </CardContent>
       </Card>
