@@ -35,6 +35,7 @@ export type PosCashWithdrawal = {
   location_id: string;
   amount: number;
   concept: string;
+  movement_type: "retiro" | "consignacion";
   requested_by: string;
   requested_by_name: string | null;
   proof_url: string | null;
@@ -230,11 +231,18 @@ export function useCreateCashWithdrawal(locationId: string) {
   const qc = useQueryClient();
   const { user } = useAuth();
   return useMutation({
-    mutationFn: async (input: { amount: number; concept: string; proof_url?: string | null; notes?: string }) => {
+    mutationFn: async (input: {
+      amount: number;
+      concept: string;
+      proof_url?: string | null;
+      notes?: string;
+      movement_type?: "retiro" | "consignacion";
+    }) => {
       const { error } = await supabase.from("pos_cash_withdrawals" as any).insert({
         location_id: locationId,
         amount: input.amount,
         concept: input.concept,
+        movement_type: input.movement_type ?? "retiro",
         proof_url: input.proof_url ?? null,
         notes: input.notes ?? null,
         requested_by: user!.id,
