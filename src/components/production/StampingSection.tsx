@@ -32,7 +32,7 @@ export function StampingSection() {
   const [doubleInk, setDoubleInk] = useState(false);
 
   // Sweatspot fields
-  const [thermoSize, setThermoSize] = useState<"150 ml" | "250 ml" | "250 ml juguetón" | "500 ml">("500 ml");
+  const [thermoSize, setThermoSize] = useState<"150 ml" | "250 ml" | "250 ml juguetón" | "250 ml con correa" | "500 ml" | "500 ml con correa">("500 ml");
   const [siliconeColor, setSiliconeColor] = useState("");
 
   const handleSelectBrand = (b: Brand) => {
@@ -185,7 +185,9 @@ export function StampingSection() {
                         <SelectItem value="150 ml">150 ml</SelectItem>
                         <SelectItem value="250 ml">250 ml</SelectItem>
                         <SelectItem value="250 ml juguetón">250 ml juguetón</SelectItem>
+                        <SelectItem value="250 ml con correa">250 ml con correa</SelectItem>
                         <SelectItem value="500 ml">500 ml</SelectItem>
+                        <SelectItem value="500 ml con correa">500 ml con correa</SelectItem>
                       </SelectContent>
                     </Select>
                   </Field>
