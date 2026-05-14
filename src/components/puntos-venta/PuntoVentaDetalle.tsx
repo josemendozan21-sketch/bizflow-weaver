@@ -111,18 +111,50 @@ export function PuntoVentaDetalle({ locationId, products }: Props) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div>
+        <div className="md:col-span-2">
           <Label>Producto</Label>
-          <Select value={form.product_id} onValueChange={handleSelectProduct}>
-            <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-            <SelectContent>
-              {products.filter((p) => p.active && Number(p.available) > 0).map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}{p.brand ? ` (${p.brand})` : ""} — {Number(p.available)} disp.
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                className="w-full justify-between"
+              >
+                <span className="truncate">
+                  {selected ? `${selected.name}${selected.brand ? ` (${selected.brand})` : ""}` : "Buscar producto…"}
+                </span>
+                <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Escribe nombre, marca o referencia…" />
+                <CommandList>
+                  <CommandEmpty>Sin coincidencias</CommandEmpty>
+                  <CommandGroup>
+                    {products.filter((p) => p.active && Number(p.available) > 0).map((p) => (
+                      <CommandItem
+                        key={p.id}
+                        value={`${p.name} ${p.brand ?? ""} ${p.category ?? ""}`}
+                        onSelect={() => handleSelectProduct(p.id)}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            form.product_id === p.id ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        <span className="flex-1 truncate">{p.name}</span>
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {p.brand ?? ""} — {Number(p.available)} disp.
+                        </span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
         <div>
           <Label>Cantidad</Label>
