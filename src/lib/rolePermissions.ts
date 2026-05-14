@@ -4,8 +4,7 @@ type AppRole = Database["public"]["Enums"]["app_role"];
 
 // Define which routes each role can access
 const ROLE_ROUTES: Record<AppRole, string[]> = {
-  admin: ["/", "/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/admin-usuarios", "/costos", "/eventos", "/ferias", "/galeria", "/feria-pos", "/presupuesto"],
-  // Note: admin always sees all routes; "/puntos-venta" added below in mapping just in case
+  admin: ["/", "/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/admin-usuarios", "/costos", "/eventos", "/ferias", "/galeria", "/feria-pos", "/presupuesto", "/puntos-venta"],
   asesor_comercial: ["/ventas", "/inventarios", "/diseno-logos", "/logistica", "/contabilidad", "/eventos", "/ferias", "/galeria"],
   produccion: ["/produccion", "/inventarios", "/eventos", "/ferias", "/galeria"],
   contabilidad: ["/contabilidad", "/eventos", "/ferias", "/galeria", "/presupuesto", "/puntos-venta"],
