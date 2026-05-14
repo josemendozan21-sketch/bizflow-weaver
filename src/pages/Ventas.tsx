@@ -713,7 +713,9 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     // Upload logo once if provided. En recompras NO se crea solicitud
     // de diseño automática (el logo ya existe y fue aprobado antes).
     let logoUrl: string | null = null;
-    if (logoFile && logoFile.size > 0 && user && !isRecompra && !noLogo) {
+    const hasLogoFile = !!(logoFile && logoFile.size > 0);
+    const hasPersonalization = !!(personalizacion && personalizacion.trim());
+    if ((hasLogoFile || hasPersonalization) && user && !isRecompra && !noLogo) {
       const firstLine = orderLines[0];
       const referencia = `${firstLine.product} (${firstLine.type})`;
       const result = await createLogoRequestFromOrder({
@@ -722,7 +724,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         product: referencia,
         advisorId: user.id,
         advisorName: user.email || "Asesor",
-        logoFile,
+        logoFile: hasLogoFile ? logoFile : null,
         clientComments: observaciones || undefined,
         additionalInstructions: personalizacion || undefined,
       });
@@ -1417,7 +1419,9 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     // Auto-create design request once if logo was uploaded.
     // En recompras NO se crea solicitud de diseño automática.
     let logoUrl: string | null = null;
-    if (logoFile && logoFile.size > 0 && user && !ssIsRecompra && !ssNoLogo) {
+    const ssHasLogoFile = !!(logoFile && logoFile.size > 0);
+    const ssHasPersonalization = !!(personalizacion && personalizacion.trim());
+    if ((ssHasLogoFile || ssHasPersonalization) && user && !ssIsRecompra && !ssNoLogo) {
       const firstRef = ssLines[0].referencia;
       const result = await createLogoRequestFromOrder({
         brand: "Sweatspot",
@@ -1425,7 +1429,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         product: firstRef,
         advisorId: user.id,
         advisorName: user.email || "Asesor",
-        logoFile,
+        logoFile: ssHasLogoFile ? logoFile : null,
         clientComments: observaciones || undefined,
         additionalInstructions: personalizacion || undefined,
       });
