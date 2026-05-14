@@ -118,50 +118,80 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
     toast.success("Datos de Consumidor Final cargados");
   };
 
+  const isSearching = search.trim().length > 0;
+
   return (
     <div className="grid lg:grid-cols-[1fr_380px] gap-4">
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Productos disponibles</CardTitle>
-          {selectedBrand && (
-            <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-2 mt-2">
+            {selectedBrand && (
               <Button variant="outline" size="sm" onClick={() => { setSelectedBrand(null); setSearch(""); }}>
                 ← Marcas
               </Button>
-              <Badge variant="outline">{selectedBrand}</Badge>
-              <div className="relative flex-1">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar producto…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
+            )}
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar producto…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-8"
+              />
             </div>
+          </div>
+          {selectedBrand && !isSearching && (
+            <Badge variant="outline" className="mt-1 w-fit">{selectedBrand}</Badge>
           )}
         </CardHeader>
         <CardContent>
-          {!selectedBrand ? (
-            available.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">No hay productos disponibles.</p>
+          {available.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">No hay productos disponibles.</p>
+          ) : isSearching ? (
+            filtered.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">No hay productos que coincidan.</p>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {brands.map(([brand, count]) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {filtered.map((p) => (
                   <button
-                    key={brand}
-                    onClick={() => setSelectedBrand(brand)}
-                    className="rounded-lg border p-4 text-left transition hover:bg-accent hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary"
+                    key={p.id}
+                    onClick={() => addToCart(p)}
+                    className="text-left p-3 rounded-md border hover:border-primary hover:bg-accent transition"
                   >
-                    <div className="flex items-center gap-2">
-                      <Tag className="h-4 w-4 text-primary" />
-                      <span className="font-semibold text-sm truncate">{brand}</span>
+                    <div className="aspect-square w-full mb-2 rounded bg-muted overflow-hidden flex items-center justify-center">
+                      {p.photo_url ? (
+                        <img src={p.photo_url} alt={p.name} className="w-full h-full object-cover" loading="lazy" />
+                      ) : (
+                        <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">{count} producto{count !== 1 ? "s" : ""}</p>
+                    <p className="font-medium text-sm truncate">{p.name}</p>
+                    {p.brand && <p className="text-xs text-muted-foreground truncate">{p.brand}</p>}
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="font-bold text-sm">${Number(p.sale_price).toLocaleString()}</span>
+                      <Badge variant="outline" className="text-xs">{Number(p.available)}</Badge>
+                    </div>
                   </button>
                 ))}
               </div>
             )
+          ) : !selectedBrand ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {brands.map(([brand, count]) => (
+                <button
+                  key={brand}
+                  onClick={() => setSelectedBrand(brand)}
+                  className="rounded-lg border p-4 text-left transition hover:bg-accent hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <div className="flex items-center gap-2">
+                    <Tag className="h-4 w-4 text-primary" />
+                    <span className="font-semibold text-sm truncate">{brand}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{count} producto{count !== 1 ? "s" : ""}</p>
+                </button>
+              ))}
+            </div>
           ) : filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
               No hay productos disponibles.
