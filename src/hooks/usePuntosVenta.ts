@@ -19,6 +19,34 @@ export async function uploadPosProductPhoto(file: File, locationId: string) {
   return data.publicUrl;
 }
 
+export async function uploadPosCashProof(file: File, locationId: string) {
+  const ext = file.name.split(".").pop() || "jpg";
+  const path = `${locationId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await supabase.storage
+    .from("pos-cash-proofs")
+    .upload(path, file, { upsert: false, contentType: file.type });
+  if (error) throw error;
+  const { data } = supabase.storage.from("pos-cash-proofs").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+export type PosCashWithdrawal = {
+  id: string;
+  location_id: string;
+  amount: number;
+  concept: string;
+  requested_by: string;
+  requested_by_name: string | null;
+  proof_url: string | null;
+  status: "pendiente" | "aprobado" | "rechazado";
+  approved_by: string | null;
+  approved_by_name: string | null;
+  approved_at: string | null;
+  rejection_reason: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
 export type PosLocation = {
   id: string;
   name: string;
@@ -179,6 +207,63 @@ export function usePosMovements(locationId: string | null) {
       if (error) throw error;
       return (data as PosMovement[]) ?? [];
     },
+  });
+}
+
+export function usePosCashWithdrawals(locationId: string | null) {
+  return useQuery({
+    queryKey: ["pos_cash_withdrawals", locationId],
+    enabled: !!locationId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pos_cash_withdrawals" as any)
+        .select("*")
+        .eq("location_id", locationId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data as unknown as PosCashWithdrawal[]) ?? [];
+    },
+  });
+}
+
+export function useCreateCashWithdrawal(locationId: string) {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async (input: { amount: number; concept: string; proof_url?: string | null; notes?: string }) => {
+      const { error } = await supabase.from("pos_cash_withdrawals" as any).insert({
+        location_id: locationId,
+        amount: input.amount,
+        concept: input.concept,
+        proof_url: input.proof_url ?? null,
+        notes: input.notes ?? null,
+        requested_by: user!.id,
+        requested_by_name: user!.email,
+      } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pos_cash_withdrawals", locationId] }),
+  });
+}
+
+export function useDecideCashWithdrawal(locationId: string) {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async (input: { id: string; status: "aprobado" | "rechazado"; rejection_reason?: string }) => {
+      const { error } = await supabase
+        .from("pos_cash_withdrawals" as any)
+        .update({
+          status: input.status,
+          rejection_reason: input.rejection_reason ?? null,
+          approved_by: user!.id,
+          approved_by_name: user!.email,
+          approved_at: new Date().toISOString(),
+        } as any)
+        .eq("id", input.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pos_cash_withdrawals", locationId] }),
   });
 }
 

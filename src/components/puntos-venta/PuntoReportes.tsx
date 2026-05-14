@@ -1,15 +1,29 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PosSale, PosMovement, PosProduct } from "@/hooks/usePuntosVenta";
-import { TrendingUp, DollarSign, Package, History } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  PosSale, PosMovement, PosProduct,
+  usePosCashWithdrawals,
+} from "@/hooks/usePuntosVenta";
+import { TrendingUp, DollarSign, Package, History, Receipt, Banknote, BarChart3 } from "lucide-react";
+import { PuntoVentasDelDia } from "./PuntoVentasDelDia";
+import { PuntoRetiros } from "./PuntoRetiros";
+import type { InvoiceLocation } from "@/lib/posInvoicePdf";
 
 type Props = {
   sales: PosSale[];
   movements: PosMovement[];
   products: PosProduct[];
+  locationId: string;
+  location: InvoiceLocation;
 };
 
-export function PuntoReportes({ sales, movements, products }: Props) {
+function methodMatches(method: string | null | undefined, target: string) {
+  return (method ?? "").toLowerCase().split("+").some((p) => p.trim() === target);
+}
+
+export function PuntoReportes({ sales, movements, products, locationId, location }: Props) {
+  const { data: withdrawals = [] } = usePosCashWithdrawals(locationId);
   const today = new Date().toISOString().slice(0, 10);
   const totals = useMemo(() => {
     const todaySales = sales.filter((s) => s.sale_date.slice(0, 10) === today);
@@ -25,28 +39,51 @@ export function PuntoReportes({ sales, movements, products }: Props) {
     );
     const byMethod = (m: string) =>
       todaySales
-        .filter((s) => (s.payment_method ?? "").toLowerCase() === m)
+        .filter((s) => methodMatches(s.payment_method, m))
         .reduce((a, b) => a + Number(b.total_amount), 0);
+    const withdrawalsToday = withdrawals
+      .filter((w) => w.status === "aprobado" && w.created_at.slice(0, 10) === today)
+      .reduce((a, b) => a + Number(b.amount), 0);
+    const efectivo = byMethod("efectivo");
     return {
       totalToday,
       totalAll,
       profitAll,
       inventoryValue,
-      efectivo: byMethod("efectivo"),
+      efectivo,
       tarjeta: byMethod("tarjeta"),
       nequi: byMethod("nequi"),
       otros: byMethod("transferencia") + byMethod("otro"),
       countToday: todaySales.length,
+      withdrawalsToday,
+      cashOnHand: efectivo - withdrawalsToday,
     };
-  }, [sales, products, today]);
+  }, [sales, products, today, withdrawals]);
 
   return (
-    <div className="space-y-4">
+    <Tabs defaultValue="resumen" className="space-y-4">
+      <TabsList>
+        <TabsTrigger value="resumen"><BarChart3 className="h-4 w-4 mr-1" /> Resumen</TabsTrigger>
+        <TabsTrigger value="ventas-dia"><Receipt className="h-4 w-4 mr-1" /> Ventas del día</TabsTrigger>
+        <TabsTrigger value="retiros"><Banknote className="h-4 w-4 mr-1" /> Retiros de caja</TabsTrigger>
+        <TabsTrigger value="movimientos"><Package className="h-4 w-4 mr-1" /> Movimientos</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="resumen" className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Stat icon={<DollarSign className="h-4 w-4" />} label="Ventas hoy" value={`$${totals.totalToday.toLocaleString()}`} sub={`${totals.countToday} ticket(s)`} />
         <Stat icon={<TrendingUp className="h-4 w-4" />} label="Ventas totales" value={`$${totals.totalAll.toLocaleString()}`} />
         <Stat icon={<TrendingUp className="h-4 w-4" />} label="Utilidad acumulada" value={`$${totals.profitAll.toLocaleString()}`} />
         <Stat icon={<Package className="h-4 w-4" />} label="Valor inventario" value={`$${totals.inventoryValue.toLocaleString()}`} />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <Stat icon={<Banknote className="h-4 w-4" />} label="Efectivo en caja hoy"
+          value={`$${totals.cashOnHand.toLocaleString()}`}
+          sub={`Ventas $${totals.efectivo.toLocaleString()} − Retiros $${totals.withdrawalsToday.toLocaleString()}`} />
+        <Stat icon={<DollarSign className="h-4 w-4" />} label="Tarjeta hoy"
+          value={`$${totals.tarjeta.toLocaleString()}`} />
+        <Stat icon={<DollarSign className="h-4 w-4" />} label="Nequi / Transf hoy"
+          value={`$${(totals.nequi + totals.otros).toLocaleString()}`} />
       </div>
 
       <Card>
@@ -90,7 +127,17 @@ export function PuntoReportes({ sales, movements, products }: Props) {
           )}
         </CardContent>
       </Card>
+      </TabsContent>
 
+      <TabsContent value="ventas-dia">
+        <PuntoVentasDelDia sales={sales} location={location} />
+      </TabsContent>
+
+      <TabsContent value="retiros">
+        <PuntoRetiros locationId={locationId} />
+      </TabsContent>
+
+      <TabsContent value="movimientos">
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Movimientos recientes de inventario</CardTitle>
@@ -116,7 +163,8 @@ export function PuntoReportes({ sales, movements, products }: Props) {
           )}
         </CardContent>
       </Card>
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 }
 
