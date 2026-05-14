@@ -1427,9 +1427,12 @@ export type Database = {
       }
       pos_sales: {
         Row: {
+          client_document: string | null
+          client_email: string | null
           client_name: string | null
           client_phone: string | null
           created_at: string
+          discount: number
           id: string
           location_id: string
           notes: string | null
@@ -1441,9 +1444,12 @@ export type Database = {
           total_cost: number
         }
         Insert: {
+          client_document?: string | null
+          client_email?: string | null
           client_name?: string | null
           client_phone?: string | null
           created_at?: string
+          discount?: number
           id?: string
           location_id: string
           notes?: string | null
@@ -1455,9 +1461,12 @@ export type Database = {
           total_cost?: number
         }
         Update: {
+          client_document?: string | null
+          client_email?: string | null
           client_name?: string | null
           client_phone?: string | null
           created_at?: string
+          discount?: number
           id?: string
           location_id?: string
           notes?: string | null

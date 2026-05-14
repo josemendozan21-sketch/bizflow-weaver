@@ -2,6 +2,23 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
+export const CONSUMIDOR_FINAL = {
+  client_name: "Consumidor Final",
+  client_document: "222222222222",
+  client_email: "",
+};
+
+export async function uploadPosProductPhoto(file: File, locationId: string) {
+  const ext = file.name.split(".").pop() || "jpg";
+  const path = `${locationId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await supabase.storage
+    .from("pos-product-photos")
+    .upload(path, file, { upsert: false, contentType: file.type });
+  if (error) throw error;
+  const { data } = supabase.storage.from("pos-product-photos").getPublicUrl(path);
+  return data.publicUrl;
+}
+
 export type PosLocation = {
   id: string;
   name: string;
@@ -33,6 +50,9 @@ export type PosSale = {
   location_id: string;
   client_name: string | null;
   client_phone: string | null;
+  client_email: string | null;
+  client_document: string | null;
+  discount: number;
   payment_method: string | null;
   total_amount: number;
   total_cost: number;
@@ -283,16 +303,39 @@ export function useRegisterPosSale(locationId: string) {
       payment_method: string;
       client_name?: string;
       client_phone?: string;
+      client_email?: string;
+      client_document?: string;
+      discount?: number;
+      split?: { method: string; amount: number };
       notes?: string;
+      override_unit_prices?: Record<string, number>;
     }) => {
-      const total_amount = input.items.reduce(
-        (a, b) => a + Number(b.product.sale_price) * b.quantity,
+      const priceFor = (id: string, fallback: number) =>
+        input.override_unit_prices && input.override_unit_prices[id] != null
+          ? Number(input.override_unit_prices[id])
+          : Number(fallback);
+      const subtotal = input.items.reduce(
+        (a, b) => a + priceFor(b.product.id, b.product.sale_price) * b.quantity,
         0
       );
+      const discount = Math.max(0, Number(input.discount ?? 0));
+      const total_amount = Math.max(0, subtotal - discount);
       const total_cost = input.items.reduce(
         (a, b) => a + Number(b.product.avg_cost) * b.quantity,
         0
       );
+
+      // Build payment_method label (supports split)
+      const paymentLabel =
+        input.split && input.split.amount > 0 && input.split.amount < total_amount
+          ? `${input.payment_method}+${input.split.method}`
+          : input.payment_method;
+
+      const splitNote =
+        input.split && input.split.amount > 0 && input.split.amount < total_amount
+          ? `Pago mixto: ${input.payment_method} $${(total_amount - input.split.amount).toLocaleString()} + ${input.split.method} $${input.split.amount.toLocaleString()}`
+          : null;
+      const finalNotes = [input.notes ?? null, splitNote].filter(Boolean).join(" | ") || null;
 
       const { data: sale, error: sErr } = await supabase
         .from("pos_sales")
@@ -300,10 +343,13 @@ export function useRegisterPosSale(locationId: string) {
           location_id: locationId,
           client_name: input.client_name ?? null,
           client_phone: input.client_phone ?? null,
-          payment_method: input.payment_method,
+          client_email: input.client_email ?? null,
+          client_document: input.client_document ?? null,
+          discount,
+          payment_method: paymentLabel,
           total_amount,
           total_cost,
-          notes: input.notes ?? null,
+          notes: finalNotes,
           recorded_by: user!.id,
           recorded_by_name: user!.email,
         })
@@ -318,9 +364,9 @@ export function useRegisterPosSale(locationId: string) {
         product_name: it.product.name,
         brand: it.product.brand,
         quantity: it.quantity,
-        unit_price: Number(it.product.sale_price),
+        unit_price: priceFor(it.product.id, it.product.sale_price),
         unit_cost: Number(it.product.avg_cost),
-        line_total: Number(it.product.sale_price) * it.quantity,
+        line_total: priceFor(it.product.id, it.product.sale_price) * it.quantity,
       }));
       const { error: iErr } = await supabase.from("pos_sale_items").insert(itemsPayload);
       if (iErr) throw iErr;

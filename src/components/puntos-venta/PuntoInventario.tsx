@@ -6,8 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Edit, Package, AlertTriangle } from "lucide-react";
-import { PosProduct, useUpsertPosProduct } from "@/hooks/usePuntosVenta";
+import { Plus, Edit, Package, AlertTriangle, Upload, ImageIcon } from "lucide-react";
+import { PosProduct, useUpsertPosProduct, uploadPosProductPhoto } from "@/hooks/usePuntosVenta";
 import { toast } from "sonner";
 
 type Props = {
@@ -45,7 +45,7 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
                 <Plus className="h-4 w-4 mr-1" /> Nuevo producto
               </Button>
             </DialogTrigger>
-            <ProductDialog product={editing} onSave={handleSave} loading={upsert.isPending} />
+            <ProductDialog product={editing} onSave={handleSave} loading={upsert.isPending} locationId={locationId} />
           </Dialog>
         )}
       </CardHeader>
@@ -61,6 +61,15 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
               return (
                 <div key={p.id} className="flex items-center justify-between gap-3 p-3 rounded-md border">
                   <div className="min-w-0 flex-1">
+                    <div className="flex items-start gap-3">
+                      <div className="h-12 w-12 rounded bg-muted overflow-hidden flex items-center justify-center flex-shrink-0">
+                        {p.photo_url ? (
+                          <img src={p.photo_url} alt={p.name} className="w-full h-full object-cover" loading="lazy" />
+                        ) : (
+                          <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-medium truncate">{p.name}</p>
                       {p.brand && <Badge variant="outline" className="text-xs">{p.brand}</Badge>}
@@ -74,6 +83,8 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
                     <p className="text-xs text-muted-foreground">
                       {p.category ?? "Sin categoría"} · Costo prom: ${Number(p.avg_cost).toLocaleString()}
                     </p>
+                      </div>
+                    </div>
                   </div>
                   <div className="text-right">
                     <p className="font-bold">${Number(p.sale_price).toLocaleString()}</p>
@@ -87,7 +98,7 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
                         </Button>
                       </DialogTrigger>
                       {editing?.id === p.id && (
-                        <ProductDialog product={editing} onSave={handleSave} loading={upsert.isPending} />
+                        <ProductDialog product={editing} onSave={handleSave} loading={upsert.isPending} locationId={locationId} />
                       )}
                     </Dialog>
                   )}
@@ -105,10 +116,12 @@ function ProductDialog({
   product,
   onSave,
   loading,
+  locationId,
 }: {
   product: PosProduct | null;
   onSave: (f: any) => void;
   loading: boolean;
+  locationId: string;
 }) {
   const [form, setForm] = useState({
     id: product?.id,
@@ -121,8 +134,25 @@ function ProductDialog({
     available: product?.available ?? 0,
     min_stock: product?.min_stock ?? 0,
     unit: product?.unit ?? "unidades",
+    photo_url: product?.photo_url ?? "",
     notes: product?.notes ?? "",
   });
+  const [uploading, setUploading] = useState(false);
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const url = await uploadPosProductPhoto(file, locationId);
+      setForm((f) => ({ ...f, photo_url: url }));
+      toast.success("Foto cargada");
+    } catch (err: any) {
+      toast.error(err.message ?? "Error al subir foto");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
     <DialogContent className="max-w-lg">
@@ -130,6 +160,26 @@ function ProductDialog({
         <DialogTitle>{product ? "Editar producto" : "Nuevo producto"}</DialogTitle>
       </DialogHeader>
       <div className="grid gap-3">
+        <div className="flex items-center gap-3">
+          <div className="h-20 w-20 rounded bg-muted overflow-hidden flex items-center justify-center flex-shrink-0">
+            {form.photo_url ? (
+              <img src={form.photo_url} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <ImageIcon className="h-7 w-7 text-muted-foreground/40" />
+            )}
+          </div>
+          <div className="flex-1">
+            <Label className="text-xs">Foto del producto</Label>
+            <div className="flex items-center gap-2 mt-1">
+              <Input type="file" accept="image/*" onChange={handleFile} disabled={uploading} className="text-xs" />
+              {form.photo_url && (
+                <Button type="button" size="sm" variant="ghost"
+                  onClick={() => setForm({ ...form, photo_url: "" })}>Quitar</Button>
+              )}
+            </div>
+            {uploading && <p className="text-xs text-muted-foreground mt-1">Subiendo…</p>}
+          </div>
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label>Nombre *</Label>
