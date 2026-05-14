@@ -270,9 +270,6 @@ export function MisPedidos() {
 
   return (
     <div className="space-y-4">
-      {/* Stamping approval requests */}
-      <StampingApprovals />
-
       {/* Buscador + filtros */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px]">
@@ -408,6 +405,9 @@ export function MisPedidos() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Stamping approval requests */}
+      <StampingApprovals />
     </div>
   );
 }
