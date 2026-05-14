@@ -1096,15 +1096,15 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="space-y-1.5">
                     <Label>Unidades</Label>
-                    <Input type="number" required value={line.units} onChange={(e) => updateLine(line.id, { units: e.target.value })} />
+                    <Input type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()} required value={line.units} onChange={(e) => updateLine(line.id, { units: e.target.value })} />
                   </div>
                   <div className="space-y-1.5">
                     <Label>Valor unitario</Label>
-                    <Input type="number" required value={line.valorUnitario} onChange={(e) => updateLine(line.id, { valorUnitario: e.target.value, autoCalc: true })} />
+                    <Input type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()} required value={line.valorUnitario} onChange={(e) => updateLine(line.id, { valorUnitario: e.target.value, autoCalc: true })} />
                   </div>
                   <div className="space-y-1.5">
                     <Label>Valor total línea</Label>
-                    <Input type="number" required value={line.valorTotal} onChange={(e) => updateLine(line.id, { valorTotal: e.target.value, autoCalc: false })} />
+                    <Input type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()} required value={line.valorTotal} onChange={(e) => updateLine(line.id, { valorTotal: e.target.value, autoCalc: false })} />
                     {line.autoCalc && parseInt(line.units, 10) > 0 && parseFloat(line.valorUnitario) > 0 && (
                       <p className="text-xs text-muted-foreground">Calculado automáticamente</p>
                     )}
@@ -1115,7 +1115,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="space-y-1.5">
                     <Label>Unidades</Label>
-                    <Input type="number" required value={line.units} onChange={(e) => updateLine(line.id, { units: e.target.value })} />
+                    <Input type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()} required value={line.units} onChange={(e) => updateLine(line.id, { units: e.target.value })} />
                   </div>
                 </div>
                 )}
@@ -1137,7 +1137,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
               {estadoPago !== "pago_total" && (
                 <div className="space-y-1.5">
                   <Label htmlFor="mw_abono">Abono del total del pedido</Label>
-                  <Input id="mw_abono" name="mw_abono" type="number" value={abono} onChange={(e) => setAbono(e.target.value)} />
+                  <Input id="mw_abono" name="mw_abono" type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()} value={abono} onChange={(e) => setAbono(e.target.value)} />
                 </div>
               )}
               <div className="space-y-1.5">
@@ -1199,7 +1199,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 </Label>
                 <Input
                   id="mw_costoAdicional"
-                  type="number"
+                  type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()}
                   min="0"
                   step="any"
                   inputMode="decimal"
@@ -1780,15 +1780,15 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="space-y-1.5">
                     <Label>Unidades</Label>
-                    <Input type="number" value={line.units} onChange={(e) => updateSSLine(line.id, { units: e.target.value })} required />
+                    <Input type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()} value={line.units} onChange={(e) => updateSSLine(line.id, { units: e.target.value })} required />
                   </div>
                   <div className="space-y-1.5">
                     <Label>Valor unitario</Label>
-                    <Input type="number" value={line.valorUnitario} onChange={(e) => updateSSLine(line.id, { valorUnitario: e.target.value, autoCalc: true })} required />
+                    <Input type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()} value={line.valorUnitario} onChange={(e) => updateSSLine(line.id, { valorUnitario: e.target.value, autoCalc: true })} required />
                   </div>
                   <div className="space-y-1.5">
                     <Label>Valor total</Label>
-                    <Input type="number" value={line.valorTotal} onChange={(e) => updateSSLine(line.id, { valorTotal: e.target.value, autoCalc: false })} required />
+                    <Input type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()} value={line.valorTotal} onChange={(e) => updateSSLine(line.id, { valorTotal: e.target.value, autoCalc: false })} required />
                   </div>
                 </div>
               </div>
@@ -1804,7 +1804,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
               {ssEstadoPago !== "pago_total" && (
                 <div className="space-y-1.5">
                   <Label htmlFor="ss_abono">Abono del total del pedido</Label>
-                  <Input id="ss_abono" name="ss_abono" type="number" value={ssAbono} onChange={(e) => setSsAbono(e.target.value)} />
+                  <Input id="ss_abono" name="ss_abono" type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()} value={ssAbono} onChange={(e) => setSsAbono(e.target.value)} />
                 </div>
               )}
               <div className="space-y-1.5">
@@ -2293,13 +2293,13 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
                   </div>
                   <div className="space-y-1.5">
                     <Label>Cantidad</Label>
-                    <Input type="number" min="1" required value={line.cantidad} onChange={(e) => updateProductLine(line.id, { cantidad: e.target.value })} />
+                    <Input type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()} min="1" required value={line.cantidad} onChange={(e) => updateProductLine(line.id, { cantidad: e.target.value })} />
                   </div>
                 </div>
                 {!line.isGift && (
                   <div className="space-y-1.5">
                     <Label>Precio de venta</Label>
-                    <Input type="number" required value={line.retailPrice} onChange={(e) => updateProductLine(line.id, { retailPrice: e.target.value })} />
+                    <Input type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()} required value={line.retailPrice} onChange={(e) => updateProductLine(line.id, { retailPrice: e.target.value })} />
                   </div>
                 )}
                 {brand === "sweatspot" && (
@@ -2337,7 +2337,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
 
               <div className="space-y-1.5">
                 <Label htmlFor="shipping_cost">Costo de envío / transporte</Label>
-                <Input id="shipping_cost" name="shipping_cost" type="number" placeholder="0" value={shippingCost} onChange={(e) => setShippingCost(e.target.value)} />
+                <Input id="shipping_cost" name="shipping_cost" type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()} placeholder="0" value={shippingCost} onChange={(e) => setShippingCost(e.target.value)} />
               </div>
 
               {paymentMethod === "contra_entrega" && (
