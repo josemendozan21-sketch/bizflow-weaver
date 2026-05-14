@@ -1104,6 +1104,7 @@ export type Database = {
           created_at: string
           id: string
           location_id: string
+          movement_type: string
           notes: string | null
           proof_url: string | null
           rejection_reason: string | null
@@ -1121,6 +1122,7 @@ export type Database = {
           created_at?: string
           id?: string
           location_id: string
+          movement_type?: string
           notes?: string | null
           proof_url?: string | null
           rejection_reason?: string | null
@@ -1138,6 +1140,7 @@ export type Database = {
           created_at?: string
           id?: string
           location_id?: string
+          movement_type?: string
           notes?: string | null
           proof_url?: string | null
           rejection_reason?: string | null

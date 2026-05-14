@@ -5,7 +5,7 @@ import {
   PosSale, PosMovement, PosProduct,
   usePosCashWithdrawals,
 } from "@/hooks/usePuntosVenta";
-import { TrendingUp, DollarSign, Package, History, Receipt, Banknote, BarChart3 } from "lucide-react";
+import { TrendingUp, DollarSign, Package, History, Receipt, Banknote, BarChart3, Wallet } from "lucide-react";
 import { PuntoVentasDelDia } from "./PuntoVentasDelDia";
 import { PuntoRetiros } from "./PuntoRetiros";
 import type { InvoiceLocation } from "@/lib/posInvoicePdf";
@@ -65,7 +65,7 @@ export function PuntoReportes({ sales, movements, products, locationId, location
       <TabsList>
         <TabsTrigger value="resumen"><BarChart3 className="h-4 w-4 mr-1" /> Resumen</TabsTrigger>
         <TabsTrigger value="ventas-dia"><Receipt className="h-4 w-4 mr-1" /> Ventas del día</TabsTrigger>
-        <TabsTrigger value="retiros"><Banknote className="h-4 w-4 mr-1" /> Retiros de caja</TabsTrigger>
+        <TabsTrigger value="retiros"><Wallet className="h-4 w-4 mr-1" /> Caja</TabsTrigger>
         <TabsTrigger value="movimientos"><Package className="h-4 w-4 mr-1" /> Movimientos</TabsTrigger>
       </TabsList>
 
