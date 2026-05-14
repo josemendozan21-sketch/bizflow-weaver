@@ -44,8 +44,15 @@ export function NuevasSolicitudes({ requests }: Props) {
                 <p className="text-sm text-muted-foreground">{req.brand} · {req.product}</p>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="border rounded-lg p-2 bg-muted/20 flex items-center justify-center">
-                  <img src={req.original_logo_url} alt="Logo original" className="max-h-20 object-contain" />
+                <div className="border rounded-lg p-2 bg-muted/20 flex items-center justify-center min-h-20">
+                  {req.original_logo_url && req.original_logo_url.startsWith("http") ? (
+                    <img src={req.original_logo_url} alt="Logo original" className="max-h-20 object-contain" />
+                  ) : (
+                    <div className="text-xs text-muted-foreground text-center px-2 py-3 flex items-center gap-2">
+                      <FileImage className="h-4 w-4" />
+                      Sin logo — diseñar desde la personalización
+                    </div>
+                  )}
                 </div>
                 {req.client_comments && (
                   <div className="flex gap-2 text-sm">
