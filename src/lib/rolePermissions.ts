@@ -7,18 +7,19 @@ const ROLE_ROUTES: Record<AppRole, string[]> = {
   admin: ["/", "/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/admin-usuarios", "/costos", "/eventos", "/ferias", "/galeria", "/feria-pos", "/presupuesto"],
   asesor_comercial: ["/ventas", "/inventarios", "/diseno-logos", "/logistica", "/contabilidad", "/eventos", "/ferias", "/galeria"],
   produccion: ["/produccion", "/inventarios", "/eventos", "/ferias", "/galeria"],
-  contabilidad: ["/contabilidad", "/eventos", "/ferias", "/galeria", "/presupuesto"],
+  contabilidad: ["/contabilidad", "/eventos", "/ferias", "/galeria", "/presupuesto", "/puntos-venta"],
   estampacion: ["/diseno-logos", "/produccion", "/eventos", "/ferias", "/galeria"],
   usuario_visual: ["/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/eventos", "/ferias", "/galeria"],
   disenador: ["/diseno-logos", "/eventos", "/ferias", "/galeria"],
   logistica: ["/logistica", "/eventos", "/ferias", "/galeria"],
   feria_pos: ["/feria-pos"],
   inventarios: ["/inventarios"],
+  pos_punto: ["/puntos-venta"],
 };
 
 // Sections where the role can edit (create, update, delete)
 const ROLE_EDIT_SECTIONS: Record<AppRole, string[]> = {
-  admin: ["/", "/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/admin-usuarios", "/costos", "/eventos", "/ferias", "/presupuesto"],
+  admin: ["/", "/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/admin-usuarios", "/costos", "/eventos", "/ferias", "/presupuesto", "/puntos-venta"],
   asesor_comercial: ["/ventas", "/diseno-logos"],
   produccion: ["/produccion", "/inventarios"],
   contabilidad: ["/presupuesto"],
@@ -28,6 +29,7 @@ const ROLE_EDIT_SECTIONS: Record<AppRole, string[]> = {
   logistica: ["/logistica"],
   feria_pos: ["/feria-pos"],
   inventarios: ["/inventarios"],
+  pos_punto: ["/puntos-venta"],
 };
 
 export function canAccessRoute(role: AppRole | null, path: string): boolean {
@@ -57,6 +59,7 @@ export function getRoleLabel(role: AppRole): string {
     logistica: "Logística",
     feria_pos: "Feria Punto de Venta",
     inventarios: "Inventarios",
+    pos_punto: "Asesor Punto de Venta",
   };
   return labels[role];
 }
