@@ -1,3 +1,6 @@
 project_id = "auncgjkpwajfbvcckuny"
 [functions.reset-user-password]
-verify_jwt = false
+verify_jwt = true
+
+[functions.create-real-user]
+verify_jwt = true

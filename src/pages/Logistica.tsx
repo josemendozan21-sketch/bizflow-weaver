@@ -187,10 +187,11 @@ function AdvisorHeaderBadge({ items }: { items: Order[] }) {
 
 function generateLabelsForGroups(groups: ShipmentGroup[]) {
   if (groups.length === 0) return;
+  const esc = (s: any) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   const labelsHtml = groups.map((g) => {
     const saldo = Math.max(g.totalAmount - g.totalAbono, 0);
     const firstItem = g.items[0];
-    const advisorInfo = getAdvisorNames(g.items).join(", ") || "No asignado";
+    const advisorInfo = esc(getAdvisorNames(g.items).join(", ") || "No asignado");
     let pagoInfo = "";
     if (g.saleType === "menor") {
       if (firstItem?.payment_method === "contra_entrega") {
@@ -202,22 +203,22 @@ function generateLabelsForGroups(groups: ShipmentGroup[]) {
       pagoInfo = saldo <= 0 ? "PAGO COMPLETO" : `SALDO: $${saldo.toLocaleString("es-CO")}`;
     }
     const itemsHtml = g.items
-      .map((it) => `<div class="item">• ${it.product} — ${it.quantity} und</div>`)
+      .map((it) => `<div class="item">• ${esc(it.product)} — ${esc(it.quantity)} und</div>`)
       .join("");
     return `
       <div class="label">
         <div class="header">Rótulo de Envío</div>
-        <div class="row"><span class="lbl">Destinatario:</span> <span class="val">${g.clientName}</span></div>
-        <div class="row"><span class="lbl">Cédula/NIT:</span> <span class="val">${g.clientNit || "—"}</span></div>
-        <div class="row"><span class="lbl">Ciudad:</span> <span class="val">${g.city || "—"}</span></div>
-        <div class="row"><span class="lbl">Dirección:</span> <span class="val">${g.address || "—"}</span></div>
-        <div class="row"><span class="lbl">Celular:</span> <span class="val">${g.clientPhone || "—"}</span></div>
+        <div class="row"><span class="lbl">Destinatario:</span> <span class="val">${esc(g.clientName)}</span></div>
+        <div class="row"><span class="lbl">Cédula/NIT:</span> <span class="val">${esc(g.clientNit || "—")}</span></div>
+        <div class="row"><span class="lbl">Ciudad:</span> <span class="val">${esc(g.city || "—")}</span></div>
+        <div class="row"><span class="lbl">Dirección:</span> <span class="val">${esc(g.address || "—")}</span></div>
+        <div class="row"><span class="lbl">Celular:</span> <span class="val">${esc(g.clientPhone || "—")}</span></div>
         <div class="row"><span class="lbl">Asesor:</span> <span class="val">${advisorInfo}</span></div>
         <div class="divider"></div>
         <div class="row"><span class="lbl">Contenido (${g.items.length} items, ${g.totalUnits} und):</span></div>
         <div class="items">${itemsHtml}</div>
         <div class="row pago"><span class="lbl">Pago:</span> <span class="val">${pagoInfo}</span></div>
-        ${g.observations.length ? `<div class="row obs"><span class="lbl">Obs:</span> <span class="val">${g.observations.join(" | ")}</span></div>` : ""}
+        ${g.observations.length ? `<div class="row obs"><span class="lbl">Obs:</span> <span class="val">${esc(g.observations.join(" | "))}</span></div>` : ""}
       </div>
     `;
   }).join("");

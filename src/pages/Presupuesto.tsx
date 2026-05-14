@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Settings2, Lock, Unlock, Plus, Trash2, FileText } from "lucide-react";
+import { openSignedUrl } from "@/lib/signedUrl";
 import {
   useMonthlyBudget,
   useBudgetLines,
@@ -448,9 +449,9 @@ export default function Presupuesto() {
                     </TableCell>
                     <TableCell>
                       {e.proof_url ? (
-                        <a href={e.proof_url} target="_blank" rel="noopener noreferrer">
-                          <Button size="sm" variant="ghost"><FileText className="h-3 w-3" /></Button>
-                        </a>
+                        <Button size="sm" variant="ghost" onClick={() => openSignedUrl(e.proof_url!)}>
+                          <FileText className="h-3 w-3" />
+                        </Button>
                       ) : "—"}
                     </TableCell>
                     <TableCell>

@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { openSignedUrl } from "@/lib/signedUrl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -205,11 +206,10 @@ const OrderCard = ({ order, actionSlot }: { order: Order; actionSlot?: React.Rea
               <FileText className="h-4 w-4" />
               <span className="font-medium">Soporte de pago adjunto</span>
             </div>
-            <a href={order.payment_proof_url} target="_blank" rel="noopener noreferrer">
-              <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
-                <ExternalLink className="h-3 w-3" /> Ver soporte
-              </Button>
-            </a>
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1"
+              onClick={() => openSignedUrl(order.payment_proof_url!)}>
+              <ExternalLink className="h-3 w-3" /> Ver soporte
+            </Button>
           </div>
         )}
 

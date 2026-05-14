@@ -18,6 +18,7 @@ import {
 import { Wallet, Plus, DollarSign, FileText, Upload, Loader2, Camera, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { openSignedUrl } from "@/lib/signedUrl";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -163,11 +164,10 @@ export default function CajaMenor() {
                         </div>
                       </div>
                       {expense.proof_url && (
-                        <a href={expense.proof_url} target="_blank" rel="noopener noreferrer">
-                          <Button size="sm" variant="ghost" className="shrink-0">
-                            <FileText className="h-4 w-4 mr-1" /> Soporte
-                          </Button>
-                        </a>
+                        <Button size="sm" variant="ghost" className="shrink-0"
+                          onClick={() => openSignedUrl(expense.proof_url!)}>
+                          <FileText className="h-4 w-4 mr-1" /> Soporte
+                        </Button>
                       )}
                     </div>
                   </CardContent>
