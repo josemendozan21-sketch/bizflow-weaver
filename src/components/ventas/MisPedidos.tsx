@@ -796,36 +796,50 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
         finalObs = finalObs ? `${tag} ${finalObs}` : tag;
       }
 
-      // Recalculate total: base (unit_price * quantity) + extra cost
-      const baseTotal = (Number(order.unit_price) || 0) * (Number(order.quantity) || 0);
+      // Recalculate total: preserve original total for retail (menor) — only add extras.
+      // For wholesale (mayor) recompute from unit_price * quantity + extras.
+      const currentTotal = Number(order.total_amount) || 0;
+      const baseTotal =
+        order.sale_type === "mayor"
+          ? (Number(order.unit_price) || 0) * (Number(order.quantity) || 0)
+          : currentTotal - (Number(initialExtras.extraCost) || 0);
       const newTotal = baseTotal + (Number(extraCost) || 0);
+
+      const updatePayload: Record<string, unknown> = {
+        personalization: personalization || null,
+        observations: finalObs || null,
+        delivery_date: deliveryDate || null,
+        total_amount: newTotal,
+      };
+      // Only update production-spec fields for wholesale orders (they go through producción).
+      // Retail orders are sold from finished stock and shouldn't overwrite these specs.
+      if (order.sale_type === "mayor") {
+        if (order.brand === "magical") updatePayload.gel_color = gelColor || null;
+        updatePayload.ink_color = inkColor || null;
+        if (order.brand === "sweatspot") updatePayload.silicone_color = siliconeColor || null;
+      }
 
       const { error } = await supabase
         .from("orders")
-        .update({
-          gel_color: gelColor || null,
-          ink_color: inkColor || null,
-          silicone_color: siliconeColor || null,
-          personalization: personalization || null,
-          observations: finalObs || null,
-          delivery_date: deliveryDate || null,
-          total_amount: newTotal,
-        })
+        .update(updatePayload)
         .eq("id", order.id);
 
       if (error) throw error;
 
-      // Propagar cambios al pedido de producción vinculado (si existe)
-      const { error: prodErr } = await supabase
-        .from("production_orders")
-        .update({
-          gel_color: gelColor || null,
+      // Propagar cambios al pedido de producción vinculado (solo aplica a mayoreo)
+      if (order.sale_type === "mayor") {
+        const prodPayload: Record<string, unknown> = {
           ink_color: inkColor || null,
-          silicone_color: siliconeColor || null,
           observations: finalObs || null,
-        })
-        .eq("order_id", order.id);
-      if (prodErr) console.warn("No se pudo sincronizar con producción:", prodErr.message);
+        };
+        if (order.brand === "magical") prodPayload.gel_color = gelColor || null;
+        if (order.brand === "sweatspot") prodPayload.silicone_color = siliconeColor || null;
+        const { error: prodErr } = await supabase
+          .from("production_orders")
+          .update(prodPayload)
+          .eq("order_id", order.id);
+        if (prodErr) console.warn("No se pudo sincronizar con producción:", prodErr.message);
+      }
 
       // Notify production so they see the updated specs
       await supabase.from("notifications").insert({
