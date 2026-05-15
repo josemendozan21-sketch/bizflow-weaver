@@ -796,36 +796,46 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
         finalObs = finalObs ? `${tag} ${finalObs}` : tag;
       }
 
-      // Recalculate total: base (unit_price * quantity) + extra cost
-      const baseTotal = (Number(order.unit_price) || 0) * (Number(order.quantity) || 0);
+      // Recalculate total: preserve original total for retail (menor) — only add extras.
+      // For wholesale (mayor) recompute from unit_price * quantity + extras.
+      const currentTotal = Number(order.total_amount) || 0;
+      const baseTotal =
+        order.sale_type === "mayor"
+          ? (Number(order.unit_price) || 0) * (Number(order.quantity) || 0)
+          : currentTotal - (Number(initialExtras.extraCost) || 0);
       const newTotal = baseTotal + (Number(extraCost) || 0);
 
+      // Only update production-spec fields for wholesale orders (they go through producción).
+      // Retail orders are sold from finished stock and shouldn't overwrite these specs.
+      const isMayor = order.sale_type === "mayor";
       const { error } = await supabase
         .from("orders")
         .update({
-          gel_color: gelColor || null,
-          ink_color: inkColor || null,
-          silicone_color: siliconeColor || null,
           personalization: personalization || null,
           observations: finalObs || null,
           delivery_date: deliveryDate || null,
           total_amount: newTotal,
+          ...(isMayor && order.brand === "magical" ? { gel_color: gelColor || null } : {}),
+          ...(isMayor ? { ink_color: inkColor || null } : {}),
+          ...(isMayor && order.brand === "sweatspot" ? { silicone_color: siliconeColor || null } : {}),
         })
         .eq("id", order.id);
 
       if (error) throw error;
 
-      // Propagar cambios al pedido de producción vinculado (si existe)
-      const { error: prodErr } = await supabase
-        .from("production_orders")
-        .update({
-          gel_color: gelColor || null,
-          ink_color: inkColor || null,
-          silicone_color: siliconeColor || null,
-          observations: finalObs || null,
-        })
-        .eq("order_id", order.id);
-      if (prodErr) console.warn("No se pudo sincronizar con producción:", prodErr.message);
+      // Propagar cambios al pedido de producción vinculado (solo aplica a mayoreo)
+      if (isMayor) {
+        const { error: prodErr } = await supabase
+          .from("production_orders")
+          .update({
+            ink_color: inkColor || null,
+            observations: finalObs || null,
+            ...(order.brand === "magical" ? { gel_color: gelColor || null } : {}),
+            ...(order.brand === "sweatspot" ? { silicone_color: siliconeColor || null } : {}),
+          })
+          .eq("order_id", order.id);
+        if (prodErr) console.warn("No se pudo sincronizar con producción:", prodErr.message);
+      }
 
       // Notify production so they see the updated specs
       await supabase.from("notifications").insert({
@@ -878,43 +888,49 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
           )}
 
           <fieldset disabled={isLocked || saving} className="space-y-4 disabled:opacity-60">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Color de gel</Label>
-                <Select value={gelColor} onValueChange={setGelColor}>
-                  <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                  <SelectContent>
-                    {COLOR_OPTIONS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Color de tinta</Label>
-                <Select value={inkColor} onValueChange={setInkColor}>
-                  <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                  <SelectContent>
-                    {COLOR_OPTIONS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            {order.sale_type === "mayor" && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  {order.brand === "magical" && (
+                    <div className="space-y-1.5">
+                      <Label>Color de gel</Label>
+                      <Select value={gelColor} onValueChange={setGelColor}>
+                        <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                        <SelectContent>
+                          {COLOR_OPTIONS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  <div className="space-y-1.5">
+                    <Label>Color de tinta</Label>
+                    <Select value={inkColor} onValueChange={setInkColor}>
+                      <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                      <SelectContent>
+                        {COLOR_OPTIONS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
 
-            {order.brand === "sweatspot" && (
-              <div className="space-y-1.5">
-                <Label>Color de silicona</Label>
-                <Input value={siliconeColor} onChange={(e) => setSiliconeColor(e.target.value)} placeholder="Ej: Negro" />
-              </div>
+                {order.brand === "sweatspot" && (
+                  <div className="space-y-1.5">
+                    <Label>Color de silicona</Label>
+                    <Input value={siliconeColor} onChange={(e) => setSiliconeColor(e.target.value)} placeholder="Ej: Negro" />
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <Label>Personalización (escarcha, doble tinta, etc.)</Label>
+                  <Textarea
+                    value={personalization}
+                    onChange={(e) => setPersonalization(e.target.value)}
+                    placeholder="Ej: Escarcha plateada, doble tinta azul + blanco"
+                    rows={2}
+                  />
+                </div>
+              </>
             )}
-
-            <div className="space-y-1.5">
-              <Label>Personalización (escarcha, doble tinta, etc.)</Label>
-              <Textarea
-                value={personalization}
-                onChange={(e) => setPersonalization(e.target.value)}
-                placeholder="Ej: Escarcha plateada, doble tinta azul + blanco"
-                rows={2}
-              />
-            </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -938,7 +954,13 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
             </div>
             {extraCost > 0 && (
               <p className="text-xs text-muted-foreground">
-                Nuevo total: ${((Number(order.unit_price) || 0) * (Number(order.quantity) || 0) + extraCost).toLocaleString("es-CO")}
+                Nuevo total: $
+                {(
+                  (order.sale_type === "mayor"
+                    ? (Number(order.unit_price) || 0) * (Number(order.quantity) || 0)
+                    : (Number(order.total_amount) || 0) - (Number(initialExtras.extraCost) || 0)
+                  ) + extraCost
+                ).toLocaleString("es-CO")}
               </p>
             )}
 
