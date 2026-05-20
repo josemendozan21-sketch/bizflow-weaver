@@ -486,7 +486,7 @@ const Eventos = () => {
                         </div>
                         <div className="ml-6 space-y-2">
                           {entries.map((entry) => {
-                            const ac = getAdvisorColor(entry.advisorName);
+                            const ac = DELIVERY_CALENDAR_COLORS[entry.status];
                             return (
                             <div key={entry.id} className="flex items-center justify-between rounded-lg border border-border p-3">
                               <div className="flex-1 grid grid-cols-5 gap-4 text-sm">
@@ -684,12 +684,12 @@ const Eventos = () => {
               </DialogHeader>
               <div className="space-y-3 overflow-y-auto flex-1 pr-1 -mr-1">
                 {selectedDayDeliveries.map((entry) => {
-                  const ac = getAdvisorColor(entry.advisorName);
+                  const ac = DELIVERY_CALENDAR_COLORS[entry.status];
                   return (
-                  <div key={entry.id} className={cn("rounded-lg border p-3 space-y-2", `border-l-4`)} style={{ borderLeftColor: `var(--${ac.bg.replace("bg-", "")}, currentColor)` }}>
+                  <div key={entry.id} className={cn("rounded-lg border p-3 space-y-2", `border-l-4`)} style={{ borderLeftColor: ac.border }}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className={cn("inline-block w-3 h-3 rounded-full shrink-0", ac.bg)} />
+                        <span className={cn("inline-block w-3 h-3 rounded-full shrink-0", ac.dot)} />
                         <span className="font-semibold text-foreground">{entry.clientName}</span>
                       </div>
                       <Badge className={cn(DELIVERY_STATUS_COLORS[entry.status])}>{DELIVERY_STATUS_LABELS[entry.status]}</Badge>
