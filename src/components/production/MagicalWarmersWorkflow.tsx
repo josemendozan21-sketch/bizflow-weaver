@@ -37,8 +37,8 @@ import {
 import { toast } from "sonner";
 import { useProductionOrders, type ProductionOrder, type BodyTask } from "@/hooks/useProductionOrders";
 import { useAuth } from "@/contexts/AuthContext";
-import { BodyTasksGrouped } from "./BodyTasksGrouped";
 import { useInventory } from "@/hooks/useInventory";
+import { BodyRequirementsPanel } from "./BodyRequirementsPanel";
 
 type MagicalStage = "produccion_cuerpos" | "estampacion" | "dosificacion" | "sellado" | "descristalizacion" | "recorte" | "empaque" | "listo";
 
@@ -106,14 +106,12 @@ function isProducibleReference(referencia: string): boolean {
 
 export const MagicalWarmersWorkflow = () => {
   const { orders, bodyTasks, isLoading, updateStageStatus, advanceStage, addBodyTask, updateBodyTaskStatus, forceCompleteOrder } = useProductionOrders("magical");
+  const { bodyStock } = useInventory();
   const { role } = useAuth();
   const isAdmin = role === "admin";
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showBodyForm, setShowBodyForm] = useState(false);
-
-  // Confirmation dialog state for body tasks
-  const [confirmTask, setConfirmTask] = useState<BodyTask | null>(null);
-  const [confirmQty, setConfirmQty] = useState("");
+  const [bodyFormPrefill, setBodyFormPrefill] = useState<{ tipoPlastico: "frio" | "calor"; referencia: string; unidades: number } | null>(null);
 
   // Confirmation dialog state for production orders in produccion_cuerpos stage
   const [confirmOrder, setConfirmOrder] = useState<ProductionOrder | null>(null);
@@ -147,7 +145,6 @@ export const MagicalWarmersWorkflow = () => {
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
   const producibleTasks = bodyTasks.filter((t) => isProducibleReference(t.referencia));
-  const activeBodyTasks = producibleTasks.filter((t) => t.status !== "finalizado");
   const completedBodyTasks = producibleTasks.filter((t) => t.status === "finalizado");
 
   const toggleSelect = (id: string) => {
@@ -169,23 +166,6 @@ export const MagicalWarmersWorkflow = () => {
     setSelected(new Set());
   };
 
-  const handleFinishBodyTask = (task: BodyTask) => {
-    setConfirmTask(task);
-    setConfirmQty(String(task.unidades));
-  };
-
-  const handleConfirmBodyTask = () => {
-    if (!confirmTask) return;
-    const qty = parseInt(confirmQty, 10);
-    if (!qty || qty <= 0) {
-      toast.error("Ingrese una cantidad válida.");
-      return;
-    }
-    updateBodyTaskStatus.mutate({ taskId: confirmTask.id, status: "finalizado", actualQuantity: qty });
-    toast.success(`Producción de cuerpos finalizada. ${qty} unidades agregadas al inventario.`);
-    setConfirmTask(null);
-  };
-
   const handleFinishOrder = (order: ProductionOrder) => {
     if (order.current_stage === "produccion_cuerpos") {
       setConfirmOrder(order);
@@ -201,6 +181,11 @@ export const MagicalWarmersWorkflow = () => {
         advanceStage.mutate({ orderId: order.id });
       }
     }
+  };
+
+  const openBodyForm = (prefill?: { tipoPlastico: "frio" | "calor"; referencia: string; unidades: number }) => {
+    setBodyFormPrefill(prefill ?? null);
+    setShowBodyForm(true);
   };
 
   const handleConfirmOrderAdvance = () => {
@@ -264,28 +249,31 @@ export const MagicalWarmersWorkflow = () => {
 
       {/* Body Production */}
       <Separator />
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">Producción de cuerpos ({activeBodyTasks.length} activas)</h3>
-        <Button size="sm" onClick={() => setShowBodyForm(true)} disabled={showBodyForm}>
-          <Plus className="h-4 w-4 mr-1" /> Producción de cuerpos
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h3 className="text-sm font-semibold text-foreground">Cuerpos por producir</h3>
+        <Button size="sm" onClick={() => openBodyForm()} disabled={showBodyForm}>
+          <Plus className="h-4 w-4 mr-1" /> Registrar producción de cuerpos
         </Button>
       </div>
 
+      <BodyRequirementsPanel
+        orders={activeOrdersAll}
+        bodyStock={bodyStock}
+        isProducible={isProducibleReference}
+        onProduce={({ referencia, tipoPlastico, unidadesSugeridas }) =>
+          openBodyForm({ referencia, tipoPlastico, unidades: unidadesSugeridas })
+        }
+      />
+
       {showBodyForm && (
         <BodyProductionForm
-          onClose={() => setShowBodyForm(false)}
+          onClose={() => { setShowBodyForm(false); setBodyFormPrefill(null); }}
+          initial={bodyFormPrefill}
           onSubmit={(data) => {
             addBodyTask.mutate({ tipo_plastico: data.tipoPlastico, referencia: data.referencia, unidades: data.unidades });
             setShowBodyForm(false);
+            setBodyFormPrefill(null);
           }}
-        />
-      )}
-
-      {activeBodyTasks.length > 0 && (
-        <BodyTasksGrouped
-          tasks={activeBodyTasks}
-          onStart={(taskId) => updateBodyTaskStatus.mutate({ taskId, status: "en_proceso" })}
-          onFinish={(task) => handleFinishBodyTask(task)}
         />
       )}
 
