@@ -326,12 +326,20 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
 
       // Update parent order status
       if (po.order_id) {
-        const orderUpdate: Record<string, any> = { production_status: nextStage };
-        // Track stamping completion when leaving the estampacion stage
         if (po.current_stage === "estampacion") {
-          orderUpdate.stamping_completed_at = new Date().toISOString();
+          await supabase
+            .from("orders")
+            .update({
+              production_status: nextStage,
+              stamping_completed_at: new Date().toISOString(),
+            })
+            .eq("id", po.order_id);
+        } else {
+          await supabase
+            .from("orders")
+            .update({ production_status: nextStage })
+            .eq("id", po.order_id);
         }
-        await supabase.from("orders").update(orderUpdate).eq("id", po.order_id);
       }
 
       // Notify teams of stage advancement
