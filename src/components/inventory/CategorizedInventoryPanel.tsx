@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Beaker, Box, PackageCheck, Layers, Plus, Pencil, Trash2, Check, X, AlertTriangle, AlertCircle, CheckCircle2, Flame, Snowflake,
+  Beaker, Box, PackageCheck, Layers, Plus, Pencil, Trash2, Check, X, AlertTriangle, AlertCircle, CheckCircle2, Flame, Snowflake, Plane,
 } from "lucide-react";
 import { useInventory, getStockStatus, type SupabaseStockItem } from "@/hooks/useInventory";
 import type { InventoryCategory, InventoryBrand } from "@/stores/inventoryStore";
@@ -35,10 +35,11 @@ const CATEGORY_META: Record<InventoryCategory, { label: string; icon: React.Elem
   producto_en_proceso: { label: "Producto en Proceso", icon: Layers },
   cuerpos_referencias: { label: "Cuerpos", icon: Box },
   producto_terminado: { label: "Producto Terminado", icon: PackageCheck },
+  importados: { label: "Importados", icon: Plane },
 };
 
-const ALL_CATEGORIES: InventoryCategory[] = ["materia_prima", "producto_en_proceso", "cuerpos_referencias", "producto_terminado"];
-const ASESOR_CATEGORIES: InventoryCategory[] = ["cuerpos_referencias", "producto_terminado"];
+const ALL_CATEGORIES: InventoryCategory[] = ["materia_prima", "producto_en_proceso", "cuerpos_referencias", "producto_terminado", "importados"];
+const ASESOR_CATEGORIES: InventoryCategory[] = ["cuerpos_referencias", "producto_terminado", "importados"];
 
 const STATUS_CONFIG: Record<StockStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ElementType }> = {
   ok: { label: "OK", variant: "secondary", icon: CheckCircle2 },
@@ -304,7 +305,7 @@ const CategorizedInventoryPanel = ({
       </div>
 
       <Tabs value={selectedCategory} onValueChange={(v) => setSelectedCategory(v as InventoryCategory)}>
-        <TabsList className={`w-full grid ${isReadOnly ? "grid-cols-2" : "grid-cols-4"}`}>
+        <TabsList className={`w-full grid ${isReadOnly ? "grid-cols-3" : "grid-cols-5"}`}>
           {CATEGORIES.map((cat) => {
             const meta = CATEGORY_META[cat];
             const Icon = meta.icon;
