@@ -38,6 +38,7 @@ import { toast } from "sonner";
 import { useProductionOrders, type ProductionOrder, type BodyTask } from "@/hooks/useProductionOrders";
 import { useAuth } from "@/contexts/AuthContext";
 import { BodyTasksGrouped } from "./BodyTasksGrouped";
+import { useInventory } from "@/hooks/useInventory";
 
 type MagicalStage = "produccion_cuerpos" | "estampacion" | "dosificacion" | "sellado" | "descristalizacion" | "recorte" | "empaque" | "listo";
 
@@ -565,6 +566,14 @@ function BodyProductionForm({ onClose, onSubmit }: { onClose: () => void; onSubm
   const [referencia, setReferencia] = useState("");
   const [unidades, setUnidades] = useState("");
   const canSubmit = tipoPlastico && referencia && unidades && parseInt(unidades) > 0;
+  const { stockItems } = useInventory();
+  const referencias = useMemo(() => {
+    const fromInv = stockItems
+      .filter((s) => s.brand === "magical" && s.category === "cuerpos_referencias")
+      .map((s) => s.name);
+    const merged = Array.from(new Set([...CANONICAL_REFERENCES, ...fromInv]));
+    return merged.sort((a, b) => a.localeCompare(b));
+  }, [stockItems]);
 
   return (
     <Card>
@@ -594,7 +603,7 @@ function BodyProductionForm({ onClose, onSubmit }: { onClose: () => void; onSubm
                 <SelectValue placeholder="Seleccionar referencia" />
               </SelectTrigger>
               <SelectContent>
-                {CANONICAL_REFERENCES.map((ref) => (
+                {referencias.map((ref) => (
                   <SelectItem key={ref} value={ref}>{ref}</SelectItem>
                 ))}
               </SelectContent>
