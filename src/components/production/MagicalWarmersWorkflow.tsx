@@ -39,6 +39,7 @@ import { useProductionOrders, type ProductionOrder, type BodyTask } from "@/hook
 import { useAuth } from "@/contexts/AuthContext";
 import { useInventory } from "@/hooks/useInventory";
 import { BodyRequirementsPanel } from "./BodyRequirementsPanel";
+import { supabase } from "@/integrations/supabase/client";
 
 type MagicalStage = "produccion_cuerpos" | "estampacion" | "dosificacion" | "sellado" | "descristalizacion" | "recorte" | "empaque" | "listo";
 
@@ -370,43 +371,6 @@ export const MagicalWarmersWorkflow = () => {
       )}
 
       {/* Confirmation Dialog - Body Task */}
-      <Dialog open={!!confirmTask} onOpenChange={(open) => { if (!open) setConfirmTask(null); }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmar cantidad producida</DialogTitle>
-            <DialogDescription>
-              Confirme la cantidad real de cuerpos producidos antes de actualizar el inventario.
-            </DialogDescription>
-          </DialogHeader>
-          {confirmTask && (
-            <div className="space-y-4">
-              <div className="rounded-md border p-3 text-sm space-y-1">
-                <Row label="Referencia" value={confirmTask.referencia} />
-                <Row label="Tipo" value={confirmTask.tipo_plastico === "frio" ? "Frío" : "Calor"} />
-                <Row label="Cantidad estimada" value={`${confirmTask.unidades} unidades`} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirm-qty">Cantidad real producida *</Label>
-                <Input
-                  id="confirm-qty"
-                  type="number"
-                  min="1"
-                  value={confirmQty}
-                  onChange={(e) => setConfirmQty(e.target.value)}
-                  placeholder="Ingrese la cantidad real"
-                />
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmTask(null)}>Cancelar</Button>
-            <Button onClick={handleConfirmBodyTask}>
-              <CheckCircle2 className="h-4 w-4 mr-1" /> Confirmar y finalizar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Confirmation Dialog - Production Order (produccion_cuerpos stage) */}
       <Dialog open={!!confirmOrder} onOpenChange={(open) => { if (!open) setConfirmOrder(null); }}>
         <DialogContent>
