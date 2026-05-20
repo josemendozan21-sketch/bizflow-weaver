@@ -270,8 +270,37 @@ export const MagicalWarmersWorkflow = () => {
         <BodyProductionForm
           onClose={() => { setShowBodyForm(false); setBodyFormPrefill(null); }}
           initial={bodyFormPrefill}
-          onSubmit={(data) => {
-            addBodyTask.mutate({ tipo_plastico: data.tipoPlastico, referencia: data.referencia, unidades: data.unidades });
+          onSubmit={async (data) => {
+            // Register as a finalized body production task (historic record)
+            const { error: taskErr } = await supabase.from("body_production_tasks").insert({
+              tipo_plastico: data.tipoPlastico,
+              referencia: data.referencia,
+              unidades: data.unidades,
+              status: "finalizado",
+              completed_at: new Date().toISOString(),
+            });
+            if (taskErr) {
+              toast.error(`Error al registrar producción: ${taskErr.message}`);
+              return;
+            }
+            // Upsert body_stock
+            const { data: existing } = await supabase
+              .from("body_stock")
+              .select("*")
+              .eq("brand", "magical")
+              .ilike("referencia", data.referencia)
+              .maybeSingle();
+            if (existing) {
+              await supabase
+                .from("body_stock")
+                .update({ available: existing.available + data.unidades })
+                .eq("id", existing.id);
+            } else {
+              await supabase
+                .from("body_stock")
+                .insert({ brand: "magical", referencia: data.referencia, available: data.unidades });
+            }
+            toast.success(`${data.unidades} uds de "${data.referencia}" agregadas al inventario de cuerpos.`);
             setShowBodyForm(false);
             setBodyFormPrefill(null);
           }}
