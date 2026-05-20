@@ -268,6 +268,10 @@ export const MagicalWarmersWorkflow = () => {
           ...bodyStock
             .filter((b) => b.brand.toLowerCase() === "magical")
             .map((b) => b.referencia),
+          // Pull mold names from active orders so anything with demand shows up
+          ...activeOrdersAll
+            .map((o) => (o.molde || "").replace(/\s*\([^)]*\)/g, "").trim())
+            .filter(Boolean),
         ]))}
         orders={activeOrdersAll}
         bodyStock={bodyStock}
