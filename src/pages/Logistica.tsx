@@ -846,15 +846,18 @@ function ShipmentGroupCard({
       </div>
       <div className="p-4 pt-3 space-y-1.5">
         {group.items.map((it) => (
-          <div key={it.id} className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-foreground truncate flex items-center gap-2 min-w-0">
-              <span className="truncate">• {it.product}</span>
-              <AdvisorTag order={it} />
-            </span>
-            <div className="flex items-center gap-3 shrink-0">
-              <span className="text-muted-foreground">{it.quantity} und</span>
-              <PaymentBadge order={it} />
+          <div key={it.id} className="space-y-0.5">
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <span className="text-foreground truncate flex items-center gap-2 min-w-0">
+                <span className="truncate">• {it.product}</span>
+                <AdvisorTag order={it} />
+              </span>
+              <div className="flex items-center gap-3 shrink-0">
+                <span className="text-muted-foreground">{it.quantity} und</span>
+                <PaymentBadge order={it} />
+              </div>
             </div>
+            <ItemDetailsLine order={it} />
           </div>
         ))}
         {finishedPhotos.length > 0 && (
@@ -928,15 +931,18 @@ function PendingGroupCard({
       </div>
       <div className="p-4 pt-3 space-y-1.5">
         {group.items.map((it) => (
-          <div key={it.id} className="flex items-center justify-between gap-3 text-sm flex-wrap">
-            <span className="text-foreground truncate flex items-center gap-2 min-w-0">
-              <span className="truncate">• {it.product} <span className="text-muted-foreground">— {it.quantity} und</span></span>
-              <AdvisorTag order={it} />
-            </span>
-            <div className="flex items-center gap-2 shrink-0">
-              <ProductionStatusBadge status={it.production_status} order={it} />
-              <PaymentBadge order={it} />
+          <div key={it.id} className="space-y-0.5">
+            <div className="flex items-center justify-between gap-3 text-sm flex-wrap">
+              <span className="text-foreground truncate flex items-center gap-2 min-w-0">
+                <span className="truncate">• {it.product} <span className="text-muted-foreground">— {it.quantity} und</span></span>
+                <AdvisorTag order={it} />
+              </span>
+              <div className="flex items-center gap-2 shrink-0">
+                <ProductionStatusBadge status={it.production_status} order={it} />
+                <PaymentBadge order={it} />
+              </div>
             </div>
+            <ItemDetailsLine order={it} />
           </div>
         ))}
       </div>
@@ -988,20 +994,23 @@ function DispatchedGroupCard({
       </div>
       <div className="p-4 pt-3 space-y-1">
         {group.items.map((it) => (
-          <div key={it.id} className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-foreground truncate flex items-center gap-2 min-w-0">
-              <span className="truncate">• {it.product}</span>
-              <AdvisorTag order={it} />
-              {it.returned_at && (
-                <Badge variant="destructive" className="text-[10px] gap-1">
-                  <PackageX className="h-3 w-3" /> Devuelto
-                </Badge>
-              )}
-            </span>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-muted-foreground">{it.quantity} und</span>
-              <ReturnOrderButton order={it} />
+          <div key={it.id} className="space-y-0.5">
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <span className="text-foreground truncate flex items-center gap-2 min-w-0">
+                <span className="truncate">• {it.product}</span>
+                <AdvisorTag order={it} />
+                {it.returned_at && (
+                  <Badge variant="destructive" className="text-[10px] gap-1">
+                    <PackageX className="h-3 w-3" /> Devuelto
+                  </Badge>
+                )}
+              </span>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-muted-foreground">{it.quantity} und</span>
+                <ReturnOrderButton order={it} />
+              </div>
             </div>
+            <ItemDetailsLine order={it} />
           </div>
         ))}
         {first?.dispatch_notes && (
