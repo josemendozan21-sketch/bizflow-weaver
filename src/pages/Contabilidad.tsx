@@ -15,7 +15,7 @@ import CommissionsPanel from "@/components/contabilidad/CommissionsPanel";
 import AdvisorSalesPanel from "@/components/contabilidad/AdvisorSalesPanel";
 import { getOrderPaidAmount, isOrderFullyPaid, useOrders, type Order } from "@/hooks/useOrders";
 import { supabase } from "@/integrations/supabase/client";
-import { exportOrdersToExcel } from "@/lib/exportSiigo";
+import { exportOrdersToExcel, exportOrdersFullReport } from "@/lib/exportSiigo";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAccountingAlerts } from "@/hooks/useAccountingAlerts";
@@ -323,6 +323,25 @@ const Contabilidad = () => {
         <h1 className="text-2xl font-bold text-foreground">Contabilidad</h1>
         <p className="text-muted-foreground">Facturación y control de pedidos</p>
       </div>
+
+      {!isReadOnly && (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (allOrders.length === 0) {
+                toast.error("No hay pedidos para exportar");
+                return;
+              }
+              exportOrdersFullReport(allOrders);
+              toast.success(`${allOrders.length} pedido(s) exportados`);
+            }}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Descargar Excel completo (pagos, IVA, comisiones)
+          </Button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
