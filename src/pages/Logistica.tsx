@@ -185,6 +185,23 @@ function AdvisorHeaderBadge({ items }: { items: Order[] }) {
   );
 }
 
+function getItemColorDetails(it: Order): string {
+  const details: string[] = [];
+  if (it.silicone_color) details.push(`Color: ${it.silicone_color}`);
+  if (it.gel_color) details.push(`Gel: ${it.gel_color}`);
+  if (it.ink_color) details.push(`Tinta: ${it.ink_color}`);
+  if (it.personalization) details.push(it.personalization);
+  return details.join(" · ");
+}
+
+function ItemDetailsLine({ order }: { order: Order }) {
+  const details = getItemColorDetails(order);
+  if (!details) return null;
+  return (
+    <p className="text-xs text-muted-foreground italic pl-3 -mt-0.5">{details}</p>
+  );
+}
+
 function generateLabelsForGroups(groups: ShipmentGroup[]) {
   if (groups.length === 0) return;
   const esc = (s: any) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
