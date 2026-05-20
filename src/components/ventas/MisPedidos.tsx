@@ -550,15 +550,24 @@ function OrderGroupCard({
 
         {/* Líneas del pedido */}
         <div className="space-y-1.5 rounded-md border bg-muted/20 p-2">
-          {group.items.map((it) => (
-            <div key={it.id} className="flex items-center justify-between gap-2 text-sm">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <Package className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                <span className="truncate">{it.product}</span>
+          {group.items.map((it) => {
+            const unit = Number(it.unit_price) || (it.quantity ? (Number(it.total_amount) || 0) / it.quantity : 0);
+            const lineTotal = unit * (Number(it.quantity) || 0);
+            return (
+              <div key={it.id} className="flex items-start justify-between gap-2 text-sm">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Package className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="truncate">{it.product}</span>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="text-muted-foreground">{it.quantity} uds {unit > 0 && <span>× ${Math.round(unit).toLocaleString("es-CO")}</span>}</div>
+                  {lineTotal > 0 && (
+                    <div className="text-xs text-foreground font-medium">${Math.round(lineTotal).toLocaleString("es-CO")}</div>
+                  )}
+                </div>
               </div>
-              <span className="text-muted-foreground shrink-0">{it.quantity} uds</span>
-            </div>
-          ))}
+            );
+          })}
           <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t">
             <span>Total del pedido</span>
             <span className="font-medium text-foreground">{group.totalUnits} uds</span>
