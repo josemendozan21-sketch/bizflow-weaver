@@ -1,12 +1,11 @@
 import { useState, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Boxes, ShoppingBag, Truck, Zap } from "lucide-react";
+import { ArrowLeft, Boxes, ShoppingBag, Zap } from "lucide-react";
 import BrandSelectionCards, { type InventoryNotification } from "@/components/inventory/BrandSelectionCards";
 import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
 import RequestBodyProductionDialog from "@/components/inventory/RequestBodyProductionDialog";
 import WholesaleOrdersInbox from "@/components/inventory/WholesaleOrdersInbox";
-import ReceptionPanel from "@/components/inventory/ReceptionPanel";
 import QuickMovementForm from "@/components/inventory/QuickMovementForm";
 import MovementHistoryTable from "@/components/inventory/MovementHistoryTable";
 import WeeklyInventoryExport from "@/components/inventory/WeeklyInventoryExport";
@@ -49,9 +48,6 @@ const InventariosRoleView = () => {
           <TabsTrigger value="movimientos" className="gap-1.5">
             <Zap className="h-4 w-4" /> Movimientos rápidos
           </TabsTrigger>
-          <TabsTrigger value="recepcion" className="gap-1.5">
-            <Truck className="h-4 w-4" /> Recepción
-          </TabsTrigger>
           <TabsTrigger value="stock" className="gap-1.5">
             <Boxes className="h-4 w-4" /> Inventario por marca
           </TabsTrigger>
@@ -67,10 +63,6 @@ const InventariosRoleView = () => {
             <WeeklyInventoryExport />
           </div>
           <MovementHistoryTable />
-        </TabsContent>
-
-        <TabsContent value="recepcion" className="mt-4">
-          <ReceptionPanel />
         </TabsContent>
 
         <TabsContent value="stock" className="space-y-4 mt-4">
