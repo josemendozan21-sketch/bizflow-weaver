@@ -203,7 +203,17 @@ function generateLabelsForGroups(groups: ShipmentGroup[]) {
       pagoInfo = saldo <= 0 ? "PAGO COMPLETO" : `SALDO: $${saldo.toLocaleString("es-CO")}`;
     }
     const itemsHtml = g.items
-      .map((it) => `<div class="item">• ${esc(it.product)} — ${esc(it.quantity)} und</div>`)
+      .map((it) => {
+        const details: string[] = [];
+        if (it.silicone_color) details.push(`Color: ${it.silicone_color}`);
+        if (it.gel_color) details.push(`Gel: ${it.gel_color}`);
+        if (it.ink_color) details.push(`Tinta: ${it.ink_color}`);
+        if (it.personalization) details.push(it.personalization);
+        const detailsHtml = details.length
+          ? `<div class="item-detail">${esc(details.join(" · "))}</div>`
+          : "";
+        return `<div class="item">• ${esc(it.product)} — ${esc(it.quantity)} und${detailsHtml}</div>`;
+      })
       .join("");
     return `
       <div class="label">
@@ -235,7 +245,8 @@ function generateLabelsForGroups(groups: ShipmentGroup[]) {
     .header { text-align: center; font-size: 13px; font-weight: bold; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 6px; letter-spacing: 1px; }
     .row { font-size: 10.5px; margin-bottom: 2px; line-height: 1.3; }
     .items { font-size: 10px; margin: 2px 0 4px 4px; }
-    .item { line-height: 1.3; }
+    .item { line-height: 1.3; margin-bottom: 2px; }
+    .item-detail { font-size: 9.5px; color: #444; margin-left: 10px; font-style: italic; }
     .lbl { font-weight: bold; text-transform: uppercase; color: #333; }
     .val { font-weight: 600; }
     .divider { border-top: 1px dashed #999; margin: 4px 0; }
