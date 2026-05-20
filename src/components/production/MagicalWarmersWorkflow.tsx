@@ -85,6 +85,23 @@ const CANONICAL_REFERENCES = [
   "Muela", "Labios", "Círculo 8 cm", "Círculo 12 cm",
 ];
 
+/** Sweatspot references that are actually produced in-house (termos).
+ *  Anything else from Sweatspot is imported or bought from third parties
+ *  and must not appear in producción. */
+const SWEATSPOT_PRODUCED_KEYWORDS = ["150", "250", "500", "jugueton", "juguetón"];
+
+/** Returns true if a reference should be shown in producción de cuerpos. */
+function isProducibleReference(referencia: string): boolean {
+  const ref = referencia.trim().toLowerCase();
+  if (!ref) return false;
+  // Magical canonical references (match by substring, case-insensitive)
+  if (CANONICAL_REFERENCES.some((r) => ref.includes(r.toLowerCase()))) return true;
+  // Sweatspot termos producidos en casa
+  const isTermo = ref.includes("termo");
+  if (isTermo && SWEATSPOT_PRODUCED_KEYWORDS.some((k) => ref.includes(k))) return true;
+  return false;
+}
+
 export const MagicalWarmersWorkflow = () => {
   const { orders, bodyTasks, isLoading, updateStageStatus, advanceStage, addBodyTask, updateBodyTaskStatus, forceCompleteOrder } = useProductionOrders("magical");
   const { role } = useAuth();
@@ -127,8 +144,9 @@ export const MagicalWarmersWorkflow = () => {
     const el = stageRefs.current[stage];
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
-  const activeBodyTasks = bodyTasks.filter((t) => t.status !== "finalizado");
-  const completedBodyTasks = bodyTasks.filter((t) => t.status === "finalizado");
+  const producibleTasks = bodyTasks.filter((t) => isProducibleReference(t.referencia));
+  const activeBodyTasks = producibleTasks.filter((t) => t.status !== "finalizado");
+  const completedBodyTasks = producibleTasks.filter((t) => t.status === "finalizado");
 
   const toggleSelect = (id: string) => {
     setSelected((prev) => {
