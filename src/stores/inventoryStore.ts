@@ -44,7 +44,7 @@ export interface InventoryTotal {
 
 export type StockStatus = "ok" | "bajo" | "critico";
 
-export type InventoryCategory = "materia_prima" | "producto_en_proceso" | "cuerpos_referencias" | "producto_terminado";
+export type InventoryCategory = "materia_prima" | "producto_en_proceso" | "cuerpos_referencias" | "producto_terminado" | "importados";
 export type InventoryBrand = "sweatspot" | "magical_warmers";
 
 export type ProductType = "Térmico" | "Frío" | null;

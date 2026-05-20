@@ -18,6 +18,7 @@ const CAT_LABEL: Record<string, string> = {
   materia_prima: "Materia prima",
   cuerpos_referencias: "Cuerpos",
   producto_terminado: "Producto terminado",
+  importados: "Importados",
 };
 
 export default function MovementHistoryTable() {
