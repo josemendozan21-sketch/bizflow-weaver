@@ -6,16 +6,20 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDownToLine, ArrowUpFromLine, Clock, RotateCcw, Zap } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, Clock, RotateCcw, Zap, Factory } from "lucide-react";
 import { toast } from "sonner";
 import { useInventory } from "@/hooks/useInventory";
 import { useInventoryMovements, type MovementKind } from "@/hooks/useInventoryMovements";
+import { supabase } from "@/integrations/supabase/client";
 
-const KIND_OPTIONS: { value: MovementKind; label: string; icon: any; color: string }[] = [
+type ActionKind = MovementKind | "solicitud";
+
+const KIND_OPTIONS: { value: ActionKind; label: string; icon: any; color: string }[] = [
   { value: "entrada", label: "Entrada", icon: ArrowDownToLine, color: "text-emerald-600" },
   { value: "salida", label: "Salida", icon: ArrowUpFromLine, color: "text-orange-600" },
   { value: "reserva", label: "Reservar (en proceso)", icon: Clock, color: "text-amber-600" },
   { value: "liberar_reserva", label: "Liberar reserva", icon: RotateCcw, color: "text-blue-600" },
+  { value: "solicitud", label: "Solicitud a producción", icon: Factory, color: "text-fuchsia-600" },
 ];
 
 const CATEGORIES = [
@@ -40,7 +44,7 @@ export default function QuickMovementForm() {
   const { stockItems } = useInventory();
   const { createMovement } = useInventoryMovements();
 
-  const [kind, setKind] = useState<MovementKind>("salida");
+  const [kind, setKind] = useState<ActionKind>("salida");
   const [brand, setBrand] = useState("");
   const [category, setCategory] = useState("");
   const [stockItemId, setStockItemId] = useState("");
@@ -58,9 +62,15 @@ export default function QuickMovementForm() {
   const items = useMemo(
     () =>
       stockItems
-        .filter((s) => (!brand || s.brand === brand) && (!category || s.category === category))
+        .filter((s) => {
+          if (brand && s.brand !== brand) return false;
+          if (category && s.category !== category) return false;
+          // Solicitudes a producción solo aplican a cuerpos o producto terminado
+          if (kind === "solicitud" && !["cuerpos_referencias", "producto_terminado"].includes(s.category)) return false;
+          return true;
+        })
         .sort((a, b) => a.name.localeCompare(b.name)),
-    [stockItems, brand, category],
+    [stockItems, brand, category, kind],
   );
   const selected = stockItems.find((s) => s.id === stockItemId);
 
@@ -81,6 +91,36 @@ export default function QuickMovementForm() {
     if (!selected) return toast.error("Selecciona un ítem");
     const qty = Number(quantity);
     if (!qty || qty <= 0) return toast.error("Cantidad inválida");
+
+    if (kind === "solicitud") {
+      if (!["cuerpos_referencias", "producto_terminado"].includes(selected.category)) {
+        return toast.error("Solo se puede solicitar cuerpos o producto terminado");
+      }
+      setSubmitting(true);
+      const tipoPlastico = (selected.product_type || "").toLowerCase().includes("calor") ? "calor" : "frio";
+      const { error } = await supabase.from("body_production_tasks").insert({
+        tipo_plastico: tipoPlastico,
+        referencia: selected.name,
+        unidades: qty,
+        status: "pendiente",
+      } as any);
+      if (error) {
+        setSubmitting(false);
+        return toast.error(`No se pudo crear la solicitud: ${error.message}`);
+      }
+      const catLabel = selected.category === "cuerpos_referencias" ? "cuerpos" : "producto terminado";
+      await supabase.from("notifications").insert({
+        target_role: "produccion",
+        title: "Nueva solicitud de producción",
+        message: `Inventarios solicita ${qty} uds de "${selected.name}" (${selected.brand}, ${catLabel})${purpose ? `. Motivo: ${purpose}` : ""}`,
+        type: "info",
+      } as any);
+      toast.success("Solicitud enviada a producción");
+      reset();
+      setSubmitting(false);
+      return;
+    }
+
     if ((kind === "salida" || kind === "reserva") && qty > selected.available) {
       return toast.error(`Stock insuficiente. Disponible: ${selected.available}`);
     }
@@ -98,7 +138,7 @@ export default function QuickMovementForm() {
       category: selected.category,
       quantity: qty,
       direction,
-      movement_kind: kind,
+      movement_kind: kind as MovementKind,
       area: "produccion", // default; real "área" semantics now in purpose
       requested_by_name: requestedBy || null,
       purpose: purpose || null,

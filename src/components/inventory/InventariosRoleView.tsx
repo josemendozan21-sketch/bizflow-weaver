@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Boxes, ShoppingBag, Zap } from "lucide-react";
 import BrandSelectionCards, { type InventoryNotification } from "@/components/inventory/BrandSelectionCards";
 import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
-import RequestBodyProductionDialog from "@/components/inventory/RequestBodyProductionDialog";
 import WholesaleOrdersInbox from "@/components/inventory/WholesaleOrdersInbox";
 import QuickMovementForm from "@/components/inventory/QuickMovementForm";
 import MovementHistoryTable from "@/components/inventory/MovementHistoryTable";
@@ -32,12 +31,9 @@ const InventariosRoleView = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Inventarios</h1>
-          <p className="text-muted-foreground">Gestiona stock, recibe pedidos de producción y solicita cuerpos.</p>
-        </div>
-        <RequestBodyProductionDialog />
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Inventarios</h1>
+        <p className="text-muted-foreground">Gestiona stock, recibe pedidos de producción y registra movimientos.</p>
       </div>
 
       <Tabs defaultValue="bandeja" className="w-full">
