@@ -10,7 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Snowflake, Thermometer, Package, Plus } from "lucide-react";
+import { Snowflake, Thermometer, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import type { ProductionOrder } from "@/hooks/useProductionOrders";
 import type { SupabaseBodyStock, SupabaseStockItem } from "@/hooks/useInventory";
 
@@ -60,6 +61,9 @@ interface RefSummary {
 
 export function BodyRequirementsPanel({ references, orders, bodyStock, stockItems, onProduce }: Props) {
   const [selected, setSelected] = useState<RefSummary | null>(null);
+  const [selectedTipo, setSelectedTipo] = useState<"frio" | "calor">("frio");
+  const [openFrio, setOpenFrio] = useState(false);
+  const [openCalor, setOpenCalor] = useState(false);
 
   const summaries = useMemo<RefSummary[]>(() => {
     // Dedupe references by normalized form, prefer the version with accents
@@ -129,22 +133,70 @@ export function BodyRequirementsPanel({ references, orders, bodyStock, stockItem
     });
   }, [references, orders, bodyStock, stockItems]);
 
-  // Sort: urgent (demand > available) first, then earliest delivery, then alphabetical
-  const sorted = useMemo(() => {
-    return [...summaries].sort((a, b) => {
-      const aShort = a.demandTotal - a.available;
-      const bShort = b.demandTotal - b.available;
-      const aUrgent = aShort > 0;
-      const bUrgent = bShort > 0;
+  // Sort: urgent (tipo demand > available) first, then earliest delivery, then alphabetical
+  const sortFor = (tipo: "frio" | "calor") =>
+    [...summaries].sort((a, b) => {
+      const ad = tipo === "frio" ? a.demandFrio : a.demandCalor;
+      const bd = tipo === "frio" ? b.demandFrio : b.demandCalor;
+      const aUrgent = ad > a.available;
+      const bUrgent = bd > b.available;
       if (aUrgent !== bUrgent) return aUrgent ? -1 : 1;
       const da = a.earliestDelivery ?? "9999-12-31";
       const db = b.earliestDelivery ?? "9999-12-31";
       if (da !== db) return da < db ? -1 : 1;
       return a.referencia.localeCompare(b.referencia);
     });
-  }, [summaries]);
 
-  const openDetail = (r: RefSummary) => setSelected(r);
+  const frioSorted = useMemo(() => sortFor("frio"), [summaries]);
+  const calorSorted = useMemo(() => sortFor("calor"), [summaries]);
+
+  const openDetail = (r: RefSummary, tipo: "frio" | "calor") => {
+    setSelectedTipo(tipo);
+    setSelected(r);
+  };
+
+  const urgentCount = (list: RefSummary[], tipo: "frio" | "calor") =>
+    list.filter((r) => (tipo === "frio" ? r.demandFrio : r.demandCalor) > r.available).length;
+
+  const renderGrid = (list: RefSummary[], tipo: "frio" | "calor") => (
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+      {list.map((r) => {
+        const demand = tipo === "frio" ? r.demandFrio : r.demandCalor;
+        const shortage = Math.max(demand - r.available, 0);
+        const isUrgent = shortage > 0;
+        const lowStock = r.minStock > 0 && r.available < r.minStock;
+        return (
+          <button
+            key={r.referencia}
+            type="button"
+            onClick={() => openDetail(r, tipo)}
+            className={`text-left rounded-md border p-2.5 transition-colors hover:bg-accent ${
+              isUrgent
+                ? "border-destructive/40 bg-destructive/5"
+                : lowStock
+                ? "border-amber-500/40 bg-amber-500/5"
+                : "border-border"
+            }`}
+          >
+            <div className="flex items-start justify-between gap-1">
+              <span className="text-sm font-medium text-foreground leading-tight">{r.referencia}</span>
+              {isUrgent && <Badge variant="destructive" className="text-[9px] h-4 px-1">!</Badge>}
+            </div>
+            <div className="mt-1.5 text-[11px] text-muted-foreground flex items-center gap-2">
+              <span>
+                Stock: <span className="font-semibold text-foreground">{r.available}</span>
+              </span>
+              {demand > 0 && (
+                <span>
+                  Pedidos: <span className="font-semibold text-foreground">{demand}</span>
+                </span>
+              )}
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
 
   return (
     <>
@@ -152,64 +204,78 @@ export function BodyRequirementsPanel({ references, orders, bodyStock, stockItem
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Referencias de cuerpos</CardTitle>
           <p className="text-xs text-muted-foreground">
-            Click en una referencia para ver pedidos activos y unidades recomendadas.
+            Selecciona el tipo de plástico para ver las referencias y sus pedidos activos.
           </p>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-            {sorted.map((r) => {
-              const shortage = Math.max(r.demandTotal - r.available, 0);
-              const isUrgent = shortage > 0;
-              const lowStock = r.minStock > 0 && r.available < r.minStock;
-              return (
-                <button
-                  key={r.referencia}
-                  type="button"
-                  onClick={() => openDetail(r)}
-                  className={`text-left rounded-md border p-2.5 transition-colors hover:bg-accent ${
-                    isUrgent
-                      ? "border-destructive/40 bg-destructive/5"
-                      : lowStock
-                      ? "border-amber-500/40 bg-amber-500/5"
-                      : "border-border"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-1">
-                    <span className="text-sm font-medium text-foreground leading-tight">{r.referencia}</span>
-                    {isUrgent && <Badge variant="destructive" className="text-[9px] h-4 px-1">!</Badge>}
-                  </div>
-                  <div className="mt-1.5 text-[11px] text-muted-foreground flex items-center gap-2">
-                    <span>
-                      Stock: <span className="font-semibold text-foreground">{r.available}</span>
-                    </span>
-                    {r.demandTotal > 0 && (
-                      <span>
-                        Pedidos: <span className="font-semibold text-foreground">{r.demandTotal}</span>
-                      </span>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+        <CardContent className="space-y-3">
+          <Collapsible open={openFrio} onOpenChange={setOpenFrio}>
+            <CollapsibleTrigger className="w-full flex items-center justify-between rounded-md border border-sky-500/30 bg-sky-500/5 hover:bg-sky-500/10 px-3 py-2.5 transition-colors">
+              <div className="flex items-center gap-2">
+                <Snowflake className="h-4 w-4 text-sky-500" />
+                <span className="text-sm font-semibold">Productos fríos</span>
+                <Badge variant="outline" className="text-[10px]">{frioSorted.length}</Badge>
+                {urgentCount(frioSorted, "frio") > 0 && (
+                  <Badge variant="destructive" className="text-[10px]">
+                    {urgentCount(frioSorted, "frio")} urgente(s)
+                  </Badge>
+                )}
+              </div>
+              <ChevronDown className={`h-4 w-4 transition-transform ${openFrio ? "rotate-180" : ""}`} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3">
+              {renderGrid(frioSorted, "frio")}
+            </CollapsibleContent>
+          </Collapsible>
+
+          <Collapsible open={openCalor} onOpenChange={setOpenCalor}>
+            <CollapsibleTrigger className="w-full flex items-center justify-between rounded-md border border-orange-500/30 bg-orange-500/5 hover:bg-orange-500/10 px-3 py-2.5 transition-colors">
+              <div className="flex items-center gap-2">
+                <Thermometer className="h-4 w-4 text-orange-500" />
+                <span className="text-sm font-semibold">Productos térmicos</span>
+                <Badge variant="outline" className="text-[10px]">{calorSorted.length}</Badge>
+                {urgentCount(calorSorted, "calor") > 0 && (
+                  <Badge variant="destructive" className="text-[10px]">
+                    {urgentCount(calorSorted, "calor")} urgente(s)
+                  </Badge>
+                )}
+              </div>
+              <ChevronDown className={`h-4 w-4 transition-transform ${openCalor ? "rotate-180" : ""}`} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3">
+              {renderGrid(calorSorted, "calor")}
+            </CollapsibleContent>
+          </Collapsible>
         </CardContent>
       </Card>
 
       <Dialog open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{selected?.referencia}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedTipo === "frio" ? (
+                <Snowflake className="h-4 w-4 text-sky-500" />
+              ) : (
+                <Thermometer className="h-4 w-4 text-orange-500" />
+              )}
+              {selected?.referencia}
+              <Badge variant="outline" className="text-[10px]">
+                {selectedTipo === "frio" ? "Frío" : "Calor"}
+              </Badge>
+            </DialogTitle>
             <DialogDescription>
               Resumen de inventario y pedidos activos para esta referencia.
             </DialogDescription>
           </DialogHeader>
           {selected && (() => {
             const s = selected;
-            const shortage = Math.max(s.demandTotal - s.available, 0);
-            const suggestedFrio = Math.max(s.demandFrio - s.available, 0);
-            const suggestedCalor = Math.max(s.demandCalor - 0, 0); // calor doesn't share stock with frio in inventory? safer: independent demand
+            const demand = selectedTipo === "frio" ? s.demandFrio : s.demandCalor;
+            const shortage = Math.max(demand - s.available, 0);
             // Default suggestion when no demand: fill to min_stock or 50
             const fallback = Math.max(s.minStock - s.available, 50);
+            const suggested = shortage > 0 ? shortage : fallback;
+            const filteredOrders = s.orders.filter((o) =>
+              selectedTipo === "calor" ? o.tipo === "calor" : o.tipo !== "calor"
+            );
             return (
               <div className="space-y-4">
                 <div className="grid grid-cols-3 gap-2 text-center">
@@ -219,7 +285,7 @@ export function BodyRequirementsPanel({ references, orders, bodyStock, stockItem
                   </div>
                   <div className="rounded-md border p-2">
                     <p className="text-[10px] uppercase text-muted-foreground">Pedidos</p>
-                    <p className="text-lg font-semibold">{s.demandTotal}</p>
+                    <p className="text-lg font-semibold">{demand}</p>
                   </div>
                   <div className={`rounded-md border p-2 ${shortage > 0 ? "border-destructive/40 bg-destructive/5" : ""}`}>
                     <p className="text-[10px] uppercase text-muted-foreground">Faltante</p>
@@ -227,11 +293,11 @@ export function BodyRequirementsPanel({ references, orders, bodyStock, stockItem
                   </div>
                 </div>
 
-                {s.orders.length > 0 ? (
+                {filteredOrders.length > 0 ? (
                   <div className="space-y-1">
                     <p className="text-xs font-medium text-muted-foreground">Pedidos que requieren esta referencia:</p>
                     <div className="max-h-40 overflow-y-auto space-y-1">
-                      {s.orders
+                      {filteredOrders
                         .slice()
                         .sort((a, b) => (a.delivery ?? "9999") < (b.delivery ?? "9999") ? -1 : 1)
                         .map((o, i) => {
@@ -266,34 +332,24 @@ export function BodyRequirementsPanel({ references, orders, bodyStock, stockItem
 
                 <div className="space-y-2">
                   <p className="text-xs font-medium text-muted-foreground">Unidades recomendadas:</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      variant={suggestedFrio > 0 ? "default" : "outline"}
-                      onClick={() => {
-                        onProduce({
-                          referencia: s.referencia,
-                          tipoPlastico: "frio",
-                          unidadesSugeridas: suggestedFrio > 0 ? suggestedFrio : fallback,
-                        });
-                        setSelected(null);
-                      }}
-                    >
-                      <Snowflake className="h-3 w-3 mr-1" /> Frío ({suggestedFrio > 0 ? suggestedFrio : fallback})
-                    </Button>
-                    <Button
-                      variant={suggestedCalor > 0 ? "default" : "outline"}
-                      onClick={() => {
-                        onProduce({
-                          referencia: s.referencia,
-                          tipoPlastico: "calor",
-                          unidadesSugeridas: suggestedCalor > 0 ? suggestedCalor : fallback,
-                        });
-                        setSelected(null);
-                      }}
-                    >
-                      <Thermometer className="h-3 w-3 mr-1" /> Calor ({suggestedCalor > 0 ? suggestedCalor : fallback})
-                    </Button>
-                  </div>
+                  <Button
+                    className="w-full"
+                    onClick={() => {
+                      onProduce({
+                        referencia: s.referencia,
+                        tipoPlastico: selectedTipo,
+                        unidadesSugeridas: suggested,
+                      });
+                      setSelected(null);
+                    }}
+                  >
+                    {selectedTipo === "frio" ? (
+                      <Snowflake className="h-3 w-3 mr-1" />
+                    ) : (
+                      <Thermometer className="h-3 w-3 mr-1" />
+                    )}
+                    Producir {selectedTipo === "frio" ? "frío" : "calor"} ({suggested})
+                  </Button>
                   <p className="text-[10px] text-muted-foreground">
                     Se calcula como pedidos pendientes menos stock disponible. Puedes ajustar la cantidad en el formulario.
                   </p>
