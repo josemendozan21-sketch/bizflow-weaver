@@ -8,7 +8,6 @@ import { MagicalWarmersWorkflow } from "@/components/production/MagicalWarmersWo
 import { SweatspotWorkflow } from "@/components/production/SweatspotWorkflow";
 import { EstampacionProductionView } from "@/components/production/EstampacionProductionView";
 import { useProductionAlerts } from "@/hooks/useProductionAlerts";
-import InventoryRequestsPanel from "@/components/inventory/InventoryRequestsPanel";
 
 const Produccion = () => {
   const { role } = useAuth();
@@ -30,7 +29,6 @@ const Produccion = () => {
           </div>
         </div>
         <EstampacionProductionView />
-        <InventoryRequestsPanel hideRetail />
       </div>
     );
   }
@@ -69,7 +67,6 @@ const Produccion = () => {
       ) : (
         <SweatspotWorkflow />
       )}
-      {!isReadOnly && <InventoryRequestsPanel hideRetail />}
     </div>
   );
 };
