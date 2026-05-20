@@ -419,7 +419,7 @@ const Eventos = () => {
                           </button>
                         ))}
                         {dayDeliveries.slice(0, 2).map((del) => {
-                          const ac = getAdvisorColor(del.advisorName);
+                          const ac = DELIVERY_CALENDAR_COLORS[del.status];
                           return (
                             <button
                               key={del.id}
@@ -438,19 +438,22 @@ const Eventos = () => {
                   );
                 })}
               </div>
-              {/* Advisor color legend */}
+              {/* Delivery status legend */}
               {deliveryEntries.length > 0 && (
                 <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                  <span className="font-medium">Asesores:</span>
-                  {[...new Set(deliveryEntries.map((d) => d.advisorName))].map((name) => {
-                    const ac = getAdvisorColor(name);
-                    return (
-                      <span key={name} className="flex items-center gap-1">
-                        <span className={cn("inline-block w-2.5 h-2.5 rounded-full", ac.bg)} />
-                        {name}
-                      </span>
-                    );
-                  })}
+                  <span className="font-medium">Estado:</span>
+                  <span className="flex items-center gap-1">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-500" />
+                    Estampación / procesos previos
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-orange-500" />
+                    En producción
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-green-500" />
+                    Listo / Despachado
+                  </span>
                 </div>
               )}
             </CardContent>
