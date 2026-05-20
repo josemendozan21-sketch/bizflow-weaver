@@ -41,15 +41,36 @@ interface EventWithProducts extends EventRow {
   event_products: EventProductRow[];
 }
 
-// Delivery status color palette for calendar entries
-const DELIVERY_CALENDAR_COLORS: Record<
-  "pendiente" | "en_produccion" | "listo" | "entregado",
+// Delivery color palette for calendar entries, by production phase
+type DeliveryPhase = "pre_estampado" | "post_estampado" | "listo";
+const DELIVERY_PHASE_COLORS: Record<
+  DeliveryPhase,
   { bg: string; text: string; dot: string; border: string }
 > = {
-  pendiente:     { bg: "bg-red-100",    text: "text-red-800",    dot: "bg-red-500",    border: "#ef4444" },
-  en_produccion: { bg: "bg-orange-100", text: "text-orange-800", dot: "bg-orange-500", border: "#f97316" },
-  listo:         { bg: "bg-green-100",  text: "text-green-800",  dot: "bg-green-500",  border: "#22c55e" },
-  entregado:     { bg: "bg-green-100",  text: "text-green-800",  dot: "bg-green-500",  border: "#22c55e" },
+  pre_estampado:  { bg: "bg-red-100",    text: "text-red-800",    dot: "bg-red-500",    border: "#ef4444" },
+  post_estampado: { bg: "bg-orange-100", text: "text-orange-800", dot: "bg-orange-500", border: "#f97316" },
+  listo:          { bg: "bg-green-100",  text: "text-green-800",  dot: "bg-green-500",  border: "#22c55e" },
+};
+
+// Map raw production_status to a calendar phase.
+// Pre-estampado (rojo): pendiente, producción de cuerpos/tubos, estampación.
+// Post-estampado hasta empaque (naranja): todas las etapas posteriores a estampación.
+// Verde: listo, despachado, entregado.
+const getDeliveryPhase = (rawStatus: string): DeliveryPhase => {
+  if (rawStatus === "listo" || rawStatus === "despachado" || rawStatus === "entregado" || rawStatus === "completado") {
+    return "listo";
+  }
+  if (
+    rawStatus === "pendiente" ||
+    rawStatus === "produccion_cuerpos" ||
+    rawStatus === "produccion_tubos" ||
+    rawStatus === "estampacion"
+  ) {
+    return "pre_estampado";
+  }
+  // dosificacion, sellado, descristalizacion, recorte, empaque,
+  // ensamble_cuello, sello_base, refile, colocacion_boquilla, en_produccion (legacy)
+  return "post_estampado";
 };
 
 export interface DeliveryEntry {
@@ -61,6 +82,7 @@ export interface DeliveryEntry {
   saleType: "mayor" | "menor";
   deliveryDate: string;
   status: "pendiente" | "en_produccion" | "listo" | "entregado";
+  rawStatus: string;
   advisorName: string;
 }
 
@@ -106,6 +128,7 @@ const Eventos = () => {
           saleType: (o.sale_type === "mayor" ? "mayor" : "menor") as "mayor" | "menor",
           deliveryDate: o.delivery_date!,
           status: mapProductionStatus(o.production_status),
+          rawStatus: o.production_status || "pendiente",
           advisorName: o.advisor_name || "Sin asesor",
         }))
       );
@@ -419,7 +442,7 @@ const Eventos = () => {
                           </button>
                         ))}
                         {dayDeliveries.slice(0, 2).map((del) => {
-                          const ac = DELIVERY_CALENDAR_COLORS[del.status];
+                          const ac = DELIVERY_PHASE_COLORS[getDeliveryPhase(del.rawStatus)];
                           return (
                             <button
                               key={del.id}
@@ -486,7 +509,7 @@ const Eventos = () => {
                         </div>
                         <div className="ml-6 space-y-2">
                           {entries.map((entry) => {
-                            const ac = DELIVERY_CALENDAR_COLORS[entry.status];
+                            const ac = DELIVERY_PHASE_COLORS[getDeliveryPhase(entry.rawStatus)];
                             return (
                             <div key={entry.id} className="flex items-center justify-between rounded-lg border border-border p-3">
                               <div className="flex-1 grid grid-cols-5 gap-4 text-sm">
@@ -684,7 +707,7 @@ const Eventos = () => {
               </DialogHeader>
               <div className="space-y-3 overflow-y-auto flex-1 pr-1 -mr-1">
                 {selectedDayDeliveries.map((entry) => {
-                  const ac = DELIVERY_CALENDAR_COLORS[entry.status];
+                  const ac = DELIVERY_PHASE_COLORS[getDeliveryPhase(entry.rawStatus)];
                   return (
                   <div key={entry.id} className={cn("rounded-lg border p-3 space-y-2", `border-l-4`)} style={{ borderLeftColor: ac.border }}>
                     <div className="flex items-center justify-between">
