@@ -22,6 +22,18 @@ const CATEGORIES = [
   { value: "materia_prima", label: "Materia prima" },
   { value: "cuerpos_referencias", label: "Cuerpos" },
   { value: "producto_terminado", label: "Producto terminado" },
+  { value: "importados", label: "Importados" },
+];
+
+const REQUESTER_OPTIONS = [
+  "Producción",
+  "Estampación",
+  "Logística",
+  "Punto 92",
+  "Asesor comercial",
+  "Feria",
+  "Inventarios",
+  "Otro",
 ];
 
 export default function QuickMovementForm() {
@@ -33,7 +45,8 @@ export default function QuickMovementForm() {
   const [category, setCategory] = useState("");
   const [stockItemId, setStockItemId] = useState("");
   const [quantity, setQuantity] = useState("");
-  const [requestedBy, setRequestedBy] = useState("");
+  const [requesterArea, setRequesterArea] = useState("");
+  const [requesterOther, setRequesterOther] = useState("");
   const [purpose, setPurpose] = useState("");
   const [supplier, setSupplier] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -58,7 +71,8 @@ export default function QuickMovementForm() {
   const reset = () => {
     setStockItemId("");
     setQuantity("");
-    setRequestedBy("");
+    setRequesterArea("");
+    setRequesterOther("");
     setPurpose("");
     setSupplier("");
   };
@@ -76,6 +90,7 @@ export default function QuickMovementForm() {
 
     setSubmitting(true);
     const direction = kind === "entrada" || kind === "liberar_reserva" ? "retorno" : "entrega";
+    const requestedBy = requesterArea === "Otro" ? requesterOther.trim() : requesterArea;
     const res = await createMovement({
       stock_item_id: selected.id,
       item_name: selected.name,
@@ -184,8 +199,21 @@ export default function QuickMovementForm() {
             <Input type="number" min="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="0" />
           </div>
           <div>
-            <Label>Solicitante</Label>
-            <Input value={requestedBy} onChange={(e) => setRequestedBy(e.target.value)} placeholder="Ej: Carlos (Producción)" />
+            <Label>Solicitante (área)</Label>
+            <Select value={requesterArea} onValueChange={setRequesterArea}>
+              <SelectTrigger><SelectValue placeholder="Selecciona área" /></SelectTrigger>
+              <SelectContent>
+                {REQUESTER_OPTIONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {requesterArea === "Otro" && (
+              <Input
+                className="mt-2"
+                value={requesterOther}
+                onChange={(e) => setRequesterOther(e.target.value)}
+                placeholder="Especifica quién solicita"
+              />
+            )}
           </div>
           <div>
             <Label>{kind === "entrada" ? "Proveedor" : "—"}</Label>
