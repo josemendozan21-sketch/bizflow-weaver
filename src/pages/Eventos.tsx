@@ -41,25 +41,15 @@ interface EventWithProducts extends EventRow {
   event_products: EventProductRow[];
 }
 
-// Advisor color palette for calendar entries
-const ADVISOR_COLORS: Record<string, { bg: string; text: string }> = {};
-const COLOR_PALETTE = [
-  { bg: "bg-rose-100", text: "text-rose-800" },
-  { bg: "bg-sky-100", text: "text-sky-800" },
-  { bg: "bg-amber-100", text: "text-amber-800" },
-  { bg: "bg-emerald-100", text: "text-emerald-800" },
-  { bg: "bg-violet-100", text: "text-violet-800" },
-  { bg: "bg-teal-100", text: "text-teal-800" },
-  { bg: "bg-fuchsia-100", text: "text-fuchsia-800" },
-  { bg: "bg-lime-100", text: "text-lime-800" },
-];
-let colorIndex = 0;
-const getAdvisorColor = (advisorName: string) => {
-  if (!ADVISOR_COLORS[advisorName]) {
-    ADVISOR_COLORS[advisorName] = COLOR_PALETTE[colorIndex % COLOR_PALETTE.length];
-    colorIndex++;
-  }
-  return ADVISOR_COLORS[advisorName];
+// Delivery status color palette for calendar entries
+const DELIVERY_CALENDAR_COLORS: Record<
+  "pendiente" | "en_produccion" | "listo" | "entregado",
+  { bg: string; text: string; dot: string; border: string }
+> = {
+  pendiente:     { bg: "bg-red-100",    text: "text-red-800",    dot: "bg-red-500",    border: "#ef4444" },
+  en_produccion: { bg: "bg-orange-100", text: "text-orange-800", dot: "bg-orange-500", border: "#f97316" },
+  listo:         { bg: "bg-green-100",  text: "text-green-800",  dot: "bg-green-500",  border: "#22c55e" },
+  entregado:     { bg: "bg-green-100",  text: "text-green-800",  dot: "bg-green-500",  border: "#22c55e" },
 };
 
 export interface DeliveryEntry {
@@ -429,7 +419,7 @@ const Eventos = () => {
                           </button>
                         ))}
                         {dayDeliveries.slice(0, 2).map((del) => {
-                          const ac = getAdvisorColor(del.advisorName);
+                          const ac = DELIVERY_CALENDAR_COLORS[del.status];
                           return (
                             <button
                               key={del.id}
@@ -448,19 +438,22 @@ const Eventos = () => {
                   );
                 })}
               </div>
-              {/* Advisor color legend */}
+              {/* Delivery status legend */}
               {deliveryEntries.length > 0 && (
                 <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                  <span className="font-medium">Asesores:</span>
-                  {[...new Set(deliveryEntries.map((d) => d.advisorName))].map((name) => {
-                    const ac = getAdvisorColor(name);
-                    return (
-                      <span key={name} className="flex items-center gap-1">
-                        <span className={cn("inline-block w-2.5 h-2.5 rounded-full", ac.bg)} />
-                        {name}
-                      </span>
-                    );
-                  })}
+                  <span className="font-medium">Estado:</span>
+                  <span className="flex items-center gap-1">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-500" />
+                    Estampación / procesos previos
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-orange-500" />
+                    En producción
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-green-500" />
+                    Listo / Despachado
+                  </span>
                 </div>
               )}
             </CardContent>
@@ -493,7 +486,7 @@ const Eventos = () => {
                         </div>
                         <div className="ml-6 space-y-2">
                           {entries.map((entry) => {
-                            const ac = getAdvisorColor(entry.advisorName);
+                            const ac = DELIVERY_CALENDAR_COLORS[entry.status];
                             return (
                             <div key={entry.id} className="flex items-center justify-between rounded-lg border border-border p-3">
                               <div className="flex-1 grid grid-cols-5 gap-4 text-sm">
@@ -691,12 +684,12 @@ const Eventos = () => {
               </DialogHeader>
               <div className="space-y-3 overflow-y-auto flex-1 pr-1 -mr-1">
                 {selectedDayDeliveries.map((entry) => {
-                  const ac = getAdvisorColor(entry.advisorName);
+                  const ac = DELIVERY_CALENDAR_COLORS[entry.status];
                   return (
-                  <div key={entry.id} className={cn("rounded-lg border p-3 space-y-2", `border-l-4`)} style={{ borderLeftColor: `var(--${ac.bg.replace("bg-", "")}, currentColor)` }}>
+                  <div key={entry.id} className={cn("rounded-lg border p-3 space-y-2", `border-l-4`)} style={{ borderLeftColor: ac.border }}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className={cn("inline-block w-3 h-3 rounded-full shrink-0", ac.bg)} />
+                        <span className={cn("inline-block w-3 h-3 rounded-full shrink-0", ac.dot)} />
                         <span className="font-semibold text-foreground">{entry.clientName}</span>
                       </div>
                       <Badge className={cn(DELIVERY_STATUS_COLORS[entry.status])}>{DELIVERY_STATUS_LABELS[entry.status]}</Badge>

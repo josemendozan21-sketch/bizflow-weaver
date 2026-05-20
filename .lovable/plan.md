@@ -1,40 +1,36 @@
-## Cambios en Movimientos rápidos (Inventarios)
+# Calendario de Eventos: colorear entregas por estado
 
-### 1. Solicitante como áreas predefinidas
-En `QuickMovementForm.tsx`, cambiar el campo **Solicitante** de input de texto libre a un **Select** con opciones fijas:
-- Estampación
-- Producción
-- Logística
-- Punto 92
-- Asesor comercial
-- Feria
-- Otro (que habilita un input de texto adicional)
+## Objetivo
+En el calendario de `/eventos`, las entregas (🚚) hoy se pintan con un color distinto por asesor. Cambiarlo a un esquema de **3 colores fijos por estado** del pedido:
 
-Se sigue guardando en la columna existente `requested_by_name` (texto), así que no se requiere migración. Si eligen "Otro", se guarda el texto escrito.
+- 🔴 **Rojo** — Estampación o procesos anteriores (`pendiente`, sin iniciar producción aún)
+- 🟠 **Naranja** — En producción (`en_produccion`)
+- 🟢 **Verde** — Enviado a logística / listo / despachado (`listo`, `entregado`)
 
-### 2. Nueva categoría "Importados"
-Agregar **Importados** como categoría en el formulario, además de las 3 existentes (Materia prima, Cuerpos, Producto terminado).
+## Cambios en `src/pages/Eventos.tsx`
 
-Para que funcione end-to-end:
+1. **Nuevo mapa de colores por estado** (tokens tailwind, sin tocar el design system):
+   ```ts
+   const DELIVERY_CALENDAR_COLORS = {
+     pendiente:     { bg: "bg-red-100",    text: "text-red-800",    dot: "bg-red-500" },
+     en_produccion: { bg: "bg-orange-100", text: "text-orange-800", dot: "bg-orange-500" },
+     listo:         { bg: "bg-green-100",  text: "text-green-800",  dot: "bg-green-500" },
+     entregado:     { bg: "bg-green-100",  text: "text-green-800",  dot: "bg-green-500" },
+   };
+   ```
 
-**a) Frontend**
-- Agregar `{ value: "importados", label: "Importados" }` al arreglo `CATEGORIES` en `QuickMovementForm.tsx`.
-- Agregar la categoría también en `MovementHistoryTable.tsx` (filtros) y en el panel de inventario por marca (`CategorizedInventoryPanel.tsx`) para que los ítems importados aparezcan en su propia pestaña/sección.
-- Actualizar `exportWeeklyInventory.ts` para que la hoja **Resumen** y **Stock final** incluyan la categoría Importados.
-- Actualizar el tipo `InventoryCategory` en `src/stores/inventoryStore.ts` para incluir `"importados"`.
+2. **Celdas del calendario** (líneas ~431–442): reemplazar `getAdvisorColor(del.advisorName)` por `DELIVERY_CALENDAR_COLORS[del.status]` para `bg` y `text` del botón de entrega.
 
-**b) Backend / datos**
-- La tabla `stock_items` ya tiene `category` como texto libre, así que no requiere migración de esquema.
-- Cuando me pases el Excel con los productos importados, los cargo a `stock_items` con `category = 'importados'` y la marca correspondiente (un INSERT masivo).
+3. **Leyenda inferior** (líneas ~451–465): reemplazar la lista de asesores con colores por una leyenda fija de 3 estados:
+   - 🔴 Estampación / procesos previos
+   - 🟠 En producción
+   - 🟢 Listo / Despachado
 
-### 3. Archivos a editar
-- `src/components/inventory/QuickMovementForm.tsx` — select de solicitante + nueva categoría
-- `src/components/inventory/MovementHistoryTable.tsx` — filtro de categoría
-- `src/components/inventory/CategorizedInventoryPanel.tsx` — pestaña Importados
-- `src/lib/exportWeeklyInventory.ts` — incluir categoría en reportes
-- `src/stores/inventoryStore.ts` — tipo `InventoryCategory`
+4. **Vista detalle del día** (línea ~696): el `borderLeftColor` que hoy usa el color del asesor pasa a usar el color del estado de cada entrega.
 
-### Pregunta
-¿Quieres que **Punto 92** y **Feria** sean opciones separadas del solicitante, o solo las 3 áreas (Producción, Estampación, Logística) más "Punto 92" y "Otro"? Tu mensaje menciona explícitamente las 4, así que las dejo todas salvo que prefieras otra cosa.
+5. Eliminar (o dejar sin usar) `ADVISOR_COLORS`, `COLOR_PALETTE`, `getAdvisorColor` si ya nadie más los consume en este archivo.
 
-Cuando apruebes este plan, implemento los cambios y quedo a la espera de tu Excel de importados para cargarlo.
+## Fuera de alcance
+- No se cambia la lógica de negocio ni `mapProductionStatus`.
+- No se tocan los badges de la vista "Entregas" (lista), solo el calendario y su leyenda.
+- No se modifican otras páginas ni la base de datos.
