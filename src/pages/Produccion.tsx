@@ -8,7 +8,6 @@ import { MagicalWarmersWorkflow } from "@/components/production/MagicalWarmersWo
 import { SweatspotWorkflow } from "@/components/production/SweatspotWorkflow";
 import { EstampacionProductionView } from "@/components/production/EstampacionProductionView";
 import { useProductionAlerts } from "@/hooks/useProductionAlerts";
-import CreateInventoryRequestDialog from "@/components/inventory/CreateInventoryRequestDialog";
 import InventoryRequestsPanel from "@/components/inventory/InventoryRequestsPanel";
 
 const Produccion = () => {
@@ -29,7 +28,6 @@ const Produccion = () => {
             <h1 className="text-2xl font-bold text-foreground">Estampación</h1>
             <p className="text-muted-foreground">Órdenes en etapa de estampación</p>
           </div>
-          <CreateInventoryRequestDialog defaultCategory="cuerpos_referencias" />
         </div>
         <EstampacionProductionView />
         <InventoryRequestsPanel hideRetail />
@@ -62,7 +60,6 @@ const Produccion = () => {
             </p>
           </div>
         </div>
-        {!isReadOnly && <CreateInventoryRequestDialog defaultCategory="cuerpos_referencias" />}
       </div>
 
       {!selectedBrand ? (
