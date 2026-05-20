@@ -10,7 +10,7 @@ import { useInventoryMovements } from "@/hooks/useInventoryMovements";
 import { exportWeeklyInventory, getWeekRange } from "@/lib/exportWeeklyInventory";
 
 export default function WeeklyInventoryExport() {
-  const { stockItems } = useInventory();
+  const { stockItems, bodyStock } = useInventory();
   const { movements } = useInventoryMovements();
   const [refDate, setRefDate] = useState(() => new Date().toISOString().slice(0, 10));
 
@@ -18,7 +18,7 @@ export default function WeeklyInventoryExport() {
 
   const handleExport = () => {
     try {
-      exportWeeklyInventory(movements, stockItems, range);
+      exportWeeklyInventory(movements, stockItems, bodyStock, range);
       toast.success(`Excel descargado: semana ${range.label}`);
     } catch (e: any) {
       toast.error(e?.message || "Error al exportar");
