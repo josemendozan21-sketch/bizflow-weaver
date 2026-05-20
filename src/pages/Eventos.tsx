@@ -41,25 +41,15 @@ interface EventWithProducts extends EventRow {
   event_products: EventProductRow[];
 }
 
-// Advisor color palette for calendar entries
-const ADVISOR_COLORS: Record<string, { bg: string; text: string }> = {};
-const COLOR_PALETTE = [
-  { bg: "bg-rose-100", text: "text-rose-800" },
-  { bg: "bg-sky-100", text: "text-sky-800" },
-  { bg: "bg-amber-100", text: "text-amber-800" },
-  { bg: "bg-emerald-100", text: "text-emerald-800" },
-  { bg: "bg-violet-100", text: "text-violet-800" },
-  { bg: "bg-teal-100", text: "text-teal-800" },
-  { bg: "bg-fuchsia-100", text: "text-fuchsia-800" },
-  { bg: "bg-lime-100", text: "text-lime-800" },
-];
-let colorIndex = 0;
-const getAdvisorColor = (advisorName: string) => {
-  if (!ADVISOR_COLORS[advisorName]) {
-    ADVISOR_COLORS[advisorName] = COLOR_PALETTE[colorIndex % COLOR_PALETTE.length];
-    colorIndex++;
-  }
-  return ADVISOR_COLORS[advisorName];
+// Delivery status color palette for calendar entries
+const DELIVERY_CALENDAR_COLORS: Record<
+  "pendiente" | "en_produccion" | "listo" | "entregado",
+  { bg: string; text: string; dot: string; border: string }
+> = {
+  pendiente:     { bg: "bg-red-100",    text: "text-red-800",    dot: "bg-red-500",    border: "#ef4444" },
+  en_produccion: { bg: "bg-orange-100", text: "text-orange-800", dot: "bg-orange-500", border: "#f97316" },
+  listo:         { bg: "bg-green-100",  text: "text-green-800",  dot: "bg-green-500",  border: "#22c55e" },
+  entregado:     { bg: "bg-green-100",  text: "text-green-800",  dot: "bg-green-500",  border: "#22c55e" },
 };
 
 export interface DeliveryEntry {
