@@ -7,12 +7,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Upload, Download, Clock, FileText, ExternalLink, BarChart3, Wallet, Trash2, AlertTriangle, Mail, Percent, Users } from "lucide-react";
+import { Upload, Download, Clock, FileText, ExternalLink, BarChart3, Wallet, Trash2, AlertTriangle, Mail, Percent, Users, Target } from "lucide-react";
 import AccountingDashboard from "@/components/contabilidad/AccountingDashboard";
 import MonthlyAnalysis from "@/components/contabilidad/MonthlyAnalysis";
 import CajaMenor from "@/components/contabilidad/CajaMenor";
 import CommissionsPanel from "@/components/contabilidad/CommissionsPanel";
 import AdvisorSalesPanel from "@/components/contabilidad/AdvisorSalesPanel";
+import AreaCompliancePanel from "@/components/contabilidad/AreaCompliancePanel";
 import { getOrderPaidAmount, isOrderFullyPaid, useOrders, type Order } from "@/hooks/useOrders";
 import { supabase } from "@/integrations/supabase/client";
 import { exportOrdersToExcel, exportOrdersFullReport } from "@/lib/exportSiigo";
@@ -364,6 +365,7 @@ const Contabilidad = () => {
           {!isReadOnly && <TabsTrigger value="analisis"><BarChart3 className="h-4 w-4 mr-1" />Análisis mensual</TabsTrigger>}
           {!isReadOnly && <TabsTrigger value="asesores"><Users className="h-4 w-4 mr-1" />Ventas por asesor</TabsTrigger>}
           {!isReadOnly && <TabsTrigger value="comisiones"><Percent className="h-4 w-4 mr-1" />Comisiones</TabsTrigger>}
+          {!isReadOnly && <TabsTrigger value="cumplimiento"><Target className="h-4 w-4 mr-1" />Cumplimiento</TabsTrigger>}
           <TabsTrigger value="pendientes">Pendientes ({pending.length})</TabsTrigger>
           <TabsTrigger value="facturar">Facturar ({toInvoice.length})</TabsTrigger>
           <TabsTrigger value="facturados">Facturados ({invoiced.length})</TabsTrigger>
@@ -391,6 +393,12 @@ const Contabilidad = () => {
         {!isReadOnly && (
           <TabsContent value="comisiones">
             <CommissionsPanel orders={allOrders} />
+          </TabsContent>
+        )}
+
+        {!isReadOnly && (
+          <TabsContent value="cumplimiento">
+            <AreaCompliancePanel orders={allOrders} />
           </TabsContent>
         )}
 

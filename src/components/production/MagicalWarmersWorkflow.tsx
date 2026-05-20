@@ -37,6 +37,7 @@ import {
 import { toast } from "sonner";
 import { useProductionOrders, type ProductionOrder, type BodyTask } from "@/hooks/useProductionOrders";
 import { useAuth } from "@/contexts/AuthContext";
+import { BodyTasksGrouped } from "./BodyTasksGrouped";
 
 type MagicalStage = "produccion_cuerpos" | "estampacion" | "dosificacion" | "sellado" | "descristalizacion" | "recorte" | "empaque" | "listo";
 
@@ -260,44 +261,11 @@ export const MagicalWarmersWorkflow = () => {
       )}
 
       {activeBodyTasks.length > 0 && (
-        <div className="grid gap-3 md:grid-cols-2">
-          {activeBodyTasks.map((task) => {
-            const badge = STATUS_BADGE[task.status] || STATUS_BADGE.pendiente;
-            return (
-              <Card key={task.id}>
-                <CardContent className="pt-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Package className="h-4 w-4 text-primary" />
-                      <span className="font-medium text-sm">
-                        {task.tipo_plastico === "frio" ? "Frío" : "Calor"} — {task.referencia}
-                      </span>
-                    </div>
-                    <Badge variant={badge.variant}>{badge.label}</Badge>
-                  </div>
-                  <div className="text-sm space-y-1">
-                    <Row label="Tipo de plástico" value={task.tipo_plastico === "frio" ? "Frío" : "Calor"} />
-                    <Row label="Referencia" value={task.referencia} />
-                    <Row label="Unidades estimadas" value={`${task.unidades}`} />
-                    <Row label="Fecha" value={new Date(task.created_at).toLocaleDateString()} />
-                  </div>
-                  <div className="flex gap-2 pt-1">
-                    {task.status === "pendiente" && (
-                      <Button size="sm" variant="outline" onClick={() => { updateBodyTaskStatus.mutate({ taskId: task.id, status: "en_proceso" }); toast.info("Producción de cuerpos iniciada."); }}>
-                        <Play className="h-3 w-3 mr-1" /> Iniciar proceso
-                      </Button>
-                    )}
-                    {task.status === "en_proceso" && (
-                      <Button size="sm" onClick={() => handleFinishBodyTask(task)}>
-                        <CheckCircle2 className="h-3 w-3 mr-1" /> Finalizar proceso
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+        <BodyTasksGrouped
+          tasks={activeBodyTasks}
+          onStart={(taskId) => updateBodyTaskStatus.mutate({ taskId, status: "en_proceso" })}
+          onFinish={(task) => handleFinishBodyTask(task)}
+        />
       )}
 
       {completedBodyTasks.length > 0 && (
