@@ -107,7 +107,7 @@ function isProducibleReference(referencia: string): boolean {
 
 export const MagicalWarmersWorkflow = () => {
   const { orders, bodyTasks, isLoading, updateStageStatus, advanceStage, addBodyTask, updateBodyTaskStatus, forceCompleteOrder } = useProductionOrders("magical");
-  const { bodyStock } = useInventory();
+  const { bodyStock, stockItems } = useInventory();
   const { role } = useAuth();
   const isAdmin = role === "admin";
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -258,9 +258,18 @@ export const MagicalWarmersWorkflow = () => {
       </div>
 
       <BodyRequirementsPanel
+        references={Array.from(new Set([
+          ...CANONICAL_REFERENCES,
+          ...stockItems
+            .filter((s) => s.brand === "magical" && s.category === "cuerpos_referencias")
+            .map((s) => s.name),
+          ...bodyStock
+            .filter((b) => b.brand.toLowerCase() === "magical")
+            .map((b) => b.referencia),
+        ]))}
         orders={activeOrdersAll}
         bodyStock={bodyStock}
-        isProducible={isProducibleReference}
+        stockItems={stockItems}
         onProduce={({ referencia, tipoPlastico, unidadesSugeridas }) =>
           openBodyForm({ referencia, tipoPlastico, unidades: unidadesSugeridas })
         }
