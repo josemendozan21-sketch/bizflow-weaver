@@ -562,10 +562,10 @@ function OrderCard({ order, role, isAdmin, selected, onToggleSelect, onStart, on
 }
 
 /* Body Production Form */
-function BodyProductionForm({ onClose, onSubmit }: { onClose: () => void; onSubmit: (data: { tipoPlastico: string; referencia: string; unidades: number }) => void }) {
-  const [tipoPlastico, setTipoPlastico] = useState<string | null>(null);
-  const [referencia, setReferencia] = useState("");
-  const [unidades, setUnidades] = useState("");
+function BodyProductionForm({ onClose, onSubmit, initial }: { onClose: () => void; onSubmit: (data: { tipoPlastico: string; referencia: string; unidades: number }) => void; initial?: { tipoPlastico: "frio" | "calor"; referencia: string; unidades: number } | null }) {
+  const [tipoPlastico, setTipoPlastico] = useState<string | null>(initial?.tipoPlastico ?? null);
+  const [referencia, setReferencia] = useState(initial?.referencia ?? "");
+  const [unidades, setUnidades] = useState(initial?.unidades ? String(initial.unidades) : "");
   const canSubmit = tipoPlastico && referencia && unidades && parseInt(unidades) > 0;
   const { stockItems } = useInventory();
   const referencias = useMemo(() => {
