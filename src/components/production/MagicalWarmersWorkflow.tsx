@@ -86,6 +86,8 @@ const CANONICAL_REFERENCES = [
   "Muela", "Labios", "Círculo 8 cm", "Círculo 12 cm",
   "Tiroides", "Toalla Higiénica", "Toalla Higienica", "Huskvarna",
   "Corazón Térmico", "Corazon Termico",
+  "Bacteria", "Antifaz", "Gafas pequeñas", "Pélvica", "Pelvica",
+  "Mariposas", "Mariposa",
 ];
 
 /** Sweatspot references that are actually produced in-house (termos).
@@ -266,6 +268,10 @@ export const MagicalWarmersWorkflow = () => {
           ...bodyStock
             .filter((b) => b.brand.toLowerCase() === "magical")
             .map((b) => b.referencia),
+          // Pull mold names from active orders so anything with demand shows up
+          ...activeOrdersAll
+            .map((o) => (o.molde || "").replace(/\s*\([^)]*\)/g, "").trim())
+            .filter(Boolean),
         ]))}
         orders={activeOrdersAll}
         bodyStock={bodyStock}

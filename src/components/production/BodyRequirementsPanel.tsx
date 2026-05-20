@@ -97,13 +97,14 @@ export function BodyRequirementsPanel({ references, orders, bodyStock, stockItem
         const molde = (o.molde || "").trim();
         if (!molde) continue;
         const moldeNorm = normalize(molde);
-        if (!moldeNorm.includes(refKey) && !refKey.includes(moldeNorm)) continue;
+        // Strip parenthetical qualifiers like "(Frío)" to compare base name
+        const moldeBase = moldeNorm.replace(/\s*\([^)]*\)/g, "").trim();
+        if (!moldeBase.includes(refKey) && !refKey.includes(moldeBase)) continue;
         // Skip if already past produccion_cuerpos
         const stages = o.stages || [];
         const cuerposIdx = stages.indexOf("produccion_cuerpos");
         const currentIdx = stages.indexOf(o.current_stage);
         if (cuerposIdx >= 0 && currentIdx > cuerposIdx) continue;
-        if (!o.needs_cuerpos) continue;
         const tipo = detectTipoFromText(molde);
         matchingOrders.push({
           client: o.client_name,
