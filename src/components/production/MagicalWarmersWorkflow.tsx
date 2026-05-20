@@ -83,6 +83,8 @@ const PLASTICO_OPTIONS = [
 const CANONICAL_REFERENCES = [
   "Lumbar", "Shoulder", "Cervical", "Multiusos", "Pocket", "Handy",
   "Muela", "Labios", "Círculo 8 cm", "Círculo 12 cm",
+  "Tiroides", "Toalla Higiénica", "Toalla Higienica", "Huskvarna",
+  "Corazón Térmico", "Corazon Termico",
 ];
 
 /** Sweatspot references that are actually produced in-house (termos).
