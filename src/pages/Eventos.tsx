@@ -128,6 +128,7 @@ const Eventos = () => {
           saleType: (o.sale_type === "mayor" ? "mayor" : "menor") as "mayor" | "menor",
           deliveryDate: o.delivery_date!,
           status: mapProductionStatus(o.production_status),
+          rawStatus: o.production_status || "pendiente",
           advisorName: o.advisor_name || "Sin asesor",
         }))
       );
