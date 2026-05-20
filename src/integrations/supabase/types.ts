@@ -664,13 +664,16 @@ export type Database = {
           feria_id: string | null
           id: string
           item_name: string
+          movement_kind: string
           order_id: string | null
           proof_url: string | null
+          purpose: string | null
           quantity: number
           reason: string | null
           recorded_at: string
           recorded_by: string | null
           recorded_by_name: string | null
+          requested_by_name: string | null
           stock_item_id: string | null
           supplier: string | null
         }
@@ -684,13 +687,16 @@ export type Database = {
           feria_id?: string | null
           id?: string
           item_name: string
+          movement_kind?: string
           order_id?: string | null
           proof_url?: string | null
+          purpose?: string | null
           quantity: number
           reason?: string | null
           recorded_at?: string
           recorded_by?: string | null
           recorded_by_name?: string | null
+          requested_by_name?: string | null
           stock_item_id?: string | null
           supplier?: string | null
         }
@@ -704,13 +710,16 @@ export type Database = {
           feria_id?: string | null
           id?: string
           item_name?: string
+          movement_kind?: string
           order_id?: string | null
           proof_url?: string | null
+          purpose?: string | null
           quantity?: number
           reason?: string | null
           recorded_at?: string
           recorded_by?: string | null
           recorded_by_name?: string | null
+          requested_by_name?: string | null
           stock_item_id?: string | null
           supplier?: string | null
         }
@@ -1894,6 +1903,7 @@ export type Database = {
           color: string | null
           created_at: string
           id: string
+          in_process: number
           logo: string | null
           min_stock: number
           name: string
@@ -1909,6 +1919,7 @@ export type Database = {
           color?: string | null
           created_at?: string
           id?: string
+          in_process?: number
           logo?: string | null
           min_stock?: number
           name: string
@@ -1924,6 +1935,7 @@ export type Database = {
           color?: string | null
           created_at?: string
           id?: string
+          in_process?: number
           logo?: string | null
           min_stock?: number
           name?: string

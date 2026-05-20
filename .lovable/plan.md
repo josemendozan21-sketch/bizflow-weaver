@@ -1,93 +1,90 @@
-
 ## Objetivo
 
-1. Medir y comisionar el cumplimiento de fechas de entrega de las áreas **Producción**, **Estampación** y **Logística**.
-2. Reorganizar la vista de **Producción de Cuerpos** para que los pedidos se agrupen por **referencia** y por **tipo de plástico** (Frío/Calor) en bloques separados.
+Simplificar las entradas y salidas de inventario para el rol **Inventarios** (producto terminado, materia prima y cuerpos por marca), capturar quién pide y para qué, marcar productos "en proceso", y permitir descargar un **Excel semanal** para alimentar el sistema de facturación.
 
 ---
 
-## Parte 1 — Comisiones por cumplimiento
+## 1. Pestaña nueva: "Entradas / Salidas rápidas"
 
-### Modelo de fechas por etapa (hitos)
+Dentro de `InventariosRoleView` agrego una pestaña **"Movimientos rápidos"** (antes de "Inventario por marca") con un formulario único y grande, optimizado para uso diario sin fricción.
 
-Cada pedido al por mayor tendrá una fecha objetivo y una fecha real por etapa:
+Un solo formulario con:
+- **Tipo**: Entrada (suma stock) / Salida (resta stock) / Marcar "En proceso" (no cambia stock, queda reservado)
+- **Marca**: Magical / Sweatspot / etc. (chips grandes)
+- **Categoría**: Materia prima / Cuerpos / Producto terminado (chips grandes)
+- **Ítem**: selector filtrado por marca + categoría, muestra stock actual
+- **Cantidad**
+- **Solicitante (nombre libre)** — texto, ej. "Carlos – Producción"
+- **Motivo / Para qué** — texto corto, ej. "Pedido cliente XYZ", "Reposición", "Compra a proveedor"
+- **Proveedor** (solo si es Entrada por compra)
+- Botón grande "Registrar"
 
-| Etapa | Área | Fecha objetivo | Fecha real |
-|---|---|---|---|
-| Cuerpos / Llenado | Producción | `production_due_date` | `production_completed_at` |
-| Estampación | Estampación | `stamping_due_date` | `stamping_completed_at` |
-| Despacho | Logística | `delivery_date` (existente) | `dispatched_at` (existente) |
-
-- Las fechas objetivo por etapa se calculan automáticamente al crear el pedido como hitos hacia atrás desde `delivery_date` (ej.: Producción = entrega − 5 días, Estampación = entrega − 2 días). Estos offsets serán configurables.
-- Las fechas reales se registran cuando cada área marca su etapa como completada (la mayoría de hooks ya existen; agregamos columnas nuevas para timestamp por etapa).
-
-### Cálculo "a tiempo"
-
-Un pedido cuenta como **a tiempo** para un área si `fecha_real ≤ fecha_objetivo` de esa etapa. Pedidos sin fecha real aún no cuentan; pedidos vencidos sin entregar cuentan como atrasados.
-
-### Comisión
-
-- **% sobre pedidos a tiempo del mes**, por área.
-- Regla configurable por área en una tabla `area_compliance_rules` (umbral mínimo, % comisión sobre base, base = total facturado del mes que pasó por esa etapa, o monto fijo por pedido — empezamos con: % sobre el valor SIN IVA de los pedidos que esa área entregó a tiempo).
-- Bonos por hito (ej. ≥90% cumplimiento mensual desbloquea bono fijo) configurables.
-
-### UI
-
-- **Contabilidad → nueva pestaña "Comisiones por área"**: tarjetas por área con % cumplimiento, pedidos a tiempo / atrasados, comisión calculada, lista detallada de pedidos con semáforo (verde a tiempo / rojo atrasado / amarillo pendiente vencido).
-- **Producción / Estampación / Logística → banner "Mi cumplimiento del mes"** con KPI rápido para que el área vea cómo va.
-- **Tarjeta de pedido**: badges con fecha objetivo de la etapa actual y días restantes / días de atraso.
-
-### Cambios técnicos
-
-- Migración: añadir a `orders` las columnas `production_due_date`, `production_completed_at`, `stamping_due_date`, `stamping_completed_at`. Crear tabla `area_compliance_rules (area, percentage, min_threshold_pct, bonus_amount, bonus_threshold_pct, active)`.
-- Trigger / lógica en los hooks existentes (`useProductionOrders`, `EstampacionProductionView`, despacho de logística) para escribir el timestamp real al cambiar de etapa.
-- Nueva utilidad `src/lib/compliance.ts` con `summarizeAreaCompliance(orders, area, month)` análoga a `commissions.ts`.
-- Nuevo componente `AreaCompliancePanel.tsx` reutilizable + pestaña en `Contabilidad.tsx`.
-- Exportar también las métricas de cumplimiento en el Excel del área contable.
+El historial de los últimos movimientos aparece debajo en una tabla compacta con filtros por marca/categoría/semana.
 
 ---
 
-## Parte 2 — Agrupación en Producción de Cuerpos
+## 2. Estado "En proceso" para ítems
 
-Refactor visual de `BodyProductionSection` / `MagicalWarmersWorkflow` (sección cuerpos):
+Para que se vea qué unidades están comprometidas pero no entregadas:
 
-- Dos columnas separadas: **Frío** y **Calor**.
-- Dentro de cada columna, las tareas pendientes se agrupan **por referencia** en una sola tarjeta con:
-  - Nombre de referencia + total de unidades sumadas.
-  - Lista colapsable de pedidos / clientes que componen ese total.
-  - Botones de acción a nivel de grupo: "Iniciar producción del lote", "Completar lote" (que marca todas las tareas hijas).
-- Contador por columna (total unidades pendientes) y filtro por estado (pendiente / en proceso).
-- No se modifica el modelo de datos: la agrupación es en cliente sobre `body_production_tasks` por `tipo_plastico` y `referencia`.
+- Nueva columna `in_process` (numeric, default 0) en `stock_items`.
+- Nueva columna `direction` permite valor `"reserva"` y `"liberar_reserva"` en `inventory_movements` (o se maneja con un campo `movement_kind`).
+- En las tarjetas de inventario por marca se mostrará:
+  - **Disponible**: X
+  - **En proceso**: Y (badge naranja)
+  - **Total físico**: X + Y
+
+Al registrar una **Salida** que viene de un movimiento "en proceso" previo, se descuenta automáticamente de `in_process`.
 
 ---
 
-## Detalles técnicos resumidos
+## 3. Captura de "quién pide y para qué"
 
-```text
-DB (migración)
-  orders +production_due_date date
-         +production_completed_at timestamptz
-         +stamping_due_date date
-         +stamping_completed_at timestamptz
-  area_compliance_rules(area text, percentage numeric,
-                        min_threshold_pct numeric, bonus_amount numeric,
-                        bonus_threshold_pct numeric, active bool)
+Hoy `inventory_movements` ya tiene `reason` y `recorded_by_name`. Agrego dos columnas explícitas:
+- `requested_by_name` (text) — quién solicita
+- `purpose` (text) — para qué / a qué pedido
 
-Frontend
-  src/lib/compliance.ts                       (cálculo por área)
-  src/components/contabilidad/AreaCompliancePanel.tsx
-  src/components/contabilidad/AreaComplianceRules.tsx (config admin)
-  src/pages/Contabilidad.tsx                  (nueva pestaña)
-  src/components/production/BodyProductionGroupedView.tsx (agrupación)
-  src/components/production/MagicalWarmersWorkflow.tsx     (integrar agrupación)
-  Banner KPI en Produccion.tsx / EstampacionProductionView.tsx / Logistica.tsx
-```
+Estos campos se muestran en el historial y van al Excel semanal.
 
-### Orden de implementación
+---
 
-1. Migración DB (columnas + tabla de reglas, con valores por defecto).
-2. Lógica de timestamps al completar etapas en los hooks existentes.
-3. `compliance.ts` + panel en Contabilidad + banners por área.
-4. Refactor visual de Producción de Cuerpos con agrupación.
+## 4. Descarga Excel semanal para facturación
 
-¿Apruebas para comenzar?
+Botón **"Descargar Excel semanal"** en la pestaña de movimientos, con selector de semana (por defecto: semana actual lun–dom).
+
+El archivo `.xlsx` tendrá 4 hojas:
+
+1. **Resumen** — por marca + categoría: entradas, salidas, en proceso, stock final.
+2. **Movimientos** — detalle: fecha, tipo, marca, categoría, ítem, cantidad, solicitante, propósito, registrado por.
+3. **Stock final por ítem** — listado completo con unidades para cargar al sistema de facturación (columnas: SKU/Nombre, Marca, Categoría, Unidades disponibles, En proceso).
+4. **Entradas por compra** — solo entradas con proveedor, para conciliación contable.
+
+Implementado con `xlsx` (ya disponible en el proyecto vía `exportSiigo`).
+
+---
+
+## Detalles técnicos
+
+**Migración SQL**:
+- `ALTER TABLE stock_items ADD COLUMN in_process numeric NOT NULL DEFAULT 0;`
+- `ALTER TABLE inventory_movements ADD COLUMN requested_by_name text, ADD COLUMN purpose text, ADD COLUMN movement_kind text NOT NULL DEFAULT 'salida';` (valores: `entrada`, `salida`, `reserva`, `liberar_reserva`)
+- Actualizar trigger `process_inventory_movement` para manejar los 4 tipos y mover entre `available` ↔ `in_process` correctamente.
+
+**Archivos a crear**:
+- `src/components/inventory/QuickMovementForm.tsx` — formulario unificado
+- `src/components/inventory/MovementHistoryTable.tsx` — historial filtrable
+- `src/components/inventory/WeeklyInventoryExport.tsx` — botón + lógica xlsx
+- `src/lib/exportWeeklyInventory.ts` — generación del Excel
+
+**Archivos a editar**:
+- `src/components/inventory/InventariosRoleView.tsx` — nueva pestaña "Movimientos"
+- `src/hooks/useInventoryMovements.ts` — agregar `requested_by_name`, `purpose`, `movement_kind`
+- `src/components/inventory/CategorizedInventoryPanel.tsx` — mostrar badge "En proceso"
+
+---
+
+## Preguntas antes de implementar
+
+1. **"En proceso"**: ¿quieres que sea una reserva real (resta de disponible y suma a "en proceso") o solo un marcador visual sin afectar disponibilidad?
+2. **Semana del Excel**: ¿lunes–domingo o domingo–sábado?
+3. **Sistema de facturación**: ¿el Excel debe seguir algún formato específico (Siigo, Alegra, World Office)? Si me dices cuál, ajusto las columnas exactas de la hoja "Stock final".

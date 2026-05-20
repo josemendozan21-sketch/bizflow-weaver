@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export type MovementDirection = "entrega" | "retorno";
 export type MovementArea = "produccion" | "estampacion" | "logistica" | "asesor_comercial" | "feria";
+export type MovementKind = "entrada" | "salida" | "reserva" | "liberar_reserva";
 
 export interface InventoryMovement {
   id: string;
@@ -21,6 +22,10 @@ export interface InventoryMovement {
   recorded_by_name: string | null;
   recorded_at: string;
   created_at: string;
+  requested_by_name?: string | null;
+  purpose?: string | null;
+  movement_kind?: MovementKind;
+  supplier?: string | null;
 }
 
 export interface CreateMovementInput {
@@ -34,6 +39,10 @@ export interface CreateMovementInput {
   feria_id?: string | null;
   reason?: string | null;
   order_id?: string | null;
+  requested_by_name?: string | null;
+  purpose?: string | null;
+  movement_kind?: MovementKind;
+  supplier?: string | null;
 }
 
 export function useInventoryMovements() {
