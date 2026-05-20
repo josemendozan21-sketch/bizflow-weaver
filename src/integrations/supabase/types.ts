@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      area_compliance_rules: {
+        Row: {
+          active: boolean
+          area: string
+          bonus_amount: number
+          bonus_threshold_pct: number
+          created_at: string
+          id: string
+          min_threshold_pct: number
+          notes: string | null
+          percentage: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          area: string
+          bonus_amount?: number
+          bonus_threshold_pct?: number
+          created_at?: string
+          id?: string
+          min_threshold_pct?: number
+          notes?: string | null
+          percentage?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          area?: string
+          bonus_amount?: number
+          bonus_threshold_pct?: number
+          created_at?: string
+          id?: string
+          min_threshold_pct?: number
+          notes?: string | null
+          percentage?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       body_production_tasks: {
         Row: {
           completed_at: string | null
@@ -929,6 +968,8 @@ export type Database = {
           payment_proof_url: string | null
           personalization: string | null
           product: string
+          production_completed_at: string | null
+          production_due_date: string | null
           production_status: string
           quantity: number
           return_notes: string | null
@@ -936,6 +977,8 @@ export type Database = {
           sale_type: string
           shipping_cost: number | null
           silicone_color: string | null
+          stamping_completed_at: string | null
+          stamping_due_date: string | null
           total_amount: number | null
           transportadora: string | null
           unit_price: number | null
@@ -974,6 +1017,8 @@ export type Database = {
           payment_proof_url?: string | null
           personalization?: string | null
           product: string
+          production_completed_at?: string | null
+          production_due_date?: string | null
           production_status?: string
           quantity?: number
           return_notes?: string | null
@@ -981,6 +1026,8 @@ export type Database = {
           sale_type?: string
           shipping_cost?: number | null
           silicone_color?: string | null
+          stamping_completed_at?: string | null
+          stamping_due_date?: string | null
           total_amount?: number | null
           transportadora?: string | null
           unit_price?: number | null
@@ -1019,6 +1066,8 @@ export type Database = {
           payment_proof_url?: string | null
           personalization?: string | null
           product?: string
+          production_completed_at?: string | null
+          production_due_date?: string | null
           production_status?: string
           quantity?: number
           return_notes?: string | null
@@ -1026,6 +1075,8 @@ export type Database = {
           sale_type?: string
           shipping_cost?: number | null
           silicone_color?: string | null
+          stamping_completed_at?: string | null
+          stamping_due_date?: string | null
           total_amount?: number | null
           transportadora?: string | null
           unit_price?: number | null
