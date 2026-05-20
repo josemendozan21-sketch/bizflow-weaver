@@ -441,7 +441,7 @@ const Eventos = () => {
                           </button>
                         ))}
                         {dayDeliveries.slice(0, 2).map((del) => {
-                          const ac = DELIVERY_CALENDAR_COLORS[del.status];
+                          const ac = DELIVERY_PHASE_COLORS[getDeliveryPhase(del.rawStatus)];
                           return (
                             <button
                               key={del.id}
@@ -508,7 +508,7 @@ const Eventos = () => {
                         </div>
                         <div className="ml-6 space-y-2">
                           {entries.map((entry) => {
-                            const ac = DELIVERY_CALENDAR_COLORS[entry.status];
+                            const ac = DELIVERY_PHASE_COLORS[getDeliveryPhase(entry.rawStatus)];
                             return (
                             <div key={entry.id} className="flex items-center justify-between rounded-lg border border-border p-3">
                               <div className="flex-1 grid grid-cols-5 gap-4 text-sm">
@@ -706,7 +706,7 @@ const Eventos = () => {
               </DialogHeader>
               <div className="space-y-3 overflow-y-auto flex-1 pr-1 -mr-1">
                 {selectedDayDeliveries.map((entry) => {
-                  const ac = DELIVERY_CALENDAR_COLORS[entry.status];
+                  const ac = DELIVERY_PHASE_COLORS[getDeliveryPhase(entry.rawStatus)];
                   return (
                   <div key={entry.id} className={cn("rounded-lg border p-3 space-y-2", `border-l-4`)} style={{ borderLeftColor: ac.border }}>
                     <div className="flex items-center justify-between">
