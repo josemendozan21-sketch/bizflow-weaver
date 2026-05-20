@@ -1,12 +1,15 @@
 import { useState, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Boxes, ShoppingBag, Truck } from "lucide-react";
+import { ArrowLeft, Boxes, ShoppingBag, Truck, Zap } from "lucide-react";
 import BrandSelectionCards, { type InventoryNotification } from "@/components/inventory/BrandSelectionCards";
 import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
 import RequestBodyProductionDialog from "@/components/inventory/RequestBodyProductionDialog";
 import WholesaleOrdersInbox from "@/components/inventory/WholesaleOrdersInbox";
 import ReceptionPanel from "@/components/inventory/ReceptionPanel";
+import QuickMovementForm from "@/components/inventory/QuickMovementForm";
+import MovementHistoryTable from "@/components/inventory/MovementHistoryTable";
+import WeeklyInventoryExport from "@/components/inventory/WeeklyInventoryExport";
 import type { InventoryBrand, InventoryCategory } from "@/stores/inventoryStore";
 
 const InventariosRoleView = () => {
@@ -43,6 +46,9 @@ const InventariosRoleView = () => {
           <TabsTrigger value="bandeja" className="gap-1.5">
             <ShoppingBag className="h-4 w-4" /> Bandeja de pedidos
           </TabsTrigger>
+          <TabsTrigger value="movimientos" className="gap-1.5">
+            <Zap className="h-4 w-4" /> Movimientos rápidos
+          </TabsTrigger>
           <TabsTrigger value="recepcion" className="gap-1.5">
             <Truck className="h-4 w-4" /> Recepción
           </TabsTrigger>
@@ -53,6 +59,14 @@ const InventariosRoleView = () => {
 
         <TabsContent value="bandeja" className="mt-4">
           <WholesaleOrdersInbox />
+        </TabsContent>
+
+        <TabsContent value="movimientos" className="mt-4 space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <QuickMovementForm />
+            <WeeklyInventoryExport />
+          </div>
+          <MovementHistoryTable />
         </TabsContent>
 
         <TabsContent value="recepcion" className="mt-4">
