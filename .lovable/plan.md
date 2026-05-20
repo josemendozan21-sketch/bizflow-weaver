@@ -1,79 +1,93 @@
-## Mejoras al módulo Reportes en Puntos de Venta
 
-### 1. Pestaña "Ventas del día" en Reportes
+## Objetivo
 
-Reorganizar `PuntoReportes.tsx` con sub-tabs:
+1. Medir y comisionar el cumplimiento de fechas de entrega de las áreas **Producción**, **Estampación** y **Logística**.
+2. Reorganizar la vista de **Producción de Cuerpos** para que los pedidos se agrupen por **referencia** y por **tipo de plástico** (Frío/Calor) en bloques separados.
 
-- **Resumen** (lo actual): tarjetas KPI + métodos de pago + últimas ventas
-- **Ventas del día** (nueva): tabla filtrable por fecha (default = hoy) que muestra cada venta con cliente, documento, ítems, total, método de pago, tipo (Factura DIAN o Remisión) y acciones de descarga
-- **Movimientos** (lo actual)
-- **Retiros de caja** (nueva)
+---
 
-### 2. Clasificación Factura DIAN vs Remisión
+## Parte 1 — Comisiones por cumplimiento
 
-Regla automática según método de pago:
-- `efectivo` o `nequi` → **Remisión** (no se envía a DIAN)
-- Cualquier otro (`tarjeta`, `transferencia`, `otro`) → **Factura DIAN**
-- Pagos divididos (`efectivo+tarjeta`, etc.): si incluye un método "DIAN" → factura; si todos son efectivo/nequi → remisión
+### Modelo de fechas por etapa (hitos)
 
-Se calcula en el frontend a partir de `payment_method`. No requiere cambio de esquema.
+Cada pedido al por mayor tendrá una fecha objetivo y una fecha real por etapa:
 
-### 3. Descarga de documentos
+| Etapa | Área | Fecha objetivo | Fecha real |
+|---|---|---|---|
+| Cuerpos / Llenado | Producción | `production_due_date` | `production_completed_at` |
+| Estampación | Estampación | `stamping_due_date` | `stamping_completed_at` |
+| Despacho | Logística | `delivery_date` (existente) | `dispatched_at` (existente) |
 
-- **PDF individual por venta**: botón "Descargar" en cada fila. Genera PDF con `jspdf` (ya disponible o se agrega) con encabezado del local, datos del cliente, ítems, totales, método de pago, y leyenda "FACTURA DE VENTA" o "REMISIÓN" según tipo.
-- **CSV resumen del día**: botón "Descargar CSV del día" que exporta todas las ventas filtradas (fecha, cliente, NIT, total, método, tipo, ítems concatenados). Útil para enviar a DIAN.
-- **Descarga masiva de PDFs**: botón "Descargar todas las facturas DIAN del día" → ZIP con los PDFs solo de tipo Factura.
+- Las fechas objetivo por etapa se calculan automáticamente al crear el pedido como hitos hacia atrás desde `delivery_date` (ej.: Producción = entrega − 5 días, Estampación = entrega − 2 días). Estos offsets serán configurables.
+- Las fechas reales se registran cuando cada área marca su etapa como completada (la mayoría de hooks ya existen; agregamos columnas nuevas para timestamp por etapa).
 
-### 4. KPIs de caja acumulada
+### Cálculo "a tiempo"
 
-En el panel Resumen, agregar:
-- **Total acumulado en caja** (ventas en efectivo del día − retiros del día)
-- **Total tarjeta del día**, **Total Nequi**, **Total transferencia**
-- **Acumulado histórico por método** (selector de rango: hoy / semana / mes)
+Un pedido cuenta como **a tiempo** para un área si `fecha_real ≤ fecha_objetivo` de esa etapa. Pedidos sin fecha real aún no cuentan; pedidos vencidos sin entregar cuentan como atrasados.
 
-### 5. Retiros de caja
+### Comisión
 
-Nueva tabla `pos_cash_withdrawals` con:
-- `location_id`, `amount`, `concept` (qué se retira), `requested_by_name` (quién/motivo), `proof_url`, `status` (`pendiente`/`aprobado`/`rechazado`), `requested_by`, `approved_by`, `approved_at`, `rejection_reason`, `created_at`
+- **% sobre pedidos a tiempo del mes**, por área.
+- Regla configurable por área en una tabla `area_compliance_rules` (umbral mínimo, % comisión sobre base, base = total facturado del mes que pasó por esa etapa, o monto fijo por pedido — empezamos con: % sobre el valor SIN IVA de los pedidos que esa área entregó a tiempo).
+- Bonos por hito (ej. ≥90% cumplimiento mensual desbloquea bono fijo) configurables.
 
-Bucket de Storage `pos-cash-proofs` (público) para los soportes.
+### UI
 
-RLS:
-- POS asignado al punto: insertar y ver propios retiros (estado = pendiente)
-- Admin/Contabilidad: ver todos, aprobar, rechazar
+- **Contabilidad → nueva pestaña "Comisiones por área"**: tarjetas por área con % cumplimiento, pedidos a tiempo / atrasados, comisión calculada, lista detallada de pedidos con semáforo (verde a tiempo / rojo atrasado / amarillo pendiente vencido).
+- **Producción / Estampación / Logística → banner "Mi cumplimiento del mes"** con KPI rápido para que el área vea cómo va.
+- **Tarjeta de pedido**: badges con fecha objetivo de la etapa actual y días restantes / días de atraso.
 
-UI dentro de la nueva sub-tab **Retiros de caja**:
-- Botón "Registrar retiro" (form: monto, concepto, persona/motivo, soporte adjunto)
-- Listado con estado, monto, concepto, soporte (link), botones aprobar/rechazar (solo admin)
-- Los retiros aprobados se descuentan del acumulado en efectivo de los KPIs
+### Cambios técnicos
 
-### 6. Archivos afectados
+- Migración: añadir a `orders` las columnas `production_due_date`, `production_completed_at`, `stamping_due_date`, `stamping_completed_at`. Crear tabla `area_compliance_rules (area, percentage, min_threshold_pct, bonus_amount, bonus_threshold_pct, active)`.
+- Trigger / lógica en los hooks existentes (`useProductionOrders`, `EstampacionProductionView`, despacho de logística) para escribir el timestamp real al cambiar de etapa.
+- Nueva utilidad `src/lib/compliance.ts` con `summarizeAreaCompliance(orders, area, month)` análoga a `commissions.ts`.
+- Nuevo componente `AreaCompliancePanel.tsx` reutilizable + pestaña en `Contabilidad.tsx`.
+- Exportar también las métricas de cumplimiento en el Excel del área contable.
 
-**Nuevos:**
-- `supabase/migrations/<timestamp>_pos_cash_withdrawals.sql` (tabla + RLS + bucket)
-- `src/components/puntos-venta/PuntoVentasDelDia.tsx` (tabla + descargas)
-- `src/components/puntos-venta/PuntoRetiros.tsx` (form + listado + aprobación)
-- `src/lib/posInvoicePdf.ts` (genera PDF factura/remisión con jsPDF)
-- `src/lib/posExports.ts` (CSV del día + ZIP de PDFs con `jszip`)
+---
 
-**Editados:**
-- `src/hooks/usePuntosVenta.ts` (hooks `usePosCashWithdrawals`, `useCreateWithdrawal`, `useApproveWithdrawal`, helper `uploadCashProof`, helper `classifySaleType`)
-- `src/components/puntos-venta/PuntoReportes.tsx` (sub-tabs + KPI ajustado por retiros)
-- `src/integrations/supabase/types.ts` (auto)
+## Parte 2 — Agrupación en Producción de Cuerpos
 
-### Detalles técnicos
+Refactor visual de `BodyProductionSection` / `MagicalWarmersWorkflow` (sección cuerpos):
 
-Dependencias a agregar: `jspdf`, `jspdf-autotable`, `jszip` (todas npm, sin claves).
+- Dos columnas separadas: **Frío** y **Calor**.
+- Dentro de cada columna, las tareas pendientes se agrupan **por referencia** en una sola tarjeta con:
+  - Nombre de referencia + total de unidades sumadas.
+  - Lista colapsable de pedidos / clientes que componen ese total.
+  - Botones de acción a nivel de grupo: "Iniciar producción del lote", "Completar lote" (que marca todas las tareas hijas).
+- Contador por columna (total unidades pendientes) y filtro por estado (pendiente / en proceso).
+- No se modifica el modelo de datos: la agrupación es en cliente sobre `body_production_tasks` por `tipo_plastico` y `referencia`.
 
-Permisos:
-- `useAuth().role === 'pos_punto'` → puede crear retiros y ver propios
-- `useAuth().role === 'admin' | 'contabilidad'` → aprueba/rechaza, ve todos
+---
 
-El cálculo de "tipo" se hace con un helper:
-```ts
-const isRemision = (method: string | null) => {
-  const parts = (method ?? "").toLowerCase().split("+");
-  return parts.length > 0 && parts.every(p => p === "efectivo" || p === "nequi");
-};
+## Detalles técnicos resumidos
+
+```text
+DB (migración)
+  orders +production_due_date date
+         +production_completed_at timestamptz
+         +stamping_due_date date
+         +stamping_completed_at timestamptz
+  area_compliance_rules(area text, percentage numeric,
+                        min_threshold_pct numeric, bonus_amount numeric,
+                        bonus_threshold_pct numeric, active bool)
+
+Frontend
+  src/lib/compliance.ts                       (cálculo por área)
+  src/components/contabilidad/AreaCompliancePanel.tsx
+  src/components/contabilidad/AreaComplianceRules.tsx (config admin)
+  src/pages/Contabilidad.tsx                  (nueva pestaña)
+  src/components/production/BodyProductionGroupedView.tsx (agrupación)
+  src/components/production/MagicalWarmersWorkflow.tsx     (integrar agrupación)
+  Banner KPI en Produccion.tsx / EstampacionProductionView.tsx / Logistica.tsx
 ```
 
+### Orden de implementación
+
+1. Migración DB (columnas + tabla de reglas, con valores por defecto).
+2. Lógica de timestamps al completar etapas en los hooks existentes.
+3. `compliance.ts` + panel en Contabilidad + banners por área.
+4. Refactor visual de Producción de Cuerpos con agrupación.
+
+¿Apruebas para comenzar?
