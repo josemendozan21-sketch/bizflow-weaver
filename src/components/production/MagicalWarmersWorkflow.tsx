@@ -86,6 +86,8 @@ const CANONICAL_REFERENCES = [
   "Muela", "Labios", "Círculo 8 cm", "Círculo 12 cm",
   "Tiroides", "Toalla Higiénica", "Toalla Higienica", "Huskvarna",
   "Corazón Térmico", "Corazon Termico",
+  "Bacteria", "Antifaz", "Gafas pequeñas", "Pélvica", "Pelvica",
+  "Mariposas", "Mariposa",
 ];
 
 /** Sweatspot references that are actually produced in-house (termos).
