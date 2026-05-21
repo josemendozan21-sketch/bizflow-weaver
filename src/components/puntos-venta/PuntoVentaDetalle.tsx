@@ -174,6 +174,9 @@ export function PuntoVentaDetalle({ locationId, products }: Props) {
               <SelectItem value="efectivo">Efectivo</SelectItem>
               <SelectItem value="tarjeta">Tarjeta</SelectItem>
               <SelectItem value="nequi">Nequi</SelectItem>
+              <SelectItem value="bancolombia">Bancolombia</SelectItem>
+              <SelectItem value="davivienda">Davivienda</SelectItem>
+              <SelectItem value="link_pago">Link de pago</SelectItem>
               <SelectItem value="transferencia">Transferencia</SelectItem>
               <SelectItem value="otro">Otro</SelectItem>
             </SelectContent>
@@ -243,6 +246,9 @@ export function PuntoVentaDetalle({ locationId, products }: Props) {
                   <SelectItem value="efectivo">Efectivo</SelectItem>
                   <SelectItem value="tarjeta">Tarjeta</SelectItem>
                   <SelectItem value="nequi">Nequi</SelectItem>
+                  <SelectItem value="bancolombia">Bancolombia</SelectItem>
+                  <SelectItem value="davivienda">Davivienda</SelectItem>
+                  <SelectItem value="link_pago">Link de pago</SelectItem>
                   <SelectItem value="transferencia">Transferencia</SelectItem>
                   <SelectItem value="otro">Otro</SelectItem>
                 </SelectContent>
