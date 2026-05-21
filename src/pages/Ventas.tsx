@@ -512,6 +512,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [orderLines, setOrderLines] = usePersistedState<OrderLine[]>("ventas:mw:lines", [createEmptyLine()]);
   const [abono, setAbono] = usePersistedState("ventas:mw:abono", "");
   const [estadoPago, setEstadoPago] = usePersistedState<"abono_inicial" | "pago_total" | "pendiente">("ventas:mw:estadoPago", "abono_inicial");
+  const [paymentChannel, setPaymentChannel] = usePersistedState<string>("ventas:mw:paymentChannel", "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [costoAdicional, setCostoAdicional] = usePersistedState("ventas:mw:costoAdicional", "");
@@ -1330,6 +1331,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const [ssLines, setSsLines] = usePersistedState<SweatspotOrderLine[]>("ventas:ss:lines", [createEmptySSLine()]);
   const [ssAbono, setSsAbono] = usePersistedState("ventas:ss:abono", "");
   const [ssEstadoPago, setSsEstadoPago] = usePersistedState<"abono_inicial" | "pago_total" | "pendiente">("ventas:ss:estadoPago", "abono_inicial");
+  const [ssPaymentChannel, setSsPaymentChannel] = usePersistedState<string>("ventas:ss:paymentChannel", "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ssIsRecompra, setSsIsRecompra] = usePersistedState("ventas:ss:isRecompra", false);
   const [ssNoLogo, setSsNoLogo] = usePersistedState("ventas:ss:noLogo", false);
@@ -1960,6 +1962,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
   const isMayor = saleType === "mayor";
   const draftKey = `ventas:generic:${brand}:${saleType}`;
   const [paymentMethod, setPaymentMethod] = usePersistedState<"contra_entrega" | "pagado">(`${draftKey}:paymentMethod`, "contra_entrega");
+  const [paymentChannel, setPaymentChannel] = usePersistedState<string>(`${draftKey}:paymentChannel`, "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [shippingCost, setShippingCost] = usePersistedState<string>(`${draftKey}:shippingCost`, "");
   const [genericPaymentProofFile, setGenericPaymentProofFile] = useState<File | null>(null);
