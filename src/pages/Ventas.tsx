@@ -1156,6 +1156,21 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
               </div>
             </div>
             <div className="space-y-1.5">
+              <Label>Medio de pago</Label>
+              <Select value={paymentChannel} onValueChange={setPaymentChannel}>
+                <SelectTrigger><SelectValue placeholder="Selecciona medio de pago" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nequi">Nequi</SelectItem>
+                  <SelectItem value="bancolombia">Bancolombia</SelectItem>
+                  <SelectItem value="davivienda">Davivienda</SelectItem>
+                  <SelectItem value="link_pago">Link de pago</SelectItem>
+                  <SelectItem value="efectivo">Efectivo</SelectItem>
+                  <SelectItem value="transferencia">Transferencia</SelectItem>
+                  <SelectItem value="otro">Otro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
               <Label>Soporte de pago inicial</Label>
               <Input type="file" accept="image/*,.pdf" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary" />
               <p className="text-xs text-muted-foreground">Adjunte el comprobante del abono inicial para revisión en contabilidad</p>
@@ -1826,6 +1841,21 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
               </div>
             </div>
             <div className="space-y-1.5">
+              <Label>Medio de pago</Label>
+              <Select value={ssPaymentChannel} onValueChange={setSsPaymentChannel}>
+                <SelectTrigger><SelectValue placeholder="Selecciona medio de pago" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nequi">Nequi</SelectItem>
+                  <SelectItem value="bancolombia">Bancolombia</SelectItem>
+                  <SelectItem value="davivienda">Davivienda</SelectItem>
+                  <SelectItem value="link_pago">Link de pago</SelectItem>
+                  <SelectItem value="efectivo">Efectivo</SelectItem>
+                  <SelectItem value="transferencia">Transferencia</SelectItem>
+                  <SelectItem value="otro">Otro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
               <Label>Soporte de pago inicial</Label>
               <Input type="file" accept="image/*,.pdf" onChange={(e) => setSsPaymentProofFile(e.target.files?.[0] || null)} className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary" />
               <p className="text-xs text-muted-foreground">Adjunte el comprobante del abono inicial para revisión en contabilidad</p>
@@ -2358,6 +2388,22 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
               <FileField label="Adjuntar soporte de pago (si aplica)" name="payment_proof" value={genericPaymentProofFile} onChange={setGenericPaymentProofFile} />
             </fieldset>
           )}
+
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-semibold text-foreground mb-2">Medio de pago</legend>
+            <Select value={paymentChannel} onValueChange={setPaymentChannel}>
+              <SelectTrigger><SelectValue placeholder="Selecciona medio de pago" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="nequi">Nequi</SelectItem>
+                <SelectItem value="bancolombia">Bancolombia</SelectItem>
+                <SelectItem value="davivienda">Davivienda</SelectItem>
+                <SelectItem value="link_pago">Link de pago</SelectItem>
+                <SelectItem value="efectivo">Efectivo</SelectItem>
+                <SelectItem value="transferencia">Transferencia</SelectItem>
+                <SelectItem value="otro">Otro</SelectItem>
+              </SelectContent>
+            </Select>
+          </fieldset>
 
           <div className="space-y-1.5">
             <Label htmlFor="notas">Notas adicionales</Label>
