@@ -163,7 +163,7 @@ function orderToFullRow(o: Order): (string | number)[] {
     o.transportadora || "",
     o.numero_guia || "",
     fmtDate(o.dispatched_at),
-    o.is_recompra ? "Sí" : "No",
+    o.is_recompra ? "Recompra" : "Nuevo",
     o.returned_at ? "Sí" : "No",
     `${(rate * 100).toFixed(1)}%`,
     Math.round(commission),
