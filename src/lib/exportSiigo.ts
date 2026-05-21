@@ -20,7 +20,6 @@ const SIIGO_HEADERS = [
   "N° Factura",
   "Fecha",
   "Observaciones",
-  "Tipo de cliente",
 ];
 
 function orderToRow(order: AccountingOrder): (string | number)[] {
@@ -45,7 +44,6 @@ function orderToRow(order: AccountingOrder): (string | number)[] {
     order.invoiceNumber || "—",
     order.invoiceDate || order.createdAt,
     order.observaciones || "",
-    "—",
   ];
 }
 
@@ -97,7 +95,7 @@ const FULL_HEADERS = [
   "Transportadora",
   "N° Guía",
   "Fecha despacho",
-  "Recompra",
+  "Tipo de cliente",
   "Devuelto",
   "% Comisión",
   "Comisión estimada ($)",
