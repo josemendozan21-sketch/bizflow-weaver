@@ -670,7 +670,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const fd = new FormData(form);
     const clientName = fd.get("mw_nombre") as string;
     const personalizacion = (fd.get("mw_personalizacion") as string) || "";
-    const observaciones = (fd.get("mw_observaciones") as string) || "";
+    const observacionesRaw = (fd.get("mw_observaciones") as string) || "";
+    const observaciones = paymentChannel
+      ? `Medio de pago: ${paymentChannel}${observacionesRaw ? ` | ${observacionesRaw}` : ""}`
+      : observacionesRaw;
     const rutFile = rutFileState;
     const logoFile = logoFileState;
     const logoNombre = ((fd.get("mw_logo_nombre") as string) || "").trim();
@@ -1399,7 +1402,10 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     const fd = new FormData(form);
     const clientName = fd.get("ss_nombre") as string;
     const personalizacion = (fd.get("ss_personalizacion") as string) || "";
-    const observaciones = (fd.get("ss_observaciones") as string) || "";
+    const observacionesRaw = (fd.get("ss_observaciones") as string) || "";
+    const observaciones = ssPaymentChannel
+      ? `Medio de pago: ${ssPaymentChannel}${observacionesRaw ? ` | ${observacionesRaw}` : ""}`
+      : observacionesRaw;
     const rutFile = ssRutFileState;
     const logoFile = ssLogoFileState;
     const logoNombre = ((fd.get("ss_logo_nombre") as string) || "").trim();
@@ -2169,6 +2175,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
 
         // Build observations for this line
         const lineObs = [
+          paymentChannel ? `Medio de pago: ${paymentChannel}` : "",
           notas.trim(),
           line.isGift ? "🎁 OBSEQUIO" : "",
         ].filter(Boolean).join(" | ");
