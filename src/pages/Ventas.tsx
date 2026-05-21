@@ -512,6 +512,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [orderLines, setOrderLines] = usePersistedState<OrderLine[]>("ventas:mw:lines", [createEmptyLine()]);
   const [abono, setAbono] = usePersistedState("ventas:mw:abono", "");
   const [estadoPago, setEstadoPago] = usePersistedState<"abono_inicial" | "pago_total" | "pendiente">("ventas:mw:estadoPago", "abono_inicial");
+  const [paymentChannel, setPaymentChannel] = usePersistedState<string>("ventas:mw:paymentChannel", "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [costoAdicional, setCostoAdicional] = usePersistedState("ventas:mw:costoAdicional", "");
@@ -669,7 +670,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const fd = new FormData(form);
     const clientName = fd.get("mw_nombre") as string;
     const personalizacion = (fd.get("mw_personalizacion") as string) || "";
-    const observaciones = (fd.get("mw_observaciones") as string) || "";
+    const observacionesRaw = (fd.get("mw_observaciones") as string) || "";
+    const observaciones = paymentChannel
+      ? `Medio de pago: ${paymentChannel}${observacionesRaw ? ` | ${observacionesRaw}` : ""}`
+      : observacionesRaw;
     const rutFile = rutFileState;
     const logoFile = logoFileState;
     const logoNombre = ((fd.get("mw_logo_nombre") as string) || "").trim();
@@ -1155,6 +1159,21 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
               </div>
             </div>
             <div className="space-y-1.5">
+              <Label>Medio de pago</Label>
+              <Select value={paymentChannel} onValueChange={setPaymentChannel}>
+                <SelectTrigger><SelectValue placeholder="Selecciona medio de pago" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nequi">Nequi</SelectItem>
+                  <SelectItem value="bancolombia">Bancolombia</SelectItem>
+                  <SelectItem value="davivienda">Davivienda</SelectItem>
+                  <SelectItem value="link_pago">Link de pago</SelectItem>
+                  <SelectItem value="efectivo">Efectivo</SelectItem>
+                  <SelectItem value="transferencia">Transferencia</SelectItem>
+                  <SelectItem value="otro">Otro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
               <Label>Soporte de pago inicial</Label>
               <Input type="file" accept="image/*,.pdf" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary" />
               <p className="text-xs text-muted-foreground">Adjunte el comprobante del abono inicial para revisión en contabilidad</p>
@@ -1330,6 +1349,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const [ssLines, setSsLines] = usePersistedState<SweatspotOrderLine[]>("ventas:ss:lines", [createEmptySSLine()]);
   const [ssAbono, setSsAbono] = usePersistedState("ventas:ss:abono", "");
   const [ssEstadoPago, setSsEstadoPago] = usePersistedState<"abono_inicial" | "pago_total" | "pendiente">("ventas:ss:estadoPago", "abono_inicial");
+  const [ssPaymentChannel, setSsPaymentChannel] = usePersistedState<string>("ventas:ss:paymentChannel", "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ssIsRecompra, setSsIsRecompra] = usePersistedState("ventas:ss:isRecompra", false);
   const [ssNoLogo, setSsNoLogo] = usePersistedState("ventas:ss:noLogo", false);
@@ -1382,7 +1402,10 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     const fd = new FormData(form);
     const clientName = fd.get("ss_nombre") as string;
     const personalizacion = (fd.get("ss_personalizacion") as string) || "";
-    const observaciones = (fd.get("ss_observaciones") as string) || "";
+    const observacionesRaw = (fd.get("ss_observaciones") as string) || "";
+    const observaciones = ssPaymentChannel
+      ? `Medio de pago: ${ssPaymentChannel}${observacionesRaw ? ` | ${observacionesRaw}` : ""}`
+      : observacionesRaw;
     const rutFile = ssRutFileState;
     const logoFile = ssLogoFileState;
     const logoNombre = ((fd.get("ss_logo_nombre") as string) || "").trim();
@@ -1824,6 +1847,21 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
               </div>
             </div>
             <div className="space-y-1.5">
+              <Label>Medio de pago</Label>
+              <Select value={ssPaymentChannel} onValueChange={setSsPaymentChannel}>
+                <SelectTrigger><SelectValue placeholder="Selecciona medio de pago" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nequi">Nequi</SelectItem>
+                  <SelectItem value="bancolombia">Bancolombia</SelectItem>
+                  <SelectItem value="davivienda">Davivienda</SelectItem>
+                  <SelectItem value="link_pago">Link de pago</SelectItem>
+                  <SelectItem value="efectivo">Efectivo</SelectItem>
+                  <SelectItem value="transferencia">Transferencia</SelectItem>
+                  <SelectItem value="otro">Otro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
               <Label>Soporte de pago inicial</Label>
               <Input type="file" accept="image/*,.pdf" onChange={(e) => setSsPaymentProofFile(e.target.files?.[0] || null)} className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary" />
               <p className="text-xs text-muted-foreground">Adjunte el comprobante del abono inicial para revisión en contabilidad</p>
@@ -1960,6 +1998,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
   const isMayor = saleType === "mayor";
   const draftKey = `ventas:generic:${brand}:${saleType}`;
   const [paymentMethod, setPaymentMethod] = usePersistedState<"contra_entrega" | "pagado">(`${draftKey}:paymentMethod`, "contra_entrega");
+  const [paymentChannel, setPaymentChannel] = usePersistedState<string>(`${draftKey}:paymentChannel`, "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [shippingCost, setShippingCost] = usePersistedState<string>(`${draftKey}:shippingCost`, "");
   const [genericPaymentProofFile, setGenericPaymentProofFile] = useState<File | null>(null);
@@ -2136,6 +2175,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
 
         // Build observations for this line
         const lineObs = [
+          paymentChannel ? `Medio de pago: ${paymentChannel}` : "",
           notas.trim(),
           line.isGift ? "🎁 OBSEQUIO" : "",
         ].filter(Boolean).join(" | ");
@@ -2355,6 +2395,22 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
               <FileField label="Adjuntar soporte de pago (si aplica)" name="payment_proof" value={genericPaymentProofFile} onChange={setGenericPaymentProofFile} />
             </fieldset>
           )}
+
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-semibold text-foreground mb-2">Medio de pago</legend>
+            <Select value={paymentChannel} onValueChange={setPaymentChannel}>
+              <SelectTrigger><SelectValue placeholder="Selecciona medio de pago" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="nequi">Nequi</SelectItem>
+                <SelectItem value="bancolombia">Bancolombia</SelectItem>
+                <SelectItem value="davivienda">Davivienda</SelectItem>
+                <SelectItem value="link_pago">Link de pago</SelectItem>
+                <SelectItem value="efectivo">Efectivo</SelectItem>
+                <SelectItem value="transferencia">Transferencia</SelectItem>
+                <SelectItem value="otro">Otro</SelectItem>
+              </SelectContent>
+            </Select>
+          </fieldset>
 
           <div className="space-y-1.5">
             <Label htmlFor="notas">Notas adicionales</Label>
