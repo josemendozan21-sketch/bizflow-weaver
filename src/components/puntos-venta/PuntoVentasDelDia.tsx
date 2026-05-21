@@ -88,6 +88,7 @@ export function PuntoVentasDelDia({ sales, location }: Props) {
                     <th>Items</th>
                     <th className="text-right">Total</th>
                     <th>Pago</th>
+                    <th>Vendedor</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -112,6 +113,7 @@ export function PuntoVentasDelDia({ sales, location }: Props) {
                         </td>
                         <td className="text-right font-medium">${Number(s.total_amount).toLocaleString()}</td>
                         <td className="text-xs">{s.payment_method ?? "—"}</td>
+                        <td className="text-xs">{s.recorded_by_name ?? "—"}</td>
                         <td className="text-right">
                           <Button size="sm" variant="ghost"
                             onClick={() => downloadSalePdf({ sale: s, items: its, location })}>
