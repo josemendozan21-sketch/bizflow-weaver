@@ -1,5 +1,12 @@
 import * as XLSX from "xlsx";
-import type { BudgetLine, BudgetKind } from "@/hooks/useMonthlyBudget";
+import {
+  INCOME_CATEGORIES,
+  COST_CATEGORIES,
+  EXPENSE_CATEGORIES,
+  LIABILITY_CATEGORIES,
+  type BudgetLine,
+  type BudgetKind,
+} from "@/hooks/useMonthlyBudget";
 
 export interface ParsedLine {
   kind: BudgetKind;
@@ -13,11 +20,11 @@ const MONTHS = [
   "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre",
 ];
 
-const KIND_SHEETS: { kind: BudgetKind; sheet: string }[] = [
-  { kind: "ingreso", sheet: "Ingresos" },
-  { kind: "costo", sheet: "Costos" },
-  { kind: "gasto", sheet: "Gastos" },
-  { kind: "pasivo", sheet: "Pasivos" },
+const KIND_SHEETS: { kind: BudgetKind; sheet: string; categories: string[] }[] = [
+  { kind: "ingreso", sheet: "Ingresos", categories: INCOME_CATEGORIES },
+  { kind: "costo", sheet: "Costos", categories: COST_CATEGORIES },
+  { kind: "gasto", sheet: "Gastos", categories: EXPENSE_CATEGORIES },
+  { kind: "pasivo", sheet: "Pasivos", categories: LIABILITY_CATEGORIES },
 ];
 
 export function exportBudgetXlsx(args: {
@@ -28,14 +35,37 @@ export function exportBudgetXlsx(args: {
   const { year, month, lines } = args;
   const wb = XLSX.utils.book_new();
 
-  for (const { kind, sheet } of KIND_SHEETS) {
-    const rows = lines
-      .filter((l) => l.kind === kind)
-      .map((l) => ({
-        Categoría: l.category,
-        Descripción: l.description ?? "",
-        Proyectado: Number(l.projected_amount) || 0,
-      }));
+  for (const { kind, sheet, categories } of KIND_SHEETS) {
+    const existing = lines.filter((l) => l.kind === kind);
+    const rows: { Categoría: string; Descripción: string; Proyectado: number }[] = [];
+
+    // Always include every predefined category (even if 0), so the user can fill it.
+    for (const cat of categories) {
+      const matches = existing.filter((l) => l.category === cat);
+      if (matches.length === 0) {
+        rows.push({ Categoría: cat, Descripción: "", Proyectado: 0 });
+      } else {
+        for (const l of matches) {
+          rows.push({
+            Categoría: cat,
+            Descripción: l.description ?? "",
+            Proyectado: Number(l.projected_amount) || 0,
+          });
+        }
+      }
+    }
+
+    // Include any custom categories not in the predefined list
+    for (const l of existing) {
+      if (!categories.includes(l.category)) {
+        rows.push({
+          Categoría: l.category,
+          Descripción: l.description ?? "",
+          Proyectado: Number(l.projected_amount) || 0,
+        });
+      }
+    }
+
     const ws = XLSX.utils.json_to_sheet(rows, {
       header: ["Categoría", "Descripción", "Proyectado"],
     });
