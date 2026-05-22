@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +37,6 @@ import {
 } from "@/hooks/useMonthlyBudget";
 import { exportBudgetXlsx, parseBudgetXlsx } from "@/lib/budgetExcel";
 import { supabase } from "@/integrations/supabase/client";
-import { useRef } from "react";
 import { DefineBudgetDialog } from "@/components/presupuesto/DefineBudgetDialog";
 import { AddEntryDialog } from "@/components/presupuesto/AddEntryDialog";
 import { BankAccountsPanel } from "@/components/presupuesto/BankAccountsPanel";
