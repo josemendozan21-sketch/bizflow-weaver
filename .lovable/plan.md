@@ -1,52 +1,66 @@
 
-## Objetivo
+## Cambios al módulo Presupuesto mensual
 
-Quitar las tareas automáticas de "Producción de cuerpos" que se están generando por cada pedido, y reemplazarlas por:
-- Un **panel de cuerpos requeridos** (agregado por referencia + tipo de plástico) calculado en vivo desde los pedidos de producción activos, ordenado por urgencia.
-- El **registro manual** de producción de cuerpos que ya existe (botón "Producción de cuerpos") sigue siendo la única vía para crear tareas — el encargado decide qué montar y cuándo.
+### 1. Reclasificación de categorías
 
-## Cambios
+Reemplazar `INCOME_CATEGORIES` y `EXPENSE_CATEGORIES` por 4 grupos con sus conceptos:
 
-### 1. Eliminar generación automática y tareas existentes
-- Quitar la función de DB `auto_create_body_task_for_production_order` (y `auto_create_body_task_on_low_stock`) — ya no se crearán tareas automáticas a partir de órdenes ni de bajo stock.
-- Borrar todas las filas `pendiente` / `en_proceso` actuales de `body_production_tasks` que NO tengan `completed_at` (las finalizadas se conservan para histórico).
-- En `MagicalWarmersWorkflow.tsx`: quitar el bloque "Producción de cuerpos (N activas)" con `BodyTasksGrouped` y el diálogo de confirmación de cantidad. Se mantiene el bloque colapsado de "cuerpos completados" para historial.
+- **Ingreso**: Ventas al detal, Ventas al por mayor, Ferias, Punto 92, Otros ingresos, Sub Arriendos
+- **Costo**: Materia Prima, Producto terminado
+- **Gasto**: Nómina, Prima de servicios, Seguridad social, Cesantías, Agua, Luz, Arriendo, Internet, Telesentinel, Marketing, Contador, Pólizas y Seguros, Aseo, Mensajería, Gerencia, Asesores Empresa, Asesores Eventos, CCB, Stand, Publicidad stand, Transporte, Tiquetes, Viáticos
+- **Pasivo**: IVA, Renta, Reteiva
 
-### 2. Nuevo panel "Cuerpos requeridos"
-Se agrega encima de "Órdenes de producción" un panel que:
-- Recorre todas las órdenes activas (`current_stage !== "listo"`) de Magical con `needs_cuerpos = true`.
-- Filtra solo referencias producibles (Magical canónicas + termos Sweatspot 150/250/500/juguetón) usando el helper `isProducibleReference` ya existente.
-- Agrupa por `(molde, tipo_plástico)` deduciendo el tipo desde el texto del molde (`calor` si contiene "calor", de lo contrario `frio`).
-- Para cada grupo calcula:
-  - Total de unidades requeridas (suma de `quantity`).
-  - Stock disponible actual (`body_stock` de Magical para esa referencia).
-  - Faltante = `max(0, requerido - disponible)`.
-  - Fecha de entrega más próxima entre los pedidos del grupo.
-  - Número de pedidos y lista de clientes.
-- Ordena por urgencia:
-  1. Faltante > 0 primero.
-  2. Fecha de entrega más próxima.
-  3. Mayor cantidad faltante.
-- Cada fila muestra: referencia, tipo (Frío/Calor), requerido / disponible / faltante, próxima entrega + días restantes, badge de urgencia (rojo si ≤3 días o vencido, ámbar si ≤7, gris si más), botón "Producir esto" que pre-llena el formulario manual de producción de cuerpos con esa referencia, tipo y cantidad faltante.
+La tabla `budget_lines` y `budget_entries` ya tienen `kind` (texto). Lo ampliamos para aceptar `ingreso | costo | gasto | pasivo`. La UI mostrará 4 tablas (una por grupo) con proyectado vs real, en lugar de 2.
 
-### 3. Botón manual existente
-- "Producción de cuerpos" sigue abriendo el formulario que ya existe (`BodyProductionForm`).
-- Al recibir el prefill del panel, se abre con referencia/tipo/unidades sugeridas y el encargado puede ajustar.
-- Al finalizar (cantidad real producida) sigue sumando a `body_stock` como hoy.
+Las lecturas automáticas (`useAutoReadings`) se mantienen y se mapean a las categorías de Ingreso correspondientes.
 
-## Detalles técnicos
+### 2. Bancos / cuentas con saldo
 
-- **Migración SQL nueva** (timestamp): `DROP FUNCTION IF EXISTS public.auto_create_body_task_for_production_order() CASCADE;` y lo mismo para `auto_create_body_task_on_low_stock`. No hay triggers conectados según el esquema, pero las funciones se eliminan para evitar reactivación accidental.
-- **Operación de datos** (tool de insert): `DELETE FROM public.body_production_tasks WHERE status IN ('pendiente','en_proceso');`
-- **Componente nuevo**: `src/components/production/BodyRequirementsPanel.tsx` — recibe `orders: ProductionOrder[]`, `bodyStock`, y un callback `onProduceClick({ referencia, tipoPlastico, unidadesSugeridas })`.
-- **Edición**: `src/components/production/MagicalWarmersWorkflow.tsx`
-  - Remover `activeBodyTasks` / `BodyTasksGrouped` y su diálogo de confirmación de cantidad para tareas (se conserva el de órdenes en stage `produccion_cuerpos`).
-  - Agregar estado `prefilledBody` que abre `BodyProductionForm` con valores iniciales.
-  - Insertar `<BodyRequirementsPanel ... />` antes del listado de órdenes.
-- `BodyProductionForm` acepta props opcionales `initialTipoPlastico`, `initialReferencia`, `initialUnidades`.
+Nueva tabla `bank_accounts`:
+- nombre, saldo_inicial, saldo_actual, notas
 
-## Lo que NO cambia
+Cuentas iniciales a sembrar: Bancolombia 68, Bancolombia 36, Davivienda, Nequi, Efectivo, Fiducuenta.
 
-- El flujo de las órdenes (etapas, finalización, envío a logística) queda igual.
-- `body_stock` y su descuento desde `useInventory.reserveBodyStock` no se tocan.
-- Sweatspot y la lógica de termos producibles se mantiene.
+Nueva tabla `bank_movements` (auditoría):
+- bank_account_id, fecha, tipo (ingreso/egreso), monto, concepto, referencia (entry_id o scheduled_payment_id)
+
+Sección nueva "Bancos" en la página con tarjetas por cuenta mostrando saldo actual y un botón para registrar ajuste manual. Cada vez que se registra un movimiento real (ingreso o pago) se elige el banco origen/destino y el saldo se actualiza automáticamente.
+
+### 3. Calendario de Ingresos
+
+Tab/sección nueva "Calendario de ingresos":
+- Calendario mensual (shadcn Calendar)
+- Cada día muestra suma de ingresos reales registrados ese día (de `budget_entries` kind=ingreso + lecturas automáticas)
+- Al hacer click en un día, panel lateral con desglose por categoría/banco
+- Solo visualización (los ingresos siguen registrándose desde su tabla)
+
+### 4. Calendario de Pagos programados (flujo completo)
+
+Nueva tabla `scheduled_payments`:
+- categoría (de Costo/Gasto/Pasivo), descripción, monto_presupuestado, fecha_vencimiento, banco_origen_id, estado (pendiente/pagado), monto_real, fecha_pago, proof_url, notas
+
+Tab "Calendario de pagos":
+- Calendario mensual con pagos pendientes y pagados por día
+- Botón "Programar pago" → categoría, monto, fecha, banco
+- Click en un pago → diálogo "Marcar como pagado" pidiendo **monto real** (puede diferir del presupuestado), fecha, soporte
+- Al marcar pagado:
+  - Crea un `budget_entry` (egreso real) por el monto real
+  - Crea un `bank_movement` que descuenta el banco
+  - Pone estado=pagado
+
+KPIs nuevos: "Pagos del mes presupuestados" vs "Pagos reales" para ver diferencia.
+
+### 5. Cambios en UI principal
+
+- KPIs ampliados a: Ingresos, Costos, Gastos, Pasivos, Utilidad
+- Tabla única reemplazada por 4 tablas colapsables (una por kind)
+- Tabs en la parte superior: **Resumen** | **Bancos** | **Calendario ingresos** | **Calendario pagos**
+- `DefineBudgetDialog` actualizado para permitir definir líneas en los 4 tipos
+- `AddEntryDialog` pide adicionalmente el banco (cuando es ingreso/egreso real)
+
+### Notas técnicas
+
+- Migraciones nuevas: `bank_accounts`, `bank_movements`, `scheduled_payments` con RLS (admin + contabilidad gestionan; resto sin acceso) y triggers que actualicen `bank_accounts.saldo_actual` al insertar `bank_movements`.
+- Inserción inicial de las 6 cuentas con saldo 0 (el usuario podrá editar los saldos iniciales desde la UI de Bancos).
+- Hooks nuevos: `useBankAccounts`, `useScheduledPayments`, `usePayScheduled`.
+- Sin tocar lógica de ventas/ferias existente.
