@@ -13,10 +13,12 @@ export interface MonthlyBudget {
   updated_at: string;
 }
 
+export type BudgetKind = "ingreso" | "costo" | "gasto" | "pasivo";
+
 export interface BudgetLine {
   id: string;
   budget_id: string;
-  kind: "ingreso" | "egreso";
+  kind: BudgetKind;
   category: string;
   description: string | null;
   projected_amount: number;
@@ -25,7 +27,7 @@ export interface BudgetLine {
 export interface BudgetEntry {
   id: string;
   budget_id: string;
-  kind: "ingreso" | "egreso";
+  kind: BudgetKind;
   category: string;
   description: string | null;
   amount: number;
@@ -33,26 +35,74 @@ export interface BudgetEntry {
   proof_url: string | null;
   recorded_by: string | null;
   recorded_by_name: string | null;
+  bank_account_id?: string | null;
   created_at: string;
 }
 
 export const ADVISORS = ["Valentina", "Angela", "Pilar", "Ilian", "Jose Mario"] as const;
 
 export const INCOME_CATEGORIES = [
-  ...ADVISORS.map((a) => `Asesores - ${a}`),
+  "Ventas al detal",
+  "Ventas al por mayor",
   "Ferias",
+  "Punto 92",
+  "Sub Arriendos",
   "Otros ingresos",
 ];
 
+export const COST_CATEGORIES = [
+  "Materia Prima",
+  "Producto terminado",
+];
+
 export const EXPENSE_CATEGORIES = [
-  "Compra de materia prima",
-  "Gastos diarios",
   "Nómina",
+  "Prima de servicios",
   "Seguridad social",
-  "Servicios",
+  "Cesantías",
+  "Agua",
+  "Luz",
   "Arriendo",
+  "Internet",
+  "Telesentinel",
+  "Marketing",
+  "Contador",
+  "Pólizas y Seguros",
+  "Aseo",
+  "Mensajería",
+  "Gerencia",
+  "Asesores Empresa",
+  "Asesores Eventos",
+  "CCB",
+  "Stand",
+  "Publicidad stand",
+  "Transporte",
+  "Tiquetes",
+  "Viáticos",
   "Otros gastos",
 ];
+
+export const LIABILITY_CATEGORIES = [
+  "IVA",
+  "Renta",
+  "Reteiva",
+];
+
+export const KIND_LABELS: Record<BudgetKind, string> = {
+  ingreso: "Ingreso",
+  costo: "Costo",
+  gasto: "Gasto",
+  pasivo: "Pasivo",
+};
+
+export function categoriesForKind(kind: BudgetKind): string[] {
+  switch (kind) {
+    case "ingreso": return INCOME_CATEGORIES;
+    case "costo": return COST_CATEGORIES;
+    case "gasto": return EXPENSE_CATEGORIES;
+    case "pasivo": return LIABILITY_CATEGORIES;
+  }
+}
 
 export function useMonthlyBudget(year: number, month: number) {
   return useQuery({
@@ -110,7 +160,7 @@ export function useUpsertBudget() {
     mutationFn: async (vars: {
       year: number;
       month: number;
-      lines: { kind: "ingreso" | "egreso"; category: string; projected_amount: number; description?: string | null }[];
+      lines: { kind: BudgetKind; category: string; projected_amount: number; description?: string | null }[];
       notes?: string | null;
     }) => {
       // upsert budget row
@@ -171,22 +221,39 @@ export function useAddBudgetEntry() {
   return useMutation({
     mutationFn: async (vars: {
       budget_id: string;
-      kind: "ingreso" | "egreso";
+      kind: BudgetKind;
       category: string;
       description?: string | null;
       amount: number;
       entry_date: string;
       proof_url?: string | null;
+      bank_account_id?: string | null;
     }) => {
-      const { error } = await supabase.from("budget_entries" as any).insert({
+      const { data: inserted, error } = await supabase.from("budget_entries" as any).insert({
         ...vars,
         recorded_by: user?.id ?? null,
         recorded_by_name: user?.email ?? null,
-      });
+      }).select("id").single();
       if (error) throw error;
+      // Also create bank movement if bank selected
+      if (vars.bank_account_id) {
+        await supabase.from("bank_movements" as any).insert({
+          bank_account_id: vars.bank_account_id,
+          movement_date: vars.entry_date,
+          direction: vars.kind === "ingreso" ? "ingreso" : "egreso",
+          amount: vars.amount,
+          concept: `${vars.category}${vars.description ? " — " + vars.description : ""}`,
+          reference_kind: "budget_entry",
+          reference_id: (inserted as any)?.id,
+          recorded_by: user?.id ?? null,
+          recorded_by_name: user?.email ?? null,
+        });
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["budget_entries"] });
+      qc.invalidateQueries({ queryKey: ["bank_accounts"] });
+      qc.invalidateQueries({ queryKey: ["bank_movements"] });
     },
   });
 }
