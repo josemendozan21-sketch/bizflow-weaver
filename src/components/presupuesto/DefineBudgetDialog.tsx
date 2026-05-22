@@ -15,9 +15,13 @@ import { Loader2, Save, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   INCOME_CATEGORIES,
+  COST_CATEGORIES,
   EXPENSE_CATEGORIES,
+  LIABILITY_CATEGORIES,
+  KIND_LABELS,
   useUpsertBudget,
   type BudgetLine,
+  type BudgetKind,
 } from "@/hooks/useMonthlyBudget";
 
 interface Props {
@@ -29,6 +33,12 @@ interface Props {
   existingNotes: string | null;
 }
 
+const MULTI_CATEGORIES: Record<string, BudgetKind> = {
+  Ferias: "ingreso",
+  "Otros ingresos": "ingreso",
+  "Otros gastos": "gasto",
+};
+
 export function DefineBudgetDialog({
   open,
   onOpenChange,
@@ -38,104 +48,68 @@ export function DefineBudgetDialog({
   existingNotes,
 }: Props) {
   const upsert = useUpsertBudget();
-  const [income, setIncome] = useState<Record<string, string>>({});
-  const [expense, setExpense] = useState<Record<string, string>>({});
-  const [ferias, setFerias] = useState<{ name: string; amount: string }[]>([]);
-  const [otrosIngresos, setOtrosIngresos] = useState<{ name: string; amount: string }[]>([]);
-  const [otrosGastos, setOtrosGastos] = useState<{ name: string; amount: string }[]>([]);
+  // Single-row amounts per (kind|category)
+  const [amounts, setAmounts] = useState<Record<string, string>>({});
+  // Multi-row groups: key = `${kind}|${category}`
+  const [multi, setMulti] = useState<Record<string, { name: string; amount: string }[]>>({});
   const [notes, setNotes] = useState("");
 
+  const groups: { kind: BudgetKind; cats: string[] }[] = [
+    { kind: "ingreso", cats: INCOME_CATEGORIES },
+    { kind: "costo", cats: COST_CATEGORIES },
+    { kind: "gasto", cats: EXPENSE_CATEGORIES },
+    { kind: "pasivo", cats: LIABILITY_CATEGORIES },
+  ];
+
   useEffect(() => {
-    if (open) {
-      const inc: Record<string, string> = {};
-      const exp: Record<string, string> = {};
-      INCOME_CATEGORIES.filter((c) => c !== "Ferias" && c !== "Otros ingresos").forEach((c) => {
-        const l = existingLines.find((l) => l.kind === "ingreso" && l.category === c);
-        inc[c] = l ? String(l.projected_amount) : "";
-      });
-      EXPENSE_CATEGORIES.filter((c) => c !== "Otros gastos").forEach((c) => {
-        const l = existingLines.find((l) => l.kind === "egreso" && l.category === c);
-        exp[c] = l ? String(l.projected_amount) : "";
-      });
-      const feriaLines = existingLines.filter(
-        (l) => l.kind === "ingreso" && l.category === "Ferias"
-      );
-      setFerias(
-        feriaLines.length > 0
-          ? feriaLines.map((l) => ({
-              name: l.description || "",
-              amount: String(l.projected_amount),
-            }))
-          : [{ name: "", amount: "" }]
-      );
-      const otrosIngLines = existingLines.filter(
-        (l) => l.kind === "ingreso" && l.category === "Otros ingresos"
-      );
-      setOtrosIngresos(
-        otrosIngLines.length > 0
-          ? otrosIngLines.map((l) => ({
-              name: l.description || "",
-              amount: String(l.projected_amount),
-            }))
-          : [{ name: "", amount: "" }]
-      );
-      const otrosGasLines = existingLines.filter(
-        (l) => l.kind === "egreso" && l.category === "Otros gastos"
-      );
-      setOtrosGastos(
-        otrosGasLines.length > 0
-          ? otrosGasLines.map((l) => ({
-              name: l.description || "",
-              amount: String(l.projected_amount),
-            }))
-          : [{ name: "", amount: "" }]
-      );
-      setIncome(inc);
-      setExpense(exp);
-      setNotes(existingNotes || "");
+    if (!open) return;
+    const next: Record<string, string> = {};
+    const nextMulti: Record<string, { name: string; amount: string }[]> = {};
+    for (const g of groups) {
+      for (const c of g.cats) {
+        const key = `${g.kind}|${c}`;
+        if (MULTI_CATEGORIES[c]) {
+          const rows = existingLines.filter((l) => l.kind === g.kind && l.category === c);
+          nextMulti[key] = rows.length > 0
+            ? rows.map((l) => ({ name: l.description || "", amount: String(l.projected_amount) }))
+            : [{ name: "", amount: "" }];
+        } else {
+          const l = existingLines.find((l) => l.kind === g.kind && l.category === c);
+          next[key] = l ? String(l.projected_amount) : "";
+        }
+      }
     }
+    setAmounts(next);
+    setMulti(nextMulti);
+    setNotes(existingNotes || "");
   }, [open, existingLines, existingNotes]);
 
   const handleSave = () => {
-    const feriaLines = ferias
-      .filter((f) => f.name.trim() || parseFloat(f.amount) > 0)
-      .map((f) => ({
-        kind: "ingreso" as const,
-        category: "Ferias",
-        description: f.name.trim() || "Feria sin nombre",
-        projected_amount: parseFloat(f.amount) || 0,
-      }));
-    const otrosIngLines = otrosIngresos
-      .filter((f) => f.name.trim() || parseFloat(f.amount) > 0)
-      .map((f) => ({
-        kind: "ingreso" as const,
-        category: "Otros ingresos",
-        description: f.name.trim() || "Sin nombre",
-        projected_amount: parseFloat(f.amount) || 0,
-      }));
-    const otrosGasLines = otrosGastos
-      .filter((f) => f.name.trim() || parseFloat(f.amount) > 0)
-      .map((f) => ({
-        kind: "egreso" as const,
-        category: "Otros gastos",
-        description: f.name.trim() || "Sin nombre",
-        projected_amount: parseFloat(f.amount) || 0,
-      }));
-    const lines = [
-      ...INCOME_CATEGORIES.filter((c) => c !== "Ferias" && c !== "Otros ingresos").map((c) => ({
-        kind: "ingreso" as const,
-        category: c,
-        projected_amount: parseFloat(income[c]) || 0,
-      })),
-      ...feriaLines,
-      ...otrosIngLines,
-      ...EXPENSE_CATEGORIES.filter((c) => c !== "Otros gastos").map((c) => ({
-        kind: "egreso" as const,
-        category: c,
-        projected_amount: parseFloat(expense[c]) || 0,
-      })),
-      ...otrosGasLines,
-    ];
+    const lines: { kind: BudgetKind; category: string; projected_amount: number; description?: string | null }[] = [];
+    for (const g of groups) {
+      for (const c of g.cats) {
+        const key = `${g.kind}|${c}`;
+        if (MULTI_CATEGORIES[c]) {
+          const rows = multi[key] || [];
+          rows
+            .filter((r) => r.name.trim() || parseFloat(r.amount) > 0)
+            .forEach((r) => {
+              lines.push({
+                kind: g.kind,
+                category: c,
+                description: r.name.trim() || "Sin nombre",
+                projected_amount: parseFloat(r.amount) || 0,
+              });
+            });
+        } else {
+          lines.push({
+            kind: g.kind,
+            category: c,
+            projected_amount: parseFloat(amounts[key]) || 0,
+          });
+        }
+      }
+    }
     upsert.mutate(
       { year, month, lines, notes: notes.trim() || null },
       {
@@ -159,181 +133,77 @@ export function DefineBudgetDialog({
         </DialogHeader>
 
         <div className="space-y-6">
-          <section className="space-y-3">
-            <h3 className="text-sm font-semibold text-foreground">Ingresos proyectados</h3>
-            {INCOME_CATEGORIES.filter((c) => c !== "Ferias" && c !== "Otros ingresos").map((c) => (
-              <div key={c} className="grid grid-cols-3 gap-2 items-center">
-                <Label className="col-span-2 text-sm">{c}</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  placeholder="0"
-                  value={income[c] ?? ""}
-                  onChange={(e) => setIncome({ ...income, [c]: e.target.value })}
-                />
-              </div>
-            ))}
-
-            <div className="space-y-2 pt-2 border-t">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Ferias del mes</Label>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setFerias([...ferias, { name: "", amount: "" }])}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Agregar feria
-                </Button>
-              </div>
-              {ferias.map((f, idx) => (
-                <div key={idx} className="grid grid-cols-[1fr_140px_auto] gap-2 items-center">
-                  <Input
-                    placeholder="Nombre de la feria"
-                    value={f.name}
-                    onChange={(e) => {
-                      const next = [...ferias];
-                      next[idx].name = e.target.value;
-                      setFerias(next);
-                    }}
-                  />
-                  <Input
-                    type="number"
-                    min="0"
-                    placeholder="0"
-                    value={f.amount}
-                    onChange={(e) => {
-                      const next = [...ferias];
-                      next[idx].amount = e.target.value;
-                      setFerias(next);
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => setFerias(ferias.filter((_, i) => i !== idx))}
-                    disabled={ferias.length === 1}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-
-            <div className="space-y-2 pt-2 border-t">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Otros ingresos</Label>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setOtrosIngresos([...otrosIngresos, { name: "", amount: "" }])}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Agregar
-                </Button>
-              </div>
-              {otrosIngresos.map((f, idx) => (
-                <div key={idx} className="grid grid-cols-[1fr_140px_auto] gap-2 items-center">
-                  <Input
-                    placeholder="Concepto (ej. reembolso)"
-                    value={f.name}
-                    onChange={(e) => {
-                      const next = [...otrosIngresos];
-                      next[idx].name = e.target.value;
-                      setOtrosIngresos(next);
-                    }}
-                  />
-                  <Input
-                    type="number"
-                    min="0"
-                    placeholder="0"
-                    value={f.amount}
-                    onChange={(e) => {
-                      const next = [...otrosIngresos];
-                      next[idx].amount = e.target.value;
-                      setOtrosIngresos(next);
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => setOtrosIngresos(otrosIngresos.filter((_, i) => i !== idx))}
-                    disabled={otrosIngresos.length === 1}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="space-y-3">
-            <h3 className="text-sm font-semibold text-foreground">Egresos proyectados</h3>
-            {EXPENSE_CATEGORIES.filter((c) => c !== "Otros gastos").map((c) => (
-              <div key={c} className="grid grid-cols-3 gap-2 items-center">
-                <Label className="col-span-2 text-sm">{c}</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  placeholder="0"
-                  value={expense[c] ?? ""}
-                  onChange={(e) => setExpense({ ...expense, [c]: e.target.value })}
-                />
-              </div>
-            ))}
-
-            <div className="space-y-2 pt-2 border-t">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Otros gastos (ej. Picap, Coordinadora, Bogotá Express)</Label>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setOtrosGastos([...otrosGastos, { name: "", amount: "" }])}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Agregar
-                </Button>
-              </div>
-              {otrosGastos.map((f, idx) => (
-                <div key={idx} className="grid grid-cols-[1fr_140px_auto] gap-2 items-center">
-                  <Input
-                    placeholder="Concepto (ej. Picap)"
-                    value={f.name}
-                    onChange={(e) => {
-                      const next = [...otrosGastos];
-                      next[idx].name = e.target.value;
-                      setOtrosGastos(next);
-                    }}
-                  />
-                  <Input
-                    type="number"
-                    min="0"
-                    placeholder="0"
-                    value={f.amount}
-                    onChange={(e) => {
-                      const next = [...otrosGastos];
-                      next[idx].amount = e.target.value;
-                      setOtrosGastos(next);
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => setOtrosGastos(otrosGastos.filter((_, i) => i !== idx))}
-                    disabled={otrosGastos.length === 1}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </section>
+          {groups.map((g) => (
+            <section key={g.kind} className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground">{KIND_LABELS[g.kind]}s proyectados</h3>
+              {g.cats.map((c) => {
+                const key = `${g.kind}|${c}`;
+                if (MULTI_CATEGORIES[c]) {
+                  const rows = multi[key] || [{ name: "", amount: "" }];
+                  return (
+                    <div key={key} className="space-y-2 pt-2 border-t">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">{c}</Label>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setMulti({ ...multi, [key]: [...rows, { name: "", amount: "" }] })}
+                        >
+                          <Plus className="h-3 w-3 mr-1" /> Agregar
+                        </Button>
+                      </div>
+                      {rows.map((r, idx) => (
+                        <div key={idx} className="grid grid-cols-[1fr_140px_auto] gap-2 items-center">
+                          <Input
+                            placeholder="Concepto"
+                            value={r.name}
+                            onChange={(e) => {
+                              const next = [...rows];
+                              next[idx] = { ...next[idx], name: e.target.value };
+                              setMulti({ ...multi, [key]: next });
+                            }}
+                          />
+                          <Input
+                            type="number"
+                            min="0"
+                            placeholder="0"
+                            value={r.amount}
+                            onChange={(e) => {
+                              const next = [...rows];
+                              next[idx] = { ...next[idx], amount: e.target.value };
+                              setMulti({ ...multi, [key]: next });
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => setMulti({ ...multi, [key]: rows.filter((_, i) => i !== idx) })}
+                            disabled={rows.length === 1}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }
+                return (
+                  <div key={key} className="grid grid-cols-3 gap-2 items-center">
+                    <Label className="col-span-2 text-sm">{c}</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={amounts[key] ?? ""}
+                      onChange={(e) => setAmounts({ ...amounts, [key]: e.target.value })}
+                    />
+                  </div>
+                );
+              })}
+            </section>
+          ))}
 
           <div className="space-y-2">
             <Label>Notas (opcional)</Label>
@@ -346,9 +216,7 @@ export function DefineBudgetDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={handleSave} disabled={upsert.isPending}>
             {upsert.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
             Guardar

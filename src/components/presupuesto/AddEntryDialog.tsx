@@ -11,31 +11,47 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader2, DollarSign, Camera } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useAddBudgetEntry } from "@/hooks/useMonthlyBudget";
+import {
+  useAddBudgetEntry,
+  useBankAccounts,
+  type BudgetKind,
+} from "@/hooks/useMonthlyBudget";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   budgetId: string;
-  kind: "ingreso" | "egreso";
+  kind: BudgetKind;
   category: string;
   defaultDescription?: string;
 }
 
 export function AddEntryDialog({ open, onOpenChange, budgetId, kind, category, defaultDescription }: Props) {
   const add = useAddBudgetEntry();
+  const { data: banks = [] } = useBankAccounts();
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState(defaultDescription ?? "");
   const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10));
+  const [bankId, setBankId] = useState<string>("");
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (open) setDescription(defaultDescription ?? "");
+    if (open) {
+      setDescription(defaultDescription ?? "");
+      setBankId("");
+    }
   }, [open, defaultDescription]);
 
   const handleSave = async () => {
@@ -64,6 +80,7 @@ export function AddEntryDialog({ open, onOpenChange, budgetId, kind, category, d
         amount: val,
         entry_date: entryDate,
         proof_url: proofUrl,
+        bank_account_id: bankId || null,
       });
       toast.success("Movimiento registrado");
       setAmount("");
@@ -106,6 +123,22 @@ export function AddEntryDialog({ open, onOpenChange, budgetId, kind, category, d
               value={entryDate}
               onChange={(e) => setEntryDate(e.target.value)}
             />
+          </div>
+          <div className="space-y-2">
+            <Label>Banco / cuenta</Label>
+            <Select value={bankId} onValueChange={setBankId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sin afectar bancos" />
+              </SelectTrigger>
+              <SelectContent>
+                {banks.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {kind === "ingreso" ? "Suma" : "Resta"} este monto del saldo del banco.
+            </p>
           </div>
           <div className="space-y-2">
             <Label>Descripción</Label>

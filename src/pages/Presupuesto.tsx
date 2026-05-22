@@ -2,20 +2,7 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Settings2, Lock, Unlock, Plus, Trash2, FileText } from "lucide-react";
-import { openSignedUrl } from "@/lib/signedUrl";
-import {
-  useMonthlyBudget,
-  useBudgetLines,
-  useBudgetEntries,
-  useAutoReadings,
-  useCloseBudget,
-  useDeleteBudgetEntry,
-  INCOME_CATEGORIES,
-  EXPENSE_CATEGORIES,
-  type BudgetLine,
-  type BudgetEntry,
-} from "@/hooks/useMonthlyBudget";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -24,44 +11,56 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-  CartesianGrid,
-} from "recharts";
+import { ChevronLeft, ChevronRight, Settings2, Lock, Unlock, Plus, Trash2, FileText } from "lucide-react";
+import { openSignedUrl } from "@/lib/signedUrl";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
+import {
+  useMonthlyBudget,
+  useBudgetLines,
+  useBudgetEntries,
+  useAutoReadings,
+  useCloseBudget,
+  useDeleteBudgetEntry,
+  INCOME_CATEGORIES,
+  COST_CATEGORIES,
+  EXPENSE_CATEGORIES,
+  LIABILITY_CATEGORIES,
+  KIND_LABELS,
+  type BudgetEntry,
+  type BudgetKind,
+} from "@/hooks/useMonthlyBudget";
 import { DefineBudgetDialog } from "@/components/presupuesto/DefineBudgetDialog";
 import { AddEntryDialog } from "@/components/presupuesto/AddEntryDialog";
+import { BankAccountsPanel } from "@/components/presupuesto/BankAccountsPanel";
+import { IncomeCalendar } from "@/components/presupuesto/IncomeCalendar";
+import { PaymentsCalendar } from "@/components/presupuesto/PaymentsCalendar";
 
 const MONTHS = [
-  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+  "Enero","Febrero","Marzo","Abril","Mayo","Junio",
+  "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre",
 ];
 
 function formatCOP(n: number) {
-  return new Intl.NumberFormat("es-CO", {
-    style: "currency",
-    currency: "COP",
-    maximumFractionDigits: 0,
-  }).format(n || 0);
+  return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n || 0);
 }
+
+const KIND_GROUPS: { kind: BudgetKind; cats: string[] }[] = [
+  { kind: "ingreso", cats: INCOME_CATEGORIES },
+  { kind: "costo", cats: COST_CATEGORIES },
+  { kind: "gasto", cats: EXPENSE_CATEGORIES },
+  { kind: "pasivo", cats: LIABILITY_CATEGORIES },
+];
+
+const MULTI = new Set(["Ferias", "Otros ingresos", "Otros gastos"]);
 
 export default function Presupuesto() {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth() + 1);
   const [defineOpen, setDefineOpen] = useState(false);
-  const [addEntry, setAddEntry] = useState<{ kind: "ingreso" | "egreso"; category: string; description?: string } | null>(null);
+  const [addEntry, setAddEntry] = useState<{ kind: BudgetKind; category: string; description?: string } | null>(null);
 
   const { data: budget } = useMonthlyBudget(year, month);
   const { data: lines = [] } = useBudgetLines(budget?.id);
@@ -77,150 +76,83 @@ export default function Presupuesto() {
     if (m > 12) { m = 1; y++; }
     setMonth(m); setYear(y);
   };
+  const goCurrent = () => { setYear(today.getFullYear()); setMonth(today.getMonth() + 1); };
 
-  const goCurrent = () => {
-    setYear(today.getFullYear());
-    setMonth(today.getMonth() + 1);
-  };
-
-  // Compute aggregates per category
-  const aggregate = useMemo(() => {
-    const byCat = (kind: "ingreso" | "egreso", category: string) => {
-      const projected = lines
-        .filter((l) => l.kind === kind && l.category === category)
-        .reduce((s, l) => s + Number(l.projected_amount || 0), 0);
-      const manual = entries
-        .filter((e) => e.kind === kind && e.category === category)
-        .reduce((s, e) => s + Number(e.amount || 0), 0);
-      const autoVal = Number(auto[category] || 0);
-      const real = manual + autoVal;
-      return { projected, manual, auto: autoVal, real };
-    };
-
-    // Expand Ferias into one row per named feria; non-feria categories stay as-is
-    const incomes = INCOME_CATEGORIES.flatMap((c) => {
-      if (c === "Ferias") {
-        const feriaLines = lines.filter((l) => l.kind === "ingreso" && l.category === "Ferias");
-        const rows = feriaLines.map((l) => {
-          const name = l.description || "sin nombre";
-          const manual = entries
-            .filter(
-              (e) =>
-                e.kind === "ingreso" &&
-                e.category === "Ferias" &&
-                (e.description || "sin nombre") === name
-            )
-            .reduce((s, e) => s + Number(e.amount || 0), 0);
-          return {
-            category: `Ferias - ${name}`,
-            projected: Number(l.projected_amount || 0),
-            manual,
-            auto: 0,
-            real: manual,
-            entryCategory: "Ferias",
-            entryDescription: name,
-          };
-        });
-        const totalsRow = { category: "Ferias (total real)", ...byCat("ingreso", "Ferias") };
-        return rows.length > 0 ? [...rows, totalsRow] : [totalsRow];
+  // Build rows per group: simple cats single-row, multi cats expanded by description + totals
+  const groupRows = useMemo(() => {
+    return KIND_GROUPS.map((g) => {
+      const rows: { category: string; projected: number; real: number; auto: number; entryCategory: string; entryDescription?: string; isTotal?: boolean }[] = [];
+      for (const c of g.cats) {
+        const projectedTotal = lines.filter((l) => l.kind === g.kind && l.category === c)
+          .reduce((s, l) => s + Number(l.projected_amount || 0), 0);
+        const manualTotal = entries.filter((e) => e.kind === g.kind && e.category === c)
+          .reduce((s, e) => s + Number(e.amount || 0), 0);
+        const autoVal = Number(auto[c] || 0);
+        if (MULTI.has(c)) {
+          const linesC = lines.filter((l) => l.kind === g.kind && l.category === c);
+          linesC.forEach((l) => {
+            const name = l.description || "sin nombre";
+            const manual = entries
+              .filter((e) => e.kind === g.kind && e.category === c && (e.description || "sin nombre") === name)
+              .reduce((s, e) => s + Number(e.amount || 0), 0);
+            rows.push({
+              category: `${c} — ${name}`,
+              projected: Number(l.projected_amount || 0),
+              real: manual,
+              auto: 0,
+              entryCategory: c,
+              entryDescription: name,
+            });
+          });
+          rows.push({
+            category: `${c} (total)`,
+            projected: projectedTotal,
+            real: manualTotal + autoVal,
+            auto: autoVal,
+            entryCategory: c,
+            isTotal: true,
+          });
+        } else {
+          rows.push({
+            category: c,
+            projected: projectedTotal,
+            real: manualTotal + autoVal,
+            auto: autoVal,
+            entryCategory: c,
+          });
+        }
       }
-      if (c === "Otros ingresos") {
-        const otrosLines = lines.filter((l) => l.kind === "ingreso" && l.category === "Otros ingresos");
-        const rows = otrosLines.map((l) => {
-          const name = l.description || "sin nombre";
-          const manual = entries
-            .filter(
-              (e) =>
-                e.kind === "ingreso" &&
-                e.category === "Otros ingresos" &&
-                (e.description || "sin nombre") === name
-            )
-            .reduce((s, e) => s + Number(e.amount || 0), 0);
-          return {
-            category: `Otros ingresos - ${name}`,
-            projected: Number(l.projected_amount || 0),
-            manual,
-            auto: 0,
-            real: manual,
-            entryCategory: "Otros ingresos",
-            entryDescription: name,
-          };
-        });
-        const totalsRow = { category: "Otros ingresos (total real)", ...byCat("ingreso", "Otros ingresos") };
-        return rows.length > 0 ? [...rows, totalsRow] : [totalsRow];
-      }
-      return [{ category: c, ...byCat("ingreso", c) }];
+      // Totals per kind: avoid double-counting MULTI rows
+      const projected = rows.filter((r) => !r.category.includes(" — ")).reduce((s, r) => s + r.projected, 0);
+      const real = rows.filter((r) => !r.category.includes(" — ")).reduce((s, r) => s + r.real, 0);
+      return { kind: g.kind, rows, projected, real };
     });
-    const expenses = EXPENSE_CATEGORIES.flatMap((c) => {
-      if (c === "Otros gastos") {
-        const otrosLines = lines.filter((l) => l.kind === "egreso" && l.category === "Otros gastos");
-        const rows = otrosLines.map((l) => {
-          const name = l.description || "sin nombre";
-          const manual = entries
-            .filter(
-              (e) =>
-                e.kind === "egreso" &&
-                e.category === "Otros gastos" &&
-                (e.description || "sin nombre") === name
-            )
-            .reduce((s, e) => s + Number(e.amount || 0), 0);
-          return {
-            category: `Otros gastos - ${name}`,
-            projected: Number(l.projected_amount || 0),
-            manual,
-            auto: 0,
-            real: manual,
-            entryCategory: "Otros gastos",
-            entryDescription: name,
-          };
-        });
-        const totalsRow = { category: "Otros gastos (total real)", ...byCat("egreso", "Otros gastos") };
-        return rows.length > 0 ? [...rows, totalsRow] : [totalsRow];
-      }
-      return [{ category: c, ...byCat("egreso", c) }];
-    });
-
-    // Avoid double-counting Ferias: sum projected from named rows, real from totals row only
-    const totalIncomeProj = incomes
-      .filter((c) => c.category !== "Ferias (total real)" && c.category !== "Otros ingresos (total real)")
-      .reduce((s, c) => s + c.projected, 0);
-    const totalIncomeReal = incomes
-      .filter(
-        (c) =>
-          !c.category.startsWith("Ferias - ") &&
-          !c.category.startsWith("Otros ingresos - ")
-      )
-      .reduce((s, c) => s + c.real, 0);
-    const totalExpenseProj = expenses
-      .filter((c) => c.category !== "Otros gastos (total real)")
-      .reduce((s, c) => s + c.projected, 0);
-    const totalExpenseReal = expenses
-      .filter((c) => !c.category.startsWith("Otros gastos - "))
-      .reduce((s, c) => s + c.real, 0);
-
-    return {
-      incomes,
-      expenses,
-      totalIncomeProj,
-      totalIncomeReal,
-      totalExpenseProj,
-      totalExpenseReal,
-      utilityProj: totalIncomeProj - totalExpenseProj,
-      utilityReal: totalIncomeReal - totalExpenseReal,
-    };
   }, [lines, entries, auto]);
+
+  const totals = useMemo(() => {
+    const find = (k: BudgetKind) => groupRows.find((g) => g.kind === k)!;
+    const ingreso = find("ingreso");
+    const costo = find("costo");
+    const gasto = find("gasto");
+    const pasivo = find("pasivo");
+    return {
+      ingreso,
+      costo,
+      gasto,
+      pasivo,
+      utilityProj: ingreso.projected - costo.projected - gasto.projected,
+      utilityReal: ingreso.real - costo.real - gasto.real,
+    };
+  }, [groupRows]);
 
   const isClosed = budget?.status === "cerrado";
 
   const handleToggleClose = () => {
     if (!budget) return;
-    closeMut.mutate(
-      { id: budget.id, status: isClosed ? "abierto" : "cerrado" },
-      {
-        onSuccess: () => toast.success(isClosed ? "Mes reabierto" : "Mes cerrado"),
-        onError: (e: any) => toast.error("Error: " + e.message),
-      }
-    );
+    closeMut.mutate({ id: budget.id, status: isClosed ? "abierto" : "cerrado" }, {
+      onSuccess: () => toast.success(isClosed ? "Mes reabierto" : "Mes cerrado"),
+      onError: (e: any) => toast.error("Error: " + e.message),
+    });
   };
 
   const handleDeleteEntry = (e: BudgetEntry) => {
@@ -231,44 +163,17 @@ export default function Presupuesto() {
     });
   };
 
-  // Chart data
-  const summaryChart = [
-    { name: "Ingresos", Proyectado: aggregate.totalIncomeProj, Real: aggregate.totalIncomeReal },
-    { name: "Egresos", Proyectado: aggregate.totalExpenseProj, Real: aggregate.totalExpenseReal },
-    { name: "Utilidad", Proyectado: aggregate.utilityProj, Real: aggregate.utilityReal },
-  ];
-
-  const expensesChart = aggregate.expenses.map((e) => ({
-    name: e.category,
-    Proyectado: e.projected,
-    Real: e.real,
-  }));
-
-  const incomePieColors = ["hsl(var(--primary))", "hsl(var(--secondary))", "hsl(var(--accent))", "hsl(var(--muted))"];
-  const incomePieData = aggregate.incomes
-    .filter((i) => i.real > 0)
-    .map((i) => ({ name: i.category, value: i.real }));
-
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Presupuesto mensual</h1>
-          <p className="text-sm text-muted-foreground">
-            Proyección y seguimiento financiero del mes
-          </p>
+          <p className="text-sm text-muted-foreground">Proyección, bancos y calendarios financieros del mes</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Button size="sm" variant="outline" onClick={() => navigate(-1)}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button size="sm" variant="outline" onClick={goCurrent}>
-            {MONTHS[month - 1]} {year}
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => navigate(1)}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+          <Button size="sm" variant="outline" onClick={() => navigate(-1)}><ChevronLeft className="h-4 w-4" /></Button>
+          <Button size="sm" variant="outline" onClick={goCurrent}>{MONTHS[month - 1]} {year}</Button>
+          <Button size="sm" variant="outline" onClick={() => navigate(1)}><ChevronRight className="h-4 w-4" /></Button>
           {isClosed && <Badge variant="secondary"><Lock className="h-3 w-3 mr-1" />Cerrado</Badge>}
         </div>
       </div>
@@ -286,190 +191,96 @@ export default function Presupuesto() {
         )}
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard
-          title="Ingresos"
-          projected={aggregate.totalIncomeProj}
-          real={aggregate.totalIncomeReal}
-          positive
-        />
-        <KpiCard
-          title="Egresos"
-          projected={aggregate.totalExpenseProj}
-          real={aggregate.totalExpenseReal}
-        />
-        <KpiCard
-          title="Utilidad"
-          projected={aggregate.utilityProj}
-          real={aggregate.utilityReal}
-          positive
-        />
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Saldo restante
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {formatCOP(aggregate.totalExpenseProj - aggregate.totalExpenseReal)}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Disponible del egreso proyectado
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <Tabs defaultValue="resumen">
+        <TabsList>
+          <TabsTrigger value="resumen">Resumen</TabsTrigger>
+          <TabsTrigger value="bancos">Bancos</TabsTrigger>
+          <TabsTrigger value="ingresos">Calendario ingresos</TabsTrigger>
+          <TabsTrigger value="pagos">Calendario pagos</TabsTrigger>
+        </TabsList>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Ingresos vs Egresos vs Utilidad</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={summaryChart}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="name" className="text-xs" />
-                <YAxis className="text-xs" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => formatCOP(v)} />
-                <Legend />
-                <Bar dataKey="Proyectado" fill="hsl(var(--muted-foreground))" />
-                <Bar dataKey="Real" fill="hsl(var(--primary))" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        <TabsContent value="resumen" className="space-y-6 mt-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <KpiCard title="Ingresos" projected={totals.ingreso.projected} real={totals.ingreso.real} positive />
+            <KpiCard title="Costos" projected={totals.costo.projected} real={totals.costo.real} />
+            <KpiCard title="Gastos" projected={totals.gasto.projected} real={totals.gasto.real} />
+            <KpiCard title="Pasivos" projected={totals.pasivo.projected} real={totals.pasivo.real} />
+            <KpiCard title="Utilidad" projected={totals.utilityProj} real={totals.utilityReal} positive />
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Egresos por categoría</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={expensesChart} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis type="number" className="text-xs" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                <YAxis type="category" dataKey="name" className="text-xs" width={120} />
-                <Tooltip formatter={(v: number) => formatCOP(v)} />
-                <Legend />
-                <Bar dataKey="Proyectado" fill="hsl(var(--muted-foreground))" />
-                <Bar dataKey="Real" fill="hsl(var(--destructive))" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+          {groupRows.map((g) => (
+            <CategoryTable
+              key={g.kind}
+              title={`${KIND_LABELS[g.kind]}s`}
+              rows={g.rows}
+              kind={g.kind}
+              onAddEntry={(cat, desc) => setAddEntry({ kind: g.kind, category: cat, description: desc })}
+              disabled={isClosed || !budget}
+            />
+          ))}
 
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">Composición de ingresos reales</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {incomePieData.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-10">
-                Aún no hay ingresos registrados este mes.
-              </p>
-            ) : (
-              <ResponsiveContainer width="100%" height={260}>
-                <PieChart>
-                  <Pie data={incomePieData} dataKey="value" nameKey="name" outerRadius={90} label>
-                    {incomePieData.map((_, i) => (
-                      <Cell key={i} fill={incomePieColors[i % incomePieColors.length]} />
+          <Card>
+            <CardHeader><CardTitle className="text-base">Movimientos manuales registrados</CardTitle></CardHeader>
+            <CardContent>
+              {entries.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">No hay movimientos manuales este mes.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Categoría</TableHead>
+                      <TableHead>Descripción</TableHead>
+                      <TableHead className="text-right">Monto</TableHead>
+                      <TableHead>Soporte</TableHead>
+                      <TableHead></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {entries.map((e) => (
+                      <TableRow key={e.id}>
+                        <TableCell className="text-sm">{format(new Date(e.entry_date), "d MMM", { locale: es })}</TableCell>
+                        <TableCell><Badge variant={e.kind === "ingreso" ? "default" : "destructive"}>{e.kind}</Badge></TableCell>
+                        <TableCell className="text-sm">{e.category}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{e.description || "—"}</TableCell>
+                        <TableCell className="text-right font-medium">{formatCOP(Number(e.amount))}</TableCell>
+                        <TableCell>
+                          {e.proof_url ? (
+                            <Button size="sm" variant="ghost" onClick={() => openSignedUrl(e.proof_url!)}>
+                              <FileText className="h-3 w-3" />
+                            </Button>
+                          ) : "—"}
+                        </TableCell>
+                        <TableCell>
+                          {!isClosed && (
+                            <Button size="sm" variant="ghost" onClick={() => handleDeleteEntry(e)}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </Pie>
-                  <Tooltip formatter={(v: number) => formatCOP(v)} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* Income table */}
-      <CategoryTable
-        title="Ingresos"
-        rows={aggregate.incomes}
-        kind="ingreso"
-        onAddEntry={(cat, desc) => setAddEntry({ kind: "ingreso", category: cat, description: desc })}
-        disabled={isClosed || !budget}
-      />
+        <TabsContent value="bancos" className="mt-4">
+          <BankAccountsPanel year={year} month={month} />
+        </TabsContent>
 
-      {/* Expense table */}
-      <CategoryTable
-        title="Egresos / Costos y gastos"
-        rows={aggregate.expenses}
-        kind="egreso"
-        onAddEntry={(cat, desc) => setAddEntry({ kind: "egreso", category: cat, description: desc })}
-        disabled={isClosed || !budget}
-      />
+        <TabsContent value="ingresos" className="mt-4">
+          <IncomeCalendar year={year} month={month} />
+        </TabsContent>
 
-      {/* Manual entries list */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Movimientos manuales registrados</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {entries.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">
-              No hay movimientos manuales este mes.
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Categoría</TableHead>
-                  <TableHead>Descripción</TableHead>
-                  <TableHead className="text-right">Monto</TableHead>
-                  <TableHead>Soporte</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {entries.map((e) => (
-                  <TableRow key={e.id}>
-                    <TableCell className="text-sm">
-                      {format(new Date(e.entry_date), "d MMM", { locale: es })}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={e.kind === "ingreso" ? "default" : "destructive"}>
-                        {e.kind}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm">{e.category}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {e.description || "—"}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCOP(Number(e.amount))}
-                    </TableCell>
-                    <TableCell>
-                      {e.proof_url ? (
-                        <Button size="sm" variant="ghost" onClick={() => openSignedUrl(e.proof_url!)}>
-                          <FileText className="h-3 w-3" />
-                        </Button>
-                      ) : "—"}
-                    </TableCell>
-                    <TableCell>
-                      {!isClosed && (
-                        <Button size="sm" variant="ghost" onClick={() => handleDeleteEntry(e)}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+        <TabsContent value="pagos" className="mt-4">
+          <PaymentsCalendar year={year} month={month} />
+        </TabsContent>
+      </Tabs>
 
-      {/* Dialogs */}
       <DefineBudgetDialog
         open={defineOpen}
         onOpenChange={setDefineOpen}
@@ -492,58 +303,32 @@ export default function Presupuesto() {
   );
 }
 
-function KpiCard({
-  title,
-  projected,
-  real,
-  positive,
-}: {
-  title: string;
-  projected: number;
-  real: number;
-  positive?: boolean;
-}) {
+function KpiCard({ title, projected, real, positive }: { title: string; projected: number; real: number; positive?: boolean }) {
   const pct = projected > 0 ? (real / projected) * 100 : 0;
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-      </CardHeader>
+      <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle></CardHeader>
       <CardContent>
-        <p className={`text-2xl font-bold ${positive && real < 0 ? "text-destructive" : ""}`}>
-          {formatCOP(real)}
-        </p>
-        <p className="text-xs text-muted-foreground mt-1">
-          Proyectado: {formatCOP(projected)}
-        </p>
-        {projected > 0 && (
-          <p className="text-xs text-muted-foreground">
-            {pct.toFixed(0)}% del proyectado
-          </p>
-        )}
+        <p className={`text-xl font-bold ${positive && real < 0 ? "text-destructive" : ""}`}>{formatCOP(real)}</p>
+        <p className="text-xs text-muted-foreground mt-1">Proy: {formatCOP(projected)}</p>
+        {projected > 0 && <p className="text-xs text-muted-foreground">{pct.toFixed(0)}%</p>}
       </CardContent>
     </Card>
   );
 }
 
 function CategoryTable({
-  title,
-  rows,
-  kind,
-  onAddEntry,
-  disabled,
+  title, rows, kind, onAddEntry, disabled,
 }: {
   title: string;
-  rows: { category: string; projected: number; real: number; auto: number; manual: number; entryCategory?: string; entryDescription?: string }[];
-  kind: "ingreso" | "egreso";
+  rows: { category: string; projected: number; real: number; auto: number; entryCategory: string; entryDescription?: string; isTotal?: boolean }[];
+  kind: BudgetKind;
   onAddEntry: (category: string, description?: string) => void;
   disabled?: boolean;
 }) {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{title}</CardTitle>
-      </CardHeader>
+      <CardHeader><CardTitle className="text-base">{title}</CardTitle></CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
@@ -560,33 +345,25 @@ function CategoryTable({
             {rows.map((r) => {
               const diff = r.real - r.projected;
               const pct = r.projected > 0 ? (r.real / r.projected) * 100 : 0;
+              const diffClass = kind === "ingreso"
+                ? (diff < 0 ? "text-destructive" : "text-emerald-600")
+                : (diff > 0 ? "text-destructive" : "text-emerald-600");
               return (
-                <TableRow key={r.category}>
+                <TableRow key={r.category} className={r.isTotal ? "bg-muted/40 font-medium" : ""}>
                   <TableCell className="font-medium">
                     {r.category}
-                    {r.auto > 0 && (
-                      <Badge variant="outline" className="ml-2 text-xs">
-                        auto: {formatCOP(r.auto)}
-                      </Badge>
-                    )}
+                    {r.auto > 0 && <Badge variant="outline" className="ml-2 text-xs">auto: {formatCOP(r.auto)}</Badge>}
                   </TableCell>
                   <TableCell className="text-right">{formatCOP(r.projected)}</TableCell>
                   <TableCell className="text-right font-medium">{formatCOP(r.real)}</TableCell>
-                  <TableCell className={`text-right ${diff < 0 && kind === "ingreso" ? "text-destructive" : diff > 0 && kind === "egreso" ? "text-destructive" : "text-emerald-600"}`}>
-                    {formatCOP(diff)}
-                  </TableCell>
-                  <TableCell className="text-right text-sm text-muted-foreground">
-                    {r.projected > 0 ? `${pct.toFixed(0)}%` : "—"}
-                  </TableCell>
+                  <TableCell className={`text-right ${diffClass}`}>{formatCOP(diff)}</TableCell>
+                  <TableCell className="text-right text-sm text-muted-foreground">{r.projected > 0 ? `${pct.toFixed(0)}%` : "—"}</TableCell>
                   <TableCell>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => onAddEntry(r.entryCategory ?? r.category, r.entryDescription)}
-                      disabled={disabled}
-                    >
-                      <Plus className="h-3 w-3 mr-1" /> {r.entryDescription ? "+ Real" : "Movimiento"}
-                    </Button>
+                    {!r.isTotal && (
+                      <Button size="sm" variant="ghost" onClick={() => onAddEntry(r.entryCategory, r.entryDescription)} disabled={disabled}>
+                        <Plus className="h-3 w-3 mr-1" /> Mov.
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               );

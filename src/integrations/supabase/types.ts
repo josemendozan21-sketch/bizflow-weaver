@@ -53,6 +53,89 @@ export type Database = {
         }
         Relationships: []
       }
+      bank_accounts: {
+        Row: {
+          active: boolean
+          created_at: string
+          current_balance: number
+          id: string
+          initial_balance: number
+          name: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          current_balance?: number
+          id?: string
+          initial_balance?: number
+          name: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          current_balance?: number
+          id?: string
+          initial_balance?: number
+          name?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bank_movements: {
+        Row: {
+          amount: number
+          bank_account_id: string
+          concept: string
+          created_at: string
+          direction: string
+          id: string
+          movement_date: string
+          recorded_by: string | null
+          recorded_by_name: string | null
+          reference_id: string | null
+          reference_kind: string | null
+        }
+        Insert: {
+          amount: number
+          bank_account_id: string
+          concept: string
+          created_at?: string
+          direction: string
+          id?: string
+          movement_date?: string
+          recorded_by?: string | null
+          recorded_by_name?: string | null
+          reference_id?: string | null
+          reference_kind?: string | null
+        }
+        Update: {
+          amount?: number
+          bank_account_id?: string
+          concept?: string
+          created_at?: string
+          direction?: string
+          id?: string
+          movement_date?: string
+          recorded_by?: string | null
+          recorded_by_name?: string | null
+          reference_id?: string | null
+          reference_kind?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_movements_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       body_production_tasks: {
         Row: {
           completed_at: string | null
@@ -137,6 +220,7 @@ export type Database = {
       budget_entries: {
         Row: {
           amount: number
+          bank_account_id: string | null
           budget_id: string
           category: string
           created_at: string
@@ -150,6 +234,7 @@ export type Database = {
         }
         Insert: {
           amount?: number
+          bank_account_id?: string | null
           budget_id: string
           category: string
           created_at?: string
@@ -163,6 +248,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          bank_account_id?: string | null
           budget_id?: string
           category?: string
           created_at?: string
@@ -175,6 +261,13 @@ export type Database = {
           recorded_by_name?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "budget_entries_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "budget_entries_budget_id_fkey"
             columns: ["budget_id"]
@@ -1894,6 +1987,103 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      scheduled_payments: {
+        Row: {
+          bank_account_id: string | null
+          bank_movement_id: string | null
+          budget_entry_id: string | null
+          budget_id: string | null
+          budgeted_amount: number
+          category: string
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          description: string | null
+          due_date: string
+          id: string
+          kind: string
+          notes: string | null
+          paid_amount: number | null
+          paid_bank_account_id: string | null
+          paid_by: string | null
+          paid_by_name: string | null
+          paid_date: string | null
+          proof_url: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          bank_account_id?: string | null
+          bank_movement_id?: string | null
+          budget_entry_id?: string | null
+          budget_id?: string | null
+          budgeted_amount?: number
+          category: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          description?: string | null
+          due_date: string
+          id?: string
+          kind: string
+          notes?: string | null
+          paid_amount?: number | null
+          paid_bank_account_id?: string | null
+          paid_by?: string | null
+          paid_by_name?: string | null
+          paid_date?: string | null
+          proof_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          bank_account_id?: string | null
+          bank_movement_id?: string | null
+          budget_entry_id?: string | null
+          budget_id?: string | null
+          budgeted_amount?: number
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          description?: string | null
+          due_date?: string
+          id?: string
+          kind?: string
+          notes?: string | null
+          paid_amount?: number | null
+          paid_bank_account_id?: string | null
+          paid_by?: string | null
+          paid_by_name?: string | null
+          paid_date?: string | null
+          proof_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_payments_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_payments_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_budgets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_payments_paid_bank_account_id_fkey"
+            columns: ["paid_bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stock_items: {
         Row: {
