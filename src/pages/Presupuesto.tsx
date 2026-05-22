@@ -23,10 +23,7 @@ import {
   useAutoReadings,
   useCloseBudget,
   useDeleteBudgetEntry,
-  useScheduledPayments,
-  useBankAccounts,
   useUpsertBudget,
-  useCreateScheduledPayment,
   INCOME_CATEGORIES,
   COST_CATEGORIES,
   EXPENSE_CATEGORIES,
@@ -36,7 +33,6 @@ import {
   type BudgetKind,
 } from "@/hooks/useMonthlyBudget";
 import { exportBudgetXlsx, parseBudgetXlsx } from "@/lib/budgetExcel";
-import { supabase } from "@/integrations/supabase/client";
 import { DefineBudgetDialog } from "@/components/presupuesto/DefineBudgetDialog";
 import { AddEntryDialog } from "@/components/presupuesto/AddEntryDialog";
 import { BankAccountsPanel } from "@/components/presupuesto/BankAccountsPanel";
@@ -72,12 +68,9 @@ export default function Presupuesto() {
   const { data: lines = [] } = useBudgetLines(budget?.id);
   const { data: entries = [] } = useBudgetEntries(budget?.id);
   const { data: auto = {} } = useAutoReadings(year, month);
-  const { data: scheduled = [] } = useScheduledPayments(year, month);
-  const { data: banks = [] } = useBankAccounts();
   const closeMut = useCloseBudget();
   const deleteEntry = useDeleteBudgetEntry();
   const upsertBudget = useUpsertBudget();
-  const createScheduled = useCreateScheduledPayment();
   const fileRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
 
@@ -176,7 +169,7 @@ export default function Presupuesto() {
   };
 
   const handleExport = () => {
-    exportBudgetXlsx({ year, month, lines, entries, scheduled, banks });
+    exportBudgetXlsx({ year, month, lines });
     toast.success("Excel descargado");
   };
 
@@ -184,46 +177,12 @@ export default function Presupuesto() {
     setImporting(true);
     try {
       const parsed = await parseBudgetXlsx(file);
-
-      // 1) Replace budget lines
-      const budgetId = await upsertBudget.mutateAsync({
+      await upsertBudget.mutateAsync({
         year, month,
         lines: parsed.lines,
         notes: budget?.notes ?? null,
       });
-
-      // 2) Scheduled payments: update existing by ID, insert new
-      const bankByName = new Map(banks.map((b) => [b.name.toLowerCase(), b.id] as const));
-      let updated = 0, created = 0;
-      for (const s of parsed.scheduled) {
-        const bank_account_id = s.bank_name ? bankByName.get(s.bank_name.toLowerCase()) ?? null : null;
-        if (s.id) {
-          const { error } = await supabase.from("scheduled_payments" as any).update({
-            kind: s.kind,
-            category: s.category,
-            description: s.description,
-            budgeted_amount: s.budgeted_amount,
-            due_date: s.due_date,
-            bank_account_id,
-            notes: s.notes,
-          }).eq("id", s.id);
-          if (error) throw error;
-          updated++;
-        } else {
-          await createScheduled.mutateAsync({
-            budget_id: budgetId,
-            kind: s.kind,
-            category: s.category,
-            description: s.description,
-            budgeted_amount: s.budgeted_amount,
-            due_date: s.due_date,
-            bank_account_id,
-            notes: s.notes,
-          });
-          created++;
-        }
-      }
-      toast.success(`Importado: ${parsed.lines.length} líneas, ${created} pagos nuevos, ${updated} actualizados`);
+      toast.success(`Importado: ${parsed.lines.length} líneas de presupuesto`);
     } catch (e: any) {
       toast.error("Error al importar: " + e.message);
     } finally {
