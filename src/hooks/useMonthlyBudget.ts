@@ -265,7 +265,241 @@ export function useDeleteBudgetEntry() {
       const { error } = await supabase.from("budget_entries" as any).delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["budget_entries"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["budget_entries"] });
+      qc.invalidateQueries({ queryKey: ["bank_accounts"] });
+      qc.invalidateQueries({ queryKey: ["bank_movements"] });
+    },
+  });
+}
+
+// =============== Bank accounts ===============
+
+export interface BankAccount {
+  id: string;
+  name: string;
+  initial_balance: number;
+  current_balance: number;
+  notes: string | null;
+  active: boolean;
+}
+
+export interface BankMovement {
+  id: string;
+  bank_account_id: string;
+  movement_date: string;
+  direction: "ingreso" | "egreso";
+  amount: number;
+  concept: string;
+  reference_kind: string | null;
+  reference_id: string | null;
+  created_at: string;
+}
+
+export function useBankAccounts() {
+  return useQuery({
+    queryKey: ["bank_accounts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bank_accounts" as any)
+        .select("*")
+        .order("name");
+      if (error) throw error;
+      return (data ?? []) as unknown as BankAccount[];
+    },
+  });
+}
+
+export function useBankMovements(year?: number, month?: number) {
+  return useQuery({
+    queryKey: ["bank_movements", year, month],
+    queryFn: async () => {
+      let q = supabase.from("bank_movements" as any).select("*").order("movement_date", { ascending: false });
+      if (year && month) {
+        const start = new Date(year, month - 1, 1).toISOString().slice(0, 10);
+        const end = new Date(year, month, 1).toISOString().slice(0, 10);
+        q = q.gte("movement_date", start).lt("movement_date", end);
+      }
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as unknown as BankMovement[];
+    },
+  });
+}
+
+export function useUpdateBankAccount() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: { id: string; name?: string; initial_balance?: number; notes?: string | null; active?: boolean }) => {
+      const { id, ...rest } = vars;
+      const { error } = await supabase.from("bank_accounts" as any).update(rest).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["bank_accounts"] }),
+  });
+}
+
+export function useCreateBankAccount() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: { name: string; initial_balance: number; notes?: string | null }) => {
+      const { error } = await supabase.from("bank_accounts" as any).insert({
+        name: vars.name,
+        initial_balance: vars.initial_balance,
+        current_balance: vars.initial_balance,
+        notes: vars.notes ?? null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["bank_accounts"] }),
+  });
+}
+
+// =============== Scheduled payments ===============
+
+export interface ScheduledPayment {
+  id: string;
+  budget_id: string | null;
+  kind: "costo" | "gasto" | "pasivo";
+  category: string;
+  description: string | null;
+  budgeted_amount: number;
+  due_date: string;
+  bank_account_id: string | null;
+  status: "pendiente" | "pagado" | "cancelado";
+  paid_amount: number | null;
+  paid_date: string | null;
+  paid_bank_account_id: string | null;
+  proof_url: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export function useScheduledPayments(year: number, month: number) {
+  return useQuery({
+    queryKey: ["scheduled_payments", year, month],
+    queryFn: async () => {
+      const start = new Date(year, month - 1, 1).toISOString().slice(0, 10);
+      const end = new Date(year, month, 1).toISOString().slice(0, 10);
+      const { data, error } = await supabase
+        .from("scheduled_payments" as any)
+        .select("*")
+        .gte("due_date", start)
+        .lt("due_date", end)
+        .order("due_date");
+      if (error) throw error;
+      return (data ?? []) as unknown as ScheduledPayment[];
+    },
+  });
+}
+
+export function useCreateScheduledPayment() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async (vars: {
+      budget_id?: string | null;
+      kind: "costo" | "gasto" | "pasivo";
+      category: string;
+      description?: string | null;
+      budgeted_amount: number;
+      due_date: string;
+      bank_account_id?: string | null;
+      notes?: string | null;
+    }) => {
+      const { error } = await supabase.from("scheduled_payments" as any).insert({
+        ...vars,
+        created_by: user?.id ?? null,
+        created_by_name: user?.email ?? null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["scheduled_payments"] }),
+  });
+}
+
+export function useDeleteScheduledPayment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("scheduled_payments" as any).delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["scheduled_payments"] }),
+  });
+}
+
+/**
+ * Marks a scheduled payment as paid:
+ * - Creates a budget_entry (egreso real) with the paid_amount
+ * - Creates a bank_movement (egreso) on the chosen bank
+ * - Updates the scheduled_payment status & refs
+ */
+export function usePayScheduled() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async (vars: {
+      payment: ScheduledPayment;
+      paid_amount: number;
+      paid_date: string;
+      paid_bank_account_id: string;
+      proof_url?: string | null;
+      notes?: string | null;
+    }) => {
+      const p = vars.payment;
+      // 1. Create budget_entry
+      let budgetEntryId: string | null = null;
+      if (p.budget_id) {
+        const { data: be, error: beErr } = await supabase.from("budget_entries" as any).insert({
+          budget_id: p.budget_id,
+          kind: p.kind,
+          category: p.category,
+          description: p.description,
+          amount: vars.paid_amount,
+          entry_date: vars.paid_date,
+          proof_url: vars.proof_url ?? null,
+          bank_account_id: vars.paid_bank_account_id,
+          recorded_by: user?.id ?? null,
+          recorded_by_name: user?.email ?? null,
+        }).select("id").single();
+        if (beErr) throw beErr;
+        budgetEntryId = (be as any)?.id ?? null;
+      }
+      // 2. Create bank_movement
+      const { data: bm, error: bmErr } = await supabase.from("bank_movements" as any).insert({
+        bank_account_id: vars.paid_bank_account_id,
+        movement_date: vars.paid_date,
+        direction: "egreso",
+        amount: vars.paid_amount,
+        concept: `Pago ${p.category}${p.description ? " — " + p.description : ""}`,
+        reference_kind: "scheduled_payment",
+        reference_id: p.id,
+        recorded_by: user?.id ?? null,
+        recorded_by_name: user?.email ?? null,
+      }).select("id").single();
+      if (bmErr) throw bmErr;
+      // 3. Update scheduled_payment
+      const { error: upErr } = await supabase.from("scheduled_payments" as any).update({
+        status: "pagado",
+        paid_amount: vars.paid_amount,
+        paid_date: vars.paid_date,
+        paid_bank_account_id: vars.paid_bank_account_id,
+        proof_url: vars.proof_url ?? null,
+        notes: vars.notes ?? p.notes,
+        budget_entry_id: budgetEntryId,
+        bank_movement_id: (bm as any)?.id,
+        paid_by: user?.id ?? null,
+        paid_by_name: user?.email ?? null,
+      }).eq("id", p.id);
+      if (upErr) throw upErr;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["scheduled_payments"] });
+      qc.invalidateQueries({ queryKey: ["bank_accounts"] });
+      qc.invalidateQueries({ queryKey: ["bank_movements"] });
+      qc.invalidateQueries({ queryKey: ["budget_entries"] });
+    },
   });
 }
 
