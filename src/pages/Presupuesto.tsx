@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChevronLeft, ChevronRight, Settings2, Lock, Unlock, Plus, Trash2, FileText } from "lucide-react";
+import { ChevronLeft, ChevronRight, Settings2, Lock, Unlock, Plus, Trash2, FileText, Download, Upload, Loader2 } from "lucide-react";
 import { openSignedUrl } from "@/lib/signedUrl";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -23,6 +23,10 @@ import {
   useAutoReadings,
   useCloseBudget,
   useDeleteBudgetEntry,
+  useScheduledPayments,
+  useBankAccounts,
+  useUpsertBudget,
+  useCreateScheduledPayment,
   INCOME_CATEGORIES,
   COST_CATEGORIES,
   EXPENSE_CATEGORIES,
@@ -31,6 +35,9 @@ import {
   type BudgetEntry,
   type BudgetKind,
 } from "@/hooks/useMonthlyBudget";
+import { exportBudgetXlsx, parseBudgetXlsx } from "@/lib/budgetExcel";
+import { supabase } from "@/integrations/supabase/client";
+import { useRef } from "react";
 import { DefineBudgetDialog } from "@/components/presupuesto/DefineBudgetDialog";
 import { AddEntryDialog } from "@/components/presupuesto/AddEntryDialog";
 import { BankAccountsPanel } from "@/components/presupuesto/BankAccountsPanel";
@@ -66,8 +73,14 @@ export default function Presupuesto() {
   const { data: lines = [] } = useBudgetLines(budget?.id);
   const { data: entries = [] } = useBudgetEntries(budget?.id);
   const { data: auto = {} } = useAutoReadings(year, month);
+  const { data: scheduled = [] } = useScheduledPayments(year, month);
+  const { data: banks = [] } = useBankAccounts();
   const closeMut = useCloseBudget();
   const deleteEntry = useDeleteBudgetEntry();
+  const upsertBudget = useUpsertBudget();
+  const createScheduled = useCreateScheduledPayment();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
 
   const navigate = (delta: number) => {
     let m = month + delta;
@@ -163,6 +176,63 @@ export default function Presupuesto() {
     });
   };
 
+  const handleExport = () => {
+    exportBudgetXlsx({ year, month, lines, entries, scheduled, banks });
+    toast.success("Excel descargado");
+  };
+
+  const handleImportFile = async (file: File) => {
+    setImporting(true);
+    try {
+      const parsed = await parseBudgetXlsx(file);
+
+      // 1) Replace budget lines
+      const budgetId = await upsertBudget.mutateAsync({
+        year, month,
+        lines: parsed.lines,
+        notes: budget?.notes ?? null,
+      });
+
+      // 2) Scheduled payments: update existing by ID, insert new
+      const bankByName = new Map(banks.map((b) => [b.name.toLowerCase(), b.id] as const));
+      let updated = 0, created = 0;
+      for (const s of parsed.scheduled) {
+        const bank_account_id = s.bank_name ? bankByName.get(s.bank_name.toLowerCase()) ?? null : null;
+        if (s.id) {
+          const { error } = await supabase.from("scheduled_payments" as any).update({
+            kind: s.kind,
+            category: s.category,
+            description: s.description,
+            budgeted_amount: s.budgeted_amount,
+            due_date: s.due_date,
+            bank_account_id,
+            notes: s.notes,
+          }).eq("id", s.id);
+          if (error) throw error;
+          updated++;
+        } else {
+          await createScheduled.mutateAsync({
+            budget_id: budgetId,
+            kind: s.kind,
+            category: s.category,
+            description: s.description,
+            budgeted_amount: s.budgeted_amount,
+            due_date: s.due_date,
+            bank_account_id,
+            notes: s.notes,
+          });
+          created++;
+        }
+      }
+      toast.success(`Importado: ${parsed.lines.length} líneas, ${created} pagos nuevos, ${updated} actualizados`);
+    } catch (e: any) {
+      toast.error("Error al importar: " + e.message);
+    } finally {
+      setImporting(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -189,6 +259,23 @@ export default function Presupuesto() {
             {isClosed ? "Reabrir mes" : "Cerrar mes"}
           </Button>
         )}
+        <Button variant="outline" onClick={handleExport}>
+          <Download className="h-4 w-4 mr-1" /> Descargar Excel
+        </Button>
+        <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={importing || isClosed}>
+          {importing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
+          Subir Excel
+        </Button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".xlsx,.xls"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleImportFile(f);
+          }}
+        />
       </div>
 
       <Tabs defaultValue="resumen">
