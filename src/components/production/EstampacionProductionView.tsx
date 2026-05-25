@@ -281,7 +281,7 @@ function EstampacionOrderCard({
           <Alert className="border-blue-300 bg-blue-50 text-blue-800">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription className="text-xs">
-              ⏳ Cuerpos aún en producción. Puedes preparar el logo, pero no inicies el estampado hasta recibirlos.
+              ⏳ Cuerpos aún en producción. Puedes iniciar el proceso y subir las muestras para aprobación.
             </AlertDescription>
           </Alert>
         )}
@@ -343,7 +343,7 @@ function EstampacionOrderCard({
               size="sm"
               variant="outline"
               onClick={onStart}
-              disabled={(hasLogo && !logoApproved) || bodiesPending}
+              disabled={hasLogo && !logoApproved}
             >
               <Play className="h-3 w-3 mr-1" /> Iniciar proceso
             </Button>
