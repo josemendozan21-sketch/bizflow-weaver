@@ -190,6 +190,8 @@ function EstampacionOrderCard({
 }) {
   const badge = STATUS_BADGE[order.stage_status] || STATUS_BADGE.pendiente;
 
+  const bodiesPending = order.current_stage === "produccion_cuerpos";
+
   const matchingLogo = logoRequests.find(
     (lr) => lr.client_name.toLowerCase() === order.client_name.toLowerCase()
   );
@@ -274,6 +276,16 @@ function EstampacionOrderCard({
           </div>
         )}
 
+        {/* Bodies pending warning */}
+        {bodiesPending && (
+          <Alert className="border-blue-300 bg-blue-50 text-blue-800">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription className="text-xs">
+              ⏳ Cuerpos aún en producción. Puedes preparar el logo, pero no inicies el estampado hasta recibirlos.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Logo not approved warning */}
         {hasLogo && !logoApproved && (
           <Alert variant="destructive" className="border-yellow-300 bg-yellow-50 text-yellow-800">
@@ -331,7 +343,7 @@ function EstampacionOrderCard({
               size="sm"
               variant="outline"
               onClick={onStart}
-              disabled={hasLogo && !logoApproved}
+              disabled={(hasLogo && !logoApproved) || bodiesPending}
             >
               <Play className="h-3 w-3 mr-1" /> Iniciar proceso
             </Button>
