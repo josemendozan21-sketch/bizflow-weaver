@@ -51,7 +51,11 @@ export const EstampacionProductionView = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
 
-  const estampacionOrders = allOrders.filter((o) => o.current_stage === "estampacion");
+  // Include orders in estampacion AND orders still waiting bodies (produccion_cuerpos)
+  // so stamping team can start preparing/logo work even if bodies aren't ready.
+  const estampacionOrders = allOrders.filter(
+    (o) => o.current_stage === "estampacion" || o.current_stage === "produccion_cuerpos"
+  );
 
   const q = searchQuery.trim().toLowerCase();
   const filteredOrders = q
