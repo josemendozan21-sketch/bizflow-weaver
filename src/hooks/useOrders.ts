@@ -52,14 +52,11 @@ export interface Order {
 type PaymentFields = Pick<Order, "sale_type" | "total_amount" | "abono" | "payment_method" | "payment_complete" | "payment_proof_url">;
 
 export function isOrderFullyPaid(order: PaymentFields): boolean {
-  const total = Number(order.total_amount) || 0;
-  const abono = Number(order.abono) || 0;
   return Boolean(
     order.payment_complete ||
       order.payment_method === "pagado" ||
       order.payment_method === "obsequio" ||
-      (order.sale_type === "menor" && order.payment_proof_url) ||
-      (total > 0 && abono >= total)
+      (order.sale_type === "menor" && order.payment_proof_url)
   );
 }
 
