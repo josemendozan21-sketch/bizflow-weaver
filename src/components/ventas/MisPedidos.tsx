@@ -681,7 +681,6 @@ function PaymentConfirmDialog({ order }: { order: Order }) {
       const { error } = await supabase.from("orders").update({
         payment_complete: true,
         payment_proof_url: finalProofUrl,
-        abono: order.total_amount, // Mark as fully paid
       }).eq("id", order.id);
 
       if (error) throw error;
