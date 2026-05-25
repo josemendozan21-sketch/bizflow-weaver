@@ -343,7 +343,7 @@ function EstampacionOrderCard({
               size="sm"
               variant="outline"
               onClick={onStart}
-              disabled={(hasLogo && !logoApproved) || bodiesPending}
+              disabled={hasLogo && !logoApproved}
             >
               <Play className="h-3 w-3 mr-1" /> Iniciar proceso
             </Button>
