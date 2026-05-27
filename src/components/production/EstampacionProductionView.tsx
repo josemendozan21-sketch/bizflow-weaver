@@ -259,21 +259,7 @@ function EstampacionOrderCard({
           )}
           <Row label="Molde / Referencia" value={order.molde || order.thermo_size || "-"} />
           <Row label="Cantidad" value={`${order.quantity} uds`} />
-          <EditableRow
-            label="Color de tinta"
-            value={order.ink_color || ""}
-            placeholder="Ej: Negro 50 / Rojo 50"
-            onSave={async (newValue) => {
-              const { error } = await supabase
-                .from("orders")
-                .update({ ink_color: newValue || null })
-                .eq("id", order.id);
-              if (error) throw error;
-              toast.success("Color de tinta actualizado");
-              queryClient.invalidateQueries({ queryKey: ["production_orders"] });
-              queryClient.invalidateQueries({ queryKey: ["orders"] });
-            }}
-          />
+          <Row label="Color de tinta" value={order.ink_color || "-"} />
           <Row label="Color de gel" value={order.gel_color || "-"} />
           {order.logo_file && <Row label="Nombre / Referencia del logo" value={order.logo_file} />}
           {order.observations && <Row label="Observaciones" value={order.observations} />}
