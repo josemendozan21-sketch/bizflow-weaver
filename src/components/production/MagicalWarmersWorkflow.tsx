@@ -293,6 +293,7 @@ export const MagicalWarmersWorkflow = () => {
               unidades: data.unidades,
               status: "finalizado",
               completed_at: new Date().toISOString(),
+              fabricated_by: data.fabricatedBy,
             });
             if (taskErr) {
               toast.error(`Error al registrar producción: ${taskErr.message}`);
@@ -315,7 +316,7 @@ export const MagicalWarmersWorkflow = () => {
                 .from("body_stock")
                 .insert({ brand: "magical", referencia: data.referencia, available: data.unidades });
             }
-            toast.success(`${data.unidades} uds de "${data.referencia}" agregadas al inventario de cuerpos.`);
+            toast.success(`${data.unidades} uds de "${data.referencia}" fabricadas por ${data.fabricatedBy} agregadas al inventario.`);
             setShowBodyForm(false);
             setBodyFormPrefill(null);
           }}
