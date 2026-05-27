@@ -54,6 +54,7 @@ export interface BodyTask {
   created_at: string;
   updated_at: string;
   completed_at: string | null;
+  fabricated_by?: string | null;
 }
 
 const MAGICAL_STAGE_LABELS: Record<string, string> = {
