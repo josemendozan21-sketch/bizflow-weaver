@@ -693,12 +693,11 @@ function OrderCard({ order, role, isAdmin, selected, onToggleSelect, onStart, on
 }
 
 /* Body Production Form */
-function BodyProductionForm({ onClose, onSubmit, initial }: { onClose: () => void; onSubmit: (data: { tipoPlastico: string; referencia: string; unidades: number; fabricatedBy: string }) => void; initial?: { tipoPlastico: "frio" | "calor"; referencia: string; unidades: number } | null }) {
+function BodyProductionForm({ onClose, onSubmit, initial }: { onClose: () => void; onSubmit: (data: { tipoPlastico: string; referencia: string; unidades: number }) => void; initial?: { tipoPlastico: "frio" | "calor"; referencia: string; unidades: number } | null }) {
   const [tipoPlastico, setTipoPlastico] = useState<string | null>(initial?.tipoPlastico ?? null);
   const [referencia, setReferencia] = useState(initial?.referencia ?? "");
   const [unidades, setUnidades] = useState(initial?.unidades ? String(initial.unidades) : "");
-  const [fabricatedBy, setFabricatedBy] = useState("");
-  const canSubmit = tipoPlastico && referencia && unidades && parseInt(unidades) > 0 && fabricatedBy.trim().length > 0;
+  const canSubmit = tipoPlastico && referencia && unidades && parseInt(unidades) > 0;
   const { stockItems } = useInventory();
   const referencias = useMemo(() => {
     const fromInv = stockItems
@@ -743,18 +742,17 @@ function BodyProductionForm({ onClose, onSubmit, initial }: { onClose: () => voi
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Unidades a producir *</Label>
+            <Label>Unidades estimadas *</Label>
             <Input type="number" min="1" placeholder="Ej: 200" value={unidades} onChange={(e) => setUnidades(e.target.value)} />
           </div>
         </div>
-        <div className="space-y-2">
-          <Label>Quién fabricó *</Label>
-          <Input placeholder="Nombre del operario" value={fabricatedBy} onChange={(e) => setFabricatedBy(e.target.value)} />
-        </div>
+        <p className="text-xs text-muted-foreground">
+          La producción se crea en estado <span className="font-medium">en proceso</span>. Al finalizar se piden las unidades reales fabricadas y se envían al inventario.
+        </p>
         <div className="flex gap-2 pt-2">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => { if (canSubmit && tipoPlastico) onSubmit({ tipoPlastico, referencia, unidades: parseInt(unidades), fabricatedBy: fabricatedBy.trim() }); }} disabled={!canSubmit}>
-            <Plus className="h-4 w-4 mr-1" /> Finalizar producción
+          <Button onClick={() => { if (canSubmit && tipoPlastico) onSubmit({ tipoPlastico, referencia, unidades: parseInt(unidades) }); }} disabled={!canSubmit}>
+            <Plus className="h-4 w-4 mr-1" /> Crear producción
           </Button>
         </div>
       </CardContent>
