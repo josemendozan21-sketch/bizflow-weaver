@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
 export type LogoRequestStatus =
   | "pendiente_diseno"
@@ -33,6 +34,23 @@ export interface LogoRequest {
 }
 
 export function useLogoRequests() {
+  const qc = useQueryClient();
+  useEffect(() => {
+    const channel = supabase
+      .channel("logo_requests_changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "logo_requests" },
+        () => {
+          qc.invalidateQueries({ queryKey: ["logo-requests"] });
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [qc]);
+
   return useQuery({
     queryKey: ["logo-requests"],
     queryFn: async () => {
@@ -43,6 +61,8 @@ export function useLogoRequests() {
       if (error) throw error;
       return data as LogoRequest[];
     },
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
   });
 }
 
