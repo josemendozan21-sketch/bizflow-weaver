@@ -103,7 +103,7 @@ export default function Personal() {
           <Users className="h-6 w-6" /> Personal
         </h1>
         <p className="text-sm text-muted-foreground">
-          Marcación de ingreso y salida con foto. Meta semanal: {WEEKLY_TARGET_HOURS}h.
+          Marcación de ingreso y salida con foto. Meta semanal: 44h hasta el 14 jun 2026; 42h desde el 15 jun 2026.
         </p>
       </div>
 
@@ -561,7 +561,7 @@ function WeeklyReport() {
             />
           </div>
           <p className="text-sm text-muted-foreground">
-            {weekStart} → {weekEnd} · meta {WEEKLY_TARGET_HOURS}h
+            {weekStart} → {weekEnd} · meta {weeklyTargetFor(weekStart)}h
           </p>
         </CardContent>
       </Card>
@@ -592,7 +592,8 @@ function WeeklyReport() {
                       (acc, r) => acc + hoursBetween(r.check_in_at, r.check_out_at),
                       0
                     );
-                    const reachedTarget = total >= WEEKLY_TARGET_HOURS;
+                    const target = weeklyTargetFor(weekStart);
+                    const reachedTarget = total >= target;
                     return (
                       <tr key={m.id} className="border-b last:border-b-0 align-top">
                         <td className="py-2 pr-3 font-medium">{m.full_name}</td>
@@ -600,7 +601,7 @@ function WeeklyReport() {
                         <td className="py-2 pr-3 font-semibold">{total.toFixed(2)}h</td>
                         <td className="py-2 pr-3">
                           <Badge variant={reachedTarget ? "default" : "secondary"}>
-                            {reachedTarget ? "Cumplida" : `Faltan ${(WEEKLY_TARGET_HOURS - total).toFixed(1)}h`}
+                            {reachedTarget ? "Cumplida" : `Faltan ${(target - total).toFixed(1)}h`}
                           </Badge>
                         </td>
                         <td className="py-2 pr-3 text-xs">
