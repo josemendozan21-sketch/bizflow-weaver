@@ -123,6 +123,11 @@ export const MagicalWarmersWorkflow = () => {
   // Completion dialog state for finishing empaque (last stage before listo)
   const [completionOrder, setCompletionOrder] = useState<ProductionOrder | null>(null);
 
+  // Finalize body task dialog (real units fabricated)
+  const [finalizeTask, setFinalizeTask] = useState<BodyTask | null>(null);
+  const [finalizeActualQty, setFinalizeActualQty] = useState("");
+  const [finalizeFabricatedBy, setFinalizeFabricatedBy] = useState("");
+
   const [searchTerm, setSearchTerm] = useState("");
   const stageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const activeOrdersAll = orders.filter((o) => o.current_stage !== "listo");
@@ -149,6 +154,7 @@ export const MagicalWarmersWorkflow = () => {
   };
   const producibleTasks = bodyTasks.filter((t) => isProducibleReference(t.referencia));
   const completedBodyTasks = producibleTasks.filter((t) => t.status === "finalizado");
+  const inProgressBodyTasks = producibleTasks.filter((t) => t.status !== "finalizado");
 
   const toggleSelect = (id: string) => {
     setSelected((prev) => {
@@ -286,41 +292,59 @@ export const MagicalWarmersWorkflow = () => {
           onClose={() => { setShowBodyForm(false); setBodyFormPrefill(null); }}
           initial={bodyFormPrefill}
           onSubmit={async (data) => {
-            // Register as a finalized body production task (historic record)
+            // Create as in-progress; does NOT enter inventory until finalized with real units
             const { error: taskErr } = await supabase.from("body_production_tasks").insert({
               tipo_plastico: data.tipoPlastico,
               referencia: data.referencia,
               unidades: data.unidades,
-              status: "finalizado",
-              completed_at: new Date().toISOString(),
-              fabricated_by: data.fabricatedBy,
+              status: "en_proceso",
             });
             if (taskErr) {
-              toast.error(`Error al registrar producción: ${taskErr.message}`);
+              toast.error(`Error al crear producción: ${taskErr.message}`);
               return;
             }
-            // Upsert body_stock
-            const { data: existing } = await supabase
-              .from("body_stock")
-              .select("*")
-              .eq("brand", "magical")
-              .ilike("referencia", data.referencia)
-              .maybeSingle();
-            if (existing) {
-              await supabase
-                .from("body_stock")
-                .update({ available: existing.available + data.unidades })
-                .eq("id", existing.id);
-            } else {
-              await supabase
-                .from("body_stock")
-                .insert({ brand: "magical", referencia: data.referencia, available: data.unidades });
-            }
-            toast.success(`${data.unidades} uds de "${data.referencia}" fabricadas por ${data.fabricatedBy} agregadas al inventario.`);
+            toast.success(`Producción de ${data.unidades} uds de "${data.referencia}" iniciada. Finalízala con las unidades reales para enviar a inventario.`);
             setShowBodyForm(false);
             setBodyFormPrefill(null);
           }}
         />
+      )}
+
+      {inProgressBodyTasks.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold text-foreground">Cuerpos en producción ({inProgressBodyTasks.length})</h4>
+          <p className="text-xs text-muted-foreground">Aún no están en inventario. Finaliza cada producción con las unidades reales fabricadas para enviarlas a inventario.</p>
+          <div className="grid gap-2 md:grid-cols-2">
+            {inProgressBodyTasks.map((task) => (
+              <Card key={task.id} className="border border-primary/30">
+                <CardContent className="pt-3 pb-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {task.tipo_plastico === "frio" ? "Frío" : "Calor"} — {task.referencia}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Estimado: {task.unidades} uds · creado {new Date(task.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <Badge variant="default" className="shrink-0">En proceso</Badge>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      setFinalizeTask(task);
+                      setFinalizeActualQty(String(task.unidades));
+                      setFinalizeFabricatedBy("");
+                    }}
+                  >
+                    <CheckCircle2 className="h-3 w-3 mr-1" /> Finalizar y enviar a inventario
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
       )}
 
       {completedBodyTasks.length > 0 && (
@@ -463,6 +487,88 @@ export const MagicalWarmersWorkflow = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Finalize body task dialog */}
+      <Dialog open={!!finalizeTask} onOpenChange={(open) => { if (!open) setFinalizeTask(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Finalizar producción de cuerpos</DialogTitle>
+            <DialogDescription>
+              Confirma las unidades realmente fabricadas. Solo entonces se sumarán al inventario.
+            </DialogDescription>
+          </DialogHeader>
+          {finalizeTask && (
+            <div className="space-y-4">
+              <div className="rounded-md border p-3 text-sm space-y-1">
+                <Row label="Referencia" value={finalizeTask.referencia} />
+                <Row label="Tipo" value={finalizeTask.tipo_plastico === "frio" ? "Frío" : "Calor"} />
+                <Row label="Estimado" value={`${finalizeTask.unidades} unidades`} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="finalize-qty">Unidades realmente fabricadas *</Label>
+                <Input
+                  id="finalize-qty"
+                  type="number"
+                  min="1"
+                  value={finalizeActualQty}
+                  onChange={(e) => setFinalizeActualQty(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="finalize-by">Quién fabricó *</Label>
+                <Input
+                  id="finalize-by"
+                  placeholder="Nombre del operario"
+                  value={finalizeFabricatedBy}
+                  onChange={(e) => setFinalizeFabricatedBy(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFinalizeTask(null)}>Cancelar</Button>
+            <Button
+              onClick={async () => {
+                if (!finalizeTask) return;
+                const qty = parseInt(finalizeActualQty, 10);
+                if (!qty || qty <= 0) { toast.error("Ingrese una cantidad válida."); return; }
+                if (!finalizeFabricatedBy.trim()) { toast.error("Indique quién fabricó."); return; }
+                const { error: updErr } = await supabase
+                  .from("body_production_tasks")
+                  .update({
+                    status: "finalizado",
+                    unidades: qty,
+                    fabricated_by: finalizeFabricatedBy.trim(),
+                    completed_at: new Date().toISOString(),
+                  })
+                  .eq("id", finalizeTask.id);
+                if (updErr) { toast.error(`Error al finalizar: ${updErr.message}`); return; }
+                // Add real units to body_stock
+                const { data: existing } = await supabase
+                  .from("body_stock")
+                  .select("*")
+                  .eq("brand", "magical")
+                  .ilike("referencia", finalizeTask.referencia)
+                  .maybeSingle();
+                if (existing) {
+                  await supabase
+                    .from("body_stock")
+                    .update({ available: existing.available + qty })
+                    .eq("id", existing.id);
+                } else {
+                  await supabase
+                    .from("body_stock")
+                    .insert({ brand: "magical", referencia: finalizeTask.referencia, available: qty });
+                }
+                toast.success(`${qty} uds de "${finalizeTask.referencia}" enviadas a inventario.`);
+                setFinalizeTask(null);
+              }}
+            >
+              <CheckCircle2 className="h-4 w-4 mr-1" /> Finalizar y enviar a inventario
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Completion Dialog - Photo, Packager, Count */}
       <CompletionDialog
         open={!!completionOrder}
@@ -587,12 +693,11 @@ function OrderCard({ order, role, isAdmin, selected, onToggleSelect, onStart, on
 }
 
 /* Body Production Form */
-function BodyProductionForm({ onClose, onSubmit, initial }: { onClose: () => void; onSubmit: (data: { tipoPlastico: string; referencia: string; unidades: number; fabricatedBy: string }) => void; initial?: { tipoPlastico: "frio" | "calor"; referencia: string; unidades: number } | null }) {
+function BodyProductionForm({ onClose, onSubmit, initial }: { onClose: () => void; onSubmit: (data: { tipoPlastico: string; referencia: string; unidades: number }) => void; initial?: { tipoPlastico: "frio" | "calor"; referencia: string; unidades: number } | null }) {
   const [tipoPlastico, setTipoPlastico] = useState<string | null>(initial?.tipoPlastico ?? null);
   const [referencia, setReferencia] = useState(initial?.referencia ?? "");
   const [unidades, setUnidades] = useState(initial?.unidades ? String(initial.unidades) : "");
-  const [fabricatedBy, setFabricatedBy] = useState("");
-  const canSubmit = tipoPlastico && referencia && unidades && parseInt(unidades) > 0 && fabricatedBy.trim().length > 0;
+  const canSubmit = tipoPlastico && referencia && unidades && parseInt(unidades) > 0;
   const { stockItems } = useInventory();
   const referencias = useMemo(() => {
     const fromInv = stockItems
@@ -637,18 +742,17 @@ function BodyProductionForm({ onClose, onSubmit, initial }: { onClose: () => voi
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Unidades a producir *</Label>
+            <Label>Unidades estimadas *</Label>
             <Input type="number" min="1" placeholder="Ej: 200" value={unidades} onChange={(e) => setUnidades(e.target.value)} />
           </div>
         </div>
-        <div className="space-y-2">
-          <Label>Quién fabricó *</Label>
-          <Input placeholder="Nombre del operario" value={fabricatedBy} onChange={(e) => setFabricatedBy(e.target.value)} />
-        </div>
+        <p className="text-xs text-muted-foreground">
+          La producción se crea en estado <span className="font-medium">en proceso</span>. Al finalizar se piden las unidades reales fabricadas y se envían al inventario.
+        </p>
         <div className="flex gap-2 pt-2">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => { if (canSubmit && tipoPlastico) onSubmit({ tipoPlastico, referencia, unidades: parseInt(unidades), fabricatedBy: fabricatedBy.trim() }); }} disabled={!canSubmit}>
-            <Plus className="h-4 w-4 mr-1" /> Finalizar producción
+          <Button onClick={() => { if (canSubmit && tipoPlastico) onSubmit({ tipoPlastico, referencia, unidades: parseInt(unidades) }); }} disabled={!canSubmit}>
+            <Plus className="h-4 w-4 mr-1" /> Crear producción
           </Button>
         </div>
       </CardContent>
