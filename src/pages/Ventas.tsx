@@ -1169,6 +1169,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                   <SelectItem value="link_pago">Link de pago</SelectItem>
                   <SelectItem value="efectivo">Efectivo</SelectItem>
                   <SelectItem value="transferencia">Transferencia</SelectItem>
+                  <SelectItem value="paypal">PayPal</SelectItem>
                   <SelectItem value="otro">Otro</SelectItem>
                 </SelectContent>
               </Select>
@@ -1857,6 +1858,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                   <SelectItem value="link_pago">Link de pago</SelectItem>
                   <SelectItem value="efectivo">Efectivo</SelectItem>
                   <SelectItem value="transferencia">Transferencia</SelectItem>
+                  <SelectItem value="paypal">PayPal</SelectItem>
                   <SelectItem value="otro">Otro</SelectItem>
                 </SelectContent>
               </Select>
@@ -2407,6 +2409,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
                 <SelectItem value="link_pago">Link de pago</SelectItem>
                 <SelectItem value="efectivo">Efectivo</SelectItem>
                 <SelectItem value="transferencia">Transferencia</SelectItem>
+                  <SelectItem value="paypal">PayPal</SelectItem>
                 <SelectItem value="otro">Otro</SelectItem>
               </SelectContent>
             </Select>

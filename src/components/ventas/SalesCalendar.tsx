@@ -20,6 +20,25 @@ import { ChevronLeft, ChevronRight, Truck, DollarSign, Loader2 } from "lucide-re
 
 const fmt = (n: number) => `$${(n || 0).toLocaleString("es-CO")}`;
 
+const CHANNEL_LABELS: Record<string, string> = {
+  nequi: "Nequi",
+  bancolombia: "Bancolombia",
+  davivienda: "Davivienda",
+  link_pago: "Link de pago",
+  efectivo: "Efectivo",
+  transferencia: "Transferencia",
+  paypal: "PayPal",
+  otro: "Otro",
+};
+
+function extractChannel(obs: string | null | undefined): string | null {
+  if (!obs) return null;
+  const m = obs.match(/Medio de pago:\s*([^|]+)/i);
+  if (!m) return null;
+  const raw = m[1].trim().toLowerCase();
+  return CHANNEL_LABELS[raw] || m[1].trim();
+}
+
 export function SalesCalendar() {
   const { data: orders = [], isLoading } = useOrders();
   const [cursor, setCursor] = useState(new Date());
@@ -218,8 +237,11 @@ export function SalesCalendar() {
                 <thead>
                   <tr className="border-b text-left text-muted-foreground text-xs">
                     <th className="pb-2 font-medium">Cliente</th>
+                    <th className="pb-2 font-medium">Asesor</th>
                     <th className="pb-2 font-medium">Producto</th>
                     <th className="pb-2 font-medium">Pago</th>
+                    <th className="pb-2 font-medium">Cuenta / Medio</th>
+                    <th className="pb-2 font-medium">Fecha pago</th>
                     <th className="pb-2 font-medium text-right">Total</th>
                     <th className="pb-2 font-medium text-right">Abono</th>
                     <th className="pb-2 font-medium text-right">Saldo</th>
@@ -231,9 +253,27 @@ export function SalesCalendar() {
                     const abono = getOrderPaidAmount(o);
                     const saldo = getOrderBalance(o);
                     const isCE = o.payment_method === "contra_entrega";
+                    const channel = extractChannel(o.observations) || (o.payment_method && !["contra_entrega","pagado","obsequio"].includes(o.payment_method) ? o.payment_method : null);
+                    const isPaid = !!o.payment_complete || (Number(o.abono) || 0) > 0 || o.payment_method === "pagado" || o.payment_method === "obsequio";
+                    const sameDay = isSameDay(new Date(o.created_at), selected);
+                    const pagoLabel = isCE
+                      ? "—"
+                      : !isPaid
+                        ? "Sin pago"
+                        : sameDay
+                          ? "Pago del día"
+                          : `Pago previo (${format(new Date(o.created_at), "d MMM", { locale: es })})`;
+                    const pagoClass = isCE
+                      ? "text-muted-foreground"
+                      : !isPaid
+                        ? "text-destructive"
+                        : sameDay
+                          ? "text-green-700"
+                          : "text-amber-700";
                     return (
                       <tr key={o.id} className="border-b last:border-0">
                         <td className="py-2">{o.client_name}</td>
+                        <td className="py-2 text-xs text-muted-foreground">{o.advisor_name || "—"}</td>
                         <td className="py-2 text-muted-foreground">
                           {o.product} <span className="text-xs">×{o.quantity}</span>
                         </td>
@@ -248,6 +288,8 @@ export function SalesCalendar() {
                             </span>
                           )}
                         </td>
+                        <td className="py-2 text-xs">{channel || <span className="text-muted-foreground">—</span>}</td>
+                        <td className={`py-2 text-xs font-medium ${pagoClass}`}>{pagoLabel}</td>
                         <td className="py-2 text-right">{fmt(total)}</td>
                         <td className="py-2 text-right text-green-600">{fmt(abono)}</td>
                         <td className="py-2 text-right font-medium text-destructive">
@@ -259,7 +301,7 @@ export function SalesCalendar() {
                 </tbody>
                 <tfoot>
                   <tr className="border-t font-semibold">
-                    <td colSpan={3} className="py-2 text-right">Totales:</td>
+                    <td colSpan={6} className="py-2 text-right">Totales:</td>
                     <td className="py-2 text-right">{fmt(selectedStats.total)}</td>
                     <td className="py-2 text-right text-green-600">{fmt(selectedStats.abonado)}</td>
                     <td className="py-2 text-right text-destructive">{fmt(selectedStats.saldo)}</td>
