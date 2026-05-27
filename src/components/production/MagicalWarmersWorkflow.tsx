@@ -293,6 +293,7 @@ export const MagicalWarmersWorkflow = () => {
               unidades: data.unidades,
               status: "finalizado",
               completed_at: new Date().toISOString(),
+              fabricated_by: data.fabricatedBy,
             });
             if (taskErr) {
               toast.error(`Error al registrar producción: ${taskErr.message}`);
@@ -315,7 +316,7 @@ export const MagicalWarmersWorkflow = () => {
                 .from("body_stock")
                 .insert({ brand: "magical", referencia: data.referencia, available: data.unidades });
             }
-            toast.success(`${data.unidades} uds de "${data.referencia}" agregadas al inventario de cuerpos.`);
+            toast.success(`${data.unidades} uds de "${data.referencia}" fabricadas por ${data.fabricatedBy} agregadas al inventario.`);
             setShowBodyForm(false);
             setBodyFormPrefill(null);
           }}
@@ -331,9 +332,18 @@ export const MagicalWarmersWorkflow = () => {
             {completedBodyTasks.map((task) => (
               <Card key={task.id} className="border opacity-70">
                 <CardContent className="pt-3 pb-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{task.tipo_plastico === "frio" ? "Frío" : "Calor"} — {task.referencia} ({task.unidades} uds)</span>
-                    <Badge variant="outline">Finalizado</Badge>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {task.tipo_plastico === "frio" ? "Frío" : "Calor"} — {task.referencia}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {task.unidades} uds
+                        {task.fabricated_by ? ` · fabricado por ${task.fabricated_by}` : ""}
+                        {task.completed_at ? ` · ${new Date(task.completed_at).toLocaleDateString()}` : ""}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="shrink-0">Finalizado</Badge>
                   </div>
                 </CardContent>
               </Card>
@@ -577,11 +587,12 @@ function OrderCard({ order, role, isAdmin, selected, onToggleSelect, onStart, on
 }
 
 /* Body Production Form */
-function BodyProductionForm({ onClose, onSubmit, initial }: { onClose: () => void; onSubmit: (data: { tipoPlastico: string; referencia: string; unidades: number }) => void; initial?: { tipoPlastico: "frio" | "calor"; referencia: string; unidades: number } | null }) {
+function BodyProductionForm({ onClose, onSubmit, initial }: { onClose: () => void; onSubmit: (data: { tipoPlastico: string; referencia: string; unidades: number; fabricatedBy: string }) => void; initial?: { tipoPlastico: "frio" | "calor"; referencia: string; unidades: number } | null }) {
   const [tipoPlastico, setTipoPlastico] = useState<string | null>(initial?.tipoPlastico ?? null);
   const [referencia, setReferencia] = useState(initial?.referencia ?? "");
   const [unidades, setUnidades] = useState(initial?.unidades ? String(initial.unidades) : "");
-  const canSubmit = tipoPlastico && referencia && unidades && parseInt(unidades) > 0;
+  const [fabricatedBy, setFabricatedBy] = useState("");
+  const canSubmit = tipoPlastico && referencia && unidades && parseInt(unidades) > 0 && fabricatedBy.trim().length > 0;
   const { stockItems } = useInventory();
   const referencias = useMemo(() => {
     const fromInv = stockItems
@@ -630,10 +641,14 @@ function BodyProductionForm({ onClose, onSubmit, initial }: { onClose: () => voi
             <Input type="number" min="1" placeholder="Ej: 200" value={unidades} onChange={(e) => setUnidades(e.target.value)} />
           </div>
         </div>
+        <div className="space-y-2">
+          <Label>Quién fabricó *</Label>
+          <Input placeholder="Nombre del operario" value={fabricatedBy} onChange={(e) => setFabricatedBy(e.target.value)} />
+        </div>
         <div className="flex gap-2 pt-2">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => { if (canSubmit && tipoPlastico) onSubmit({ tipoPlastico, referencia, unidades: parseInt(unidades) }); }} disabled={!canSubmit}>
-            <Plus className="h-4 w-4 mr-1" /> Crear tarea
+          <Button onClick={() => { if (canSubmit && tipoPlastico) onSubmit({ tipoPlastico, referencia, unidades: parseInt(unidades), fabricatedBy: fabricatedBy.trim() }); }} disabled={!canSubmit}>
+            <Plus className="h-4 w-4 mr-1" /> Finalizar producción
           </Button>
         </div>
       </CardContent>

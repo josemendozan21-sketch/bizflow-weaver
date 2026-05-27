@@ -1,0 +1,1 @@
+ALTER TABLE public.body_production_tasks ADD COLUMN IF NOT EXISTS fabricated_by text;

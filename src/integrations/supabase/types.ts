@@ -140,6 +140,7 @@ export type Database = {
         Row: {
           completed_at: string | null
           created_at: string
+          fabricated_by: string | null
           id: string
           order_id: string | null
           production_order_id: string | null
@@ -152,6 +153,7 @@ export type Database = {
         Insert: {
           completed_at?: string | null
           created_at?: string
+          fabricated_by?: string | null
           id?: string
           order_id?: string | null
           production_order_id?: string | null
@@ -164,6 +166,7 @@ export type Database = {
         Update: {
           completed_at?: string | null
           created_at?: string
+          fabricated_by?: string | null
           id?: string
           order_id?: string | null
           production_order_id?: string | null
