@@ -579,6 +579,41 @@ export const MagicalWarmersWorkflow = () => {
                     .from("body_stock")
                     .insert({ brand: "magical", referencia: finalizeTask.referencia, available: qty });
                 }
+                // Sync stock_items (cuerpos_referencias) so it appears in inventarios view
+                const { data: stockRow } = await supabase
+                  .from("stock_items")
+                  .select("id, available, in_process")
+                  .eq("brand", "magical")
+                  .eq("category", "cuerpos_referencias")
+                  .ilike("name", finalizeTask.referencia)
+                  .maybeSingle();
+                if (stockRow) {
+                  const estimated = Number(finalizeTask.unidades || 0);
+                  const newInProcess = Math.max(Number(stockRow.in_process || 0) - estimated, 0);
+                  await supabase
+                    .from("stock_items")
+                    .update({
+                      available: Number(stockRow.available || 0) + qty,
+                      in_process: newInProcess,
+                    } as any)
+                    .eq("id", stockRow.id);
+                } else {
+                  await supabase.from("stock_items").insert({
+                    name: finalizeTask.referencia,
+                    brand: "magical",
+                    category: "cuerpos_referencias",
+                    available: qty,
+                    unit: "unidades",
+                    min_stock: 0,
+                  } as any);
+                }
+                // Notify inventarios so they can receive / verify the new stock
+                await supabase.from("notifications").insert({
+                  target_role: "inventarios",
+                  title: "Cuerpos finalizados — recibir inventario",
+                  message: `${qty} uds de "${finalizeTask.referencia}" finalizadas por ${finalizeFabricatedBy.trim()}. Inventario actualizado, listo para recepción.`,
+                  type: "success",
+                } as any);
                 toast.success(`${qty} uds de "${finalizeTask.referencia}" enviadas a inventario.`);
                 setFinalizeTask(null);
               }}
