@@ -66,26 +66,40 @@ export function BodyRequirementsPanel({ references, orders, bodyStock, stockItem
   const [openCalor, setOpenCalor] = useState(false);
 
   const summaries = useMemo<RefSummary[]>(() => {
-    // Dedupe references by normalized form, prefer the version with accents
+    // Strip parenthetical qualifiers like "(Frío)" / "(Térmico)" to get base ref name
+    const baseOf = (s: string) => s.replace(/\s*\([^)]*\)/g, "").trim();
+    const baseKey = (s: string) => normalize(baseOf(s));
+
+    // Dedupe references by BASE name, prefer the cleanest label (no parens, with accents)
     const seen = new Map<string, string>();
     for (const r of references) {
-      const key = normalize(r);
+      const key = baseKey(r);
+      if (!key) continue;
+      const base = baseOf(r);
       const existing = seen.get(key);
-      if (!existing || /[áéíóúñ]/i.test(r)) seen.set(key, r);
+      const preferred =
+        !existing ||
+        // Prefer label without parens
+        (/\(/.test(existing) && !/\(/.test(base)) ||
+        // Prefer label with accents when both are similar
+        (!/\(/.test(existing) === !/\(/.test(base) && /[áéíóúñ]/i.test(base));
+      if (preferred) seen.set(key, base);
     }
     const refs = Array.from(seen.values()).sort((a, b) => a.localeCompare(b));
 
     return refs.map((ref) => {
       const refKey = normalize(ref);
 
-      const stock = bodyStock.find(
-        (b) => normalize(b.brand) === "magical" && normalize(b.referencia) === refKey
-      );
+      // Sum stock across all body_stock entries whose base name matches this ref
+      const available = bodyStock
+        .filter((b) => normalize(b.brand) === "magical" && baseKey(b.referencia) === refKey)
+        .reduce((sum, b) => sum + Math.max(b.available, 0), 0);
+
       const stockItem = stockItems.find(
         (s) =>
           normalize(s.brand) === "magical" &&
           s.category === "cuerpos_referencias" &&
-          normalize(s.name) === refKey
+          baseKey(s.name) === refKey
       );
 
       const matchingOrders: DemandOrder[] = [];
@@ -123,7 +137,7 @@ export function BodyRequirementsPanel({ references, orders, bodyStock, stockItem
 
       return {
         referencia: ref,
-        available: stock ? Math.max(stock.available, 0) : 0,
+        available,
         minStock: stockItem?.min_stock ?? 0,
         demandTotal: demandFrio + demandCalor,
         demandFrio,
@@ -136,7 +150,11 @@ export function BodyRequirementsPanel({ references, orders, bodyStock, stockItem
 
   // Sort: urgent (tipo demand > available) first, then earliest delivery, then alphabetical
   const sortFor = (tipo: "frio" | "calor") =>
-    [...summaries].sort((a, b) => {
+    summaries
+      // Only show refs that have demand for this tipo
+      .filter((r) => (tipo === "frio" ? r.demandFrio : r.demandCalor) > 0)
+      .slice()
+      .sort((a, b) => {
       const ad = tipo === "frio" ? a.demandFrio : a.demandCalor;
       const bd = tipo === "frio" ? b.demandFrio : b.demandCalor;
       const aUrgent = ad > a.available;
