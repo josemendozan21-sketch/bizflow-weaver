@@ -107,6 +107,10 @@ interface OrderGroup {
 
 function groupOrders(orders: Order[]): OrderGroup[] {
   const map = new Map<string, OrderGroup>();
+  // Track abono contributions per group, deduplicated by (payment_proof_url|abono)
+  // so a single shared deposit duplicated across multiple lines of the same order
+  // is only counted once.
+  const abonoSeen = new Map<string, Set<string>>();
   for (const o of orders) {
     const minuteBucket = o.created_at.slice(0, 16); // YYYY-MM-DDTHH:mm
     const key = `${o.client_name || ""}|${o.client_city || ""}|${o.sale_type || ""}|${o.brand || ""}|${minuteBucket}`;
@@ -128,12 +132,29 @@ function groupOrders(orders: Order[]): OrderGroup[] {
         representative: o,
       };
       map.set(key, g);
+      abonoSeen.set(key, new Set());
     }
     g.items.push(o);
     g.totalUnits += Number(o.quantity) || 0;
     const lineTotal = Number(o.total_amount) || 0;
     g.totalAmount += lineTotal;
-    g.totalAbono += getOrderPaidAmount(o);
+    if (isOrderFullyPaid(o)) {
+      // Fully paid lines always contribute their own line total.
+      g.totalAbono += lineTotal;
+    } else {
+      // Shared deposit: same proof_url + same abono recorded across multiple
+      // lines of one order should only be counted once, using the raw abono
+      // amount (it belongs to the whole order, not a single line).
+      const rawAbono = Number(o.abono) || 0;
+      if (rawAbono > 0) {
+        const dedupeKey = `${o.payment_proof_url || ""}|${rawAbono}`;
+        const seen = abonoSeen.get(key)!;
+        if (!seen.has(dedupeKey)) {
+          seen.add(dedupeKey);
+          g.totalAbono += rawAbono;
+        }
+      }
+    }
     if (o.created_at < g.oldestCreatedAt) g.oldestCreatedAt = o.created_at;
     if (o.created_at > g.newestCreatedAt) g.newestCreatedAt = o.created_at;
   }
