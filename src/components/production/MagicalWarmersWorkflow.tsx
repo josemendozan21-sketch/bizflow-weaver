@@ -303,6 +303,26 @@ export const MagicalWarmersWorkflow = () => {
               toast.error(`Error al crear producción: ${taskErr.message}`);
               return;
             }
+            // Reflect "en proceso" in inventarios so they can see what's being fabricated
+            const { data: matchingStock } = await supabase
+              .from("stock_items")
+              .select("id, in_process")
+              .eq("brand", "magical")
+              .eq("category", "cuerpos_referencias")
+              .ilike("name", data.referencia)
+              .maybeSingle();
+            if (matchingStock) {
+              await supabase
+                .from("stock_items")
+                .update({ in_process: Number(matchingStock.in_process || 0) + data.unidades } as any)
+                .eq("id", matchingStock.id);
+            }
+            await supabase.from("notifications").insert({
+              target_role: "inventarios",
+              title: "Producción de cuerpos iniciada",
+              message: `Producción iniciada: ${data.unidades} uds de "${data.referencia}" (Magical Warmers).`,
+              type: "info",
+            } as any);
             toast.success(`Producción de ${data.unidades} uds de "${data.referencia}" iniciada. Finalízala con las unidades reales para enviar a inventario.`);
             setShowBodyForm(false);
             setBodyFormPrefill(null);
