@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,8 @@ export function StampingApprovals() {
   const { data: pendingApprovals = [], isLoading } = useQuery({
     queryKey: ["stamping_approvals", user?.id],
     enabled: !!user,
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
     queryFn: async () => {
       const { data, error } = await supabase
         .from("production_orders")
@@ -47,6 +49,25 @@ export function StampingApprovals() {
       ) as StampApproval[];
     },
   });
+
+  // Realtime: refetch when production_orders change so advisors see new
+  // stamping photos right after estampación uploads them.
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel("stamping_approvals_changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "production_orders" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["stamping_approvals"] });
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, queryClient]);
 
   if (isLoading) {
     return (
