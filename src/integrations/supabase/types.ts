@@ -2088,6 +2088,83 @@ export type Database = {
           },
         ]
       }
+      staff_attendance: {
+        Row: {
+          check_in_at: string | null
+          check_in_photo_url: string | null
+          check_out_at: string | null
+          check_out_photo_url: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          recorded_by: string | null
+          staff_id: string
+          updated_at: string
+          work_date: string
+        }
+        Insert: {
+          check_in_at?: string | null
+          check_in_photo_url?: string | null
+          check_out_at?: string | null
+          check_out_photo_url?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          recorded_by?: string | null
+          staff_id: string
+          updated_at?: string
+          work_date?: string
+        }
+        Update: {
+          check_in_at?: string | null
+          check_in_photo_url?: string | null
+          check_out_at?: string | null
+          check_out_photo_url?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          recorded_by?: string | null
+          staff_id?: string
+          updated_at?: string
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_attendance_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_members: {
+        Row: {
+          active: boolean
+          area: string
+          created_at: string
+          full_name: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          area: string
+          created_at?: string
+          full_name: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          area?: string
+          created_at?: string
+          full_name?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       stock_items: {
         Row: {
           available: number
