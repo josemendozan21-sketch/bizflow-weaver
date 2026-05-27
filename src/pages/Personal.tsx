@@ -98,7 +98,7 @@ export default function Personal() {
         </p>
       </div>
 
-      <Tabs value={isAdmin ? "marcacion" : "marcacion"} className="space-y-4">
+      <Tabs defaultValue="marcacion" className="space-y-4">
         <TabsList>
           <TabsTrigger value="marcacion">Marcación de hoy</TabsTrigger>
           {isAdmin && <TabsTrigger value="reporte">Reporte semanal</TabsTrigger>}
