@@ -189,6 +189,7 @@ function EstampacionOrderCard({
   onStart: () => void;
   onFinish: () => void;
 }) {
+  const queryClient = useQueryClient();
   const badge = STATUS_BADGE[order.stage_status] || STATUS_BADGE.pendiente;
 
   const bodiesPending = order.current_stage === "produccion_cuerpos";
