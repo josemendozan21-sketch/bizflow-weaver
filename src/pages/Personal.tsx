@@ -39,7 +39,16 @@ const AREA_LABEL: Record<Area, string> = {
   logistica: "Logística",
 };
 
-const WEEKLY_TARGET_HOURS = 44;
+// Meta semanal: 44h hasta el 14 de junio de 2026; 42h a partir del 15 de junio.
+const WEEKLY_TARGET_HOURS_BEFORE = 44;
+const WEEKLY_TARGET_HOURS_AFTER = 42;
+const WEEKLY_TARGET_CHANGE_DATE = "2026-06-15";
+
+function weeklyTargetFor(weekStartISO: string): number {
+  return weekStartISO >= WEEKLY_TARGET_CHANGE_DATE
+    ? WEEKLY_TARGET_HOURS_AFTER
+    : WEEKLY_TARGET_HOURS_BEFORE;
+}
 
 function todayBogota(): string {
   const fmt = new Intl.DateTimeFormat("en-CA", {
