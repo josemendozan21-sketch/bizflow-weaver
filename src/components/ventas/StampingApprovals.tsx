@@ -37,7 +37,6 @@ export function StampingApprovals() {
       const { data, error } = await supabase
         .from("production_orders")
         .select("id, client_name, brand, molde, quantity, ink_color, gel_color, stamp_size_photo_url, stamp_size_status, stamp_inkgel_photo_url, stamp_inkgel_status, stamp_advisor_feedback, advisor_id")
-        .eq("current_stage", "estampacion")
         .or("stamp_size_status.eq.pendiente,stamp_inkgel_status.eq.pendiente");
       if (error) throw error;
       // Filter to only those with photos uploaded (waiting approval)
