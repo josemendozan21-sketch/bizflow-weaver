@@ -19,7 +19,6 @@ import {
   Camera,
   Loader2,
   Search,
-  Pencil,
 } from "lucide-react";
 import { useProductionOrders, type ProductionOrder } from "@/hooks/useProductionOrders";
 import { supabase } from "@/integrations/supabase/client";
@@ -503,82 +502,6 @@ function Row({ label, value }: { label: string; value: string }) {
     <div>
       <span className="text-muted-foreground">{label}:</span>{" "}
       <span className="font-medium text-foreground">{value}</span>
-    </div>
-  );
-}
-
-function EditableRow({
-  label,
-  value,
-  placeholder,
-  onSave,
-}: {
-  label: string;
-  value: string;
-  placeholder?: string;
-  onSave: (newValue: string) => Promise<void>;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(value);
-  const [saving, setSaving] = useState(false);
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await onSave(draft.trim());
-      setEditing(false);
-    } catch (err: any) {
-      toast.error("Error", { description: err.message });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (editing) {
-    return (
-      <div className="flex items-center gap-1">
-        <span className="text-muted-foreground">{label}:</span>
-        <Input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder={placeholder}
-          className="h-7 text-xs flex-1"
-          autoFocus
-        />
-        <Button size="sm" className="h-7 px-2" onClick={handleSave} disabled={saving}>
-          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Guardar"}
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-7 px-2"
-          onClick={() => {
-            setDraft(value);
-            setEditing(false);
-          }}
-          disabled={saving}
-        >
-          Cancelar
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex items-center gap-1">
-      <span className="text-muted-foreground">{label}:</span>{" "}
-      <span className="font-medium text-foreground">{value || "-"}</span>
-      <button
-        type="button"
-        onClick={() => {
-          setDraft(value);
-          setEditing(true);
-        }}
-        className="text-muted-foreground hover:text-primary transition-colors"
-        title="Editar"
-      >
-        <Pencil className="h-3 w-3" />
-      </button>
     </div>
   );
 }
