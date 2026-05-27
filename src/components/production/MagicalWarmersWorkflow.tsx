@@ -332,9 +332,18 @@ export const MagicalWarmersWorkflow = () => {
             {completedBodyTasks.map((task) => (
               <Card key={task.id} className="border opacity-70">
                 <CardContent className="pt-3 pb-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{task.tipo_plastico === "frio" ? "Frío" : "Calor"} — {task.referencia} ({task.unidades} uds)</span>
-                    <Badge variant="outline">Finalizado</Badge>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {task.tipo_plastico === "frio" ? "Frío" : "Calor"} — {task.referencia}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {task.unidades} uds
+                        {task.fabricated_by ? ` · fabricado por ${task.fabricated_by}` : ""}
+                        {task.completed_at ? ` · ${new Date(task.completed_at).toLocaleDateString()}` : ""}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="shrink-0">Finalizado</Badge>
                   </div>
                 </CardContent>
               </Card>
