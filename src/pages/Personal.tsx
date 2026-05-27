@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Camera, Clock, LogIn, LogOut, Loader2, Users } from "lucide-react";
+import { Camera, Clock, LogIn, LogOut, Loader2, Users, Video, Upload } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -272,8 +272,68 @@ function ClockActionDialog({
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [mode, setMode] = useState<"camera" | "upload">("camera");
+  const [streaming, setStreaming] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const { user } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const stopCamera = () => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    setStreaming(false);
+  };
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      setStreaming(true);
+    } catch (err: any) {
+      toast.error("No se pudo acceder a la cámara", { description: err.message });
+      setMode("upload");
+    }
+  };
+
+  useEffect(() => {
+    if (open && mode === "camera" && !streamRef.current) {
+      startCamera();
+    }
+    if (!open) {
+      stopCamera();
+      setFile(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, mode]);
+
+  const capturePhoto = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        const captured = new File([blob], `capture_${Date.now()}.jpg`, { type: "image/jpeg" });
+        setFile(captured);
+        stopCamera();
+      },
+      "image/jpeg",
+      0.9,
+    );
+  };
 
   const submit = async () => {
     if (!file) {
@@ -344,26 +404,85 @@ function ClockActionDialog({
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Toma una fotografía como evidencia de la marcación.
-          </p>
-          <div className="space-y-2">
-            <Label>Fotografía *</Label>
-            <Input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            />
-            {file && (
-              <img
-                src={URL.createObjectURL(file)}
-                alt="preview"
-                className="max-h-48 rounded border object-contain"
-              />
-            )}
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={mode === "camera" ? "default" : "outline"}
+              onClick={() => { setFile(null); setMode("camera"); }}
+            >
+              <Video className="h-3 w-3 mr-1" /> Cámara
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={mode === "upload" ? "default" : "outline"}
+              onClick={() => { stopCamera(); setFile(null); setMode("upload"); }}
+            >
+              <Upload className="h-3 w-3 mr-1" /> Subir archivo
+            </Button>
           </div>
+
+          {mode === "camera" ? (
+            <div className="space-y-2">
+              <Label>Captura desde la cámara *</Label>
+              {!file ? (
+                <>
+                  <video
+                    ref={videoRef}
+                    playsInline
+                    muted
+                    className="w-full max-h-64 rounded border bg-black object-contain"
+                  />
+                  <div className="flex gap-2">
+                    <Button type="button" size="sm" onClick={capturePhoto} disabled={!streaming}>
+                      <Camera className="h-3 w-3 mr-1" /> Tomar foto
+                    </Button>
+                    {!streaming && (
+                      <Button type="button" size="sm" variant="outline" onClick={startCamera}>
+                        Reintentar cámara
+                      </Button>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt="preview"
+                    className="max-h-64 rounded border object-contain"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => { setFile(null); startCamera(); }}
+                  >
+                    Repetir foto
+                  </Button>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label>Fotografía *</Label>
+              <Input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              />
+              {file && (
+                <img
+                  src={URL.createObjectURL(file)}
+                  alt="preview"
+                  className="max-h-48 rounded border object-contain"
+                />
+              )}
+            </div>
+          )}
+
           <Button className="w-full" onClick={submit} disabled={saving || !file}>
             {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Camera className="h-4 w-4 mr-1" />}
             Confirmar {type === "in" ? "ingreso" : "salida"}
