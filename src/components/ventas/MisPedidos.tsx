@@ -138,17 +138,21 @@ function groupOrders(orders: Order[]): OrderGroup[] {
     g.totalUnits += Number(o.quantity) || 0;
     const lineTotal = Number(o.total_amount) || 0;
     g.totalAmount += lineTotal;
-    const paid = getOrderPaidAmount(o);
     if (isOrderFullyPaid(o)) {
-      // Fully paid lines always contribute their own total.
-      g.totalAbono += paid;
+      // Fully paid lines always contribute their own line total.
+      g.totalAbono += lineTotal;
     } else {
-      // Shared deposit detection: same proof_url + same abono = one deposit.
-      const dedupeKey = `${o.payment_proof_url || ""}|${Number(o.abono) || 0}`;
-      const seen = abonoSeen.get(key)!;
-      if (!seen.has(dedupeKey)) {
-        seen.add(dedupeKey);
-        g.totalAbono += paid;
+      // Shared deposit: same proof_url + same abono recorded across multiple
+      // lines of one order should only be counted once, using the raw abono
+      // amount (it belongs to the whole order, not a single line).
+      const rawAbono = Number(o.abono) || 0;
+      if (rawAbono > 0) {
+        const dedupeKey = `${o.payment_proof_url || ""}|${rawAbono}`;
+        const seen = abonoSeen.get(key)!;
+        if (!seen.has(dedupeKey)) {
+          seen.add(dedupeKey);
+          g.totalAbono += rawAbono;
+        }
       }
     }
     if (o.created_at < g.oldestCreatedAt) g.oldestCreatedAt = o.created_at;
