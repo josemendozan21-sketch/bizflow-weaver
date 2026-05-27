@@ -27,9 +27,9 @@ const normalize = (s: string) =>
   s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
 function detectTipoFromText(s: string): "frio" | "calor" | null {
-  const t = s.toLowerCase();
-  if (t.includes("calor")) return "calor";
-  if (t.includes("frio") || t.includes("frío")) return "frio";
+  const t = normalize(s);
+  if (t.includes("calor") || t.includes("termico")) return "calor";
+  if (t.includes("frio")) return "frio";
   return null;
 }
 
@@ -66,8 +66,14 @@ export function BodyRequirementsPanel({ references, orders, bodyStock, stockItem
   const [openCalor, setOpenCalor] = useState(false);
 
   const summaries = useMemo<RefSummary[]>(() => {
-    // Strip parenthetical qualifiers like "(Frío)" / "(Térmico)" to get base ref name
-    const baseOf = (s: string) => s.replace(/\s*\([^)]*\)/g, "").trim();
+    // Strip qualifiers like "(Frío)", "Térmico", "FRIO" to get base ref name
+    const QUALIFIER_RE = /\s*\(?\s*(fr[ií]o|t[eé]rmico|calor)\s*\)?\s*/gi;
+    const baseOf = (s: string) =>
+      s
+        .replace(/\s*\([^)]*\)/g, "")
+        .replace(QUALIFIER_RE, " ")
+        .replace(/\s+/g, " ")
+        .trim();
     const baseKey = (s: string) => normalize(baseOf(s));
 
     // Dedupe references by BASE name, prefer the cleanest label (no parens, with accents)
