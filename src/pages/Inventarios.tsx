@@ -61,7 +61,13 @@ const FullInventoryView = () => {
 };
 
 const Inventarios = () => {
-  const { role } = useAuth();
+  const { role, loading } = useAuth();
+
+  if (loading || !role) {
+    return (
+      <div className="p-8 text-sm text-muted-foreground">Cargando inventario…</div>
+    );
+  }
 
   if (role === "asesor_comercial") {
     return <AsesorInventoryView />;
