@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useBudgetEntries, useMonthlyBudget } from "@/hooks/useMonthlyBudget";
+import { useBudgetEntries, useMonthlyBudget, ADVISOR_EMAILS } from "@/hooks/useMonthlyBudget";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
@@ -46,11 +46,19 @@ export function IncomeCalendar({ year, month }: { year: number; month: number })
       const rows: { id: string; amount: number; entry_date: string; category: string; description: string | null }[] = [];
       for (const o of ordersRes.data ?? []) {
         const d = (o as any).payment_date || String((o as any).created_at).slice(0, 10);
+        const raw = String((o as any).advisor_name || "").toLowerCase().trim();
+        let displayAdvisor = (o as any).advisor_name || "";
+        for (const [name, aliases] of Object.entries(ADVISOR_EMAILS)) {
+          if (aliases.some((a) => raw.includes(a.toLowerCase()))) {
+            displayAdvisor = name;
+            break;
+          }
+        }
         rows.push({
           id: `o-${(o as any).id}`,
           amount: Number((o as any).total_amount || 0),
           entry_date: d,
-          category: `Asesor — ${(o as any).advisor_name || ""}`,
+          category: `Asesor — ${displayAdvisor}`,
           description: `${(o as any).client_name || ""}${(o as any).brand ? ` · ${(o as any).brand}` : ""}`,
         });
       }
