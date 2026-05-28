@@ -146,7 +146,8 @@ export function DefineBudgetDialog({
               {g.cats.map((c) => {
                 const key = `${g.kind}|${c}`;
                 if (MULTI_CATEGORIES[c]) {
-                  const rows = multi[key] || [{ name: "", amount: "" }];
+                  const rows = multi[key] || [{ name: "", amount: "", date: "" }];
+                  const showDate = c === "Ferias";
                   return (
                     <div key={key} className="space-y-2 pt-2 border-t">
                       <div className="flex items-center justify-between">
@@ -155,13 +156,13 @@ export function DefineBudgetDialog({
                           type="button"
                           size="sm"
                           variant="outline"
-                          onClick={() => setMulti({ ...multi, [key]: [...rows, { name: "", amount: "" }] })}
+                          onClick={() => setMulti({ ...multi, [key]: [...rows, { name: "", amount: "", date: "" }] })}
                         >
                           <Plus className="h-3 w-3 mr-1" /> Agregar
                         </Button>
                       </div>
                       {rows.map((r, idx) => (
-                        <div key={idx} className="grid grid-cols-[1fr_140px_auto] gap-2 items-center">
+                        <div key={idx} className={`grid ${showDate ? "grid-cols-[1fr_120px_140px_auto]" : "grid-cols-[1fr_140px_auto]"} gap-2 items-center`}>
                           <Input
                             placeholder="Concepto"
                             value={r.name}
@@ -182,6 +183,17 @@ export function DefineBudgetDialog({
                               setMulti({ ...multi, [key]: next });
                             }}
                           />
+                          {showDate && (
+                            <Input
+                              type="date"
+                              value={r.date}
+                              onChange={(e) => {
+                                const next = [...rows];
+                                next[idx] = { ...next[idx], date: e.target.value };
+                                setMulti({ ...multi, [key]: next });
+                              }}
+                            />
+                          )}
                           <Button
                             type="button"
                             size="icon"
@@ -197,14 +209,20 @@ export function DefineBudgetDialog({
                   );
                 }
                 return (
-                  <div key={key} className="grid grid-cols-3 gap-2 items-center">
-                    <Label className="col-span-2 text-sm">{c}</Label>
+                  <div key={key} className="grid grid-cols-[1fr_140px_140px] gap-2 items-center">
+                    <Label className="text-sm">{c}</Label>
                     <Input
                       type="number"
                       min="0"
                       placeholder="0"
                       value={amounts[key] ?? ""}
                       onChange={(e) => setAmounts({ ...amounts, [key]: e.target.value })}
+                    />
+                    <Input
+                      type="date"
+                      title="Fecha estimada (opcional)"
+                      value={dates[key] ?? ""}
+                      onChange={(e) => setDates({ ...dates, [key]: e.target.value })}
                     />
                   </div>
                 );
