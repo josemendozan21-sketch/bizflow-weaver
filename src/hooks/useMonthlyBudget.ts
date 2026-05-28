@@ -69,6 +69,7 @@ export const INCOME_CATEGORIES = [
 export const COST_CATEGORIES = [
   "Materia Prima",
   "Producto terminado",
+  "Stand ferias",
 ];
 
 export const EXPENSE_CATEGORIES = [
