@@ -42,6 +42,15 @@ export interface BudgetEntry {
 
 export const ADVISORS = ["Valentina", "Angela", "Pilar", "Ilian", "Jose Mario"] as const;
 
+/** Email aliases used to match orders.advisor_name (which often stores the email) to a display advisor. */
+export const ADVISOR_EMAILS: Record<string, string[]> = {
+  Valentina: ["valemendoza2228@gmail.com", "valentina"],
+  Angela: ["angela.mendozan@gmail.com", "angela"],
+  Pilar: ["beltran.pilar1923@gmail.com", "pilar"],
+  Ilian: ["ilianghernandez@gmail.com", "ilian"],
+  "Jose Mario": ["josemendozan21@gmail.com", "jose"],
+};
+
 export const INCOME_CATEGORIES = [
   "Ventas al detal",
   "Ventas al por mayor",
