@@ -100,7 +100,7 @@ const WholesaleOrdersInbox = () => {
       const { data, error } = await supabase
         .from("orders")
         .select("id,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations")
-        .eq("sale_type", "detal")
+        .eq("sale_type", "menor")
         .in("production_status", ACTIVE_STATUSES)
         .order("created_at", { ascending: false });
       if (error) throw error;
