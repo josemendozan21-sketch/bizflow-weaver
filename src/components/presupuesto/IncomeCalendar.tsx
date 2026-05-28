@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { useBudgetEntries, useMonthlyBudget } from "@/hooks/useMonthlyBudget";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 function formatCOP(n: number) {
   return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n || 0);
@@ -14,11 +16,78 @@ export function IncomeCalendar({ year, month }: { year: number; month: number })
   const { data: entries = [] } = useBudgetEntries(budget?.id);
   const [selected, setSelected] = useState<Date | null>(null);
 
-  const ingresos = entries.filter((e) => e.kind === "ingreso");
-
   const monthStart = startOfMonth(new Date(year, month - 1, 1));
   const monthEnd = endOfMonth(monthStart);
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
+  const startDate = monthStart.toISOString().slice(0, 10);
+  const endDate = new Date(year, month, 1).toISOString().slice(0, 10);
+
+  const { data: autoIncome = [] } = useQuery({
+    queryKey: ["income_calendar_auto", year, month],
+    queryFn: async () => {
+      const [ordersRes, feriaRes, posRes] = await Promise.all([
+        supabase
+          .from("orders")
+          .select("id, total_amount, payment_date, created_at, advisor_name, client_name, brand")
+          .gte("payment_date", startDate)
+          .lt("payment_date", endDate),
+        supabase
+          .from("feria_sales")
+          .select("id, total_amount, sale_date, product_name")
+          .gte("sale_date", startDate)
+          .lt("sale_date", endDate),
+        supabase
+          .from("pos_sales")
+          .select("id, total_amount, sale_date")
+          .gte("sale_date", startDate)
+          .lt("sale_date", endDate),
+      ]);
+      const rows: { id: string; amount: number; entry_date: string; category: string; description: string | null }[] = [];
+      for (const o of ordersRes.data ?? []) {
+        const d = (o as any).payment_date || String((o as any).created_at).slice(0, 10);
+        rows.push({
+          id: `o-${(o as any).id}`,
+          amount: Number((o as any).total_amount || 0),
+          entry_date: d,
+          category: `Asesor — ${(o as any).advisor_name || ""}`,
+          description: `${(o as any).client_name || ""}${(o as any).brand ? ` · ${(o as any).brand}` : ""}`,
+        });
+      }
+      for (const f of feriaRes.data ?? []) {
+        rows.push({
+          id: `f-${(f as any).id}`,
+          amount: Number((f as any).total_amount || 0),
+          entry_date: String((f as any).sale_date).slice(0, 10),
+          category: "Ferias",
+          description: (f as any).product_name || null,
+        });
+      }
+      for (const p of posRes.data ?? []) {
+        rows.push({
+          id: `p-${(p as any).id}`,
+          amount: Number((p as any).total_amount || 0),
+          entry_date: String((p as any).sale_date).slice(0, 10),
+          category: "Punto 92",
+          description: null,
+        });
+      }
+      return rows;
+    },
+  });
+
+  const ingresos = useMemo(() => {
+    const manual = entries
+      .filter((e) => e.kind === "ingreso")
+      .map((e) => ({
+        id: e.id,
+        amount: Number(e.amount),
+        entry_date: e.entry_date,
+        category: e.category,
+        description: e.description,
+      }));
+    return [...manual, ...autoIncome];
+  }, [entries, autoIncome]);
 
   const dailyTotals = useMemo(() => {
     const map = new Map<string, number>();
