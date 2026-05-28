@@ -1358,6 +1358,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const [ssAbono, setSsAbono] = usePersistedState("ventas:ss:abono", "");
   const [ssEstadoPago, setSsEstadoPago] = usePersistedState<"abono_inicial" | "pago_total" | "pendiente">("ventas:ss:estadoPago", "abono_inicial");
   const [ssPaymentChannel, setSsPaymentChannel] = usePersistedState<string>("ventas:ss:paymentChannel", "");
+  const [ssPaymentDate, setSsPaymentDate] = usePersistedState<string>("ventas:ss:paymentDate", new Date().toISOString().slice(0, 10));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ssIsRecompra, setSsIsRecompra] = usePersistedState("ventas:ss:isRecompra", false);
   const [ssNoLogo, setSsNoLogo] = usePersistedState("ventas:ss:noLogo", false);
