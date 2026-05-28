@@ -48,6 +48,12 @@ export const INCOME_CATEGORIES = [
   "Punto 92",
   "Sub Arriendos",
   "Otros ingresos",
+  // Legacy (presupuestos anteriores por asesor)
+  "Asesores - Valentina",
+  "Asesores - Angela",
+  "Asesores - Pilar",
+  "Asesores - Ilian",
+  "Asesores - Jose Mario",
 ];
 
 export const COST_CATEGORIES = [
@@ -80,6 +86,10 @@ export const EXPENSE_CATEGORIES = [
   "Tiquetes",
   "Viáticos",
   "Otros gastos",
+  // Legacy (presupuestos anteriores)
+  "Compra de materia prima",
+  "Servicios",
+  "Gastos diarios",
 ];
 
 export const LIABILITY_CATEGORIES = [
