@@ -1,0 +1,1 @@
+ALTER TABLE public.budget_lines ADD COLUMN IF NOT EXISTS expected_date date;
