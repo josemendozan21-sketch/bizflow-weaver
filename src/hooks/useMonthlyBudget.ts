@@ -88,6 +88,8 @@ export const EXPENSE_CATEGORIES = [
   "Aseo",
   "Mensajería",
   "Gerencia",
+  "Bonificaciones asesores",
+  "Asesores externos (ferias/local)",
   "Asesores Empresa",
   "Asesores Eventos",
   "CCB",
