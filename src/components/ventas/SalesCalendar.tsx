@@ -62,7 +62,8 @@ export function SalesCalendar() {
   const ordersByDay = useMemo(() => {
     const map = new Map<string, typeof orders>();
     for (const o of orders) {
-      const k = format(new Date(o.created_at), "yyyy-MM-dd");
+      const dateStr = (o as any).payment_date || format(new Date(o.created_at), "yyyy-MM-dd");
+      const k = dateStr.length >= 10 ? dateStr.slice(0, 10) : format(new Date(o.created_at), "yyyy-MM-dd");
       const list = map.get(k) || [];
       list.push(o);
       map.set(k, list);
