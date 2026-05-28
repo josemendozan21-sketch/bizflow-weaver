@@ -1161,6 +1161,11 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
               </div>
             </div>
             <div className="space-y-1.5">
+              <Label htmlFor="mw_paymentDate">Fecha del pago</Label>
+              <Input id="mw_paymentDate" type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
+              <p className="text-xs text-muted-foreground">Si el pago fue hoy déjala como está; si fue otro día selecciónala.</p>
+            </div>
+            <div className="space-y-1.5">
               <Label>Medio de pago</Label>
               <Select value={paymentChannel} onValueChange={setPaymentChannel}>
                 <SelectTrigger><SelectValue placeholder="Selecciona medio de pago" /></SelectTrigger>
