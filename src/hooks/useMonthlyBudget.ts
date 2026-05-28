@@ -52,8 +52,6 @@ export const ADVISOR_EMAILS: Record<string, string[]> = {
 };
 
 export const INCOME_CATEGORIES = [
-  "Ventas al detal",
-  "Ventas al por mayor",
   "Ferias",
   "Punto 92",
   "Sub Arriendos",
