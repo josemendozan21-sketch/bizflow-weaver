@@ -550,7 +550,7 @@ export function useAutoReadings(year: number, month: number) {
       const startDate = start.toISOString().slice(0, 10);
       const endDate = end.toISOString().slice(0, 10);
 
-      const [ordersRes, feriaRes, pettyRes] = await Promise.all([
+      const [ordersRes, feriaRes, pettyRes, posRes] = await Promise.all([
         supabase
           .from("orders")
           .select("total_amount, sale_type, invoice_status, created_at, advisor_name")
@@ -566,14 +566,21 @@ export function useAutoReadings(year: number, month: number) {
           .select("amount, created_at")
           .gte("created_at", startISO)
           .lt("created_at", endISO),
+        supabase
+          .from("pos_sales")
+          .select("total_amount, sale_date")
+          .gte("sale_date", startISO)
+          .lt("sale_date", endISO),
       ]);
 
       const orders = ordersRes.data ?? [];
       const feria = feriaRes.data ?? [];
       const petty = pettyRes.data ?? [];
+      const pos = posRes.data ?? [];
 
       const feriasTotal = feria.reduce((s: number, f: any) => s + Number(f.total_amount || 0), 0);
       const pettyTotal = petty.reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+      const posTotal = pos.reduce((s: number, p: any) => s + Number(p.total_amount || 0), 0);
 
       // Sum sales per advisor by name (case/diacritic-insensitive matching)
       const norm = (s: string) =>
@@ -582,6 +589,7 @@ export function useAutoReadings(year: number, month: number) {
       const result: Record<string, number> = {
         Ferias: feriasTotal,
         "Gastos diarios": pettyTotal,
+        "Punto 92": posTotal,
       };
       for (const advisor of ADVISORS) {
         const aliases = (ADVISOR_EMAILS[advisor] || [advisor]).map(norm);
