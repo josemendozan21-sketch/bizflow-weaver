@@ -554,7 +554,6 @@ export function useAutoReadings(year: number, month: number) {
         supabase
           .from("orders")
           .select("total_amount, sale_type, invoice_status, created_at, advisor_name")
-          .eq("invoice_status", "facturado")
           .gte("created_at", startISO)
           .lt("created_at", endISO),
         supabase
@@ -585,9 +584,12 @@ export function useAutoReadings(year: number, month: number) {
         "Gastos diarios": pettyTotal,
       };
       for (const advisor of ADVISORS) {
-        const target = norm(advisor);
+        const aliases = (ADVISOR_EMAILS[advisor] || [advisor]).map(norm);
         const total = orders
-          .filter((o: any) => norm(o.advisor_name || "").includes(target))
+          .filter((o: any) => {
+            const a = norm(o.advisor_name || "");
+            return aliases.some((alias) => a === alias || a.includes(alias));
+          })
           .reduce((s: number, o: any) => s + Number(o.total_amount || 0), 0);
         result[`Asesores - ${advisor}`] = total;
       }
