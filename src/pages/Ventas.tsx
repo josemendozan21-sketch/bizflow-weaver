@@ -2221,6 +2221,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
             observations: lineObs || null,
             shipping_cost: line.isGift ? 0 : shippingAmount,
             silicone_color: brand === "sweatspot" && line.colorProducto ? line.colorProducto : null,
+            payment_date: genericPaymentDate || new Date().toISOString().slice(0, 10),
           } as any);
         } catch (err: any) {
           console.error("Error saving retail order:", err);
