@@ -513,6 +513,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [abono, setAbono] = usePersistedState("ventas:mw:abono", "");
   const [estadoPago, setEstadoPago] = usePersistedState<"abono_inicial" | "pago_total" | "pendiente">("ventas:mw:estadoPago", "abono_inicial");
   const [paymentChannel, setPaymentChannel] = usePersistedState<string>("ventas:mw:paymentChannel", "");
+  const [paymentDate, setPaymentDate] = usePersistedState<string>("ventas:mw:paymentDate", new Date().toISOString().slice(0, 10));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [costoAdicional, setCostoAdicional] = usePersistedState("ventas:mw:costoAdicional", "");
