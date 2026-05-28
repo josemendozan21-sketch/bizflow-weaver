@@ -2015,6 +2015,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
   const draftKey = `ventas:generic:${brand}:${saleType}`;
   const [paymentMethod, setPaymentMethod] = usePersistedState<"contra_entrega" | "pagado">(`${draftKey}:paymentMethod`, "contra_entrega");
   const [paymentChannel, setPaymentChannel] = usePersistedState<string>(`${draftKey}:paymentChannel`, "");
+  const [genericPaymentDate, setGenericPaymentDate] = usePersistedState<string>(`${draftKey}:paymentDate`, new Date().toISOString().slice(0, 10));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [shippingCost, setShippingCost] = usePersistedState<string>(`${draftKey}:shippingCost`, "");
   const [genericPaymentProofFile, setGenericPaymentProofFile] = useState<File | null>(null);
