@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useBudgetEntries, useMonthlyBudget, ADVISOR_EMAILS } from "@/hooks/useMonthlyBudget";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
 import { es } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,8 +20,10 @@ export function IncomeCalendar({ year, month }: { year: number; month: number })
   const monthEnd = endOfMonth(monthStart);
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-  const startDate = monthStart.toISOString().slice(0, 10);
-  const endDate = new Date(year, month, 1).toISOString().slice(0, 10);
+  const toLocalISO = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const startDate = toLocalISO(monthStart);
+  const endDate = toLocalISO(new Date(year, month, 1));
 
   const { data: autoIncome = [] } = useQuery({
     queryKey: ["income_calendar_auto", year, month],
@@ -100,7 +102,7 @@ export function IncomeCalendar({ year, month }: { year: number; month: number })
   const dailyTotals = useMemo(() => {
     const map = new Map<string, number>();
     for (const e of ingresos) {
-      const key = e.entry_date;
+      const key = String(e.entry_date).slice(0, 10);
       map.set(key, (map.get(key) || 0) + Number(e.amount));
     }
     return map;
@@ -108,7 +110,7 @@ export function IncomeCalendar({ year, month }: { year: number; month: number })
 
   const monthTotal = ingresos.reduce((s, e) => s + Number(e.amount), 0);
   const selectedEntries = selected
-    ? ingresos.filter((e) => isSameDay(new Date(e.entry_date), selected))
+    ? ingresos.filter((e) => String(e.entry_date).slice(0, 10) === toLocalISO(selected))
     : [];
 
   // Leading offset
@@ -130,8 +132,9 @@ export function IncomeCalendar({ year, month }: { year: number; month: number })
           <div className="grid grid-cols-7 gap-1">
             {Array.from({ length: firstWeekday }).map((_, i) => (<div key={`b${i}`} />))}
             {days.map((d) => {
-              const total = dailyTotals.get(d.toISOString().slice(0, 10)) || 0;
-              const isSel = selected && isSameDay(d, selected);
+              const dKey = toLocalISO(d);
+              const total = dailyTotals.get(dKey) || 0;
+              const isSel = selected && toLocalISO(selected) === dKey;
               return (
                 <button
                   key={d.toISOString()}
