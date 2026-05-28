@@ -102,6 +102,7 @@ export const EXPENSE_CATEGORIES = [
   "Transporte",
   "Tiquetes",
   "Viáticos",
+  "Hospedaje",
   "Otros gastos",
   // Legacy (presupuestos anteriores)
   "Compra de materia prima",
