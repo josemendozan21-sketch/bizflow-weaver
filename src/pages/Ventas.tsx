@@ -1563,6 +1563,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
           payment_proof_url: ssPaymentProofUrl,
           payment_complete: ssEstadoPago === "pago_total",
           delivery_date: fechaRequerida || null,
+          payment_date: ssPaymentDate || new Date().toISOString().slice(0, 10),
         }).select("id").single();
         orderData = data;
       } catch (err: any) {
