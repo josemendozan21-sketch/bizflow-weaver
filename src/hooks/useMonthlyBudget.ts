@@ -22,6 +22,7 @@ export interface BudgetLine {
   category: string;
   description: string | null;
   projected_amount: number;
+  expected_date?: string | null;
 }
 
 export interface BudgetEntry {
@@ -170,7 +171,7 @@ export function useUpsertBudget() {
     mutationFn: async (vars: {
       year: number;
       month: number;
-      lines: { kind: BudgetKind; category: string; projected_amount: number; description?: string | null }[];
+      lines: { kind: BudgetKind; category: string; projected_amount: number; description?: string | null; expected_date?: string | null }[];
       notes?: string | null;
     }) => {
       // upsert budget row
@@ -212,6 +213,7 @@ export function useUpsertBudget() {
           category: l.category,
           description: l.description ?? null,
           projected_amount: l.projected_amount,
+          expected_date: l.expected_date ?? null,
         }));
         const { error } = await supabase.from("budget_lines" as any).insert(rows);
         if (error) throw error;
