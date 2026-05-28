@@ -23,6 +23,7 @@ import FeriaPOS from "./pages/FeriaPOS";
 import Presupuesto from "./pages/Presupuesto";
 import PuntosVenta from "./pages/PuntosVenta";
 import Personal from "./pages/Personal";
+import Documentos from "./pages/Documentos";
 import NotFound from "./pages/NotFound";
 import Install from "./pages/Install";
 import { ReactNode } from "react";
@@ -153,6 +154,7 @@ const App = () => (
                 <Route path="/presupuesto" element={<ProtectedRoute path="/presupuesto"><Presupuesto /></ProtectedRoute>} />
                 <Route path="/puntos-venta" element={<ProtectedRoute path="/puntos-venta"><PuntosVenta /></ProtectedRoute>} />
                 <Route path="/personal" element={<ProtectedRoute path="/personal"><Personal /></ProtectedRoute>} />
+                <Route path="/documentos" element={<ProtectedRoute path="/documentos"><Documentos /></ProtectedRoute>} />
                   </Route>
                   <Route path="*" element={<NotFound />} />
                 </Routes>
