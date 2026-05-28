@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Beaker, Box, PackageCheck, Layers, Plus, Pencil, Trash2, Check, X, AlertTriangle, AlertCircle, CheckCircle2, Flame, Snowflake, Plane,
+  Beaker, Box, PackageCheck, Layers, Plus, Pencil, Trash2, Check, X, AlertTriangle, AlertCircle, CheckCircle2, Flame, Snowflake, Plane, Search, ArrowDownAZ, ArrowUpAZ,
 } from "lucide-react";
 import { useInventory, getStockStatus, type SupabaseStockItem } from "@/hooks/useInventory";
 import type { InventoryCategory, InventoryBrand } from "@/stores/inventoryStore";
@@ -80,6 +80,9 @@ const CategorizedInventoryPanel = ({
   const [newForm, setNewForm] = useState({ name: "", available: "", unit: "unidades", minStock: "" });
   const [activeHighlights, setActiveHighlights] = useState<string[]>(highlightItemNames);
   const highlightRef = useRef<HTMLTableRowElement>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"todos" | "termico" | "frio" | "otros">("todos");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   useEffect(() => {
     if (activeHighlights.length > 0 && highlightRef.current) {
@@ -96,9 +99,27 @@ const CategorizedInventoryPanel = ({
 
   const dbBrand = BRAND_DB_MAP[selectedBrand] || selectedBrand;
 
-  const filteredItems = stockItems.filter(
+  const normalize = (s: string) =>
+    s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+  const baseItems = stockItems.filter(
     (i) => i.brand === dbBrand && i.category === selectedCategory
   );
+
+  const search = normalize(searchTerm.trim());
+  const filteredItems = baseItems
+    .filter((i) => {
+      if (search && !normalize(i.name).includes(search)) return false;
+      if (typeFilter === "termico") return i.product_type === "Térmico";
+      if (typeFilter === "frio") return i.product_type === "Frío";
+      if (typeFilter === "otros") return !i.product_type;
+      return true;
+    })
+    .sort((a, b) =>
+      sortDir === "asc"
+        ? a.name.localeCompare(b.name, "es", { sensitivity: "base" })
+        : b.name.localeCompare(a.name, "es", { sensitivity: "base" })
+    );
 
   const handleAdd = async () => {
     if (!newForm.name || !newForm.available || !newForm.minStock) {
@@ -378,11 +399,46 @@ const CategorizedInventoryPanel = ({
                   </div>
                 </CardHeader>
                 <CardContent>
+                  <div className="flex flex-wrap items-center gap-2 mb-4">
+                    <div className="relative flex-1 min-w-[180px]">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar producto..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-8 h-9"
+                      />
+                    </div>
+                    <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}>
+                      <SelectTrigger className="h-9 w-[140px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todos</SelectItem>
+                        <SelectItem value="termico">🔥 Térmico</SelectItem>
+                        <SelectItem value="frio">❄️ Frío</SelectItem>
+                        <SelectItem value="otros">Otros</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-9 gap-1.5"
+                      onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+                      title="Ordenar alfabéticamente"
+                    >
+                      {sortDir === "asc" ? <ArrowDownAZ className="h-4 w-4" /> : <ArrowUpAZ className="h-4 w-4" />}
+                      {sortDir === "asc" ? "A-Z" : "Z-A"}
+                    </Button>
+                  </div>
                   {isLoading ? (
                     <p className="text-center text-muted-foreground py-8 text-sm">Cargando inventario…</p>
                   ) : filteredItems.length === 0 ? (
                     <p className="text-center text-muted-foreground py-8 text-sm">
-                      No hay ítems registrados en {CATEGORY_META[cat].label} para {brandLabel}.
+                      {baseItems.length === 0
+                        ? `No hay ítems registrados en ${CATEGORY_META[cat].label} para ${brandLabel}.`
+                        : "No se encontraron ítems con esos filtros."}
                     </p>
                   ) : isGroupedCategory ? (
                     renderGroupedContent(filteredItems)
