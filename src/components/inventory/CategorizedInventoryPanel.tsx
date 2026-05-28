@@ -38,7 +38,8 @@ const CATEGORY_META: Record<InventoryCategory, { label: string; icon: React.Elem
   importados: { label: "Importados", icon: Plane },
 };
 
-const ALL_CATEGORIES: InventoryCategory[] = ["materia_prima", "cuerpos_referencias", "producto_terminado", "importados"];
+// Materia Prima ya no vive por marca: tiene su propia pestaña global con filtro de marca.
+const ALL_CATEGORIES: InventoryCategory[] = ["cuerpos_referencias", "producto_terminado", "importados"];
 const ASESOR_CATEGORIES: InventoryCategory[] = ["cuerpos_referencias", "producto_terminado", "importados"];
 
 const STATUS_CONFIG: Record<StockStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ElementType }> = {
