@@ -40,7 +40,7 @@ export interface BudgetEntry {
   created_at: string;
 }
 
-export const ADVISORS = ["Valentina", "Angela", "Pilar", "Ilian", "Jose Mario"] as const;
+export const ADVISORS = ["Valentina", "Angela", "Pilar", "Ilian", "Jose Mario", "Jailin"] as const;
 
 /** Email aliases used to match orders.advisor_name (which often stores the email) to a display advisor. */
 export const ADVISOR_EMAILS: Record<string, string[]> = {
@@ -49,6 +49,7 @@ export const ADVISOR_EMAILS: Record<string, string[]> = {
   Pilar: ["beltran.pilar1923@gmail.com", "pilar"],
   Ilian: ["ilianghernandez@gmail.com", "ilian"],
   "Jose Mario": ["josemendozan21@gmail.com", "jose"],
+  Jailin: ["herrerasotojailin@gmail.com", "jailin"],
 };
 
 export const INCOME_CATEGORIES = [
@@ -62,6 +63,7 @@ export const INCOME_CATEGORIES = [
   "Asesores - Pilar",
   "Asesores - Ilian",
   "Asesores - Jose Mario",
+  "Asesores - Jailin",
 ];
 
 export const COST_CATEGORIES = [
