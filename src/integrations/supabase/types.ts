@@ -1072,6 +1072,7 @@ export type Database = {
           numero_guia: string | null
           observations: string | null
           payment_complete: boolean | null
+          payment_date: string | null
           payment_method: string | null
           payment_proof_url: string | null
           personalization: string | null
@@ -1121,6 +1122,7 @@ export type Database = {
           numero_guia?: string | null
           observations?: string | null
           payment_complete?: boolean | null
+          payment_date?: string | null
           payment_method?: string | null
           payment_proof_url?: string | null
           personalization?: string | null
@@ -1170,6 +1172,7 @@ export type Database = {
           numero_guia?: string | null
           observations?: string | null
           payment_complete?: boolean | null
+          payment_date?: string | null
           payment_method?: string | null
           payment_proof_url?: string | null
           personalization?: string | null
