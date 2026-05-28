@@ -42,6 +42,15 @@ export interface BudgetEntry {
 
 export const ADVISORS = ["Valentina", "Angela", "Pilar", "Ilian", "Jose Mario"] as const;
 
+/** Email aliases used to match orders.advisor_name (which often stores the email) to a display advisor. */
+export const ADVISOR_EMAILS: Record<string, string[]> = {
+  Valentina: ["valemendoza2228@gmail.com", "valentina"],
+  Angela: ["angela.mendozan@gmail.com", "angela"],
+  Pilar: ["beltran.pilar1923@gmail.com", "pilar"],
+  Ilian: ["ilianghernandez@gmail.com", "ilian"],
+  "Jose Mario": ["josemendozan21@gmail.com", "jose"],
+};
+
 export const INCOME_CATEGORIES = [
   "Ventas al detal",
   "Ventas al por mayor",
@@ -545,7 +554,6 @@ export function useAutoReadings(year: number, month: number) {
         supabase
           .from("orders")
           .select("total_amount, sale_type, invoice_status, created_at, advisor_name")
-          .eq("invoice_status", "facturado")
           .gte("created_at", startISO)
           .lt("created_at", endISO),
         supabase
@@ -576,9 +584,12 @@ export function useAutoReadings(year: number, month: number) {
         "Gastos diarios": pettyTotal,
       };
       for (const advisor of ADVISORS) {
-        const target = norm(advisor);
+        const aliases = (ADVISOR_EMAILS[advisor] || [advisor]).map(norm);
         const total = orders
-          .filter((o: any) => norm(o.advisor_name || "").includes(target))
+          .filter((o: any) => {
+            const a = norm(o.advisor_name || "");
+            return aliases.some((alias) => a === alias || a.includes(alias));
+          })
           .reduce((s: number, o: any) => s + Number(o.total_amount || 0), 0);
         result[`Asesores - ${advisor}`] = total;
       }
