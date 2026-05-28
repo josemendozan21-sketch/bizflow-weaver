@@ -38,7 +38,7 @@ const CATEGORY_META: Record<InventoryCategory, { label: string; icon: React.Elem
   importados: { label: "Importados", icon: Plane },
 };
 
-const ALL_CATEGORIES: InventoryCategory[] = ["materia_prima", "producto_en_proceso", "cuerpos_referencias", "producto_terminado", "importados"];
+const ALL_CATEGORIES: InventoryCategory[] = ["materia_prima", "cuerpos_referencias", "producto_terminado", "importados"];
 const ASESOR_CATEGORIES: InventoryCategory[] = ["cuerpos_referencias", "producto_terminado", "importados"];
 
 const STATUS_CONFIG: Record<StockStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ElementType }> = {
@@ -70,8 +70,14 @@ const CategorizedInventoryPanel = ({
   const { stockItems, addStockItem, updateStockItem, deleteStockItem, isLoading } = useInventory();
   const { role } = useAuth();
   const isReadOnly = role === "asesor_comercial";
-  const CATEGORIES = isReadOnly ? ASESOR_CATEGORIES : ALL_CATEGORIES;
-  const effectiveInitialCategory = isReadOnly && !ASESOR_CATEGORIES.includes(initialCategory) ? "cuerpos_referencias" : initialCategory;
+  const baseCategories = isReadOnly ? ASESOR_CATEGORIES : ALL_CATEGORIES;
+  // Magical Warmers no tiene productos importados
+  const CATEGORIES = initialBrand === "magical_warmers"
+    ? baseCategories.filter((c) => c !== "importados")
+    : baseCategories;
+  const effectiveInitialCategory = !CATEGORIES.includes(initialCategory)
+    ? CATEGORIES[0]
+    : initialCategory;
   const [selectedBrand] = useState<InventoryBrand>(initialBrand);
   const [selectedCategory, setSelectedCategory] = useState<InventoryCategory>(effectiveInitialCategory);
   const [addOpen, setAddOpen] = useState(false);
@@ -326,7 +332,7 @@ const CategorizedInventoryPanel = ({
       </div>
 
       <Tabs value={selectedCategory} onValueChange={(v) => setSelectedCategory(v as InventoryCategory)}>
-        <TabsList className={`w-full grid ${isReadOnly ? "grid-cols-3" : "grid-cols-5"}`}>
+        <TabsList className="w-full grid" style={{ gridTemplateColumns: `repeat(${CATEGORIES.length}, minmax(0, 1fr))` }}>
           {CATEGORIES.map((cat) => {
             const meta = CATEGORY_META[cat];
             const Icon = meta.icon;
