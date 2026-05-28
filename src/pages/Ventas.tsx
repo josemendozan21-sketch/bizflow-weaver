@@ -1857,6 +1857,11 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
               </div>
             </div>
             <div className="space-y-1.5">
+              <Label htmlFor="ss_paymentDate">Fecha del pago</Label>
+              <Input id="ss_paymentDate" type="date" value={ssPaymentDate} onChange={(e) => setSsPaymentDate(e.target.value)} />
+              <p className="text-xs text-muted-foreground">Si el pago fue hoy déjala como está; si fue otro día selecciónala.</p>
+            </div>
+            <div className="space-y-1.5">
               <Label>Medio de pago</Label>
               <Select value={ssPaymentChannel} onValueChange={setSsPaymentChannel}>
                 <SelectTrigger><SelectValue placeholder="Selecciona medio de pago" /></SelectTrigger>
