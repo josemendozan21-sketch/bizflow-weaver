@@ -513,6 +513,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [abono, setAbono] = usePersistedState("ventas:mw:abono", "");
   const [estadoPago, setEstadoPago] = usePersistedState<"abono_inicial" | "pago_total" | "pendiente">("ventas:mw:estadoPago", "abono_inicial");
   const [paymentChannel, setPaymentChannel] = usePersistedState<string>("ventas:mw:paymentChannel", "");
+  const [paymentDate, setPaymentDate] = usePersistedState<string>("ventas:mw:paymentDate", new Date().toISOString().slice(0, 10));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [costoAdicional, setCostoAdicional] = usePersistedState("ventas:mw:costoAdicional", "");
@@ -869,6 +870,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           payment_proof_url: paymentProofUrl,
           payment_complete: estadoPago === "pago_total",
           delivery_date: fechaRequerida || null,
+          payment_date: paymentDate || new Date().toISOString().slice(0, 10),
         }).select("id").single();
         orderData = data;
       } catch (err: any) {
@@ -1159,6 +1161,11 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
               </div>
             </div>
             <div className="space-y-1.5">
+              <Label htmlFor="mw_paymentDate">Fecha del pago</Label>
+              <Input id="mw_paymentDate" type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
+              <p className="text-xs text-muted-foreground">Si el pago fue hoy déjala como está; si fue otro día selecciónala.</p>
+            </div>
+            <div className="space-y-1.5">
               <Label>Medio de pago</Label>
               <Select value={paymentChannel} onValueChange={setPaymentChannel}>
                 <SelectTrigger><SelectValue placeholder="Selecciona medio de pago" /></SelectTrigger>
@@ -1351,6 +1358,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const [ssAbono, setSsAbono] = usePersistedState("ventas:ss:abono", "");
   const [ssEstadoPago, setSsEstadoPago] = usePersistedState<"abono_inicial" | "pago_total" | "pendiente">("ventas:ss:estadoPago", "abono_inicial");
   const [ssPaymentChannel, setSsPaymentChannel] = usePersistedState<string>("ventas:ss:paymentChannel", "");
+  const [ssPaymentDate, setSsPaymentDate] = usePersistedState<string>("ventas:ss:paymentDate", new Date().toISOString().slice(0, 10));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ssIsRecompra, setSsIsRecompra] = usePersistedState("ventas:ss:isRecompra", false);
   const [ssNoLogo, setSsNoLogo] = usePersistedState("ventas:ss:noLogo", false);
@@ -1555,6 +1563,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
           payment_proof_url: ssPaymentProofUrl,
           payment_complete: ssEstadoPago === "pago_total",
           delivery_date: fechaRequerida || null,
+          payment_date: ssPaymentDate || new Date().toISOString().slice(0, 10),
         }).select("id").single();
         orderData = data;
       } catch (err: any) {
@@ -1848,6 +1857,11 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
               </div>
             </div>
             <div className="space-y-1.5">
+              <Label htmlFor="ss_paymentDate">Fecha del pago</Label>
+              <Input id="ss_paymentDate" type="date" value={ssPaymentDate} onChange={(e) => setSsPaymentDate(e.target.value)} />
+              <p className="text-xs text-muted-foreground">Si el pago fue hoy déjala como está; si fue otro día selecciónala.</p>
+            </div>
+            <div className="space-y-1.5">
               <Label>Medio de pago</Label>
               <Select value={ssPaymentChannel} onValueChange={setSsPaymentChannel}>
                 <SelectTrigger><SelectValue placeholder="Selecciona medio de pago" /></SelectTrigger>
@@ -2001,6 +2015,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
   const draftKey = `ventas:generic:${brand}:${saleType}`;
   const [paymentMethod, setPaymentMethod] = usePersistedState<"contra_entrega" | "pagado">(`${draftKey}:paymentMethod`, "contra_entrega");
   const [paymentChannel, setPaymentChannel] = usePersistedState<string>(`${draftKey}:paymentChannel`, "");
+  const [genericPaymentDate, setGenericPaymentDate] = usePersistedState<string>(`${draftKey}:paymentDate`, new Date().toISOString().slice(0, 10));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [shippingCost, setShippingCost] = usePersistedState<string>(`${draftKey}:shippingCost`, "");
   const [genericPaymentProofFile, setGenericPaymentProofFile] = useState<File | null>(null);
@@ -2206,6 +2221,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
             observations: lineObs || null,
             shipping_cost: line.isGift ? 0 : shippingAmount,
             silicone_color: brand === "sweatspot" && line.colorProducto ? line.colorProducto : null,
+            payment_date: genericPaymentDate || new Date().toISOString().slice(0, 10),
           } as any);
         } catch (err: any) {
           console.error("Error saving retail order:", err);
@@ -2413,6 +2429,11 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
                 <SelectItem value="otro">Otro</SelectItem>
               </SelectContent>
             </Select>
+            <div className="space-y-1.5 pt-2">
+              <Label htmlFor="generic_paymentDate">Fecha del pago</Label>
+              <Input id="generic_paymentDate" type="date" value={genericPaymentDate} onChange={(e) => setGenericPaymentDate(e.target.value)} />
+              <p className="text-xs text-muted-foreground">Si el pago fue hoy déjala como está; si fue otro día selecciónala.</p>
+            </div>
           </fieldset>
 
           <div className="space-y-1.5">
