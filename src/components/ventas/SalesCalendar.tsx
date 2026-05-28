@@ -90,7 +90,8 @@ export function SalesCalendar() {
       contraEntrega = 0,
       pedidos = 0;
     for (const o of orders) {
-      const d = new Date(o.created_at);
+      const dateStr = (o as any).payment_date || format(new Date(o.created_at), "yyyy-MM-dd");
+      const d = new Date(dateStr.length >= 10 ? dateStr.slice(0, 10) : o.created_at);
       if (d < monthStart || d > monthEnd) continue;
       pedidos += 1;
       total += Number(o.total_amount || 0);
