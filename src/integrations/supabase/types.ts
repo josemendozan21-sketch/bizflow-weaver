@@ -286,6 +286,7 @@ export type Database = {
           category: string
           created_at: string
           description: string | null
+          expected_date: string | null
           id: string
           kind: string
           projected_amount: number
@@ -296,6 +297,7 @@ export type Database = {
           category: string
           created_at?: string
           description?: string | null
+          expected_date?: string | null
           id?: string
           kind: string
           projected_amount?: number
@@ -306,6 +308,7 @@ export type Database = {
           category?: string
           created_at?: string
           description?: string | null
+          expected_date?: string | null
           id?: string
           kind?: string
           projected_amount?: number
