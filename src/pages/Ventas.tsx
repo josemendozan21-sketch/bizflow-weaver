@@ -2429,6 +2429,11 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
                 <SelectItem value="otro">Otro</SelectItem>
               </SelectContent>
             </Select>
+            <div className="space-y-1.5 pt-2">
+              <Label htmlFor="generic_paymentDate">Fecha del pago</Label>
+              <Input id="generic_paymentDate" type="date" value={genericPaymentDate} onChange={(e) => setGenericPaymentDate(e.target.value)} />
+              <p className="text-xs text-muted-foreground">Si el pago fue hoy déjala como está; si fue otro día selecciónala.</p>
+            </div>
           </fieldset>
 
           <div className="space-y-1.5">
