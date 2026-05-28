@@ -50,8 +50,10 @@ export function DefineBudgetDialog({
   const upsert = useUpsertBudget();
   // Single-row amounts per (kind|category)
   const [amounts, setAmounts] = useState<Record<string, string>>({});
+  // Single-row optional expected date per (kind|category)
+  const [dates, setDates] = useState<Record<string, string>>({});
   // Multi-row groups: key = `${kind}|${category}`
-  const [multi, setMulti] = useState<Record<string, { name: string; amount: string }[]>>({});
+  const [multi, setMulti] = useState<Record<string, { name: string; amount: string; date: string }[]>>({});
   const [notes, setNotes] = useState("");
 
   const groups: { kind: BudgetKind; cats: string[] }[] = [
@@ -64,28 +66,31 @@ export function DefineBudgetDialog({
   useEffect(() => {
     if (!open) return;
     const next: Record<string, string> = {};
-    const nextMulti: Record<string, { name: string; amount: string }[]> = {};
+    const nextDates: Record<string, string> = {};
+    const nextMulti: Record<string, { name: string; amount: string; date: string }[]> = {};
     for (const g of groups) {
       for (const c of g.cats) {
         const key = `${g.kind}|${c}`;
         if (MULTI_CATEGORIES[c]) {
           const rows = existingLines.filter((l) => l.kind === g.kind && l.category === c);
           nextMulti[key] = rows.length > 0
-            ? rows.map((l) => ({ name: l.description || "", amount: String(l.projected_amount) }))
-            : [{ name: "", amount: "" }];
+            ? rows.map((l) => ({ name: l.description || "", amount: String(l.projected_amount), date: l.expected_date || "" }))
+            : [{ name: "", amount: "", date: "" }];
         } else {
           const l = existingLines.find((l) => l.kind === g.kind && l.category === c);
           next[key] = l ? String(l.projected_amount) : "";
+          nextDates[key] = l?.expected_date || "";
         }
       }
     }
     setAmounts(next);
+    setDates(nextDates);
     setMulti(nextMulti);
     setNotes(existingNotes || "");
   }, [open, existingLines, existingNotes]);
 
   const handleSave = () => {
-    const lines: { kind: BudgetKind; category: string; projected_amount: number; description?: string | null }[] = [];
+    const lines: { kind: BudgetKind; category: string; projected_amount: number; description?: string | null; expected_date?: string | null }[] = [];
     for (const g of groups) {
       for (const c of g.cats) {
         const key = `${g.kind}|${c}`;
@@ -99,6 +104,7 @@ export function DefineBudgetDialog({
                 category: c,
                 description: r.name.trim() || "Sin nombre",
                 projected_amount: parseFloat(r.amount) || 0,
+                expected_date: r.date || null,
               });
             });
         } else {
@@ -106,6 +112,7 @@ export function DefineBudgetDialog({
             kind: g.kind,
             category: c,
             projected_amount: parseFloat(amounts[key]) || 0,
+            expected_date: dates[key] || null,
           });
         }
       }
