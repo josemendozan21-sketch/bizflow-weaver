@@ -1348,6 +1348,62 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           </fieldset>
 
           <fieldset className="space-y-4">
+            <legend className="text-sm font-semibold text-foreground mb-2">Molde nuevo</legend>
+            <div className="flex items-center justify-between rounded-md border border-input p-3">
+              <div>
+                <Label htmlFor="mw_moldeNuevo" className="cursor-pointer">¿Este pedido incluye un molde nuevo?</Label>
+                <p className="text-xs text-muted-foreground">Activa esta opción si el cliente está pagando un molde nuevo.</p>
+              </div>
+              <Switch id="mw_moldeNuevo" checked={moldeNuevo} onCheckedChange={setMoldeNuevo} />
+            </div>
+            {moldeNuevo && (
+              <div className="space-y-4 rounded-md border border-input bg-muted/30 p-3">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="mw_moldeNombre">Nombre del molde</Label>
+                    <Input
+                      id="mw_moldeNombre"
+                      placeholder="Ej: Molde logo XYZ"
+                      value={moldeNombre}
+                      onChange={(e) => setMoldeNombre(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="mw_moldeCosto">Costo del molde</Label>
+                    <Input
+                      id="mw_moldeCosto"
+                      type="number"
+                      min="0"
+                      step="any"
+                      inputMode="decimal"
+                      onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()}
+                      placeholder="Ej: 80000"
+                      value={moldeCosto}
+                      onChange={(e) => setMoldeCosto(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Forma de cobro del molde</Label>
+                  <Select value={moldeModo} onValueChange={(v) => setMoldeModo(v as typeof moldeModo)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="con_pedido">Cobrado junto con este pedido (suma al total)</SelectItem>
+                      <SelectItem value="separado">Pagado por separado (no suma al total)</SelectItem>
+                      <SelectItem value="solo_molde">Solo molde (sin productos en este pedido)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {moldeModo === "solo_molde" && (
+                    <p className="text-xs text-muted-foreground">
+                      Se creará un pedido únicamente por la compra del molde. Las líneas de producto se ignorarán.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </fieldset>
+
+          <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Archivos adjuntos</legend>
             <div className="grid gap-4 sm:grid-cols-2">
               <FileField label="Adjuntar logo" name="mw_logo" value={logoFileState} onChange={setLogoFileState} accept="image/*,.pdf,.svg,.ai" />
