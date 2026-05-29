@@ -308,8 +308,12 @@ function buildMagicalMayorSummary(args: {
   escarcha: boolean;
   costoAdicional: string;
   paymentProofFile: File | null;
+  moldeNuevo?: boolean;
+  moldeNombre?: string;
+  moldeCosto?: string;
+  moldeModo?: "con_pedido" | "separado" | "solo_molde";
 }): OrderSummary {
-  const { form, orderLines, grandTotal, abono, estadoPago, isRecompra, noLogo, dobleTinta, escarcha, costoAdicional, paymentProofFile } = args;
+  const { form, orderLines, grandTotal, abono, estadoPago, isRecompra, noLogo, dobleTinta, escarcha, costoAdicional, paymentProofFile, moldeNuevo, moldeNombre, moldeCosto, moldeModo } = args;
   const abonoNum = estadoPago === "pago_total" ? grandTotal : (parseFloat(abono) || 0);
   const saldo = Math.max(grandTotal - abonoNum, 0);
   const estadoPagoLabel =
@@ -324,6 +328,18 @@ function buildMagicalMayorSummary(args: {
   if (escarcha) opciones.push({ label: "Escarcha", value: "Sí" });
   if ((dobleTinta || escarcha) && parseFloat(costoAdicional) > 0) {
     opciones.push({ label: "Costo adicional", value: formatMoney(parseFloat(costoAdicional)) });
+  }
+  if (moldeNuevo) {
+    opciones.push({ label: "Molde nuevo", value: moldeNombre || "—" });
+    opciones.push({ label: "Costo del molde", value: formatMoney(parseFloat(moldeCosto || "0")) });
+    opciones.push({
+      label: "Forma de cobro del molde",
+      value: moldeModo === "solo_molde"
+        ? "Solo molde (sin productos)"
+        : moldeModo === "separado"
+          ? "Pagado por separado"
+          : "Cobrado con este pedido",
+    });
   }
 
   return {
@@ -519,6 +535,11 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [costoAdicional, setCostoAdicional] = usePersistedState("ventas:mw:costoAdicional", "");
   const [logoFileState, setLogoFileState] = useState<File | null>(null);
   const [rutFileState, setRutFileState] = useState<File | null>(null);
+  // Molde nuevo (sólo Magical)
+  const [moldeNuevo, setMoldeNuevo] = usePersistedState("ventas:mw:moldeNuevo", false);
+  const [moldeNombre, setMoldeNombre] = usePersistedState("ventas:mw:moldeNombre", "");
+  const [moldeCosto, setMoldeCosto] = usePersistedState("ventas:mw:moldeCosto", "");
+  const [moldeModo, setMoldeModo] = usePersistedState<"con_pedido" | "separado" | "solo_molde">("ventas:mw:moldeModo", "con_pedido");
   const formRef = useRef<HTMLFormElement>(null);
   useFormDraft(formRef, "ventas:mw:fields");
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -597,8 +618,9 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const grandTotal = useMemo(() => {
     const linesSum = orderLines.reduce((sum, line) => line.isGift ? sum : sum + (parseFloat(line.valorTotal) || 0), 0);
     const extra = (dobleTinta || escarcha) ? (parseFloat(costoAdicional) || 0) : 0;
-    return linesSum + extra;
-  }, [orderLines, costoAdicional, dobleTinta, escarcha]);
+    const moldeExtra = (moldeNuevo && moldeModo !== "separado") ? (parseFloat(moldeCosto) || 0) : 0;
+    return linesSum + extra + moldeExtra;
+  }, [orderLines, costoAdicional, dobleTinta, escarcha, moldeNuevo, moldeCosto, moldeModo]);
 
   // Auto-fill abono when pago_total
   useEffect(() => {
@@ -680,7 +702,24 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const logoNombre = ((fd.get("mw_logo_nombre") as string) || "").trim();
     const fechaRequerida = fd.get("mw_fechaRequerida") as string;
 
-    // Validate all lines
+    // Validar molde nuevo si está activo
+    if (moldeNuevo) {
+      if (!moldeNombre.trim()) {
+        toast.error("Nombre del molde requerido", { description: "Indica el nombre del molde nuevo." });
+        setIsSubmitting(false);
+        return;
+      }
+      if (!moldeCosto || parseFloat(moldeCosto) <= 0) {
+        toast.error("Costo del molde requerido", { description: "Indica el costo del molde nuevo." });
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    const isSoloMolde = moldeNuevo && moldeModo === "solo_molde";
+
+    // En modo "solo molde" no validamos líneas de producto
+    if (!isSoloMolde) {
     for (const line of orderLines) {
       if (!line.product || !line.type) {
         toast.error("Producto requerido", { description: "Seleccione producto y tipo en todas las líneas." });
@@ -699,6 +738,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         setIsSubmitting(false);
         return;
       }
+    }
     }
 
     // RUT es opcional en ventas al por mayor
@@ -763,14 +803,80 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       return [...base.slice(0, idx + 1), "descristalizacion", ...base.slice(idx + 1)];
     };
 
+    // ----- Caso especial: SOLO MOLDE (sin productos) -----
+    if (isSoloMolde) {
+      const moldeCostoNum = parseFloat(moldeCosto) || 0;
+      const moldeAbono = estadoPago === "pago_total" ? moldeCostoNum : (parseFloat(abono) || 0);
+      const moldeObs = [
+        `Compra de molde nuevo: "${moldeNombre}" — $${moldeCostoNum.toLocaleString("es-CO")}`,
+        observaciones,
+      ].filter(Boolean).join(" | ");
+      try {
+        const { data } = await supabase.from("orders").insert({
+          brand: "magical",
+          sale_type: "mayor",
+          client_name: clientName,
+          client_nit: (fd.get("mw_cedulaNit") as string) || null,
+          client_phone: (fd.get("mw_contacto") as string) || null,
+          client_email: (fd.get("mw_email") as string) || null,
+          client_address: (fd.get("mw_direccion") as string) || null,
+          client_city: (fd.get("mw_ciudad") as string) || null,
+          product: `Molde: ${moldeNombre}`,
+          quantity: 1,
+          unit_price: moldeCostoNum,
+          total_amount: moldeCostoNum,
+          abono: moldeAbono,
+          observations: moldeObs || null,
+          advisor_id: user?.id || "",
+          advisor_name: user?.email || "Asesor",
+          production_status: "pendiente",
+          is_recompra: false,
+          payment_proof_url: paymentProofUrl,
+          payment_complete: estadoPago === "pago_total",
+          delivery_date: fechaRequerida || null,
+          payment_date: paymentDate || new Date().toISOString().slice(0, 10),
+        }).select("id").single();
+        if (data) {
+          queryClient.invalidateQueries({ queryKey: ["orders"] });
+          toast.success("Compra de molde registrada", { description: `${clientName} — Molde "${moldeNombre}"` });
+          [
+            "ventas:mw:lines","ventas:mw:abono","ventas:mw:estadoPago",
+            "ventas:mw:dobleTinta","ventas:mw:escarcha","ventas:mw:isRecompra",
+            "ventas:mw:noLogo","ventas:mw:needsLogoAdjustment","ventas:mw:costoAdicional",
+            "ventas:mw:moldeNuevo","ventas:mw:moldeNombre","ventas:mw:moldeCosto","ventas:mw:moldeModo",
+            "ventas:mw:fields",
+          ].forEach(clearFormDraft);
+          setLogoFileState(null);
+          setRutFileState(null);
+          setPaymentProofFile(null);
+          setMoldeNuevo(false);
+          setMoldeNombre("");
+          setMoldeCosto("");
+          onReset();
+        }
+      } catch (err: any) {
+        console.error("Error saving mold-only order:", err);
+        toast.error("Error al registrar el molde", { description: "No se pudo guardar. Intenta de nuevo." });
+      }
+      setIsSubmitting(false);
+      return;
+    }
+
     // Process each line as a separate order
-    const extraCost = (dobleTinta || escarcha) ? (parseFloat(costoAdicional) || 0) : 0;
+    const moldeCostoNum = parseFloat(moldeCosto) || 0;
+    const moldeIncluidoEnTotal = moldeNuevo && moldeModo === "con_pedido" && moldeCostoNum > 0;
+    const extraCost = ((dobleTinta || escarcha) ? (parseFloat(costoAdicional) || 0) : 0)
+      + (moldeIncluidoEnTotal ? moldeCostoNum : 0);
     const extraNoteParts: string[] = [];
     if (dobleTinta) extraNoteParts.push("doble tinta");
     if (escarcha) extraNoteParts.push("escarcha");
-    const extraNote = extraCost > 0
-      ? `Costo adicional ${extraNoteParts.join(" y ")}: $${extraCost.toLocaleString("es-CO")}`
+    const adicionalNote = ((dobleTinta || escarcha) && parseFloat(costoAdicional) > 0)
+      ? `Costo adicional ${extraNoteParts.join(" y ")}: $${(parseFloat(costoAdicional) || 0).toLocaleString("es-CO")}`
       : "";
+    const moldeNote = moldeNuevo && moldeCostoNum > 0
+      ? `Molde nuevo "${moldeNombre}": $${moldeCostoNum.toLocaleString("es-CO")} (${moldeModo === "con_pedido" ? "cobrado con el pedido" : "pagado por separado"})`
+      : "";
+    const extraNote = [adicionalNote, moldeNote].filter(Boolean).join(" | ");
 
     // Calcular totales del pedido completo para prorratear el abono entre líneas.
     // El abono ingresado por el asesor es por el TOTAL del pedido, no por cada línea.
@@ -953,11 +1059,15 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       "ventas:mw:lines","ventas:mw:abono","ventas:mw:estadoPago",
       "ventas:mw:dobleTinta","ventas:mw:escarcha","ventas:mw:isRecompra",
       "ventas:mw:noLogo","ventas:mw:needsLogoAdjustment","ventas:mw:costoAdicional",
+      "ventas:mw:moldeNuevo","ventas:mw:moldeNombre","ventas:mw:moldeCosto","ventas:mw:moldeModo",
       "ventas:mw:fields",
     ].forEach(clearFormDraft);
     setLogoFileState(null);
     setRutFileState(null);
     setPaymentProofFile(null);
+    setMoldeNuevo(false);
+    setMoldeNombre("");
+    setMoldeCosto("");
     onReset();
   };
 
@@ -1242,6 +1352,62 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           </fieldset>
 
           <fieldset className="space-y-4">
+            <legend className="text-sm font-semibold text-foreground mb-2">Molde nuevo</legend>
+            <div className="flex items-center justify-between rounded-md border border-input p-3">
+              <div>
+                <Label htmlFor="mw_moldeNuevo" className="cursor-pointer">¿Este pedido incluye un molde nuevo?</Label>
+                <p className="text-xs text-muted-foreground">Activa esta opción si el cliente está pagando un molde nuevo.</p>
+              </div>
+              <Switch id="mw_moldeNuevo" checked={moldeNuevo} onCheckedChange={setMoldeNuevo} />
+            </div>
+            {moldeNuevo && (
+              <div className="space-y-4 rounded-md border border-input bg-muted/30 p-3">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="mw_moldeNombre">Nombre del molde</Label>
+                    <Input
+                      id="mw_moldeNombre"
+                      placeholder="Ej: Molde logo XYZ"
+                      value={moldeNombre}
+                      onChange={(e) => setMoldeNombre(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="mw_moldeCosto">Costo del molde</Label>
+                    <Input
+                      id="mw_moldeCosto"
+                      type="number"
+                      min="0"
+                      step="any"
+                      inputMode="decimal"
+                      onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()}
+                      placeholder="Ej: 80000"
+                      value={moldeCosto}
+                      onChange={(e) => setMoldeCosto(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Forma de cobro del molde</Label>
+                  <Select value={moldeModo} onValueChange={(v) => setMoldeModo(v as typeof moldeModo)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="con_pedido">Cobrado junto con este pedido (suma al total)</SelectItem>
+                      <SelectItem value="separado">Pagado por separado (no suma al total)</SelectItem>
+                      <SelectItem value="solo_molde">Solo molde (sin productos en este pedido)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {moldeModo === "solo_molde" && (
+                    <p className="text-xs text-muted-foreground">
+                      Se creará un pedido únicamente por la compra del molde. Las líneas de producto se ignorarán.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </fieldset>
+
+          <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Archivos adjuntos</legend>
             <div className="grid gap-4 sm:grid-cols-2">
               <FileField label="Adjuntar logo" name="mw_logo" value={logoFileState} onChange={setLogoFileState} accept="image/*,.pdf,.svg,.ai" />
@@ -1313,6 +1479,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             escarcha,
             costoAdicional,
             paymentProofFile,
+            moldeNuevo,
+            moldeNombre,
+            moldeCosto,
+            moldeModo,
           })}
         />
       </CardContent>
