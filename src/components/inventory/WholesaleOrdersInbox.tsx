@@ -125,23 +125,36 @@ const WholesaleOrdersInbox = () => {
     refetchInterval: 15_000,
   });
 
-  // Fetch which orders already had a delivery movement OR a body production task (to dim them)
-  const { data: deliveredIds = new Set<string>() } = useQuery({
+  // Fetch which orders already had a delivery movement OR an ACTIVE body production task.
+  // Once production finalizes its task, the order reappears in the inbox (only Estampación).
+  const { data: orderStates = { deliveredIds: new Set<string>(), producedIds: new Set<string>() } } = useQuery({
     queryKey: ["mayor-orders-delivered"],
     queryFn: async () => {
       const [mov, tasks] = await Promise.all([
         supabase.from("inventory_movements").select("order_id")
           .eq("direction", "entrega").not("order_id", "is", null),
-        supabase.from("body_production_tasks").select("order_id" as any)
+        supabase.from("body_production_tasks").select("order_id,status" as any)
           .not("order_id", "is", null),
       ]);
-      const set = new Set<string>();
-      (mov.data || []).forEach((m: any) => m.order_id && set.add(m.order_id));
-      (tasks.data || []).forEach((t: any) => t.order_id && set.add(t.order_id));
-      return set;
+      const deliveredIds = new Set<string>();
+      const producedIds = new Set<string>();
+      (mov.data || []).forEach((m: any) => m.order_id && deliveredIds.add(m.order_id));
+      (tasks.data || []).forEach((t: any) => {
+        if (!t.order_id) return;
+        if (t.status === "finalizado") {
+          producedIds.add(t.order_id);
+        } else {
+          deliveredIds.add(t.order_id);
+        }
+      });
+      // Orders already entregadas a estampación no deben reaparecer aunque haya tarea finalizada
+      producedIds.forEach((id) => { if (deliveredIds.has(id)) producedIds.delete(id); });
+      return { deliveredIds, producedIds };
     },
     refetchInterval: 15_000,
   });
+  const deliveredIds = orderStates.deliveredIds;
+  const producedIds = orderStates.producedIds;
 
   const findStockItem = (o: MayorOrder, category: "producto_terminado" | "cuerpos_referencias" = "producto_terminado") => {
     // Normalize: lowercase, collapse repeated "(frío)/(térmico)" suffixes, trim
@@ -246,11 +259,17 @@ const WholesaleOrdersInbox = () => {
     // For detal: check finished product.
     const item = findStockItem(o, kind === "mayor" ? "cuerpos_referencias" : "producto_terminado");
     const stock = item ? Number(item.available) : null;
-    const enough = stock !== null && stock >= o.quantity;
+    // If production already finalized cuerpos for this order, force-show only Estampación.
+    const producedReady = kind === "mayor" && producedIds.has(o.id);
+    const enough = producedReady || (stock !== null && stock >= o.quantity);
     const stockBadge = stock === null
-      ? <Badge variant="outline">Sin referencia en stock</Badge>
+      ? (producedReady
+          ? <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">Cuerpos producidos</Badge>
+          : <Badge variant="outline">Sin referencia en stock</Badge>)
       : enough
-        ? <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">Stock: {stock}</Badge>
+        ? <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">
+            {producedReady ? "Cuerpos producidos" : `Stock: ${stock}`}
+          </Badge>
         : stock > 0
           ? <Badge className="bg-amber-500 hover:bg-amber-600 text-white">Stock parcial: {stock} / {o.quantity}</Badge>
           : <Badge variant="destructive">Sin stock</Badge>;
@@ -304,7 +323,12 @@ const WholesaleOrdersInbox = () => {
               </div>
             ) : (
               <div className="flex flex-wrap gap-2 pt-1">
-                {(stock === null || stock === 0) ? (
+                {producedReady ? (
+                  <Button size="sm" variant="default" className="flex-1 min-w-[140px] gap-1.5"
+                    onClick={() => openDeliver(o, "estampacion")}>
+                    <Paintbrush className="h-3.5 w-3.5" /> Entregar a Estampación
+                  </Button>
+                ) : (stock === null || stock === 0) ? (
                   <Button size="sm" variant="default" className="flex-1 min-w-[140px] gap-1.5"
                     onClick={() => openDeliver(o, "produccion")}>
                     <Factory className="h-3.5 w-3.5" /> Producir cuerpos
