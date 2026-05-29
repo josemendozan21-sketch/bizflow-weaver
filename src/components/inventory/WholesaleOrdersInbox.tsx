@@ -507,7 +507,7 @@ const WholesaleOrdersInbox = () => {
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 md:grid-cols-2">
-              {delivered.slice(0, 6).map((o) => renderCard(o, true))}
+              {filteredDelivered.slice(0, 6).map((o) => renderCard(o, true))}
             </div>
           </CardContent>
         </Card>
