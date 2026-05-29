@@ -787,14 +787,80 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       return [...base.slice(0, idx + 1), "descristalizacion", ...base.slice(idx + 1)];
     };
 
+    // ----- Caso especial: SOLO MOLDE (sin productos) -----
+    if (isSoloMolde) {
+      const moldeCostoNum = parseFloat(moldeCosto) || 0;
+      const moldeAbono = estadoPago === "pago_total" ? moldeCostoNum : (parseFloat(abono) || 0);
+      const moldeObs = [
+        `Compra de molde nuevo: "${moldeNombre}" — $${moldeCostoNum.toLocaleString("es-CO")}`,
+        observaciones,
+      ].filter(Boolean).join(" | ");
+      try {
+        const { data } = await supabase.from("orders").insert({
+          brand: "magical",
+          sale_type: "mayor",
+          client_name: clientName,
+          client_nit: (fd.get("mw_cedulaNit") as string) || null,
+          client_phone: (fd.get("mw_contacto") as string) || null,
+          client_email: (fd.get("mw_email") as string) || null,
+          client_address: (fd.get("mw_direccion") as string) || null,
+          client_city: (fd.get("mw_ciudad") as string) || null,
+          product: `Molde: ${moldeNombre}`,
+          quantity: 1,
+          unit_price: moldeCostoNum,
+          total_amount: moldeCostoNum,
+          abono: moldeAbono,
+          observations: moldeObs || null,
+          advisor_id: user?.id || "",
+          advisor_name: user?.email || "Asesor",
+          production_status: "pendiente",
+          is_recompra: false,
+          payment_proof_url: paymentProofUrl,
+          payment_complete: estadoPago === "pago_total",
+          delivery_date: fechaRequerida || null,
+          payment_date: paymentDate || new Date().toISOString().slice(0, 10),
+        }).select("id").single();
+        if (data) {
+          queryClient.invalidateQueries({ queryKey: ["orders"] });
+          toast.success("Compra de molde registrada", { description: `${clientName} — Molde "${moldeNombre}"` });
+          [
+            "ventas:mw:lines","ventas:mw:abono","ventas:mw:estadoPago",
+            "ventas:mw:dobleTinta","ventas:mw:escarcha","ventas:mw:isRecompra",
+            "ventas:mw:noLogo","ventas:mw:needsLogoAdjustment","ventas:mw:costoAdicional",
+            "ventas:mw:moldeNuevo","ventas:mw:moldeNombre","ventas:mw:moldeCosto","ventas:mw:moldeModo",
+            "ventas:mw:fields",
+          ].forEach(clearFormDraft);
+          setLogoFileState(null);
+          setRutFileState(null);
+          setPaymentProofFile(null);
+          setMoldeNuevo(false);
+          setMoldeNombre("");
+          setMoldeCosto("");
+          onReset();
+        }
+      } catch (err: any) {
+        console.error("Error saving mold-only order:", err);
+        toast.error("Error al registrar el molde", { description: "No se pudo guardar. Intenta de nuevo." });
+      }
+      setIsSubmitting(false);
+      return;
+    }
+
     // Process each line as a separate order
-    const extraCost = (dobleTinta || escarcha) ? (parseFloat(costoAdicional) || 0) : 0;
+    const moldeCostoNum = parseFloat(moldeCosto) || 0;
+    const moldeIncluidoEnTotal = moldeNuevo && moldeModo === "con_pedido" && moldeCostoNum > 0;
+    const extraCost = ((dobleTinta || escarcha) ? (parseFloat(costoAdicional) || 0) : 0)
+      + (moldeIncluidoEnTotal ? moldeCostoNum : 0);
     const extraNoteParts: string[] = [];
     if (dobleTinta) extraNoteParts.push("doble tinta");
     if (escarcha) extraNoteParts.push("escarcha");
-    const extraNote = extraCost > 0
-      ? `Costo adicional ${extraNoteParts.join(" y ")}: $${extraCost.toLocaleString("es-CO")}`
+    const adicionalNote = ((dobleTinta || escarcha) && parseFloat(costoAdicional) > 0)
+      ? `Costo adicional ${extraNoteParts.join(" y ")}: $${(parseFloat(costoAdicional) || 0).toLocaleString("es-CO")}`
       : "";
+    const moldeNote = moldeNuevo && moldeCostoNum > 0
+      ? `Molde nuevo "${moldeNombre}": $${moldeCostoNum.toLocaleString("es-CO")} (${moldeModo === "con_pedido" ? "cobrado con el pedido" : "pagado por separado"})`
+      : "";
+    const extraNote = [adicionalNote, moldeNote].filter(Boolean).join(" | ");
 
     // Calcular totales del pedido completo para prorratear el abono entre líneas.
     // El abono ingresado por el asesor es por el TOTAL del pedido, no por cada línea.
