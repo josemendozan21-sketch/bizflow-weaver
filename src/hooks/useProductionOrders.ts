@@ -187,6 +187,53 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
             .from("body_stock")
             .insert({ brand: po.brand, referencia: po.molde, available: qtyToAdd });
         }
+
+        // Mirror as an inventory movement (entrada) so Inventarios sees it
+        // in the movement history with date and quantity.
+        try {
+          // Ensure a stock_items row exists for this cuerpo (the trigger requires it)
+          let { data: stockItem } = await supabase
+            .from("stock_items")
+            .select("id")
+            .eq("brand", po.brand)
+            .eq("category", "cuerpos_referencias")
+            .ilike("name", po.molde)
+            .maybeSingle();
+
+          if (!stockItem) {
+            const { data: created } = await supabase
+              .from("stock_items")
+              .insert({
+                brand: po.brand,
+                category: "cuerpos_referencias",
+                name: po.molde,
+                available: 0,
+                in_process: 0,
+              } as any)
+              .select("id")
+              .single();
+            stockItem = created;
+          }
+
+          const { data: { user: authUser } } = await supabase.auth.getUser();
+          await supabase.from("inventory_movements").insert({
+            stock_item_id: stockItem?.id ?? null,
+            item_name: po.molde,
+            brand: po.brand,
+            category: "cuerpos_referencias",
+            quantity: qtyToAdd,
+            direction: "retorno",
+            area: "produccion",
+            movement_kind: "entrada",
+            purpose: `Producción de cuerpos finalizada — ${po.client_name}`,
+            requested_by_name: "Producción",
+            order_id: po.order_id,
+            recorded_by: authUser?.id ?? null,
+            recorded_by_name: authUser?.email ?? "Producción",
+          } as any);
+        } catch (movErr) {
+          console.warn("[useProductionOrders] No se pudo registrar movimiento de entrada:", movErr);
+        }
       }
 
       if (currentIdx >= lastActionableIdx) {
