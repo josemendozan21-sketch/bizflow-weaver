@@ -507,7 +507,7 @@ const WholesaleOrdersInbox = () => {
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar cliente, producto o asesor…"
+              placeholder="Buscar referencia, molde, cliente o asesor…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
