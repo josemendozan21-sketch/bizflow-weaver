@@ -485,7 +485,7 @@ const WholesaleOrdersInbox = () => {
         <CardContent>
           {isLoading ? (
             <p className="text-center text-sm text-muted-foreground py-6">Cargando…</p>
-          ) : pending.length === 0 ? (
+          ) : filteredPending.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
               <p className="text-sm">No hay pedidos al por mayor pendientes de entrega.</p>
