@@ -59,7 +59,7 @@ const STATUS_CONFIG = {
 const MateriaPrimaPanel = () => {
   const { stockItems, addStockItem, updateStockItem, deleteStockItem, refetch } = useInventory();
   const { role } = useAuth();
-  const isReadOnly = role === "asesor_comercial";
+  const isReadOnly = role !== "admin";
 
   const [brandFilter, setBrandFilter] = useState<BrandFilter>("todas");
   const [search, setSearch] = useState("");

@@ -70,8 +70,8 @@ const CategorizedInventoryPanel = ({
 }: CategorizedInventoryPanelProps) => {
   const { stockItems, addStockItem, updateStockItem, deleteStockItem, isLoading } = useInventory();
   const { role } = useAuth();
-  const isReadOnly = role === "asesor_comercial";
-  const baseCategories = isReadOnly ? ASESOR_CATEGORIES : ALL_CATEGORIES;
+  const isReadOnly = role !== "admin";
+  const baseCategories = role === "asesor_comercial" ? ASESOR_CATEGORIES : ALL_CATEGORIES;
   // Magical Warmers no tiene productos importados
   const CATEGORIES = initialBrand === "magical_warmers"
     ? baseCategories.filter((c) => c !== "importados")
