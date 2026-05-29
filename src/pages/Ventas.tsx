@@ -519,6 +519,11 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [costoAdicional, setCostoAdicional] = usePersistedState("ventas:mw:costoAdicional", "");
   const [logoFileState, setLogoFileState] = useState<File | null>(null);
   const [rutFileState, setRutFileState] = useState<File | null>(null);
+  // Molde nuevo (sólo Magical)
+  const [moldeNuevo, setMoldeNuevo] = usePersistedState("ventas:mw:moldeNuevo", false);
+  const [moldeNombre, setMoldeNombre] = usePersistedState("ventas:mw:moldeNombre", "");
+  const [moldeCosto, setMoldeCosto] = usePersistedState("ventas:mw:moldeCosto", "");
+  const [moldeModo, setMoldeModo] = usePersistedState<"con_pedido" | "separado" | "solo_molde">("ventas:mw:moldeModo", "con_pedido");
   const formRef = useRef<HTMLFormElement>(null);
   useFormDraft(formRef, "ventas:mw:fields");
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -597,8 +602,9 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const grandTotal = useMemo(() => {
     const linesSum = orderLines.reduce((sum, line) => line.isGift ? sum : sum + (parseFloat(line.valorTotal) || 0), 0);
     const extra = (dobleTinta || escarcha) ? (parseFloat(costoAdicional) || 0) : 0;
-    return linesSum + extra;
-  }, [orderLines, costoAdicional, dobleTinta, escarcha]);
+    const moldeExtra = (moldeNuevo && moldeModo !== "separado") ? (parseFloat(moldeCosto) || 0) : 0;
+    return linesSum + extra + moldeExtra;
+  }, [orderLines, costoAdicional, dobleTinta, escarcha, moldeNuevo, moldeCosto, moldeModo]);
 
   // Auto-fill abono when pago_total
   useEffect(() => {
