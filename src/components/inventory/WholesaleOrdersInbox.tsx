@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Inbox, Package, Truck, Paintbrush, Factory, Calendar, User as UserIcon, ShoppingBag, ArrowLeft } from "lucide-react";
+import { Inbox, Package, Truck, Paintbrush, Factory, Calendar, User as UserIcon, ShoppingBag, ArrowLeft, Search } from "lucide-react";
 import { useInventory } from "@/hooks/useInventory";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -56,6 +56,18 @@ const WholesaleOrdersInbox = () => {
   const [obs, setObs] = useState<string>("");
   const [plastico, setPlastico] = useState<"frio" | "calor">("frio");
   const [busy, setBusy] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filterOrders = (list: MayorOrder[]) => {
+    if (!searchQuery.trim()) return list;
+    const q = searchQuery.toLowerCase();
+    return list.filter(
+      (o) =>
+        o.client_name.toLowerCase().includes(q) ||
+        o.product.toLowerCase().includes(q) ||
+        o.advisor_name.toLowerCase().includes(q)
+    );
+  };
 
   // Realtime: pop up toast + refetch when a new order arrives
   useEffect(() => {
@@ -344,42 +356,55 @@ const WholesaleOrdersInbox = () => {
   }
 
   if (view === "detal") {
+    const filteredPendingRetail = filterOrders(pendingRetail);
+    const filteredDeliveredRetail = filterOrders(deliveredRetail);
     return (
       <div className="space-y-4">
         <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setView("menu")}>
           <ArrowLeft className="h-4 w-4" /> Volver
         </Button>
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-3 space-y-3">
             <CardTitle className="text-base flex items-center gap-2">
               <ShoppingBag className="h-4 w-4" />
               Pedidos al detal
-              <Badge variant="secondary">{pendingRetail.length} pendientes</Badge>
+              <Badge variant="secondary">{filteredPendingRetail.length} pendientes</Badge>
             </CardTitle>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar cliente, producto o asesor…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
           </CardHeader>
           <CardContent>
             {loadingRetail ? (
               <p className="text-center text-sm text-muted-foreground py-6">Cargando…</p>
-            ) : pendingRetail.length === 0 ? (
+            ) : filteredPendingRetail.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No hay pedidos al detal pendientes.</p>
+                <p className="text-sm">
+                  {searchQuery.trim() ? "Ningún pedido coincide con la búsqueda." : "No hay pedidos al detal pendientes."}
+                </p>
               </div>
             ) : (
               <div className="grid gap-3 md:grid-cols-2">
-                {pendingRetail.map((o) => renderCard(o, false, "detal"))}
+                {filteredPendingRetail.map((o) => renderCard(o, false, "detal"))}
               </div>
             )}
           </CardContent>
         </Card>
-        {deliveredRetail.length > 0 && (
+        {filteredDeliveredRetail.length > 0 && (
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm text-muted-foreground">Entregados recientes</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-3 md:grid-cols-2">
-                {deliveredRetail.slice(0, 6).map((o) => renderCard(o, true, "detal"))}
+                {filteredDeliveredRetail.slice(0, 6).map((o) => renderCard(o, true, "detal"))}
               </div>
             </CardContent>
           </Card>
@@ -433,43 +458,56 @@ const WholesaleOrdersInbox = () => {
   }
 
   // view === "mayor"
+  const filteredPending = filterOrders(pending);
+  const filteredDelivered = filterOrders(delivered);
   return (
     <div className="space-y-4">
       <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setView("menu")}>
         <ArrowLeft className="h-4 w-4" /> Volver
       </Button>
       <Card>
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-3 space-y-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Inbox className="h-4 w-4" />
             Bandeja de pedidos al por mayor
-            <Badge variant="secondary">{pending.length} pendientes</Badge>
+            <Badge variant="secondary">{filteredPending.length} pendientes</Badge>
           </CardTitle>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar cliente, producto o asesor…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <p className="text-center text-sm text-muted-foreground py-6">Cargando…</p>
-          ) : pending.length === 0 ? (
+          ) : filteredPending.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No hay pedidos al por mayor pendientes de entrega.</p>
+              <p className="text-sm">
+                {searchQuery.trim() ? "Ningún pedido coincide con la búsqueda." : "No hay pedidos al por mayor pendientes de entrega."}
+              </p>
             </div>
           ) : (
             <div className="grid gap-3 md:grid-cols-2">
-              {pending.map((o) => renderCard(o, false))}
+              {filteredPending.map((o) => renderCard(o, false))}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {delivered.length > 0 && (
+      {filteredDelivered.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm text-muted-foreground">Entregados recientes</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 md:grid-cols-2">
-              {delivered.slice(0, 6).map((o) => renderCard(o, true))}
+              {filteredDelivered.slice(0, 6).map((o) => renderCard(o, true))}
             </div>
           </CardContent>
         </Card>
