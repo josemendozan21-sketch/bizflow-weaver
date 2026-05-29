@@ -56,6 +56,18 @@ const WholesaleOrdersInbox = () => {
   const [obs, setObs] = useState<string>("");
   const [plastico, setPlastico] = useState<"frio" | "calor">("frio");
   const [busy, setBusy] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filterOrders = (list: MayorOrder[]) => {
+    if (!searchQuery.trim()) return list;
+    const q = searchQuery.toLowerCase();
+    return list.filter(
+      (o) =>
+        o.client_name.toLowerCase().includes(q) ||
+        o.product.toLowerCase().includes(q) ||
+        o.advisor_name.toLowerCase().includes(q)
+    );
+  };
 
   // Realtime: pop up toast + refetch when a new order arrives
   useEffect(() => {
