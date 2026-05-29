@@ -383,14 +383,16 @@ const WholesaleOrdersInbox = () => {
           <CardContent>
             {loadingRetail ? (
               <p className="text-center text-sm text-muted-foreground py-6">Cargando…</p>
-            ) : pendingRetail.length === 0 ? (
+            ) : filteredPendingRetail.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No hay pedidos al detal pendientes.</p>
+                <p className="text-sm">
+                  {searchQuery.trim() ? "Ningún pedido coincide con la búsqueda." : "No hay pedidos al detal pendientes."}
+                </p>
               </div>
             ) : (
               <div className="grid gap-3 md:grid-cols-2">
-                {pendingRetail.map((o) => renderCard(o, false, "detal"))}
+                {filteredPendingRetail.map((o) => renderCard(o, false, "detal"))}
               </div>
             )}
           </CardContent>
