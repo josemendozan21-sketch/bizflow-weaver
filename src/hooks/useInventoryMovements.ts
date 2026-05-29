@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -45,23 +45,33 @@ export interface CreateMovementInput {
   supplier?: string | null;
 }
 
+// Shared module-level cache so multiple components see the same data
+let cachedMovements: InventoryMovement[] = [];
+const listeners = new Set<(m: InventoryMovement[]) => void>();
+const notify = () => listeners.forEach((l) => l(cachedMovements));
+
 export function useInventoryMovements() {
   const { user } = useAuth();
-  const [movements, setMovements] = useState<InventoryMovement[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [movements, setMovements] = useState<InventoryMovement[]>(cachedMovements);
+  const [isLoading, setIsLoading] = useState(cachedMovements.length === 0);
+  const mounted = useRef(true);
 
   const fetchAll = useCallback(async () => {
-    setIsLoading(true);
+    if (mounted.current) setIsLoading(true);
     const { data } = await supabase
       .from("inventory_movements" as any)
       .select("*")
       .order("recorded_at", { ascending: false })
       .limit(200);
-    setMovements((data as unknown as InventoryMovement[]) || []);
-    setIsLoading(false);
+    cachedMovements = (data as unknown as InventoryMovement[]) || [];
+    notify();
+    if (mounted.current) setIsLoading(false);
   }, []);
 
   useEffect(() => {
+    mounted.current = true;
+    const listener = (m: InventoryMovement[]) => setMovements(m);
+    listeners.add(listener);
     fetchAll();
     const channel = supabase
       .channel(`inv-movements-${Math.random().toString(36).slice(2)}`)
@@ -72,6 +82,8 @@ export function useInventoryMovements() {
       )
       .subscribe();
     return () => {
+      mounted.current = false;
+      listeners.delete(listener);
       supabase.removeChannel(channel);
     };
   }, [fetchAll]);
@@ -79,15 +91,25 @@ export function useInventoryMovements() {
   const createMovement = useCallback(
     async (input: CreateMovementInput) => {
       if (!user) return { success: false, message: "No autenticado" };
-      const { error } = await supabase.from("inventory_movements" as any).insert({
-        ...input,
-        recorded_by: user.id,
-        recorded_by_name: user.email || "Inventarios",
-      } as any);
+      const { data, error } = await supabase
+        .from("inventory_movements" as any)
+        .insert({
+          ...input,
+          recorded_by: user.id,
+          recorded_by_name: user.email || "Inventarios",
+        } as any)
+        .select()
+        .single();
       if (error) return { success: false, message: error.message };
+      if (data) {
+        cachedMovements = [data as unknown as InventoryMovement, ...cachedMovements];
+        notify();
+      }
+      // Also refetch in background to stay in sync
+      fetchAll();
       return { success: true, message: input.direction === "entrega" ? "Entrega registrada" : "Retorno registrado" };
     },
-    [user],
+    [user, fetchAll],
   );
 
   return { movements, isLoading, refetch: fetchAll, createMovement };

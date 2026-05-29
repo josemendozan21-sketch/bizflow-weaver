@@ -1,5 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Boxes, ShoppingBag, Zap, Beaker, Sparkles } from "lucide-react";
+import { Boxes, ShoppingBag, History, Beaker, Sparkles } from "lucide-react";
 import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
 import MateriaPrimaPanel from "@/components/inventory/MateriaPrimaPanel";
 import WholesaleOrdersInbox from "@/components/inventory/WholesaleOrdersInbox";
@@ -21,7 +21,7 @@ const InventariosRoleView = () => {
             <ShoppingBag className="h-4 w-4" /> Bandeja de pedidos
           </TabsTrigger>
           <TabsTrigger value="movimientos" className="gap-1.5">
-            <Zap className="h-4 w-4" /> Movimientos rápidos
+            <History className="h-4 w-4" /> Historial de movimientos
           </TabsTrigger>
           <TabsTrigger value="materia_prima" className="gap-1.5">
             <Beaker className="h-4 w-4" /> Materia Prima
