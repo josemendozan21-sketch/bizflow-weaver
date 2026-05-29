@@ -140,10 +140,26 @@ const WholesaleOrdersInbox = () => {
   });
 
   const findStockItem = (o: MayorOrder) => {
-    return stockItems.find(
-      (s) => s.brand === o.brand && s.category === "producto_terminado" &&
-        s.name.toLowerCase() === o.product.toLowerCase()
+    // Normalize: lowercase, collapse repeated "(frío)/(térmico)" suffixes, trim
+    const norm = (s: string) =>
+      s
+        .toLowerCase()
+        .replace(/\s+/g, " ")
+        .replace(/(\((?:frío|frio|térmico|termico)\))(\s*\1)+/g, "$1")
+        .trim();
+    const stripTemp = (s: string) =>
+      norm(s).replace(/\s*\((?:frío|frio|térmico|termico)\)\s*$/g, "").trim();
+    const target = norm(o.product);
+    const targetBase = stripTemp(o.product);
+    const candidates = stockItems.filter(
+      (s) => s.brand === o.brand && s.category === "producto_terminado"
     );
+    // 1) exact normalized match
+    let match = candidates.find((s) => norm(s.name) === target);
+    if (match) return match;
+    // 2) base name match (without temperature suffix)
+    match = candidates.find((s) => stripTemp(s.name) === targetBase);
+    return match;
   };
 
   const pending = useMemo(() => orders.filter((o) => !deliveredIds.has(o.id)), [orders, deliveredIds]);
