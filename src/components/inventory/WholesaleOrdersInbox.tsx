@@ -215,12 +215,13 @@ const WholesaleOrdersInbox = () => {
       if (error) { toast.error(error.message); return; }
       toast.success(`Orden de producción creada (${quantity} uds). Los cuerpos volverán a inventario al terminar.`);
     } else {
-      const item = findStockItem(order);
+      const cat = target === "estampacion" ? "cuerpos_referencias" : "producto_terminado";
+      const item = findStockItem(order, cat);
       const { error } = await supabase.from("inventory_movements").insert({
         stock_item_id: item?.id ?? null,
         item_name: order.product,
         brand: order.brand,
-        category: "producto_terminado",
+        category: cat,
         quantity,
         direction: "entrega",
         area: target,
