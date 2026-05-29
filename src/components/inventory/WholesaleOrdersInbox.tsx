@@ -94,11 +94,13 @@ const WholesaleOrdersInbox = () => {
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["mayor-orders-inbox"],
     queryFn: async () => {
+      // Solo pedidos recién ingresados que aún no han iniciado ningún paso
+      // (sin entrega a estampación ni orden de producción de cuerpos creada).
       const { data, error } = await supabase
         .from("orders")
         .select("id,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations")
         .eq("sale_type", "mayor")
-        .in("production_status", ACTIVE_STATUSES)
+        .eq("production_status", "pendiente")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as MayorOrder[];
