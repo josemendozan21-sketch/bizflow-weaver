@@ -458,18 +458,29 @@ const WholesaleOrdersInbox = () => {
   }
 
   // view === "mayor"
+  const filteredPending = filterOrders(pending);
+  const filteredDelivered = filterOrders(delivered);
   return (
     <div className="space-y-4">
       <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setView("menu")}>
         <ArrowLeft className="h-4 w-4" /> Volver
       </Button>
       <Card>
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-3 space-y-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Inbox className="h-4 w-4" />
             Bandeja de pedidos al por mayor
-            <Badge variant="secondary">{pending.length} pendientes</Badge>
+            <Badge variant="secondary">{filteredPending.length} pendientes</Badge>
           </CardTitle>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar cliente, producto o asesor…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
