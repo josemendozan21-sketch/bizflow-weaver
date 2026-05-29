@@ -1419,6 +1419,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             escarcha,
             costoAdicional,
             paymentProofFile,
+            moldeNuevo,
+            moldeNombre,
+            moldeCosto,
+            moldeModo,
           })}
         />
       </CardContent>
