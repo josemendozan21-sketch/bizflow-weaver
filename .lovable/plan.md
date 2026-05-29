@@ -1,39 +1,37 @@
-## Producción de mezcla de gel desde Materia Prima
+## Cambio en `WholesaleOrdersInbox.tsx` (bandeja mayor del rol Inventarios)
 
-Agregar un flujo en la pestaña **Materia Prima** (Inventarios) para registrar la producción de mezcla de gel a partir de la receta fija, descontando insumos y aumentando el stock de "Mezcla Gel".
+Hoy, en cada tarjeta de pedido al por mayor, el badge de stock ya aparece arriba a la derecha ("Stock: N", "Stock parcial: N / X" o "Sin stock"), pero los dos botones — **Entregar a Estampación** y **Producir cuerpos** — siempre aparecen juntos. El usuario quiere que la decisión sea automática según el stock.
 
-### Receta fija (por batch = 30 kg de gel)
-- Carbopol: 250 g
-- Metil (incluye propil ya armado): 100 g
-- Agua: 30 litros (= 30.000 ml o como se mida en stock)
-- Trietanolamina: 150 ml
+### Reglas a implementar (solo afecta los botones de pedidos al por mayor)
 
-### UI
-- Botón **"Producir mezcla de gel"** en el header del panel de Materia Prima, junto a "Agregar materia prima".
-- Abre un diálogo con:
-  - Input numérico **# de batches** (default 1).
-  - Tabla preview: insumo requerido vs disponible, marcando en rojo los faltantes.
-  - Resultado: **X kg de mezcla de gel** que se sumará al stock.
-  - Botón **Confirmar producción** (deshabilitado si falta algún insumo).
+1. **Hay stock suficiente** (`stock >= cantidad pedida`):
+   - Mostrar **solo** el botón `Entregar a Estampación`.
+   - Ocultar `Producir cuerpos`.
 
-### Lógica al confirmar
-1. Validar que cada insumo tenga stock suficiente (qty × batches).
-2. Por cada insumo: registrar un movimiento de **salida** en `inventory_movements` (area `produccion`, purpose `Producción mezcla de gel`), que descuenta vía el trigger existente `process_inventory_movement`.
-3. Buscar el ítem **"Mezcla Gel"** en `stock_items` (category `materia_prima`) y registrar un movimiento de **entrada** por `30 × batches` kg → suma al stock.
-4. Toast de éxito con resumen.
+2. **No hay stock** (`stock === 0` o no existe referencia en stock):
+   - Mostrar **solo** el botón `Producir cuerpos` (esto genera la orden que le llega a Producción, igual que hoy).
+   - Ocultar `Entregar a Estampación`.
 
-### Matching de insumos
-Los nombres en BD pueden variar. Usaremos coincidencia normalizada (sin acentos, lowercase, contiene) sobre `stock_items` con `category = 'materia_prima'`:
-- "carbopol"
-- "metil"
-- "agua"
-- "trietanolamina"
-- "mezcla gel" (destino)
+3. **Stock parcial** (`0 < stock < cantidad`):
+   - Mostrar **ambos** botones, para que Inventarios pueda entregar lo que hay a Estampación y a la vez solicitar a Producción los cuerpos faltantes.
+   - Mantiene el flujo flexible para casos mixtos.
 
-Si algún ítem no existe en la base, mostrar advertencia clara con el nombre faltante para que lo creen primero.
+### Visibilidad del stock
 
-### Archivos a tocar
-- `src/components/inventory/MateriaPrimaPanel.tsx` — agregar botón + diálogo + handler.
-- (Opcional) extraer la receta a una constante al inicio del archivo para fácil mantenimiento.
+El badge de stock ya es visible en la tarjeta — no hay que añadir nada nuevo, simplemente queda como la única señal que determina qué botón se ve.
 
-Sin cambios de schema; aprovecha tablas y triggers existentes (`stock_items`, `inventory_movements`).
+### Alcance
+
+- Solo se toca el bloque `kind === "mayor"` dentro de `renderCard` en `src/components/inventory/WholesaleOrdersInbox.tsx`.
+- No se cambia la pestaña "al detal" (sigue con su botón único de Logística).
+- No se cambia ninguna lógica de backend, notificaciones, ni el diálogo de confirmación.
+
+### Detalles técnicos
+
+```text
+enough         => [Entregar a Estampación]
+stock === 0    => [Producir cuerpos]
+parcial (>0)   => [Entregar a Estampación] [Producir cuerpos]
+```
+
+`enough` y `stock` ya están calculados en `renderCard`, así que es solo envolver cada botón en su condición correspondiente.

@@ -274,14 +274,28 @@ const WholesaleOrdersInbox = () => {
               </div>
             ) : (
               <div className="flex flex-wrap gap-2 pt-1">
-                <Button size="sm" variant="outline" className="flex-1 min-w-[140px] gap-1.5"
-                  onClick={() => openDeliver(o, "estampacion")}>
-                  <Paintbrush className="h-3.5 w-3.5" /> Entregar a Estampación
-                </Button>
-                <Button size="sm" variant="default" className="flex-1 min-w-[140px] gap-1.5"
-                  onClick={() => openDeliver(o, "produccion")}>
-                  <Factory className="h-3.5 w-3.5" /> Producir cuerpos
-                </Button>
+                {(stock === null || stock === 0) ? (
+                  <Button size="sm" variant="default" className="flex-1 min-w-[140px] gap-1.5"
+                    onClick={() => openDeliver(o, "produccion")}>
+                    <Factory className="h-3.5 w-3.5" /> Producir cuerpos
+                  </Button>
+                ) : enough ? (
+                  <Button size="sm" variant="default" className="flex-1 min-w-[140px] gap-1.5"
+                    onClick={() => openDeliver(o, "estampacion")}>
+                    <Paintbrush className="h-3.5 w-3.5" /> Entregar a Estampación
+                  </Button>
+                ) : (
+                  <>
+                    <Button size="sm" variant="outline" className="flex-1 min-w-[140px] gap-1.5"
+                      onClick={() => openDeliver(o, "estampacion")}>
+                      <Paintbrush className="h-3.5 w-3.5" /> Entregar a Estampación
+                    </Button>
+                    <Button size="sm" variant="default" className="flex-1 min-w-[140px] gap-1.5"
+                      onClick={() => openDeliver(o, "produccion")}>
+                      <Factory className="h-3.5 w-3.5" /> Producir cuerpos
+                    </Button>
+                  </>
+                )}
               </div>
             )
           )}
