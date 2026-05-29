@@ -397,14 +397,14 @@ const WholesaleOrdersInbox = () => {
             )}
           </CardContent>
         </Card>
-        {deliveredRetail.length > 0 && (
+        {filteredDeliveredRetail.length > 0 && (
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm text-muted-foreground">Entregados recientes</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-3 md:grid-cols-2">
-                {deliveredRetail.slice(0, 6).map((o) => renderCard(o, true, "detal"))}
+                {filteredDeliveredRetail.slice(0, 6).map((o) => renderCard(o, true, "detal"))}
               </div>
             </CardContent>
           </Card>
