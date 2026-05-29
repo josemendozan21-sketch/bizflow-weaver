@@ -14,11 +14,12 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  Beaker, Plus, Pencil, Check, X, AlertTriangle, AlertCircle, CheckCircle2, Search, ArrowDownAZ, ArrowUpAZ, Trash2,
+  Beaker, Plus, Pencil, Check, X, AlertTriangle, AlertCircle, CheckCircle2, Search, ArrowDownAZ, ArrowUpAZ, Trash2, FlaskConical,
 } from "lucide-react";
 import { useInventory, getStockStatus, type SupabaseStockItem } from "@/hooks/useInventory";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const UNITS = ["unidades", "gramos", "kilos", "tarros", "metros", "litros"];
 
@@ -39,6 +40,16 @@ type BrandFilter = "todas" | "magical" | "sweatspot" | "ambas";
 const normalize = (s: string) =>
   s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
+// Receta fija por batch (= 30 kg de mezcla de gel)
+const GEL_RECIPE = [
+  { match: "carbopol", label: "Carbopol", qty: 250, unitHint: "gramos" },
+  { match: "metil", label: "Metil (incluye propil)", qty: 100, unitHint: "gramos" },
+  { match: "agua", label: "Agua", qty: 30, unitHint: "litros" },
+  { match: "trietanolamina", label: "Trietanolamina", qty: 150, unitHint: "ml" },
+] as const;
+const GEL_OUTPUT_NAME = "mezcla gel";
+const GEL_OUTPUT_PER_BATCH = 30; // 30 kg
+
 const STATUS_CONFIG = {
   ok: { label: "OK", variant: "secondary" as const, icon: CheckCircle2 },
   bajo: { label: "Bajo stock", variant: "default" as const, icon: AlertTriangle },
@@ -46,7 +57,7 @@ const STATUS_CONFIG = {
 };
 
 const MateriaPrimaPanel = () => {
-  const { stockItems, addStockItem, updateStockItem, deleteStockItem } = useInventory();
+  const { stockItems, addStockItem, updateStockItem, deleteStockItem, refetch } = useInventory();
   const { role } = useAuth();
   const isReadOnly = role === "asesor_comercial";
 
@@ -59,6 +70,9 @@ const MateriaPrimaPanel = () => {
   const [newForm, setNewForm] = useState({
     name: "", brand: "ambas", available: "", unit: "unidades", minStock: "",
   });
+  const [produceOpen, setProduceOpen] = useState(false);
+  const [batches, setBatches] = useState("1");
+  const [producing, setProducing] = useState(false);
 
   const items = useMemo(() => {
     const q = normalize(search.trim());
@@ -109,6 +123,78 @@ const MateriaPrimaPanel = () => {
     }
   };
 
+  // Resolve recipe items against current stock
+  const recipeRows = useMemo(() => {
+    const pool = stockItems.filter((i) => i.category === "materia_prima");
+    const findItem = (key: string) =>
+      pool.find((i) => normalize(i.name).includes(key));
+    const n = Math.max(1, Number(batches) || 0);
+    const rows = GEL_RECIPE.map((r) => {
+      const item = findItem(r.match);
+      const required = r.qty * n;
+      return {
+        ...r,
+        item,
+        required,
+        available: item?.available ?? 0,
+        unit: item?.unit ?? r.unitHint,
+        missing: !item,
+        insufficient: !!item && item.available < required,
+      };
+    });
+    const gelItem = pool.find((i) => normalize(i.name).includes(GEL_OUTPUT_NAME));
+    return { rows, gelItem, batches: n };
+  }, [stockItems, batches]);
+
+  const canProduce =
+    !!recipeRows.gelItem &&
+    recipeRows.rows.every((r) => !r.missing && !r.insufficient);
+
+  // Adjust gel output qty to gel item's unit
+  const computeGelDelta = (n: number, unit?: string) => {
+    const u = normalize(unit || "");
+    const totalKg = GEL_OUTPUT_PER_BATCH * n;
+    if (u.includes("kilo")) return totalKg;
+    if (u.includes("gram")) return totalKg * 1000;
+    return totalKg; // default: assume kg
+  };
+
+  const handleProduce = async () => {
+    if (!canProduce || !recipeRows.gelItem) return;
+    setProducing(true);
+    try {
+      // Discount each input
+      for (const r of recipeRows.rows) {
+        if (!r.item) continue;
+        const newAvail = r.item.available - r.required;
+        const { error } = await supabase
+          .from("stock_items")
+          .update({ available: newAvail } as any)
+          .eq("id", r.item.id);
+        if (error) throw new Error(`${r.label}: ${error.message}`);
+      }
+      // Add gel output
+      const gelDelta = computeGelDelta(recipeRows.batches, recipeRows.gelItem.unit);
+      const newGel = recipeRows.gelItem.available + gelDelta;
+      const { error: gelErr } = await supabase
+        .from("stock_items")
+        .update({ available: newGel } as any)
+        .eq("id", recipeRows.gelItem.id);
+      if (gelErr) throw new Error(`Mezcla Gel: ${gelErr.message}`);
+
+      toast.success(
+        `Producidos ${GEL_OUTPUT_PER_BATCH * recipeRows.batches} kg de mezcla de gel (${recipeRows.batches} batch${recipeRows.batches > 1 ? "es" : ""}).`
+      );
+      setProduceOpen(false);
+      setBatches("1");
+      refetch();
+    } catch (e: any) {
+      toast.error(e.message || "Error al producir mezcla");
+    } finally {
+      setProducing(false);
+    }
+  };
+
   const startEdit = (it: SupabaseStockItem) => {
     setEditingId(it.id);
     setEditForm({ available: String(it.available), minStock: String(it.min_stock) });
@@ -144,6 +230,76 @@ const MateriaPrimaPanel = () => {
             {totals.bajo > 0 && <Badge className="text-xs">{totals.bajo} bajo</Badge>}
           </CardTitle>
           {!isReadOnly && (
+            <div className="flex items-center gap-2">
+            <Dialog open={produceOpen} onOpenChange={setProduceOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="secondary">
+                  <FlaskConical className="h-4 w-4 mr-1" />Producir mezcla de gel
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Producir mezcla de gel (frío)</DialogTitle>
+                  <DialogDescription>
+                    Cada batch consume los insumos de la receta y suma {GEL_OUTPUT_PER_BATCH} kg al stock de Mezcla Gel.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-3 py-2">
+                  <div className="grid gap-1.5 max-w-[160px]">
+                    <Label># de batches</Label>
+                    <Input type="number" min={1} value={batches}
+                      onChange={(e) => setBatches(e.target.value)} />
+                  </div>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Insumo</TableHead>
+                          <TableHead className="text-right">Requerido</TableHead>
+                          <TableHead className="text-right">Disponible</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {recipeRows.rows.map((r) => (
+                          <TableRow key={r.match}
+                            className={r.missing || r.insufficient ? "bg-destructive/10" : ""}>
+                            <TableCell className="font-medium">
+                              {r.label}
+                              {r.missing && (
+                                <div className="text-xs text-destructive">No existe en inventario</div>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {r.required.toLocaleString("es-CO")} {r.unit}
+                            </TableCell>
+                            <TableCell className={`text-right ${r.insufficient ? "text-destructive font-semibold" : ""}`}>
+                              {r.item ? `${r.available.toLocaleString("es-CO")} ${r.unit}` : "—"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  {!recipeRows.gelItem && (
+                    <p className="text-xs text-destructive">
+                      No existe el ítem "Mezcla Gel" en materia prima. Créalo primero.
+                    </p>
+                  )}
+                  <div className="rounded-md bg-primary/5 p-3 text-sm">
+                    Resultado: <strong>{GEL_OUTPUT_PER_BATCH * recipeRows.batches} kg</strong> de mezcla de gel
+                    {recipeRows.gelItem && (
+                      <span className="text-muted-foreground"> (se sumarán {computeGelDelta(recipeRows.batches, recipeRows.gelItem.unit).toLocaleString("es-CO")} {recipeRows.gelItem.unit})</span>
+                    )}
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setProduceOpen(false)}>Cancelar</Button>
+                  <Button onClick={handleProduce} disabled={!canProduce || producing}>
+                    {producing ? "Produciendo..." : "Confirmar producción"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             <Dialog open={addOpen} onOpenChange={setAddOpen}>
               <DialogTrigger asChild>
                 <Button size="sm"><Plus className="h-4 w-4 mr-1" />Agregar materia prima</Button>
@@ -200,6 +356,7 @@ const MateriaPrimaPanel = () => {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            </div>
           )}
         </div>
       </CardHeader>
