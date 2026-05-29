@@ -1,0 +1,1 @@
+UPDATE public.orders SET production_status = 'despachado', dispatched_at = COALESCE(dispatched_at, CURRENT_DATE), updated_at = now() WHERE id IN ('a0904e1f-e81a-4ba8-ac32-8a4f9a3b7565','fec3f04f-0af9-459f-a35d-fcaba10b7fb7','b6ca1f85-b2f2-4da2-a46f-1cb846767884','1cf9432b-83cb-41c1-89f0-4b31bd5fd53e');
