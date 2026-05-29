@@ -230,6 +230,76 @@ const MateriaPrimaPanel = () => {
             {totals.bajo > 0 && <Badge className="text-xs">{totals.bajo} bajo</Badge>}
           </CardTitle>
           {!isReadOnly && (
+            <div className="flex items-center gap-2">
+            <Dialog open={produceOpen} onOpenChange={setProduceOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="secondary">
+                  <FlaskConical className="h-4 w-4 mr-1" />Producir mezcla de gel
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Producir mezcla de gel (frío)</DialogTitle>
+                  <DialogDescription>
+                    Cada batch consume los insumos de la receta y suma {GEL_OUTPUT_PER_BATCH} kg al stock de Mezcla Gel.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-3 py-2">
+                  <div className="grid gap-1.5 max-w-[160px]">
+                    <Label># de batches</Label>
+                    <Input type="number" min={1} value={batches}
+                      onChange={(e) => setBatches(e.target.value)} />
+                  </div>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Insumo</TableHead>
+                          <TableHead className="text-right">Requerido</TableHead>
+                          <TableHead className="text-right">Disponible</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {recipeRows.rows.map((r) => (
+                          <TableRow key={r.match}
+                            className={r.missing || r.insufficient ? "bg-destructive/10" : ""}>
+                            <TableCell className="font-medium">
+                              {r.label}
+                              {r.missing && (
+                                <div className="text-xs text-destructive">No existe en inventario</div>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {r.required.toLocaleString("es-CO")} {r.unit}
+                            </TableCell>
+                            <TableCell className={`text-right ${r.insufficient ? "text-destructive font-semibold" : ""}`}>
+                              {r.item ? `${r.available.toLocaleString("es-CO")} ${r.unit}` : "—"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  {!recipeRows.gelItem && (
+                    <p className="text-xs text-destructive">
+                      No existe el ítem "Mezcla Gel" en materia prima. Créalo primero.
+                    </p>
+                  )}
+                  <div className="rounded-md bg-primary/5 p-3 text-sm">
+                    Resultado: <strong>{GEL_OUTPUT_PER_BATCH * recipeRows.batches} kg</strong> de mezcla de gel
+                    {recipeRows.gelItem && (
+                      <span className="text-muted-foreground"> (se sumarán {computeGelDelta(recipeRows.batches, recipeRows.gelItem.unit).toLocaleString("es-CO")} {recipeRows.gelItem.unit})</span>
+                    )}
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setProduceOpen(false)}>Cancelar</Button>
+                  <Button onClick={handleProduce} disabled={!canProduce || producing}>
+                    {producing ? "Produciendo..." : "Confirmar producción"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             <Dialog open={addOpen} onOpenChange={setAddOpen}>
               <DialogTrigger asChild>
                 <Button size="sm"><Plus className="h-4 w-4 mr-1" />Agregar materia prima</Button>
@@ -286,6 +356,7 @@ const MateriaPrimaPanel = () => {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            </div>
           )}
         </div>
       </CardHeader>
