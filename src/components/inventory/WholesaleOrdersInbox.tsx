@@ -158,12 +158,19 @@ const WholesaleOrdersInbox = () => {
     const candidates = stockItems.filter(
       (s) => s.brand === o.brand && s.category === "producto_terminado"
     );
-    // 1) exact normalized match
-    let match = candidates.find((s) => norm(s.name) === target);
-    if (match) return match;
-    // 2) base name match (without temperature suffix)
-    match = candidates.find((s) => stripTemp(s.name) === targetBase);
-    return match;
+    // 1) exact normalized match (may have duplicates)
+    let matches = candidates.filter((s) => norm(s.name) === target);
+    // 2) fall back to base name match (without temperature suffix)
+    if (matches.length === 0) {
+      matches = candidates.filter((s) => stripTemp(s.name) === targetBase);
+    }
+    if (matches.length === 0) return undefined;
+    // Aggregate stock across duplicate references to avoid picking a 0-stock duplicate
+    const totalAvailable = matches.reduce((sum, s) => sum + (Number(s.available) || 0), 0);
+    const primary = matches.reduce((a, b) =>
+      (Number(b.available) || 0) > (Number(a.available) || 0) ? b : a
+    );
+    return { ...primary, available: totalAvailable };
   };
 
   const pending = useMemo(() => orders.filter((o) => !deliveredIds.has(o.id)), [orders, deliveredIds]);
