@@ -21,6 +21,9 @@ const InventariosRoleView = () => {
             <ShoppingBag className="h-4 w-4" /> Bandeja de pedidos
           </TabsTrigger>
           <TabsTrigger value="movimientos" className="gap-1.5">
+            <Boxes className="h-4 w-4" /> Entradas y Salidas
+          </TabsTrigger>
+          <TabsTrigger value="historial" className="gap-1.5">
             <History className="h-4 w-4" /> Historial de movimientos
           </TabsTrigger>
           <TabsTrigger value="materia_prima" className="gap-1.5">
@@ -43,6 +46,9 @@ const InventariosRoleView = () => {
             <QuickMovementForm />
             <WeeklyInventoryExport />
           </div>
+        </TabsContent>
+
+        <TabsContent value="historial" className="mt-4">
           <MovementHistoryTable />
         </TabsContent>
 
