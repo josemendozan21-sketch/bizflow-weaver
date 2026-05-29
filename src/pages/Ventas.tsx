@@ -308,8 +308,12 @@ function buildMagicalMayorSummary(args: {
   escarcha: boolean;
   costoAdicional: string;
   paymentProofFile: File | null;
+  moldeNuevo?: boolean;
+  moldeNombre?: string;
+  moldeCosto?: string;
+  moldeModo?: "con_pedido" | "separado" | "solo_molde";
 }): OrderSummary {
-  const { form, orderLines, grandTotal, abono, estadoPago, isRecompra, noLogo, dobleTinta, escarcha, costoAdicional, paymentProofFile } = args;
+  const { form, orderLines, grandTotal, abono, estadoPago, isRecompra, noLogo, dobleTinta, escarcha, costoAdicional, paymentProofFile, moldeNuevo, moldeNombre, moldeCosto, moldeModo } = args;
   const abonoNum = estadoPago === "pago_total" ? grandTotal : (parseFloat(abono) || 0);
   const saldo = Math.max(grandTotal - abonoNum, 0);
   const estadoPagoLabel =
@@ -324,6 +328,18 @@ function buildMagicalMayorSummary(args: {
   if (escarcha) opciones.push({ label: "Escarcha", value: "Sí" });
   if ((dobleTinta || escarcha) && parseFloat(costoAdicional) > 0) {
     opciones.push({ label: "Costo adicional", value: formatMoney(parseFloat(costoAdicional)) });
+  }
+  if (moldeNuevo) {
+    opciones.push({ label: "Molde nuevo", value: moldeNombre || "—" });
+    opciones.push({ label: "Costo del molde", value: formatMoney(parseFloat(moldeCosto || "0")) });
+    opciones.push({
+      label: "Forma de cobro del molde",
+      value: moldeModo === "solo_molde"
+        ? "Solo molde (sin productos)"
+        : moldeModo === "separado"
+          ? "Pagado por separado"
+          : "Cobrado con este pedido",
+    });
   }
 
   return {
