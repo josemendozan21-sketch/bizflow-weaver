@@ -1,35 +1,13 @@
-import { useState, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Boxes, ShoppingBag, Zap, Beaker } from "lucide-react";
-import BrandSelectionCards, { type InventoryNotification } from "@/components/inventory/BrandSelectionCards";
+import { Boxes, ShoppingBag, Zap, Beaker, Sparkles } from "lucide-react";
 import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
 import MateriaPrimaPanel from "@/components/inventory/MateriaPrimaPanel";
 import WholesaleOrdersInbox from "@/components/inventory/WholesaleOrdersInbox";
 import QuickMovementForm from "@/components/inventory/QuickMovementForm";
 import MovementHistoryTable from "@/components/inventory/MovementHistoryTable";
 import WeeklyInventoryExport from "@/components/inventory/WeeklyInventoryExport";
-import type { InventoryBrand, InventoryCategory } from "@/stores/inventoryStore";
 
 const InventariosRoleView = () => {
-  const [selectedBrand, setSelectedBrand] = useState<InventoryBrand | null>(null);
-  const [initialCategory, setInitialCategory] = useState<InventoryCategory>("cuerpos_referencias");
-  const [highlightNames, setHighlightNames] = useState<string[]>([]);
-
-  const handleNotificationClick = useCallback((brand: InventoryBrand, notification: InventoryNotification) => {
-    if (notification.targetCategory) {
-      setInitialCategory(notification.targetCategory === "materia_prima" ? "cuerpos_referencias" : notification.targetCategory);
-      setHighlightNames(notification.targetItemNames);
-      setSelectedBrand(brand);
-    }
-  }, []);
-
-  const handleSelectBrand = useCallback((brand: InventoryBrand) => {
-    setInitialCategory("cuerpos_referencias");
-    setHighlightNames([]);
-    setSelectedBrand(brand);
-  }, []);
-
   return (
     <div className="space-y-6">
       <div>
@@ -48,8 +26,11 @@ const InventariosRoleView = () => {
           <TabsTrigger value="materia_prima" className="gap-1.5">
             <Beaker className="h-4 w-4" /> Materia Prima
           </TabsTrigger>
-          <TabsTrigger value="stock" className="gap-1.5">
-            <Boxes className="h-4 w-4" /> Por marca
+          <TabsTrigger value="magical_warmers" className="gap-1.5">
+            <Sparkles className="h-4 w-4" /> Magical Warmers
+          </TabsTrigger>
+          <TabsTrigger value="sweatspot" className="gap-1.5">
+            <Boxes className="h-4 w-4" /> Sweatspot
           </TabsTrigger>
         </TabsList>
 
@@ -69,29 +50,12 @@ const InventariosRoleView = () => {
           <MateriaPrimaPanel />
         </TabsContent>
 
-        <TabsContent value="stock" className="space-y-4 mt-4">
-          {!selectedBrand ? (
-            <>
-              <p className="text-sm text-muted-foreground">Selecciona una marca para ver cuerpos, producto terminado e importados:</p>
-              <BrandSelectionCards
-                selectedBrand={null}
-                onSelectBrand={handleSelectBrand}
-                onNotificationClick={handleNotificationClick}
-              />
-            </>
-          ) : (
-            <>
-              <Button variant="ghost" size="sm" onClick={() => { setSelectedBrand(null); setHighlightNames([]); }} className="gap-1.5">
-                <ArrowLeft className="h-4 w-4" /> Volver a marcas
-              </Button>
-              <CategorizedInventoryPanel
-                key={`${selectedBrand}-${initialCategory}-${highlightNames.join(",")}`}
-                initialBrand={selectedBrand}
-                initialCategory={initialCategory}
-                highlightItemNames={highlightNames}
-              />
-            </>
-          )}
+        <TabsContent value="magical_warmers" className="mt-4">
+          <CategorizedInventoryPanel initialBrand="magical_warmers" initialCategory="cuerpos_referencias" />
+        </TabsContent>
+
+        <TabsContent value="sweatspot" className="mt-4">
+          <CategorizedInventoryPanel initialBrand="sweatspot" initialCategory="cuerpos_referencias" />
         </TabsContent>
       </Tabs>
     </div>
