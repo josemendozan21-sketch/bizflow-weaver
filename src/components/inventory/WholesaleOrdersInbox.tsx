@@ -500,7 +500,7 @@ const WholesaleOrdersInbox = () => {
         </CardContent>
       </Card>
 
-      {delivered.length > 0 && (
+      {filteredDelivered.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm text-muted-foreground">Entregados recientes</CardTitle>
