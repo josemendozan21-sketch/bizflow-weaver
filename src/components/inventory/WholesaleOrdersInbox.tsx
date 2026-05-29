@@ -101,6 +101,7 @@ const WholesaleOrdersInbox = () => {
         .select("id,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations")
         .eq("sale_type", "mayor")
         .eq("production_status", "pendiente")
+        .gte("created_at", "2026-05-15")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as MayorOrder[];
@@ -116,6 +117,7 @@ const WholesaleOrdersInbox = () => {
         .select("id,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations")
         .eq("sale_type", "menor")
         .in("production_status", ACTIVE_STATUSES)
+        .gte("created_at", "2026-05-15")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as MayorOrder[];
