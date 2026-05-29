@@ -686,7 +686,24 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const logoNombre = ((fd.get("mw_logo_nombre") as string) || "").trim();
     const fechaRequerida = fd.get("mw_fechaRequerida") as string;
 
-    // Validate all lines
+    // Validar molde nuevo si está activo
+    if (moldeNuevo) {
+      if (!moldeNombre.trim()) {
+        toast.error("Nombre del molde requerido", { description: "Indica el nombre del molde nuevo." });
+        setIsSubmitting(false);
+        return;
+      }
+      if (!moldeCosto || parseFloat(moldeCosto) <= 0) {
+        toast.error("Costo del molde requerido", { description: "Indica el costo del molde nuevo." });
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    const isSoloMolde = moldeNuevo && moldeModo === "solo_molde";
+
+    // En modo "solo molde" no validamos líneas de producto
+    if (!isSoloMolde) {
     for (const line of orderLines) {
       if (!line.product || !line.type) {
         toast.error("Producto requerido", { description: "Seleccione producto y tipo en todas las líneas." });
@@ -705,6 +722,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         setIsSubmitting(false);
         return;
       }
+    }
     }
 
     // RUT es opcional en ventas al por mayor
