@@ -143,7 +143,7 @@ const WholesaleOrdersInbox = () => {
     refetchInterval: 15_000,
   });
 
-  const findStockItem = (o: MayorOrder) => {
+  const findStockItem = (o: MayorOrder, category: "producto_terminado" | "cuerpos_referencias" = "producto_terminado") => {
     // Normalize: lowercase, collapse repeated "(frío)/(térmico)" suffixes, trim
     const norm = (s: string) =>
       s
@@ -156,7 +156,7 @@ const WholesaleOrdersInbox = () => {
     const target = norm(o.product);
     const targetBase = stripTemp(o.product);
     const candidates = stockItems.filter(
-      (s) => s.brand === o.brand && s.category === "producto_terminado"
+      (s) => s.brand === o.brand && s.category === category
     );
     // 1) exact normalized match (may have duplicates)
     let matches = candidates.filter((s) => norm(s.name) === target);
@@ -241,7 +241,9 @@ const WholesaleOrdersInbox = () => {
   };
 
   const renderCard = (o: MayorOrder, isDelivered: boolean, kind: "mayor" | "detal" = "mayor") => {
-    const item = findStockItem(o);
+    // For mayor: check blank bodies (cuerpos) — those are what get sent to Estampación.
+    // For detal: check finished product.
+    const item = findStockItem(o, kind === "mayor" ? "cuerpos_referencias" : "producto_terminado");
     const stock = item ? Number(item.available) : null;
     const enough = stock !== null && stock >= o.quantity;
     const stockBadge = stock === null
