@@ -308,12 +308,14 @@ function buildMagicalMayorSummary(args: {
   escarcha: boolean;
   costoAdicional: string;
   paymentProofFile: File | null;
+  cobroLogo?: boolean;
+  costoLogo?: string;
   moldeNuevo?: boolean;
   moldeNombre?: string;
   moldeCosto?: string;
   moldeModo?: "con_pedido" | "separado" | "solo_molde";
 }): OrderSummary {
-  const { form, orderLines, grandTotal, abono, estadoPago, isRecompra, noLogo, dobleTinta, escarcha, costoAdicional, paymentProofFile, moldeNuevo, moldeNombre, moldeCosto, moldeModo } = args;
+  const { form, orderLines, grandTotal, abono, estadoPago, isRecompra, noLogo, dobleTinta, escarcha, costoAdicional, paymentProofFile, cobroLogo, costoLogo, moldeNuevo, moldeNombre, moldeCosto, moldeModo } = args;
   const abonoNum = estadoPago === "pago_total" ? grandTotal : (parseFloat(abono) || 0);
   const saldo = Math.max(grandTotal - abonoNum, 0);
   const estadoPagoLabel =
@@ -328,6 +330,9 @@ function buildMagicalMayorSummary(args: {
   if (escarcha) opciones.push({ label: "Escarcha", value: "Sí" });
   if ((dobleTinta || escarcha) && parseFloat(costoAdicional) > 0) {
     opciones.push({ label: "Costo adicional", value: formatMoney(parseFloat(costoAdicional)) });
+  }
+  if (cobroLogo) {
+    opciones.push({ label: "Cobro de logo", value: formatMoney(parseFloat(costoLogo || "0")) });
   }
   if (moldeNuevo) {
     opciones.push({ label: "Molde nuevo", value: moldeNombre || "—" });
