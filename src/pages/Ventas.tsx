@@ -1787,7 +1787,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
           ink_color: inkColor,
           silicone_color: siliconeColor,
           logo_url: logoUrl,
-          observations: observaciones || null,
+          observations: [observaciones, lineIdx === 0 ? ssLogoNote : ""].filter(Boolean).join(" | ") || null,
           personalization: personalizacion || null,
           advisor_id: user?.id || "",
           advisor_name: user?.email || "Asesor",
