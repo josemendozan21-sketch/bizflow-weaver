@@ -2234,6 +2234,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
             ssIsRecompra,
             ssNoLogo,
             ssPaymentProofFile,
+            ssCobroLogo,
+            ssCostoLogo,
           })}
         />
       </CardContent>
