@@ -2130,6 +2130,10 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                 <Label htmlFor="ss_noLogo" className="cursor-pointer">No requiere logo</Label>
                 <Switch id="ss_noLogo" checked={ssNoLogo} onCheckedChange={setSsNoLogo} />
               </div>
+              <div className="flex items-center justify-between rounded-md border border-input p-3">
+                <Label htmlFor="ss_cobroLogo" className="cursor-pointer">Cobrar logo</Label>
+                <Switch id="ss_cobroLogo" checked={ssCobroLogo} onCheckedChange={setSsCobroLogo} />
+              </div>
             </div>
             {ssIsRecompra && (
               <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3 max-w-md">
@@ -2140,6 +2144,24 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
               <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3 max-w-md">
                 ✓ Sin logo: El pedido omitirá la etapa de estampación y pasará directo a producción.
               </p>
+            )}
+            {ssCobroLogo && (
+              <div className="space-y-1.5 rounded-md border border-input bg-muted/30 p-3 max-w-md">
+                <Label htmlFor="ss_costoLogo">Costo del logo</Label>
+                <Input
+                  id="ss_costoLogo"
+                  type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()}
+                  min="0"
+                  step="any"
+                  inputMode="decimal"
+                  placeholder="Ej: 20000"
+                  value={ssCostoLogo}
+                  onChange={(e) => setSsCostoLogo(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Este valor se sumará al total del pedido y será cobrado al cliente.
+                </p>
+              </div>
             )}
           </fieldset>
 
