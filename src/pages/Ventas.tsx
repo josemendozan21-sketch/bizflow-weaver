@@ -1082,6 +1082,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       "ventas:mw:lines","ventas:mw:abono","ventas:mw:estadoPago",
       "ventas:mw:dobleTinta","ventas:mw:escarcha","ventas:mw:isRecompra",
       "ventas:mw:noLogo","ventas:mw:needsLogoAdjustment","ventas:mw:costoAdicional",
+      "ventas:mw:cobroLogo","ventas:mw:costoLogo",
       "ventas:mw:moldeNuevo","ventas:mw:moldeNombre","ventas:mw:moldeCosto","ventas:mw:moldeModo",
       "ventas:mw:fields",
     ].forEach(clearFormDraft);
