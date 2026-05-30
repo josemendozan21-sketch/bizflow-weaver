@@ -543,6 +543,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [costoAdicional, setCostoAdicional] = usePersistedState("ventas:mw:costoAdicional", "");
+  const [cobroLogo, setCobroLogo] = usePersistedState("ventas:mw:cobroLogo", false);
+  const [costoLogo, setCostoLogo] = usePersistedState("ventas:mw:costoLogo", "");
   const [logoFileState, setLogoFileState] = useState<File | null>(null);
   const [rutFileState, setRutFileState] = useState<File | null>(null);
   // Molde nuevo (sólo Magical)
@@ -558,6 +560,11 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   useEffect(() => {
     if (!dobleTinta && !escarcha) setCostoAdicional("");
   }, [dobleTinta, escarcha]);
+
+  // Reset costo logo si se desactiva la opción
+  useEffect(() => {
+    if (!cobroLogo) setCostoLogo("");
+  }, [cobroLogo]);
 
   const materialConfigs = useInventoryStore((s) => s.materialConfigs);
   const { reserveBodyStock: reserveBodyStockDB, discountStock: discountStockDB, stockItems: inventoryStockItems } = useInventory();
@@ -628,9 +635,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const grandTotal = useMemo(() => {
     const linesSum = orderLines.reduce((sum, line) => line.isGift ? sum : sum + (parseFloat(line.valorTotal) || 0), 0);
     const extra = (dobleTinta || escarcha) ? (parseFloat(costoAdicional) || 0) : 0;
+    const logoExtra = cobroLogo ? (parseFloat(costoLogo) || 0) : 0;
     const moldeExtra = (moldeNuevo && moldeModo !== "separado") ? (parseFloat(moldeCosto) || 0) : 0;
-    return linesSum + extra + moldeExtra;
-  }, [orderLines, costoAdicional, dobleTinta, escarcha, moldeNuevo, moldeCosto, moldeModo]);
+    return linesSum + extra + logoExtra + moldeExtra;
+  }, [orderLines, costoAdicional, dobleTinta, escarcha, cobroLogo, costoLogo, moldeNuevo, moldeCosto, moldeModo]);
 
   // Auto-fill abono when pago_total
   useEffect(() => {
