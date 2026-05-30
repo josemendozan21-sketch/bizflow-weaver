@@ -308,12 +308,14 @@ function buildMagicalMayorSummary(args: {
   escarcha: boolean;
   costoAdicional: string;
   paymentProofFile: File | null;
+  cobroLogo?: boolean;
+  costoLogo?: string;
   moldeNuevo?: boolean;
   moldeNombre?: string;
   moldeCosto?: string;
   moldeModo?: "con_pedido" | "separado" | "solo_molde";
 }): OrderSummary {
-  const { form, orderLines, grandTotal, abono, estadoPago, isRecompra, noLogo, dobleTinta, escarcha, costoAdicional, paymentProofFile, moldeNuevo, moldeNombre, moldeCosto, moldeModo } = args;
+  const { form, orderLines, grandTotal, abono, estadoPago, isRecompra, noLogo, dobleTinta, escarcha, costoAdicional, paymentProofFile, cobroLogo, costoLogo, moldeNuevo, moldeNombre, moldeCosto, moldeModo } = args;
   const abonoNum = estadoPago === "pago_total" ? grandTotal : (parseFloat(abono) || 0);
   const saldo = Math.max(grandTotal - abonoNum, 0);
   const estadoPagoLabel =
@@ -328,6 +330,9 @@ function buildMagicalMayorSummary(args: {
   if (escarcha) opciones.push({ label: "Escarcha", value: "Sí" });
   if ((dobleTinta || escarcha) && parseFloat(costoAdicional) > 0) {
     opciones.push({ label: "Costo adicional", value: formatMoney(parseFloat(costoAdicional)) });
+  }
+  if (cobroLogo) {
+    opciones.push({ label: "Cobro de logo", value: formatMoney(parseFloat(costoLogo || "0")) });
   }
   if (moldeNuevo) {
     opciones.push({ label: "Molde nuevo", value: moldeNombre || "—" });
@@ -402,8 +407,10 @@ function buildSweatspotMayorSummary(args: {
   ssIsRecompra: boolean;
   ssNoLogo: boolean;
   ssPaymentProofFile: File | null;
+  ssCobroLogo?: boolean;
+  ssCostoLogo?: string;
 }): OrderSummary {
-  const { form, ssLines, grandTotal, ssAbono, ssEstadoPago, ssIsRecompra, ssNoLogo, ssPaymentProofFile } = args;
+  const { form, ssLines, grandTotal, ssAbono, ssEstadoPago, ssIsRecompra, ssNoLogo, ssPaymentProofFile, ssCobroLogo, ssCostoLogo } = args;
   const abonoNum = ssEstadoPago === "pago_total" ? grandTotal : (parseFloat(ssAbono) || 0);
   const saldo = Math.max(grandTotal - abonoNum, 0);
   const estadoPagoLabel =
@@ -414,6 +421,9 @@ function buildSweatspotMayorSummary(args: {
   const opciones: Array<{ label: string; value: string }> = [];
   if (ssIsRecompra) opciones.push({ label: "Recompra", value: "Sí" });
   if (ssNoLogo) opciones.push({ label: "Sin logo", value: "Sí" });
+  if (ssCobroLogo) {
+    opciones.push({ label: "Cobro de logo", value: formatMoney(parseFloat(ssCostoLogo || "0")) });
+  }
 
   return {
     brandLabel: "Sweatspot",
@@ -533,6 +543,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [costoAdicional, setCostoAdicional] = usePersistedState("ventas:mw:costoAdicional", "");
+  const [cobroLogo, setCobroLogo] = usePersistedState("ventas:mw:cobroLogo", false);
+  const [costoLogo, setCostoLogo] = usePersistedState("ventas:mw:costoLogo", "");
   const [logoFileState, setLogoFileState] = useState<File | null>(null);
   const [rutFileState, setRutFileState] = useState<File | null>(null);
   // Molde nuevo (sólo Magical)
@@ -548,6 +560,11 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   useEffect(() => {
     if (!dobleTinta && !escarcha) setCostoAdicional("");
   }, [dobleTinta, escarcha]);
+
+  // Reset costo logo si se desactiva la opción
+  useEffect(() => {
+    if (!cobroLogo) setCostoLogo("");
+  }, [cobroLogo]);
 
   const materialConfigs = useInventoryStore((s) => s.materialConfigs);
   const { reserveBodyStock: reserveBodyStockDB, discountStock: discountStockDB, stockItems: inventoryStockItems } = useInventory();
@@ -618,9 +635,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const grandTotal = useMemo(() => {
     const linesSum = orderLines.reduce((sum, line) => line.isGift ? sum : sum + (parseFloat(line.valorTotal) || 0), 0);
     const extra = (dobleTinta || escarcha) ? (parseFloat(costoAdicional) || 0) : 0;
+    const logoExtra = cobroLogo ? (parseFloat(costoLogo) || 0) : 0;
     const moldeExtra = (moldeNuevo && moldeModo !== "separado") ? (parseFloat(moldeCosto) || 0) : 0;
-    return linesSum + extra + moldeExtra;
-  }, [orderLines, costoAdicional, dobleTinta, escarcha, moldeNuevo, moldeCosto, moldeModo]);
+    return linesSum + extra + logoExtra + moldeExtra;
+  }, [orderLines, costoAdicional, dobleTinta, escarcha, cobroLogo, costoLogo, moldeNuevo, moldeCosto, moldeModo]);
 
   // Auto-fill abono when pago_total
   useEffect(() => {
@@ -843,6 +861,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             "ventas:mw:lines","ventas:mw:abono","ventas:mw:estadoPago",
             "ventas:mw:dobleTinta","ventas:mw:escarcha","ventas:mw:isRecompra",
             "ventas:mw:noLogo","ventas:mw:needsLogoAdjustment","ventas:mw:costoAdicional",
+            "ventas:mw:cobroLogo","ventas:mw:costoLogo",
             "ventas:mw:moldeNuevo","ventas:mw:moldeNombre","ventas:mw:moldeCosto","ventas:mw:moldeModo",
             "ventas:mw:fields",
           ].forEach(clearFormDraft);
@@ -866,6 +885,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const moldeCostoNum = parseFloat(moldeCosto) || 0;
     const moldeIncluidoEnTotal = moldeNuevo && moldeModo === "con_pedido" && moldeCostoNum > 0;
     const extraCost = ((dobleTinta || escarcha) ? (parseFloat(costoAdicional) || 0) : 0)
+      + (cobroLogo ? (parseFloat(costoLogo) || 0) : 0)
       + (moldeIncluidoEnTotal ? moldeCostoNum : 0);
     const extraNoteParts: string[] = [];
     if (dobleTinta) extraNoteParts.push("doble tinta");
@@ -873,10 +893,13 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const adicionalNote = ((dobleTinta || escarcha) && parseFloat(costoAdicional) > 0)
       ? `Costo adicional ${extraNoteParts.join(" y ")}: $${(parseFloat(costoAdicional) || 0).toLocaleString("es-CO")}`
       : "";
+    const logoNote = (cobroLogo && parseFloat(costoLogo) > 0)
+      ? `Cobro de logo: $${(parseFloat(costoLogo) || 0).toLocaleString("es-CO")}`
+      : "";
     const moldeNote = moldeNuevo && moldeCostoNum > 0
       ? `Molde nuevo "${moldeNombre}": $${moldeCostoNum.toLocaleString("es-CO")} (${moldeModo === "con_pedido" ? "cobrado con el pedido" : "pagado por separado"})`
       : "";
-    const extraNote = [adicionalNote, moldeNote].filter(Boolean).join(" | ");
+    const extraNote = [adicionalNote, logoNote, moldeNote].filter(Boolean).join(" | ");
 
     // Calcular totales del pedido completo para prorratear el abono entre líneas.
     // El abono ingresado por el asesor es por el TOTAL del pedido, no por cada línea.
@@ -1059,6 +1082,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       "ventas:mw:lines","ventas:mw:abono","ventas:mw:estadoPago",
       "ventas:mw:dobleTinta","ventas:mw:escarcha","ventas:mw:isRecompra",
       "ventas:mw:noLogo","ventas:mw:needsLogoAdjustment","ventas:mw:costoAdicional",
+      "ventas:mw:cobroLogo","ventas:mw:costoLogo",
       "ventas:mw:moldeNuevo","ventas:mw:moldeNombre","ventas:mw:moldeCosto","ventas:mw:moldeModo",
       "ventas:mw:fields",
     ].forEach(clearFormDraft);
@@ -1318,6 +1342,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 <Label htmlFor="mw_noLogo" className="cursor-pointer">No requiere logo</Label>
                 <Switch id="mw_noLogo" checked={noLogo} onCheckedChange={setNoLogo} />
               </div>
+              <div className="flex items-center justify-between rounded-md border border-input p-3">
+                <Label htmlFor="mw_cobroLogo" className="cursor-pointer">Cobrar logo</Label>
+                <Switch id="mw_cobroLogo" checked={cobroLogo} onCheckedChange={setCobroLogo} />
+              </div>
             </div>
             {isRecompra && (
               <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3">
@@ -1343,6 +1371,24 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                   placeholder="Ej: 15000"
                   value={costoAdicional}
                   onChange={(e) => setCostoAdicional(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Este valor se sumará al total del pedido y será cobrado al cliente.
+                </p>
+              </div>
+            )}
+            {cobroLogo && (
+              <div className="space-y-1.5 rounded-md border border-input bg-muted/30 p-3">
+                <Label htmlFor="mw_costoLogo">Costo del logo</Label>
+                <Input
+                  id="mw_costoLogo"
+                  type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()}
+                  min="0"
+                  step="any"
+                  inputMode="decimal"
+                  placeholder="Ej: 20000"
+                  value={costoLogo}
+                  onChange={(e) => setCostoLogo(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
                   Este valor se sumará al total del pedido y será cobrado al cliente.
@@ -1479,6 +1525,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             escarcha,
             costoAdicional,
             paymentProofFile,
+            cobroLogo,
+            costoLogo,
             moldeNuevo,
             moldeNombre,
             moldeCosto,
@@ -1533,6 +1581,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const [ssIsRecompra, setSsIsRecompra] = usePersistedState("ventas:ss:isRecompra", false);
   const [ssNoLogo, setSsNoLogo] = usePersistedState("ventas:ss:noLogo", false);
   const [ssNeedsLogoAdjustment, setSsNeedsLogoAdjustment] = usePersistedState("ventas:ss:needsLogoAdjustment", false);
+  const [ssCobroLogo, setSsCobroLogo] = usePersistedState("ventas:ss:cobroLogo", false);
+  const [ssCostoLogo, setSsCostoLogo] = usePersistedState("ventas:ss:costoLogo", "");
   const [ssPaymentProofFile, setSsPaymentProofFile] = useState<File | null>(null);
   const [ssLogoFileState, setSsLogoFileState] = useState<File | null>(null);
   const [ssRutFileState, setSsRutFileState] = useState<File | null>(null);
@@ -1543,8 +1593,14 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
   // Grand total across all lines
   const grandTotal = useMemo(() => {
-    return ssLines.reduce((sum, line) => sum + (parseFloat(line.valorTotal) || 0), 0);
-  }, [ssLines]);
+    const linesSum = ssLines.reduce((sum, line) => sum + (parseFloat(line.valorTotal) || 0), 0);
+    const logoExtra = ssCobroLogo ? (parseFloat(ssCostoLogo) || 0) : 0;
+    return linesSum + logoExtra;
+  }, [ssLines, ssCobroLogo, ssCostoLogo]);
+
+  useEffect(() => {
+    if (!ssCobroLogo) setSsCostoLogo("");
+  }, [ssCobroLogo]);
 
   // Auto-fill abono when pago_total
   useEffect(() => {
@@ -1653,8 +1709,15 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
     // Process each line as a separate order
     // Calcular totales para prorratear el abono entre líneas (el abono es por el TOTAL del pedido).
-    const ssLineTotals = ssLines.map((line) => parseFloat(line.valorTotal) || 0);
+    const ssLogoExtra = ssCobroLogo ? (parseFloat(ssCostoLogo) || 0) : 0;
+    const ssLineTotals = ssLines.map((line, idx) => {
+      const base = parseFloat(line.valorTotal) || 0;
+      return idx === 0 ? base + ssLogoExtra : base;
+    });
     const ssGrandTotal = ssLineTotals.reduce((s, v) => s + v, 0);
+    const ssLogoNote = (ssCobroLogo && ssLogoExtra > 0)
+      ? `Cobro de logo: $${ssLogoExtra.toLocaleString("es-CO")}`
+      : "";
     const totalAbonoPedidoSs = ssEstadoPago === "pago_total"
       ? ssGrandTotal
       : (parseFloat(ssAbono) || 0);
@@ -1668,7 +1731,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       const siliconeColor = line.colorSilicona;
       const thermoSize = line.tamano as "150 ml" | "250 ml" | "250 ml juguetón" | "250 ml con correa" | "500 ml" | "500 ml con correa";
       const tipoLogo = line.tipoLogo;
-      const lineTotal = parseFloat(line.valorTotal) || 0;
+      const lineTotal = ssLineTotals[lineIdx];
       // Prorratear el abono según el peso de la línea sobre el total del pedido.
       let abonoAmount = 0;
       if (ssGrandTotal > 0) {
@@ -1724,7 +1787,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
           ink_color: inkColor,
           silicone_color: siliconeColor,
           logo_url: logoUrl,
-          observations: observaciones || null,
+          observations: [observaciones, lineIdx === 0 ? ssLogoNote : ""].filter(Boolean).join(" | ") || null,
           personalization: personalizacion || null,
           advisor_id: user?.id || "",
           advisor_name: user?.email || "Asesor",
@@ -1844,6 +1907,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     [
       "ventas:ss:lines","ventas:ss:abono","ventas:ss:estadoPago",
       "ventas:ss:isRecompra","ventas:ss:noLogo","ventas:ss:needsLogoAdjustment",
+      "ventas:ss:cobroLogo","ventas:ss:costoLogo",
       "ventas:ss:fields",
     ].forEach(clearFormDraft);
     setSsLogoFileState(null);
@@ -2066,6 +2130,10 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                 <Label htmlFor="ss_noLogo" className="cursor-pointer">No requiere logo</Label>
                 <Switch id="ss_noLogo" checked={ssNoLogo} onCheckedChange={setSsNoLogo} />
               </div>
+              <div className="flex items-center justify-between rounded-md border border-input p-3">
+                <Label htmlFor="ss_cobroLogo" className="cursor-pointer">Cobrar logo</Label>
+                <Switch id="ss_cobroLogo" checked={ssCobroLogo} onCheckedChange={setSsCobroLogo} />
+              </div>
             </div>
             {ssIsRecompra && (
               <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3 max-w-md">
@@ -2076,6 +2144,24 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
               <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3 max-w-md">
                 ✓ Sin logo: El pedido omitirá la etapa de estampación y pasará directo a producción.
               </p>
+            )}
+            {ssCobroLogo && (
+              <div className="space-y-1.5 rounded-md border border-input bg-muted/30 p-3 max-w-md">
+                <Label htmlFor="ss_costoLogo">Costo del logo</Label>
+                <Input
+                  id="ss_costoLogo"
+                  type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()}
+                  min="0"
+                  step="any"
+                  inputMode="decimal"
+                  placeholder="Ej: 20000"
+                  value={ssCostoLogo}
+                  onChange={(e) => setSsCostoLogo(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Este valor se sumará al total del pedido y será cobrado al cliente.
+                </p>
+              </div>
             )}
           </fieldset>
 
@@ -2148,6 +2234,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
             ssIsRecompra,
             ssNoLogo,
             ssPaymentProofFile,
+            ssCobroLogo,
+            ssCostoLogo,
           })}
         />
       </CardContent>
