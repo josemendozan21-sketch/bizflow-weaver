@@ -1342,6 +1342,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 <Label htmlFor="mw_noLogo" className="cursor-pointer">No requiere logo</Label>
                 <Switch id="mw_noLogo" checked={noLogo} onCheckedChange={setNoLogo} />
               </div>
+              <div className="flex items-center justify-between rounded-md border border-input p-3">
+                <Label htmlFor="mw_cobroLogo" className="cursor-pointer">Cobrar logo</Label>
+                <Switch id="mw_cobroLogo" checked={cobroLogo} onCheckedChange={setCobroLogo} />
+              </div>
             </div>
             {isRecompra && (
               <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3">
@@ -1367,6 +1371,24 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                   placeholder="Ej: 15000"
                   value={costoAdicional}
                   onChange={(e) => setCostoAdicional(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Este valor se sumará al total del pedido y será cobrado al cliente.
+                </p>
+              </div>
+            )}
+            {cobroLogo && (
+              <div className="space-y-1.5 rounded-md border border-input bg-muted/30 p-3">
+                <Label htmlFor="mw_costoLogo">Costo del logo</Label>
+                <Input
+                  id="mw_costoLogo"
+                  type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()}
+                  min="0"
+                  step="any"
+                  inputMode="decimal"
+                  placeholder="Ej: 20000"
+                  value={costoLogo}
+                  onChange={(e) => setCostoLogo(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
                   Este valor se sumará al total del pedido y será cobrado al cliente.
