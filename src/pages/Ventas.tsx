@@ -1731,7 +1731,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       const siliconeColor = line.colorSilicona;
       const thermoSize = line.tamano as "150 ml" | "250 ml" | "250 ml juguetón" | "250 ml con correa" | "500 ml" | "500 ml con correa";
       const tipoLogo = line.tipoLogo;
-      const lineTotal = parseFloat(line.valorTotal) || 0;
+      const lineTotal = ssLineTotals[lineIdx];
       // Prorratear el abono según el peso de la línea sobre el total del pedido.
       let abonoAmount = 0;
       if (ssGrandTotal > 0) {
