@@ -920,6 +920,7 @@ function ShipmentGroupCard({
           {canEdit && <GroupDispatchDialog group={group} />}
         </div>
       </div>
+      <GroupPaymentSummary group={group} />
       <div className="p-4 pt-3 space-y-1.5">
         {group.items.map((it) => (
           <div key={it.id} className="space-y-0.5">
@@ -1005,6 +1006,7 @@ function PendingGroupCard({
         </div>
         <AgingBadge days={aging} />
       </div>
+      <GroupPaymentSummary group={group} />
       <div className="p-4 pt-3 space-y-1.5">
         {group.items.map((it) => (
           <div key={it.id} className="space-y-0.5">
