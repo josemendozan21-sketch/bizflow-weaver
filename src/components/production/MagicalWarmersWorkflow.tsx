@@ -88,6 +88,7 @@ const CANONICAL_REFERENCES = [
   "Corazón Térmico", "Corazon Termico",
   "Bacteria", "Antifaz", "Gafas pequeñas", "Pélvica", "Pelvica",
   "Mariposas", "Mariposa",
+  "Gorro quimioterapia", "Gorro Quimioterapia", "Gorro",
 ];
 
 /** Sweatspot references that are actually produced in-house (termos).
