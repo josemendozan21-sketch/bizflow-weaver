@@ -407,8 +407,10 @@ function buildSweatspotMayorSummary(args: {
   ssIsRecompra: boolean;
   ssNoLogo: boolean;
   ssPaymentProofFile: File | null;
+  ssCobroLogo?: boolean;
+  ssCostoLogo?: string;
 }): OrderSummary {
-  const { form, ssLines, grandTotal, ssAbono, ssEstadoPago, ssIsRecompra, ssNoLogo, ssPaymentProofFile } = args;
+  const { form, ssLines, grandTotal, ssAbono, ssEstadoPago, ssIsRecompra, ssNoLogo, ssPaymentProofFile, ssCobroLogo, ssCostoLogo } = args;
   const abonoNum = ssEstadoPago === "pago_total" ? grandTotal : (parseFloat(ssAbono) || 0);
   const saldo = Math.max(grandTotal - abonoNum, 0);
   const estadoPagoLabel =
@@ -419,6 +421,9 @@ function buildSweatspotMayorSummary(args: {
   const opciones: Array<{ label: string; value: string }> = [];
   if (ssIsRecompra) opciones.push({ label: "Recompra", value: "Sí" });
   if (ssNoLogo) opciones.push({ label: "Sin logo", value: "Sí" });
+  if (ssCobroLogo) {
+    opciones.push({ label: "Cobro de logo", value: formatMoney(parseFloat(ssCostoLogo || "0")) });
+  }
 
   return {
     brandLabel: "Sweatspot",
