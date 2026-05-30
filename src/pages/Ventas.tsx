@@ -884,6 +884,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const moldeCostoNum = parseFloat(moldeCosto) || 0;
     const moldeIncluidoEnTotal = moldeNuevo && moldeModo === "con_pedido" && moldeCostoNum > 0;
     const extraCost = ((dobleTinta || escarcha) ? (parseFloat(costoAdicional) || 0) : 0)
+      + (cobroLogo ? (parseFloat(costoLogo) || 0) : 0)
       + (moldeIncluidoEnTotal ? moldeCostoNum : 0);
     const extraNoteParts: string[] = [];
     if (dobleTinta) extraNoteParts.push("doble tinta");
@@ -891,10 +892,13 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const adicionalNote = ((dobleTinta || escarcha) && parseFloat(costoAdicional) > 0)
       ? `Costo adicional ${extraNoteParts.join(" y ")}: $${(parseFloat(costoAdicional) || 0).toLocaleString("es-CO")}`
       : "";
+    const logoNote = (cobroLogo && parseFloat(costoLogo) > 0)
+      ? `Cobro de logo: $${(parseFloat(costoLogo) || 0).toLocaleString("es-CO")}`
+      : "";
     const moldeNote = moldeNuevo && moldeCostoNum > 0
       ? `Molde nuevo "${moldeNombre}": $${moldeCostoNum.toLocaleString("es-CO")} (${moldeModo === "con_pedido" ? "cobrado con el pedido" : "pagado por separado"})`
       : "";
-    const extraNote = [adicionalNote, moldeNote].filter(Boolean).join(" | ");
+    const extraNote = [adicionalNote, logoNote, moldeNote].filter(Boolean).join(" | ");
 
     // Calcular totales del pedido completo para prorratear el abono entre líneas.
     // El abono ingresado por el asesor es por el TOTAL del pedido, no por cada línea.
