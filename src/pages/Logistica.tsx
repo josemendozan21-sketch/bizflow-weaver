@@ -550,6 +550,82 @@ function PaymentBadge({ order }: { order: Order }) {
   return <Badge variant="destructive">Saldo: ${saldo.toLocaleString("es-CO")}</Badge>;
 }
 
+function GroupPaymentSummary({ group }: { group: ShipmentGroup }) {
+  const saldo = Math.max(group.totalAmount - group.totalAbono, 0);
+  if (group.saleType === "menor") {
+    const contraItems = group.items.filter((i) => i.payment_method === "contra_entrega");
+    const paidItems = group.items.filter((i) => i.payment_method === "pagado");
+    const hasContra = contraItems.length > 0;
+    if (hasContra) {
+      // Sumar saldo de los items contraentrega + envío del grupo
+      const saldoContra = contraItems.reduce(
+        (s, it) => s + Math.max(Number(it.total_amount || 0) - getOrderPaidAmount(it), 0),
+        0,
+      );
+      const aCobrar = saldoContra + group.totalShipping;
+      return (
+        <div className="mx-4 mt-3 rounded-md border border-amber-400/60 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2 text-sm">
+            <Truck className="h-4 w-4 text-amber-700 dark:text-amber-400" />
+            <span className="font-semibold text-amber-800 dark:text-amber-300">
+              CONTRA ENTREGA — cobrar al cliente
+            </span>
+          </div>
+          <div className="text-right">
+            <p className="text-lg font-bold text-amber-800 dark:text-amber-300 leading-tight">
+              ${aCobrar.toLocaleString("es-CO")}
+            </p>
+            <p className="text-[11px] text-amber-700/80 dark:text-amber-300/80">
+              Productos ${saldoContra.toLocaleString("es-CO")}
+              {group.totalShipping > 0 ? ` + envío $${group.totalShipping.toLocaleString("es-CO")}` : ""}
+              {paidItems.length > 0 ? ` · ${paidItems.length} item(s) ya pagado(s)` : ""}
+            </p>
+          </div>
+        </div>
+      );
+    }
+    // Todos pagados
+    return (
+      <div className="mx-4 mt-3 rounded-md border border-emerald-400/60 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-2 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+          <CheckCircle2 className="h-4 w-4" /> PAGADO — no cobrar contra entrega
+        </div>
+        <span className="text-xs text-emerald-700/80 dark:text-emerald-300/80">
+          Total ${group.totalAmount.toLocaleString("es-CO")}
+        </span>
+      </div>
+    );
+  }
+  // Mayor
+  if (saldo <= 0) {
+    return (
+      <div className="mx-4 mt-3 rounded-md border border-emerald-400/60 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-2 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+          <CheckCircle2 className="h-4 w-4" /> PAGO COMPLETO
+        </div>
+        <span className="text-xs text-emerald-700/80 dark:text-emerald-300/80">
+          Total ${group.totalAmount.toLocaleString("es-CO")}
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className="mx-4 mt-3 rounded-md border border-red-400/60 bg-red-50 dark:bg-red-500/10 px-3 py-2 flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex items-center gap-2 text-sm font-semibold text-red-800 dark:text-red-300">
+        <AlertTriangle className="h-4 w-4" /> SALDO PENDIENTE (mayorista)
+      </div>
+      <div className="text-right">
+        <p className="text-lg font-bold text-red-800 dark:text-red-300 leading-tight">
+          ${saldo.toLocaleString("es-CO")}
+        </p>
+        <p className="text-[11px] text-red-700/80 dark:text-red-300/80">
+          Total ${group.totalAmount.toLocaleString("es-CO")} · Abonado ${group.totalAbono.toLocaleString("es-CO")}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function ProductionStatusBadge({ status, order }: { status: string; order?: Order }) {
   // If production is done but payment not confirmed by advisor
   if (status === "listo" && order && !isOrderFullyPaid(order)) {
@@ -844,6 +920,7 @@ function ShipmentGroupCard({
           {canEdit && <GroupDispatchDialog group={group} />}
         </div>
       </div>
+      <GroupPaymentSummary group={group} />
       <div className="p-4 pt-3 space-y-1.5">
         {group.items.map((it) => (
           <div key={it.id} className="space-y-0.5">
@@ -929,6 +1006,7 @@ function PendingGroupCard({
         </div>
         <AgingBadge days={aging} />
       </div>
+      <GroupPaymentSummary group={group} />
       <div className="p-4 pt-3 space-y-1.5">
         {group.items.map((it) => (
           <div key={it.id} className="space-y-0.5">
