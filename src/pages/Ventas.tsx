@@ -1709,8 +1709,15 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
     // Process each line as a separate order
     // Calcular totales para prorratear el abono entre líneas (el abono es por el TOTAL del pedido).
-    const ssLineTotals = ssLines.map((line) => parseFloat(line.valorTotal) || 0);
+    const ssLogoExtra = ssCobroLogo ? (parseFloat(ssCostoLogo) || 0) : 0;
+    const ssLineTotals = ssLines.map((line, idx) => {
+      const base = parseFloat(line.valorTotal) || 0;
+      return idx === 0 ? base + ssLogoExtra : base;
+    });
     const ssGrandTotal = ssLineTotals.reduce((s, v) => s + v, 0);
+    const ssLogoNote = (ssCobroLogo && ssLogoExtra > 0)
+      ? `Cobro de logo: $${ssLogoExtra.toLocaleString("es-CO")}`
+      : "";
     const totalAbonoPedidoSs = ssEstadoPago === "pago_total"
       ? ssGrandTotal
       : (parseFloat(ssAbono) || 0);
