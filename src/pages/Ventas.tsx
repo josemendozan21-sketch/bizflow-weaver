@@ -1525,6 +1525,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             escarcha,
             costoAdicional,
             paymentProofFile,
+            cobroLogo,
+            costoLogo,
             moldeNuevo,
             moldeNombre,
             moldeCosto,
