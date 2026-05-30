@@ -1581,6 +1581,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const [ssIsRecompra, setSsIsRecompra] = usePersistedState("ventas:ss:isRecompra", false);
   const [ssNoLogo, setSsNoLogo] = usePersistedState("ventas:ss:noLogo", false);
   const [ssNeedsLogoAdjustment, setSsNeedsLogoAdjustment] = usePersistedState("ventas:ss:needsLogoAdjustment", false);
+  const [ssCobroLogo, setSsCobroLogo] = usePersistedState("ventas:ss:cobroLogo", false);
+  const [ssCostoLogo, setSsCostoLogo] = usePersistedState("ventas:ss:costoLogo", "");
   const [ssPaymentProofFile, setSsPaymentProofFile] = useState<File | null>(null);
   const [ssLogoFileState, setSsLogoFileState] = useState<File | null>(null);
   const [ssRutFileState, setSsRutFileState] = useState<File | null>(null);
@@ -1591,8 +1593,14 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
   // Grand total across all lines
   const grandTotal = useMemo(() => {
-    return ssLines.reduce((sum, line) => sum + (parseFloat(line.valorTotal) || 0), 0);
-  }, [ssLines]);
+    const linesSum = ssLines.reduce((sum, line) => sum + (parseFloat(line.valorTotal) || 0), 0);
+    const logoExtra = ssCobroLogo ? (parseFloat(ssCostoLogo) || 0) : 0;
+    return linesSum + logoExtra;
+  }, [ssLines, ssCobroLogo, ssCostoLogo]);
+
+  useEffect(() => {
+    if (!ssCobroLogo) setSsCostoLogo("");
+  }, [ssCobroLogo]);
 
   // Auto-fill abono when pago_total
   useEffect(() => {
