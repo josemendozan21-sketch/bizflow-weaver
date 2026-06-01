@@ -147,10 +147,17 @@ function groupOrders(orders: Order[]): OrderGroup[] {
       // amount (it belongs to the whole order, not a single line).
       const rawAbono = Number(o.abono) || 0;
       if (rawAbono > 0) {
-        const dedupeKey = `${o.payment_proof_url || ""}|${rawAbono}`;
-        const seen = abonoSeen.get(key)!;
-        if (!seen.has(dedupeKey)) {
-          seen.add(dedupeKey);
+        // Only dedupe when there's an actual shared proof_url. Without a proof,
+        // each line's abono is independent (e.g. asesor capturó el mismo abono
+        // por línea porque el cliente abonó por cada referencia).
+        if (o.payment_proof_url) {
+          const dedupeKey = `${o.payment_proof_url}|${rawAbono}`;
+          const seen = abonoSeen.get(key)!;
+          if (!seen.has(dedupeKey)) {
+            seen.add(dedupeKey);
+            g.totalAbono += rawAbono;
+          }
+        } else {
           g.totalAbono += rawAbono;
         }
       }
