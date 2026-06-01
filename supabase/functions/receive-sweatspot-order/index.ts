@@ -47,8 +47,12 @@ Deno.serve(async (req) => {
     const SWEATSPOT_WEB_ADVISOR_ID = '00000000-0000-0000-0000-000000000001'
 
     const order = {
-      brand: String(body.brand ?? 'sweatspot'),
-      sale_type: String(body.sale_type ?? 'detal'),
+      // Pedidos que entran desde la web de Sweatspot SIEMPRE son ventas al detal
+      // de producto terminado de la marca Sweatspot. Forzamos estos valores para
+      // que entren al flujo correcto (inventarios + logística al detal) sin
+      // depender de lo que envíe el cliente.
+      brand: 'sweatspot',
+      sale_type: 'detal',
       client_name,
       client_nit: body.client_nit ?? null,
       client_phone: body.client_phone ?? null,
