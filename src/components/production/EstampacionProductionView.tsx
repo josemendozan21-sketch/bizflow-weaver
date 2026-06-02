@@ -24,6 +24,8 @@ import { useProductionOrders, type ProductionOrder } from "@/hooks/useProduction
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { OperatorPromptDialog } from "./OperatorPromptDialog";
+import { StageLogsList } from "./StageLogsList";
 
 interface BodyStockItem {
   id: string;
@@ -47,9 +49,13 @@ const STATUS_BADGE: Record<string, { label: string; variant: "secondary" | "defa
 };
 
 export const EstampacionProductionView = () => {
-  const { orders: allOrders, isLoading, updateStageStatus, advanceStage } = useProductionOrders();
+  const { orders: allOrders, stageLogs, isLoading, updateStageStatus, advanceStage } = useProductionOrders();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [operatorPrompt, setOperatorPrompt] = useState<
+    | { mode: "start" | "finish"; orderId: string; clientName: string }
+    | null
+  >(null);
 
   // Include orders in estampacion AND orders still waiting bodies (produccion_cuerpos)
   // so stamping team can start preparing/logo work even if bodies aren't ready.
@@ -131,9 +137,10 @@ export const EstampacionProductionView = () => {
               <EstampacionOrderCard
                 key={order.id}
                 order={order}
+                stageLogs={stageLogs.filter((l) => l.production_order_id === order.id)}
                 logoRequests={logoRequests}
-                onStart={() => updateStageStatus.mutate({ orderId: order.id, status: "en_proceso" })}
-                onFinish={() => advanceStage.mutate({ orderId: order.id })}
+                onStart={() => setOperatorPrompt({ mode: "start", orderId: order.id, clientName: order.client_name })}
+                onFinish={() => setOperatorPrompt({ mode: "finish", orderId: order.id, clientName: order.client_name })}
               />
             ))}
           </div>
@@ -147,6 +154,23 @@ export const EstampacionProductionView = () => {
       <TabsContent value="termicos">
         <BodyStockGrid items={thermalStock} title="Productos Térmicos" />
       </TabsContent>
+
+      <OperatorPromptDialog
+        open={!!operatorPrompt}
+        title={operatorPrompt?.mode === "start" ? "Iniciar estampación" : "Finalizar estampación"}
+        description={operatorPrompt ? `Pedido de ${operatorPrompt.clientName}. Se registrará la hora actual.` : undefined}
+        confirmLabel={operatorPrompt?.mode === "start" ? "Iniciar" : "Finalizar"}
+        onCancel={() => setOperatorPrompt(null)}
+        onConfirm={(name) => {
+          if (!operatorPrompt) return;
+          if (operatorPrompt.mode === "start") {
+            updateStageStatus.mutate({ orderId: operatorPrompt.orderId, status: "en_proceso", operatorName: name });
+          } else {
+            advanceStage.mutate({ orderId: operatorPrompt.orderId, operatorName: name });
+          }
+          setOperatorPrompt(null);
+        }}
+      />
     </Tabs>
   );
 };
@@ -179,11 +203,13 @@ function BodyStockGrid({ items, title }: { items: BodyStockItem[]; title: string
 
 function EstampacionOrderCard({
   order,
+  stageLogs,
   logoRequests,
   onStart,
   onFinish,
 }: {
   order: ProductionOrder;
+  stageLogs: import("@/hooks/useProductionOrders").ProductionStageLog[];
   logoRequests: LogoRequestInfo[];
   onStart: () => void;
   onFinish: () => void;
