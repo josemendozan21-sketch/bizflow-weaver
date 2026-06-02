@@ -57,6 +57,15 @@ export interface BodyTask {
   fabricated_by?: string | null;
 }
 
+export interface ProductionStageLog {
+  id: string;
+  production_order_id: string;
+  stage: string;
+  operator_name: string;
+  started_at: string;
+  ended_at: string | null;
+}
+
 const MAGICAL_STAGE_LABELS: Record<string, string> = {
   produccion_cuerpos: "Producción de Cuerpos",
   estampacion: "Estampación",
@@ -141,19 +150,83 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
     enabled: brand === "magical" || !brand,
   });
 
+  const stageLogsQuery = useQuery({
+    queryKey: ["production_stage_logs"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("production_stage_logs" as any)
+        .select("*")
+        .order("started_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as ProductionStageLog[];
+    },
+  });
+
+  // Realtime for stage logs
+  useEffect(() => {
+    const channel = supabase
+      .channel("production_stage_logs_realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "production_stage_logs" },
+        () => queryClient.invalidateQueries({ queryKey: ["production_stage_logs"] })
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
+  /** Close any open stage log for this order+stage by setting ended_at = now() */
+  async function closeOpenStageLog(orderId: string, stage: string) {
+    const { data: open } = await supabase
+      .from("production_stage_logs" as any)
+      .select("id")
+      .eq("production_order_id", orderId)
+      .eq("stage", stage)
+      .is("ended_at", null)
+      .order("started_at", { ascending: false })
+      .limit(1);
+    const row = (open ?? [])[0] as any;
+    if (row?.id) {
+      await supabase
+        .from("production_stage_logs" as any)
+        .update({ ended_at: new Date().toISOString() })
+        .eq("id", row.id);
+    }
+  }
+
   const updateStageStatus = useMutation({
-    mutationFn: async ({ orderId, status }: { orderId: string; status: string }) => {
+    mutationFn: async ({ orderId, status, operatorName }: { orderId: string; status: string; operatorName?: string }) => {
+      // Fetch current stage to log against
+      const { data: po } = await supabase
+        .from("production_orders")
+        .select("current_stage")
+        .eq("id", orderId)
+        .single();
       const { error } = await supabase
         .from("production_orders")
         .update({ stage_status: status })
         .eq("id", orderId);
       if (error) throw error;
+
+      if (status === "en_proceso" && operatorName && po?.current_stage) {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        await supabase.from("production_stage_logs" as any).insert({
+          production_order_id: orderId,
+          stage: po.current_stage,
+          operator_name: operatorName,
+          started_at: new Date().toISOString(),
+          recorded_by: authUser?.id ?? null,
+        });
+      }
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["production_orders"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["production_orders"] });
+      queryClient.invalidateQueries({ queryKey: ["production_stage_logs"] });
+    },
   });
 
   const advanceStage = useMutation({
-    mutationFn: async ({ orderId, confirmedQuantity, completionData }: { orderId: string; confirmedQuantity?: number; completionData?: { photoUrl: string; packagerName: string; finalCount: number } }) => {
+    mutationFn: async ({ orderId, confirmedQuantity, completionData, operatorName }: { orderId: string; confirmedQuantity?: number; completionData?: { photoUrl: string; packagerName: string; finalCount: number }; operatorName?: string }) => {
       // Get fresh order data
       const { data: order, error: fetchErr } = await supabase
         .from("production_orders")
@@ -163,6 +236,41 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
       if (fetchErr || !order) throw fetchErr || new Error("Orden no encontrada");
 
       const po = order as ProductionOrder;
+
+      // Close the currently-open log for this stage (mark ended_at)
+      // If operatorName provided and there is no open log yet, create a closed one.
+      const stageBeingFinished = po.current_stage;
+      if (operatorName) {
+        const { data: openRows } = await supabase
+          .from("production_stage_logs" as any)
+          .select("id, operator_name")
+          .eq("production_order_id", orderId)
+          .eq("stage", stageBeingFinished)
+          .is("ended_at", null)
+          .order("started_at", { ascending: false })
+          .limit(1);
+        const open = (openRows ?? [])[0] as any;
+        if (open?.id) {
+          await supabase
+            .from("production_stage_logs" as any)
+            .update({ ended_at: new Date().toISOString(), operator_name: operatorName })
+            .eq("id", open.id);
+        } else {
+          const { data: { user: authUser } } = await supabase.auth.getUser();
+          const nowIso = new Date().toISOString();
+          await supabase.from("production_stage_logs" as any).insert({
+            production_order_id: orderId,
+            stage: stageBeingFinished,
+            operator_name: operatorName,
+            started_at: nowIso,
+            ended_at: nowIso,
+            recorded_by: authUser?.id ?? null,
+          });
+        }
+      } else {
+        await closeOpenStageLog(orderId, stageBeingFinished);
+      }
+
       const stages = po.stages;
       const currentIdx = stages.indexOf(po.current_stage);
       const lastActionableIdx = stages.length - 2; // before "listo"
@@ -428,6 +536,7 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["production_orders"] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["production_stage_logs"] });
 
       if (result.completed) {
         toast.success(`Orden de ${result.order.client_name} completada. Enviada a Logística.`);
@@ -544,6 +653,7 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
   return {
     orders: ordersQuery.data ?? [],
     bodyTasks: bodyTasksQuery.data ?? [],
+    stageLogs: stageLogsQuery.data ?? [],
     isLoading: ordersQuery.isLoading,
     isBodyTasksLoading: bodyTasksQuery.isLoading,
     updateStageStatus,
