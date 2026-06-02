@@ -153,8 +153,8 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
   const stageLogsQuery = useQuery({
     queryKey: ["production_stage_logs"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("production_stage_logs" as any)
+      const { data, error } = await (supabase as any)
+        .from("production_stage_logs")
         .select("*")
         .order("started_at", { ascending: true });
       if (error) throw error;
@@ -177,8 +177,8 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
 
   /** Close any open stage log for this order+stage by setting ended_at = now() */
   async function closeOpenStageLog(orderId: string, stage: string) {
-    const { data: open } = await supabase
-      .from("production_stage_logs" as any)
+    const { data: open } = await (supabase as any)
+      .from("production_stage_logs")
       .select("id")
       .eq("production_order_id", orderId)
       .eq("stage", stage)
@@ -187,8 +187,8 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
       .limit(1);
     const row = (open ?? [])[0] as any;
     if (row?.id) {
-      await supabase
-        .from("production_stage_logs" as any)
+      await (supabase as any)
+        .from("production_stage_logs")
         .update({ ended_at: new Date().toISOString() })
         .eq("id", row.id);
     }
@@ -210,7 +210,7 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
 
       if (status === "en_proceso" && operatorName && po?.current_stage) {
         const { data: { user: authUser } } = await supabase.auth.getUser();
-        await supabase.from("production_stage_logs" as any).insert({
+        await (supabase as any).from("production_stage_logs").insert({
           production_order_id: orderId,
           stage: po.current_stage,
           operator_name: operatorName,
@@ -241,8 +241,8 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
       // If operatorName provided and there is no open log yet, create a closed one.
       const stageBeingFinished = po.current_stage;
       if (operatorName) {
-        const { data: openRows } = await supabase
-          .from("production_stage_logs" as any)
+        const { data: openRows } = await (supabase as any)
+          .from("production_stage_logs")
           .select("id, operator_name")
           .eq("production_order_id", orderId)
           .eq("stage", stageBeingFinished)
@@ -251,14 +251,14 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
           .limit(1);
         const open = (openRows ?? [])[0] as any;
         if (open?.id) {
-          await supabase
-            .from("production_stage_logs" as any)
+          await (supabase as any)
+            .from("production_stage_logs")
             .update({ ended_at: new Date().toISOString(), operator_name: operatorName })
             .eq("id", open.id);
         } else {
           const { data: { user: authUser } } = await supabase.auth.getUser();
           const nowIso = new Date().toISOString();
-          await supabase.from("production_stage_logs" as any).insert({
+          await (supabase as any).from("production_stage_logs").insert({
             production_order_id: orderId,
             stage: stageBeingFinished,
             operator_name: operatorName,
