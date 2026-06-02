@@ -62,8 +62,7 @@ export function SalesCalendar() {
   const ordersByDay = useMemo(() => {
     const map = new Map<string, typeof orders>();
     for (const o of orders) {
-      const dateStr = (o as any).payment_date || format(new Date(o.created_at), "yyyy-MM-dd");
-      const k = dateStr.length >= 10 ? dateStr.slice(0, 10) : format(new Date(o.created_at), "yyyy-MM-dd");
+      const k = format(new Date(o.created_at), "yyyy-MM-dd");
       const list = map.get(k) || [];
       list.push(o);
       map.set(k, list);
@@ -90,8 +89,7 @@ export function SalesCalendar() {
       contraEntrega = 0,
       pedidos = 0;
     for (const o of orders) {
-      const dateStr = (o as any).payment_date || format(new Date(o.created_at), "yyyy-MM-dd");
-      const d = new Date(dateStr.length >= 10 ? dateStr.slice(0, 10) : o.created_at);
+      const d = new Date(o.created_at);
       if (d < monthStart || d > monthEnd) continue;
       pedidos += 1;
       total += Number(o.total_amount || 0);
