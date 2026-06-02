@@ -381,6 +381,24 @@ function EstampacionOrderCard({
             </Button>
           )}
         </div>
+
+        <StageLogsList
+          logs={stageLogs}
+          stageLabels={{
+            produccion_cuerpos: "Producción de Cuerpos",
+            estampacion: "Estampación",
+            dosificacion: "Dosificación",
+            sellado: "Sellado",
+            descristalizacion: "Descristalización",
+            recorte: "Recorte",
+            empaque: "Empaque",
+            produccion_tubos: "Producción de tubos",
+            ensamble_cuello: "Ensamble de cuello",
+            sello_base: "Sello de base",
+            refile: "Refile",
+            colocacion_boquilla: "Colocación de boquilla",
+          }}
+        />
       </CardContent>
     </Card>
   );
