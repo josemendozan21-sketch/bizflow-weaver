@@ -768,6 +768,8 @@ function OrderCard({ order, stageLogs, role, isAdmin, selected, onToggleSelect, 
             </Button>
           )}
         </div>
+
+        <StageLogsList logs={stageLogs} stageLabels={STAGE_LABELS} />
       </CardContent>
     </Card>
   );
