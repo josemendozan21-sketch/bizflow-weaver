@@ -1967,6 +1967,47 @@ export type Database = {
           },
         ]
       }
+      production_stage_logs: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          id: string
+          operator_name: string
+          production_order_id: string
+          recorded_by: string | null
+          stage: string
+          started_at: string
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          operator_name: string
+          production_order_id: string
+          recorded_by?: string | null
+          stage: string
+          started_at?: string
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          operator_name?: string
+          production_order_id?: string
+          recorded_by?: string | null
+          stage?: string
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_stage_logs_production_order_id_fkey"
+            columns: ["production_order_id"]
+            isOneToOne: false
+            referencedRelation: "production_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       production_supply_orders: {
         Row: {
           brand: string
