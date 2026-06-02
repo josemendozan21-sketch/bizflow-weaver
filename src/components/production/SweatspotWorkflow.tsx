@@ -23,8 +23,10 @@ import {
   Search,
   Package,
 } from "lucide-react";
-import { useProductionOrders, type ProductionOrder } from "@/hooks/useProductionOrders";
+import { useProductionOrders, type ProductionOrder, type ProductionStageLog } from "@/hooks/useProductionOrders";
 import { useAuth } from "@/contexts/AuthContext";
+import { OperatorPromptDialog } from "./OperatorPromptDialog";
+import { StageLogsList } from "./StageLogsList";
 
 const STAGE_ICONS: Record<string, React.ElementType> = {
   produccion_cuerpos: Package,
@@ -57,11 +59,15 @@ const STATUS_BADGE: Record<string, { label: string; variant: "secondary" | "defa
 };
 
 export const SweatspotWorkflow = () => {
-  const { orders, isLoading, updateStageStatus, advanceStage, forceCompleteOrder } = useProductionOrders("sweatspot");
+  const { orders, stageLogs, isLoading, updateStageStatus, advanceStage, forceCompleteOrder } = useProductionOrders("sweatspot");
   const { role } = useAuth();
   const [completionOrder, setCompletionOrder] = useState<ProductionOrder | null>(null);
   const isAdmin = role === "admin";
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [operatorPrompt, setOperatorPrompt] = useState<
+    | { mode: "start" | "finish"; orderId: string; clientName: string }
+    | null
+  >(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const stageRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -192,16 +198,17 @@ export const SweatspotWorkflow = () => {
                     <OrderCard
                       key={order.id}
                       order={order}
+                      stageLogs={stageLogs.filter((l) => l.production_order_id === order.id)}
                       role={role}
                       isAdmin={isAdmin}
                       selected={selected.has(order.id)}
                       onToggleSelect={() => toggleSelect(order.id)}
-                      onStart={() => updateStageStatus.mutate({ orderId: order.id, status: "en_proceso" })}
+                      onStart={() => setOperatorPrompt({ mode: "start", orderId: order.id, clientName: order.client_name })}
                       onFinish={() => {
                         if (isLastStage) {
                           setCompletionOrder(order);
                         } else {
-                          advanceStage.mutate({ orderId: order.id });
+                          setOperatorPrompt({ mode: "finish", orderId: order.id, clientName: order.client_name });
                         }
                       }}
                     />
@@ -251,12 +258,29 @@ export const SweatspotWorkflow = () => {
           setCompletionOrder(null);
         }}
       />
+
+      <OperatorPromptDialog
+        open={!!operatorPrompt}
+        title={operatorPrompt?.mode === "start" ? "Iniciar etapa" : "Finalizar etapa"}
+        description={operatorPrompt ? `Pedido de ${operatorPrompt.clientName}. Se registrará la hora actual.` : undefined}
+        confirmLabel={operatorPrompt?.mode === "start" ? "Iniciar" : "Finalizar"}
+        onCancel={() => setOperatorPrompt(null)}
+        onConfirm={(name) => {
+          if (!operatorPrompt) return;
+          if (operatorPrompt.mode === "start") {
+            updateStageStatus.mutate({ orderId: operatorPrompt.orderId, status: "en_proceso", operatorName: name });
+          } else {
+            advanceStage.mutate({ orderId: operatorPrompt.orderId, operatorName: name });
+          }
+          setOperatorPrompt(null);
+        }}
+      />
     </div>
   );
 };
 
 /* Order Card */
-function OrderCard({ order, role, isAdmin, selected, onToggleSelect, onStart, onFinish }: { order: ProductionOrder; role: string | null; isAdmin: boolean; selected: boolean; onToggleSelect: () => void; onStart: () => void; onFinish: () => void }) {
+function OrderCard({ order, stageLogs, role, isAdmin, selected, onToggleSelect, onStart, onFinish }: { order: ProductionOrder; stageLogs: ProductionStageLog[]; role: string | null; isAdmin: boolean; selected: boolean; onToggleSelect: () => void; onStart: () => void; onFinish: () => void }) {
   const stages = order.stages;
   const currentIdx = stages.indexOf(order.current_stage);
   const Icon = STAGE_ICONS[order.current_stage] || Paintbrush;
@@ -353,6 +377,8 @@ function OrderCard({ order, role, isAdmin, selected, onToggleSelect, onStart, on
             )}
           </div>
         )}
+
+        <StageLogsList logs={stageLogs} stageLabels={SS_STAGE_LABELS} />
       </CardContent>
     </Card>
   );

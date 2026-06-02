@@ -35,11 +35,13 @@ import {
   Search,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useProductionOrders, type ProductionOrder, type BodyTask } from "@/hooks/useProductionOrders";
+import { useProductionOrders, type ProductionOrder, type BodyTask, type ProductionStageLog } from "@/hooks/useProductionOrders";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInventory } from "@/hooks/useInventory";
 import { BodyRequirementsPanel } from "./BodyRequirementsPanel";
 import { supabase } from "@/integrations/supabase/client";
+import { OperatorPromptDialog } from "./OperatorPromptDialog";
+import { StageLogsList } from "./StageLogsList";
 
 type MagicalStage = "produccion_cuerpos" | "estampacion" | "dosificacion" | "sellado" | "descristalizacion" | "recorte" | "empaque" | "listo";
 
@@ -109,13 +111,18 @@ function isProducibleReference(referencia: string): boolean {
 }
 
 export const MagicalWarmersWorkflow = () => {
-  const { orders, bodyTasks, isLoading, updateStageStatus, advanceStage, addBodyTask, updateBodyTaskStatus, forceCompleteOrder } = useProductionOrders("magical");
+  const { orders, bodyTasks, stageLogs, isLoading, updateStageStatus, advanceStage, addBodyTask, updateBodyTaskStatus, forceCompleteOrder } = useProductionOrders("magical");
   const { bodyStock, stockItems } = useInventory();
   const { role } = useAuth();
   const isAdmin = role === "admin";
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showBodyForm, setShowBodyForm] = useState(false);
   const [bodyFormPrefill, setBodyFormPrefill] = useState<{ tipoPlastico: "frio" | "calor"; referencia: string; unidades: number } | null>(null);
+
+  const [operatorPrompt, setOperatorPrompt] = useState<
+    | { mode: "start" | "finish"; orderId: string; clientName: string }
+    | null
+  >(null);
 
   // Confirmation dialog state for production orders in produccion_cuerpos stage
   const [confirmOrder, setConfirmOrder] = useState<ProductionOrder | null>(null);
@@ -188,7 +195,7 @@ export const MagicalWarmersWorkflow = () => {
       if (currentIdx >= lastActionableIdx) {
         setCompletionOrder(order);
       } else {
-        advanceStage.mutate({ orderId: order.id });
+        setOperatorPrompt({ mode: "finish", orderId: order.id, clientName: order.client_name });
       }
     }
   };
@@ -430,11 +437,12 @@ export const MagicalWarmersWorkflow = () => {
                   <OrderCard
                     key={order.id}
                     order={order}
+                    stageLogs={stageLogs.filter((l) => l.production_order_id === order.id)}
                     role={role}
                     isAdmin={isAdmin}
                     selected={selected.has(order.id)}
                     onToggleSelect={() => toggleSelect(order.id)}
-                    onStart={() => updateStageStatus.mutate({ orderId: order.id, status: "en_proceso" })}
+                    onStart={() => setOperatorPrompt({ mode: "start", orderId: order.id, clientName: order.client_name })}
                     onFinish={() => handleFinishOrder(order)}
                   />
                 ))}
@@ -639,12 +647,29 @@ export const MagicalWarmersWorkflow = () => {
           setCompletionOrder(null);
         }}
       />
+
+      <OperatorPromptDialog
+        open={!!operatorPrompt}
+        title={operatorPrompt?.mode === "start" ? "Iniciar etapa" : "Finalizar etapa"}
+        description={operatorPrompt ? `Pedido de ${operatorPrompt.clientName}. Se registrará la hora actual.` : undefined}
+        confirmLabel={operatorPrompt?.mode === "start" ? "Iniciar" : "Finalizar"}
+        onCancel={() => setOperatorPrompt(null)}
+        onConfirm={(name) => {
+          if (!operatorPrompt) return;
+          if (operatorPrompt.mode === "start") {
+            updateStageStatus.mutate({ orderId: operatorPrompt.orderId, status: "en_proceso", operatorName: name });
+          } else {
+            advanceStage.mutate({ orderId: operatorPrompt.orderId, operatorName: name });
+          }
+          setOperatorPrompt(null);
+        }}
+      />
     </div>
   );
 };
 
 /* Order Card */
-function OrderCard({ order, role, isAdmin, selected, onToggleSelect, onStart, onFinish }: { order: ProductionOrder; role: string | null; isAdmin: boolean; selected: boolean; onToggleSelect: () => void; onStart: () => void; onFinish: () => void }) {
+function OrderCard({ order, stageLogs, role, isAdmin, selected, onToggleSelect, onStart, onFinish }: { order: ProductionOrder; stageLogs: ProductionStageLog[]; role: string | null; isAdmin: boolean; selected: boolean; onToggleSelect: () => void; onStart: () => void; onFinish: () => void }) {
   const stages = order.stages;
   const currentIdx = stages.indexOf(order.current_stage);
   const Icon = STAGE_ICONS[order.current_stage] || Package;
@@ -743,6 +768,8 @@ function OrderCard({ order, role, isAdmin, selected, onToggleSelect, onStart, on
             </Button>
           )}
         </div>
+
+        <StageLogsList logs={stageLogs} stageLabels={STAGE_LABELS} />
       </CardContent>
     </Card>
   );
