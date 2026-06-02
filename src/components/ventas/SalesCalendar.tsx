@@ -255,14 +255,16 @@ export function SalesCalendar() {
                     const isCE = o.payment_method === "contra_entrega";
                     const channel = extractChannel(o.observations) || (o.payment_method && !["contra_entrega","pagado","obsequio"].includes(o.payment_method) ? o.payment_method : null);
                     const isPaid = !!o.payment_complete || (Number(o.abono) || 0) > 0 || o.payment_method === "pagado" || o.payment_method === "obsequio";
-                    const sameDay = isSameDay(new Date(o.created_at), selected);
+                    const payDateStr = (o as any).payment_date as string | null | undefined;
+                    const payDate = payDateStr ? new Date(payDateStr.slice(0, 10) + "T00:00:00") : null;
+                    const sameDay = payDate ? isSameDay(payDate, selected) : false;
                     const pagoLabel = isCE
                       ? "—"
                       : !isPaid
                         ? "Sin pago"
-                        : sameDay
-                          ? "Pago del día"
-                          : `Pago previo (${format(new Date(o.created_at), "d MMM", { locale: es })})`;
+                        : payDate
+                          ? (sameDay ? "Pago del día" : format(payDate, "d MMM yyyy", { locale: es }))
+                          : "Sin fecha";
                     const pagoClass = isCE
                       ? "text-muted-foreground"
                       : !isPaid
