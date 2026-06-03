@@ -803,7 +803,9 @@ function GroupDispatchDialog({ group }: { group: ShipmentGroup }) {
     setGuiaFile(null);
   };
 
-  const canSubmit = transportadora && (isBogoexpress || numeroGuia.trim() || dispatchNotes.trim());
+  const canSubmit =
+    transportadora &&
+    (isBogoexpress || numeroGuia.trim() || dispatchNotes.trim() || !!guiaFile);
   const canSubmitFinal = canSubmit && (!hasCreditPending || !!paymentDueDate);
 
   return (
