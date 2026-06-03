@@ -16,6 +16,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Wallet, Plus, DollarSign, FileText, Upload, Loader2, Camera, User } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { openSignedUrl } from "@/lib/signedUrl";
@@ -49,37 +55,38 @@ export default function CajaMenor() {
   const [showFundDialog, setShowFundDialog] = useState(false);
   const [showExpenseDialog, setShowExpenseDialog] = useState(false);
 
-  // Fetch latest fund
+  // Fetch all funds (history)
   const { data: funds = [] } = useQuery({
     queryKey: ["petty_cash_funds"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("petty_cash_funds")
         .select("*")
-        .order("created_at", { ascending: false })
-        .limit(1);
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as PettyCashFund[];
     },
   });
 
   const activeFund = funds[0] ?? null;
+  const historyFunds = funds.slice(1);
 
-  // Fetch expenses for active fund
-  const { data: expenses = [] } = useQuery({
-    queryKey: ["petty_cash_expenses", activeFund?.id],
+  // Fetch ALL expenses across funds (for active + history)
+  const { data: allExpenses = [] } = useQuery({
+    queryKey: ["petty_cash_expenses_all"],
     queryFn: async () => {
-      if (!activeFund) return [];
       const { data, error } = await supabase
         .from("petty_cash_expenses")
         .select("*")
-        .eq("fund_id", activeFund.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as PettyCashExpense[];
     },
-    enabled: !!activeFund,
   });
+
+  const expenses = activeFund
+    ? allExpenses.filter((e) => e.fund_id === activeFund.id)
+    : [];
 
   const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount), 0);
   const currentBalance = activeFund ? Number(activeFund.amount) - totalExpenses : 0;
@@ -200,10 +207,98 @@ export default function CajaMenor() {
           userId={user?.id || ""}
           userName={user?.email || "Contabilidad"}
           onSaved={() => {
-            queryClient.invalidateQueries({ queryKey: ["petty_cash_expenses"] });
+            queryClient.invalidateQueries({ queryKey: ["petty_cash_expenses_all"] });
             setShowExpenseDialog(false);
           }}
         />
+      )}
+
+      {/* History of previous funds */}
+      {historyFunds.length > 0 && (
+        <div className="space-y-2 pt-4">
+          <h3 className="text-sm font-semibold text-foreground">
+            Historial de fondos anteriores ({historyFunds.length})
+          </h3>
+          <Accordion type="multiple" className="space-y-2">
+            {historyFunds.map((fund) => {
+              const fundExpenses = allExpenses
+                .filter((e) => e.fund_id === fund.id)
+                .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
+              const spent = fundExpenses.reduce((s, e) => s + Number(e.amount), 0);
+              const closing = Number(fund.amount) - spent;
+              return (
+                <AccordionItem
+                  key={fund.id}
+                  value={fund.id}
+                  className="border rounded-md px-3 bg-card"
+                >
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex flex-1 items-center justify-between gap-3 pr-2 text-left">
+                      <div>
+                        <p className="text-sm font-medium">
+                          {format(new Date(fund.created_at), "d MMM yyyy HH:mm", { locale: es })}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Fondo ${Number(fund.amount).toLocaleString("es-CO")} ·
+                          {" "}{fundExpenses.length} mov.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <Badge variant="outline" className="text-destructive border-destructive/40">
+                          -${spent.toLocaleString("es-CO")}
+                        </Badge>
+                        <Badge variant="outline">
+                          Cierre: ${closing.toLocaleString("es-CO")}
+                        </Badge>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    {fund.notes && (
+                      <p className="text-xs text-muted-foreground mb-2 italic">{fund.notes}</p>
+                    )}
+                    {fundExpenses.length === 0 ? (
+                      <p className="text-xs text-muted-foreground py-2">Sin gastos en este fondo.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {fundExpenses.map((expense) => (
+                          <div
+                            key={expense.id}
+                            className="flex items-start justify-between gap-3 p-2 rounded border bg-background"
+                          >
+                            <div className="space-y-0.5 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-destructive text-sm">
+                                  -${Number(expense.amount).toLocaleString("es-CO")}
+                                </span>
+                              </div>
+                              <p className="text-xs text-foreground">{expense.description}</p>
+                              <div className="flex items-center gap-2 text-[10px] text-muted-foreground flex-wrap">
+                                <span>Solicitó: <span className="font-medium text-foreground">{expense.requested_by}</span></span>
+                                <span>· Registró: {expense.recorded_by_name}</span>
+                                <span>· {format(new Date(expense.created_at), "d MMM HH:mm", { locale: es })}</span>
+                              </div>
+                            </div>
+                            {expense.proof_url && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="shrink-0 h-7"
+                                onClick={() => openSignedUrl(expense.proof_url!)}
+                              >
+                                <FileText className="h-3 w-3 mr-1" /> Soporte
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
+          </Accordion>
+        </div>
       )}
     </div>
   );
