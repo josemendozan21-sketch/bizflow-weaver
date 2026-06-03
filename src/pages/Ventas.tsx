@@ -625,10 +625,18 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const handleProductSelect = (lineId: string, value: string) => {
     const selectedOption = productOptions.find((option) => option.value === value);
     if (selectedOption) {
-      updateLine(lineId, { product: selectedOption.product, type: selectedOption.type });
+      let resolvedType = selectedOption.type;
+      if (!resolvedType) {
+        const availableTypes = getAvailableTypes(selectedOption.product);
+        if (availableTypes.length === 1) {
+          resolvedType = availableTypes[0];
+        }
+      }
+      updateLine(lineId, { product: selectedOption.product, type: resolvedType });
       return;
     }
-    updateLine(lineId, { product: value, type: "" });
+    const availableTypes = getAvailableTypes(value);
+    updateLine(lineId, { product: value, type: availableTypes.length === 1 ? availableTypes[0] : "" });
   };
 
   // Grand total across all lines
