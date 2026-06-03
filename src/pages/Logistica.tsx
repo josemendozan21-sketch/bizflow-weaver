@@ -310,6 +310,10 @@ const Logistica = () => {
     if (o.sale_type === "menor") {
       return o.production_status === "listo";
     }
+    // Pedidos a crédito: pueden despacharse aunque no estén totalmente pagados.
+    if (o.is_credit) {
+      return o.production_status === "listo";
+    }
     // Wholesale: must be in "listo" stage AND payment complete
     const productionDone = o.production_status === "listo";
     const paid = isOrderFullyPaid(o);
@@ -319,6 +323,7 @@ const Logistica = () => {
   // Pending: wholesale orders not yet ready (production not done or not paid)
   const pendingOrders = allOrders.filter((o) => {
     if (o.sale_type === "menor") return false;
+    if (o.is_credit) return false;
     if (o.dispatched_at) return false;
     if (o.production_status === "despachado" || o.production_status === "entregado") return false;
     const productionDone = o.production_status === "listo";
