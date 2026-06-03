@@ -1,15 +1,13 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { useBudgetEntries, useMonthlyBudget, ADVISOR_EMAILS } from "@/hooks/useMonthlyBudget";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
 import { es } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-
-function formatCOP(n: number) {
-  return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n || 0);
-}
+import { Search } from "lucide-react";
 
 export function IncomeCalendar({ year, month }: { year: number; month: number }) {
   const { data: budget } = useMonthlyBudget(year, month);
