@@ -802,6 +802,7 @@ function GroupDispatchDialog({ group }: { group: ShipmentGroup }) {
   };
 
   const canSubmit = transportadora && (isBogoexpress || numeroGuia.trim() || dispatchNotes.trim());
+  const canSubmitFinal = canSubmit && (!hasCreditPending || !!paymentDueDate);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -829,6 +830,25 @@ function GroupDispatchDialog({ group }: { group: ShipmentGroup }) {
         <p className="text-sm text-muted-foreground">
           Envío de <span className="font-semibold text-foreground">{group.clientName}</span> — {group.items.length} item(s), {group.totalUnits} unidades en total
         </p>
+        {hasCreditPending && (
+          <div className="rounded-md border border-purple-300 bg-purple-50 p-3 text-xs space-y-2">
+            <p className="text-purple-900 font-medium">
+              Pedido a crédito — saldo pendiente ${creditBalance.toLocaleString("es-CO")}
+            </p>
+            <p className="text-purple-800">
+              Se despachará sin pago completo. Contabilidad recibirá una alerta para hacer seguimiento.
+            </p>
+            <div className="space-y-1">
+              <Label className="text-xs">Fecha pactada de pago *</Label>
+              <Input
+                type="date"
+                value={paymentDueDate}
+                onChange={(e) => setPaymentDueDate(e.target.value)}
+                className="h-8"
+              />
+            </div>
+          </div>
+        )}
         <div className="space-y-4 pt-2">
           <div className="space-y-1.5">
             <Label>Transportadora</Label>
@@ -882,7 +902,7 @@ function GroupDispatchDialog({ group }: { group: ShipmentGroup }) {
             <Textarea value={dispatchNotes} onChange={(e) => setDispatchNotes(e.target.value)} placeholder="Ej: Se envió por moto propia, entrega en punto..." />
           </div>
 
-          <Button className="w-full" onClick={handleConfirm} disabled={!canSubmit || uploading}>
+          <Button className="w-full" onClick={handleConfirm} disabled={!canSubmitFinal || uploading}>
             <Truck className="h-4 w-4 mr-1" />
             {uploading ? "Subiendo..." : "Marcar como despachado"}
           </Button>
