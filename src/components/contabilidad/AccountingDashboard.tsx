@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { DollarSign, Users, Clock, TrendingUp } from "lucide-react";
 import { getOrderBalance, getOrderPaidAmount, isOrderFullyPaid, type Order } from "@/hooks/useOrders";
 import { startOfMonth, endOfMonth, isWithinInterval, differenceInDays } from "date-fns";
+import { CreditOrdersPanel } from "./CreditOrdersPanel";
 
 interface Props {
   orders: Order[];
@@ -57,6 +58,7 @@ const AccountingDashboard = ({ orders }: Props) => {
 
   return (
     <div className="space-y-6">
+      <CreditOrdersPanel />
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
