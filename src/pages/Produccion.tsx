@@ -7,6 +7,8 @@ import ProductionBrandSelector, { type ProductionBrand } from "@/components/prod
 import { MagicalWarmersWorkflow } from "@/components/production/MagicalWarmersWorkflow";
 import { SweatspotWorkflow } from "@/components/production/SweatspotWorkflow";
 import { EstampacionProductionView } from "@/components/production/EstampacionProductionView";
+import { RollCutsView } from "@/components/production/RollCutsView";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProductionAlerts } from "@/hooks/useProductionAlerts";
 
 const Produccion = () => {
@@ -14,6 +16,7 @@ const Produccion = () => {
   const isReadOnly = role === "asesor_comercial" || role === "usuario_visual";
   const isEstampacion = role === "estampacion";
   const [selectedBrand, setSelectedBrand] = useState<ProductionBrand | null>(null);
+  const [topTab, setTopTab] = useState<"marcas" | "rollos">("marcas");
 
   // Show toast popups when new production orders arrive
   useProductionAlerts();
@@ -60,12 +63,21 @@ const Produccion = () => {
         </div>
       </div>
 
-      {!selectedBrand ? (
-        <ProductionBrandSelector selectedBrand={selectedBrand} onSelectBrand={setSelectedBrand} />
-      ) : selectedBrand === "magical_warmers" ? (
-        <MagicalWarmersWorkflow />
+      {selectedBrand ? (
+        selectedBrand === "magical_warmers" ? <MagicalWarmersWorkflow /> : <SweatspotWorkflow />
       ) : (
-        <SweatspotWorkflow />
+        <Tabs value={topTab} onValueChange={(v) => setTopTab(v as any)}>
+          <TabsList>
+            <TabsTrigger value="marcas">Marcas</TabsTrigger>
+            <TabsTrigger value="rollos">Corte de Rollos</TabsTrigger>
+          </TabsList>
+          <TabsContent value="marcas" className="mt-4">
+            <ProductionBrandSelector selectedBrand={selectedBrand} onSelectBrand={setSelectedBrand} />
+          </TabsContent>
+          <TabsContent value="rollos" className="mt-4">
+            <RollCutsView />
+          </TabsContent>
+        </Tabs>
       )}
     </div>
   );
