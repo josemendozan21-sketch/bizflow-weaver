@@ -952,6 +952,17 @@ function ShipmentGroupCard({
             {group.brands.map((b) => (
               <Badge key={b} variant={b === "magical" ? "default" : "secondary"} className="text-xs">{brandLabel(b)}</Badge>
             ))}
+            {group.items.some((it) => it.is_credit) && (
+              <Badge className="bg-purple-100 text-purple-800 text-xs hover:bg-purple-100">
+                Crédito
+                {(() => {
+                  const saldo = group.items
+                    .filter((it) => it.is_credit)
+                    .reduce((s, it) => s + Math.max((Number(it.total_amount) || 0) - (Number(it.abono) || 0), 0), 0);
+                  return saldo > 0 ? ` · saldo $${saldo.toLocaleString("es-CO")}` : "";
+                })()}
+              </Badge>
+            )}
             <AdvisorHeaderBadge items={group.items} />
           </div>
           <p className="text-xs text-muted-foreground mt-1">
