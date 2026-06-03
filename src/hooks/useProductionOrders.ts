@@ -490,6 +490,16 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
               stamping_completed_at: new Date().toISOString(),
             })
             .eq("id", po.order_id);
+
+          // Auto-finalize matching approved logo request so the card disappears
+          // from Diseño de logos once estampación finishes the stamping process.
+          const brandLabel = po.brand === "magical" ? "Magical Warmers" : "Sweatspot";
+          await supabase
+            .from("logo_requests")
+            .update({ status: "finalizado" })
+            .eq("status", "aprobado")
+            .eq("brand", brandLabel)
+            .eq("client_name", po.client_name);
         } else {
           await supabase
             .from("orders")
