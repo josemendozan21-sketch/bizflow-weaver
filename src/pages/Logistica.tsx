@@ -458,6 +458,7 @@ const Logistica = () => {
                       group={g}
                       brandLabel={brandLabel}
                       saleLabel={saleLabel}
+                      completionMap={completionMap}
                     />
                   ))}
                 </div>
