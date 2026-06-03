@@ -19,6 +19,8 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { StampingApprovals } from "./StampingApprovals";
 import { useAuth } from "@/contexts/AuthContext";
+import { PaymentsList } from "./PaymentsList";
+import { AddPaymentDialog } from "./AddPaymentDialog";
 
 const STAGE_ORDER = [
   "pendiente",
