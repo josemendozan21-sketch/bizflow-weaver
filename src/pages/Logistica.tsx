@@ -1030,10 +1030,12 @@ function PendingGroupCard({
   group,
   brandLabel,
   saleLabel,
+  completionMap,
 }: {
   group: ShipmentGroup;
   brandLabel: (b: string) => string;
   saleLabel: (t: string) => string;
+  completionMap?: Map<string, { photoUrl: string | null; packagerName: string | null; finalCount: number | null }>;
 }) {
   const oldestDate = new Date(group.oldestCreatedAt);
   const aging = differenceInDays(new Date(), oldestDate);
@@ -1042,6 +1044,12 @@ function PendingGroupCard({
     .map((o) => o.delivery_date)
     .filter(Boolean)
     .sort()[0];
+  const finishedPhotos = group.items
+    .map((it) => ({ item: it, info: completionMap?.get(it.id) }))
+    .filter((x) => x.info && x.info.photoUrl);
+  const itemsMissingPhoto = group.items.filter(
+    (it) => it.production_status === "listo" && !completionMap?.get(it.id)?.photoUrl,
+  );
   return (
     <div className={`rounded-lg border bg-card ${allPaid ? "" : "opacity-70"}`}>
       <div className="flex items-start gap-3 p-4 border-b flex-wrap">
@@ -1086,6 +1094,45 @@ function PendingGroupCard({
             <ItemDetailsLine order={it} />
           </div>
         ))}
+        {finishedPhotos.length > 0 && (
+          <div className="pt-3 mt-2 border-t">
+            <p className="text-xs font-medium text-muted-foreground mb-2">
+              Foto(s) de producto terminado ({finishedPhotos.length})
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {finishedPhotos.map(({ info }, idx) => (
+                <a
+                  key={idx}
+                  href={info!.photoUrl!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-20 h-20 rounded-md border overflow-hidden bg-muted hover:ring-2 hover:ring-primary transition"
+                  title={`Empacado por ${info!.packagerName || "—"}${info!.finalCount ? ` · ${info!.finalCount} und` : ""}`}
+                >
+                  <img src={info!.photoUrl!} alt="Producto terminado" className="w-full h-full object-cover" />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+        {itemsMissingPhoto.length > 0 && (
+          <div className="pt-3 mt-2 border-t space-y-2">
+            <p className="text-xs font-medium text-amber-700">
+              Falta foto de empaque ({itemsMissingPhoto.length})
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {itemsMissingPhoto.map((it) => (
+                <MissingFinishedPhotoButton
+                  key={it.id}
+                  orderId={it.id}
+                  clientName={it.client_name}
+                  quantity={it.quantity}
+                  label={`Subir foto · ${it.product}`}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
