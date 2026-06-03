@@ -85,7 +85,7 @@ const PLASTICO_OPTIONS = [
 /** Canonical product references for body production */
 const CANONICAL_REFERENCES = [
   "Lumbar", "Shoulder", "Cervical", "Multiusos", "Pocket", "Handy",
-  "Muela", "Labios", "Círculo 8 cm", "Círculo 12 cm",
+  "Muela", "Labios", "Círculo 8 cm", "Círculo 12 cm", "Círculo Ojo",
   "Tiroides", "Toalla Higiénica", "Toalla Higienica", "Huskvarna",
   "Corazón Térmico", "Corazon Termico",
   "Bacteria", "Antifaz", "Gafas pequeñas", "Pélvica", "Pelvica",
