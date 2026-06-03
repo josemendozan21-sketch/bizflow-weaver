@@ -75,7 +75,10 @@ Deno.serve(async (req) => {
       shipping_cost: body.shipping_cost ?? null,
       advisor_id: SWEATSPOT_WEB_ADVISOR_ID,
       advisor_name: String(body.advisor_name ?? 'Sweatspot Web'),
-      production_status: 'pendiente',
+      // Los pedidos web de Sweatspot son producto terminado al detal: entran
+      // directamente como "listo" para que aparezcan en Logística y se pueda
+      // generar el rótulo de envío sin pasar por producción.
+      production_status: 'listo',
     }
 
     const supabase = createClient(
