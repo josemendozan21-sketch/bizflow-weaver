@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { useBudgetEntries, useMonthlyBudget, ADVISOR_EMAILS } from "@/hooks/useMonthlyBudget";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
 import { es } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Search, X } from "lucide-react";
 
 function formatCOP(n: number) {
   return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n || 0);
@@ -15,6 +17,7 @@ export function IncomeCalendar({ year, month }: { year: number; month: number })
   const { data: budget } = useMonthlyBudget(year, month);
   const { data: entries = [] } = useBudgetEntries(budget?.id);
   const [selected, setSelected] = useState<Date | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const monthStart = startOfMonth(new Date(year, month - 1, 1));
   const monthEnd = endOfMonth(monthStart);
@@ -99,19 +102,42 @@ export function IncomeCalendar({ year, month }: { year: number; month: number })
     return [...manual, ...autoIncome];
   }, [entries, autoIncome]);
 
+  const filteredIngresos = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return ingresos;
+    return ingresos.filter((e) =>
+      (e.category || "").toLowerCase().includes(q) ||
+      (e.description || "").toLowerCase().includes(q)
+    );
+  }, [ingresos, searchTerm]);
+
   const dailyTotals = useMemo(() => {
     const map = new Map<string, number>();
-    for (const e of ingresos) {
+    for (const e of filteredIngresos) {
       const key = String(e.entry_date).slice(0, 10);
       map.set(key, (map.get(key) || 0) + Number(e.amount));
     }
     return map;
-  }, [ingresos]);
+  }, [filteredIngresos]);
 
-  const monthTotal = ingresos.reduce((s, e) => s + Number(e.amount), 0);
-  const selectedEntries = selected
-    ? ingresos.filter((e) => String(e.entry_date).slice(0, 10) === toLocalISO(selected))
-    : [];
+  const monthTotal = filteredIngresos.reduce((s, e) => s + Number(e.amount), 0);
+
+  const selectedEntries = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!selected) return [];
+    const dayEntries = ingresos.filter((e) => String(e.entry_date).slice(0, 10) === toLocalISO(selected));
+    if (!q) return dayEntries;
+    return dayEntries.filter((e) =>
+      (e.category || "").toLowerCase().includes(q) ||
+      (e.description || "").toLowerCase().includes(q)
+    );
+  }, [ingresos, selected, searchTerm]);
+
+  const searchResults = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return [];
+    return filteredIngresos;
+  }, [filteredIngresos, searchTerm]);
 
   // Leading offset
   const firstWeekday = (monthStart.getDay() + 6) % 7; // Monday=0
@@ -120,10 +146,31 @@ export function IncomeCalendar({ year, month }: { year: number; month: number })
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">
-            Ingresos de {format(monthStart, "MMMM yyyy", { locale: es })}
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">Total mes: <span className="font-medium text-emerald-600">{formatCOP(monthTotal)}</span></p>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <CardTitle className="text-base">
+                Ingresos de {format(monthStart, "MMMM yyyy", { locale: es })}
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">Total mes: <span className="font-medium text-emerald-600">{formatCOP(monthTotal)}</span></p>
+            </div>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar cliente o asesor..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 pr-8"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-7 gap-1 text-xs font-medium text-muted-foreground mb-1">
@@ -135,13 +182,14 @@ export function IncomeCalendar({ year, month }: { year: number; month: number })
               const dKey = toLocalISO(d);
               const total = dailyTotals.get(dKey) || 0;
               const isSel = selected && toLocalISO(selected) === dKey;
+              const hasMatch = searchTerm.trim() ? total > 0 : dailyTotals.has(dKey);
               return (
                 <button
                   key={d.toISOString()}
                   onClick={() => setSelected(d)}
                   className={`min-h-[64px] rounded-md border p-1 text-left transition-colors ${
                     isSel ? "border-primary bg-primary/10" : "border-border hover:bg-muted"
-                  } ${total > 0 ? "bg-emerald-500/5" : ""}`}
+                  } ${hasMatch ? "bg-emerald-500/5" : ""}`}
                 >
                   <div className="text-xs font-medium">{d.getDate()}</div>
                   {total > 0 && (
@@ -159,11 +207,36 @@ export function IncomeCalendar({ year, month }: { year: number; month: number })
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            {selected ? format(selected, "d 'de' MMMM", { locale: es }) : "Selecciona un día"}
+            {searchTerm.trim()
+              ? `Resultados (${searchResults.length})`
+              : selected
+                ? format(selected, "d 'de' MMMM", { locale: es })
+                : "Selecciona un día"}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {selectedEntries.length === 0 ? (
+          {searchTerm.trim() ? (
+            searchResults.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No se encontraron ingresos con ese criterio.</p>
+            ) : (
+              <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                {searchResults.map((e) => (
+                  <div key={e.id} className="border-l-2 border-emerald-500 pl-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <Badge variant="outline" className="text-xs">{e.category}</Badge>
+                      <span className="text-sm font-semibold text-emerald-700">{formatCOP(Number(e.amount))}</span>
+                    </div>
+                    {e.description && <p className="text-xs text-muted-foreground mt-1">{e.description}</p>}
+                    <p className="text-[10px] text-muted-foreground">{String(e.entry_date).slice(0, 10)}</p>
+                  </div>
+                ))}
+                <div className="pt-2 border-t mt-2 flex justify-between text-sm font-semibold">
+                  <span>Total</span>
+                  <span className="text-emerald-700">{formatCOP(searchResults.reduce((s, e) => s + Number(e.amount), 0))}</span>
+                </div>
+              </div>
+            )
+          ) : selectedEntries.length === 0 ? (
             <p className="text-sm text-muted-foreground">{selected ? "Sin ingresos este día." : "Haz clic en un día del calendario."}</p>
           ) : (
             <div className="space-y-2">
