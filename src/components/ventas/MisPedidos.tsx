@@ -789,6 +789,7 @@ function PaymentConfirmDialog({ order }: { order: Order }) {
 }
 
 const COLOR_OPTIONS = [
+// duplicated marker — removed by next hunk
   "No Aplica",
   "Azul",
   "Azul claro",
