@@ -1154,6 +1154,7 @@ export type Database = {
           delivery_date: string | null
           dispatch_notes: string | null
           dispatched_at: string | null
+          external_order_id: string | null
           gel_color: string | null
           id: string
           ink_color: string | null
@@ -1207,6 +1208,7 @@ export type Database = {
           delivery_date?: string | null
           dispatch_notes?: string | null
           dispatched_at?: string | null
+          external_order_id?: string | null
           gel_color?: string | null
           id?: string
           ink_color?: string | null
@@ -1260,6 +1262,7 @@ export type Database = {
           delivery_date?: string | null
           dispatch_notes?: string | null
           dispatched_at?: string | null
+          external_order_id?: string | null
           gel_color?: string | null
           id?: string
           ink_color?: string | null
