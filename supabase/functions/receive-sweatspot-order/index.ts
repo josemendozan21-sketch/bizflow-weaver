@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
       // que entren al flujo correcto (inventarios + logística al detal) sin
       // depender de lo que envíe el cliente.
       brand: 'sweatspot',
-      sale_type: 'detal',
+      sale_type: 'menor',
       client_name,
       client_nit: body.client_nit ?? null,
       client_phone: body.client_phone ?? null,
