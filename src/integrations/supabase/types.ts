@@ -2083,6 +2083,66 @@ export type Database = {
         }
         Relationships: []
       }
+      roll_cuts: {
+        Row: {
+          code: string
+          cortado_at: string
+          cortado_por: string
+          created_at: string
+          finalizado_at: string | null
+          finalizado_por: string | null
+          id: string
+          medida_cm: number
+          montado_at: string | null
+          montado_por: string | null
+          notas_final: string | null
+          notas_inicio: string | null
+          peso_final_g: number | null
+          peso_inicial_g: number
+          status: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          cortado_at?: string
+          cortado_por: string
+          created_at?: string
+          finalizado_at?: string | null
+          finalizado_por?: string | null
+          id?: string
+          medida_cm: number
+          montado_at?: string | null
+          montado_por?: string | null
+          notas_final?: string | null
+          notas_inicio?: string | null
+          peso_final_g?: number | null
+          peso_inicial_g: number
+          status?: string
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          cortado_at?: string
+          cortado_por?: string
+          created_at?: string
+          finalizado_at?: string | null
+          finalizado_por?: string | null
+          id?: string
+          medida_cm?: number
+          montado_at?: string | null
+          montado_por?: string | null
+          notas_final?: string | null
+          notas_inicio?: string | null
+          peso_final_g?: number | null
+          peso_inicial_g?: number
+          status?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       scheduled_payments: {
         Row: {
           bank_account_id: string | null

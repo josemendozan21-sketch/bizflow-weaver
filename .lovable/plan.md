@@ -1,37 +1,67 @@
-## Cambio en `WholesaleOrdersInbox.tsx` (bandeja mayor del rol Inventarios)
+## Corte de Rollos — Nueva pestaña en Producción
 
-Hoy, en cada tarjeta de pedido al por mayor, el badge de stock ya aparece arriba a la derecha ("Stock: N", "Stock parcial: N / X" o "Sin stock"), pero los dos botones — **Entregar a Estampación** y **Producir cuerpos** — siempre aparecen juntos. El usuario quiere que la decisión sea automática según el stock.
+Una pestaña dentro de **Producción** para registrar el corte de rollos grandes (150 cm) de plástico **calor** o **frío** en rollos pequeños (15–28 cm), con código, peso y registro de uso.
 
-### Reglas a implementar (solo afecta los botones de pedidos al por mayor)
+### Flujo
 
-1. **Hay stock suficiente** (`stock >= cantidad pedida`):
-   - Mostrar **solo** el botón `Entregar a Estampación`.
-   - Ocultar `Producir cuerpos`.
+**1. Cortar rollo grande → genera rollos pequeños**
+Formulario para registrar el corte:
+- Tipo: Calor o Frío
+- Medida de corte (cm): 15–28
+- Cantidad de rollos pequeños generados
+- Peso inicial de cada rollo (gramos) — un campo por rollo
+- Operario que cortó (texto libre)
 
-2. **No hay stock** (`stock === 0` o no existe referencia en stock):
-   - Mostrar **solo** el botón `Producir cuerpos` (esto genera la orden que le llega a Producción, igual que hoy).
-   - Ocultar `Entregar a Estampación`.
+Al guardar, se crea un registro por cada rollo pequeño con código autogenerado:
+- **Formato:** `RC-28-0306` (Calor, 28 cm, 03 jun) o `RF-20-0306` (Frío, 20 cm)
+- Si hay varios el mismo día con misma medida y tipo, se agrega sufijo: `RC-28-0306-A`, `-B`, `-C`...
 
-3. **Stock parcial** (`0 < stock < cantidad`):
-   - Mostrar **ambos** botones, para que Inventarios pueda entregar lo que hay a Estampación y a la vez solicitar a Producción los cuerpos faltantes.
-   - Mantiene el flujo flexible para casos mixtos.
+**2. Listado de rollos pequeños (estado: disponible)**
+Tabla/cards con: código, tipo, medida, peso inicial, fecha de corte, operario.
+Filtros por tipo y estado (disponible / en uso / consumido).
 
-### Visibilidad del stock
+**3. Montar rollo para producción**
+Botón "Iniciar uso" en un rollo disponible:
+- Operario (texto libre)
+- Notas: qué se va a hacer con el rollo
+- Hora de inicio (automática)
+- Estado pasa a **en uso**
 
-El badge de stock ya es visible en la tarjeta — no hay que añadir nada nuevo, simplemente queda como la única señal que determina qué botón se ve.
+**4. Finalizar uso del rollo**
+Botón "Finalizar":
+- Peso final (gramos)
+- Notas finales (qué se produjo, observaciones)
+- Hora de finalización (automática)
+- Estado pasa a **consumido**
 
-### Alcance
-
-- Solo se toca el bloque `kind === "mayor"` dentro de `renderCard` en `src/components/inventory/WholesaleOrdersInbox.tsx`.
-- No se cambia la pestaña "al detal" (sigue con su botón único de Logística).
-- No se cambia ninguna lógica de backend, notificaciones, ni el diálogo de confirmación.
+La tarjeta muestra: peso inicial, peso final, diferencia (gramos consumidos), duración, operario, notas.
 
 ### Detalles técnicos
 
-```text
-enough         => [Entregar a Estampación]
-stock === 0    => [Producir cuerpos]
-parcial (>0)   => [Entregar a Estampación] [Producir cuerpos]
-```
+**Nueva tabla `roll_cuts`** en la base de datos:
+- `id`, `code` (único), `tipo` (calor/frio), `medida_cm`, `peso_inicial_g`, `peso_final_g`
+- `cortado_por`, `cortado_at`
+- `montado_por`, `montado_at`, `notas_inicio`
+- `finalizado_por`, `finalizado_at`, `notas_final`
+- `status` (disponible / en_uso / consumido)
+- RLS: producción + admin gestionan; visual y otros roles autorizados pueden ver
 
-`enough` y `stock` ya están calculados en `renderCard`, así que es solo envolver cada botón en su condición correspondiente.
+**Frontend:**
+- Nueva pestaña en `src/pages/Produccion.tsx` (o dentro del flujo de Magical Warmers, ya que aplica a cuerpos calor/frío). **Propongo agregarla como nueva sección en la vista principal de Producción**, accesible tanto desde Magical Warmers como independientemente, ya que los rollos abastecen la producción de cuerpos.
+- Componentes nuevos:
+  - `RollCutsView.tsx` — pestaña/tab principal con listado + filtros
+  - `CreateRollCutDialog.tsx` — formulario de corte (genera N rollos)
+  - `StartRollUsageDialog.tsx` — montar rollo
+  - `FinishRollUsageDialog.tsx` — finalizar con peso final
+  - `RollCutCard.tsx` — tarjeta de cada rollo con su historial
+
+**Sin cálculos automáticos** de unidades por ahora — solo se registran pesos y notas. Más adelante podemos agregar cálculo automático si defines el peso estándar por referencia.
+
+### Ubicación de la pestaña
+
+Dentro de `/produccion`, agregar tabs en la parte superior:
+- **Magical Warmers** (actual)
+- **Sweatspot** (actual)
+- **Corte de Rollos** (nuevo) — visible para roles de producción y admin
+
+¿Procedo con esta implementación?
