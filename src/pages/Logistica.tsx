@@ -937,6 +937,9 @@ function ShipmentGroupCard({
   const finishedPhotos = group.items
     .map((it) => completionMap?.get(it.id))
     .filter((c): c is { photoUrl: string | null; packagerName: string | null; finalCount: number | null } => !!c && !!c.photoUrl);
+  const itemsMissingPhoto = group.items.filter(
+    (it) => !completionMap?.get(it.id)?.photoUrl,
+  );
 
   return (
     <div className={`rounded-lg border bg-card transition-colors ${selected ? "border-primary ring-1 ring-primary/30" : ""}`}>
@@ -1017,6 +1020,24 @@ function ShipmentGroupCard({
                 >
                   <img src={c.photoUrl!} alt="Producto terminado" className="w-full h-full object-cover" />
                 </a>
+              ))}
+            </div>
+          </div>
+        )}
+        {canEdit && itemsMissingPhoto.length > 0 && (
+          <div className="pt-3 mt-2 border-t space-y-2">
+            <p className="text-xs font-medium text-amber-700">
+              Falta foto de empaque ({itemsMissingPhoto.length})
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {itemsMissingPhoto.map((it) => (
+                <MissingFinishedPhotoButton
+                  key={it.id}
+                  orderId={it.id}
+                  clientName={it.client_name}
+                  quantity={it.quantity}
+                  label={`Subir foto · ${it.product}`}
+                />
               ))}
             </div>
           </div>
