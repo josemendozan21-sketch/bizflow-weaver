@@ -148,6 +148,8 @@ export const MagicalWarmersWorkflow = () => {
       (o.advisor_name || "").toLowerCase().includes(q) ||
       (o.logo_file || "").toLowerCase().includes(q) ||
       (o.molde || "").toLowerCase().includes(q) ||
+      (o.ink_color || "").toLowerCase().includes(q) ||
+      (o.gel_color || "").toLowerCase().includes(q) ||
       (o.observations || "").toLowerCase().includes(q)
     );
   }, [activeOrdersAll, searchTerm]);
@@ -257,7 +259,7 @@ export const MagicalWarmersWorkflow = () => {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Buscar por cliente, asesor, logo o molde..."
+          placeholder="Buscar por cliente, asesor, logo, molde, color gel/tinta..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-9"

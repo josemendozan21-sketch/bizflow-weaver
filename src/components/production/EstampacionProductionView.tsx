@@ -66,7 +66,7 @@ export const EstampacionProductionView = () => {
   const q = searchQuery.trim().toLowerCase();
   const filteredOrders = q
     ? estampacionOrders.filter((o) =>
-        [o.client_name, o.logo_file, o.advisor_name]
+        [o.client_name, o.logo_file, o.advisor_name, o.molde, o.thermo_size, o.ink_color, o.gel_color]
           .filter(Boolean)
           .some((v) => String(v).toLowerCase().includes(q))
       )
@@ -121,7 +121,7 @@ export const EstampacionProductionView = () => {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por cliente, referencia de logo o asesor..."
+            placeholder="Buscar por cliente, referencia, molde, color gel/tinta o asesor..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
