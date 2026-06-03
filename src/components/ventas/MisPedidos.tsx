@@ -463,6 +463,9 @@ function OrderGroupCard({
     .map((it) => completionMap.get(it.id))
     .filter((c): c is { photoUrl: string | null; packagerName: string | null; finalCount: number | null } => !!c);
 
+  const creditItems = group.items.filter((it) => it.is_credit);
+  const hasCredit = creditItems.length > 0;
+
   const handleDeleteGroup = async () => {
     const ids = group.items.map((it) => it.id);
     const confirmMsg = ids.length > 1
@@ -494,6 +497,16 @@ function OrderGroupCard({
             {PRODUCTION_STATUS_LABELS[rep.production_status] || rep.production_status}
           </Badge>
         </div>
+        {hasCredit && (
+          <div className="flex items-center gap-2 mt-1">
+            <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">Crédito</Badge>
+            {creditItems[0].payment_due_date && (
+              <span className="text-xs text-muted-foreground">
+                Vence: {format(new Date(creditItems[0].payment_due_date), "d MMM yyyy", { locale: es })}
+              </span>
+            )}
+          </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-3">
         {/* Payment action banner */}
