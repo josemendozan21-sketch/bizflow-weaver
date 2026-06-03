@@ -1,0 +1,1 @@
+CREATE POLICY "Logistica can update production orders" ON public.production_orders FOR UPDATE TO authenticated USING (public.has_role(auth.uid(), 'logistica'::app_role)) WITH CHECK (public.has_role(auth.uid(), 'logistica'::app_role));
