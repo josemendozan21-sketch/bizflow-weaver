@@ -694,7 +694,6 @@ function OrderGroupCard({
 }
 
 function PaymentConfirmDialog({ order }: { order: Order }) {
-  // (existing component below)
   const [open, setOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [proofUrl, setProofUrl] = useState(order.payment_proof_url || "");
