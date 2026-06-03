@@ -19,6 +19,8 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { StampingApprovals } from "./StampingApprovals";
 import { useAuth } from "@/contexts/AuthContext";
+import { PaymentsList } from "./PaymentsList";
+import { AddPaymentDialog } from "./AddPaymentDialog";
 
 const STAGE_ORDER = [
   "pendiente",
@@ -461,6 +463,9 @@ function OrderGroupCard({
     .map((it) => completionMap.get(it.id))
     .filter((c): c is { photoUrl: string | null; packagerName: string | null; finalCount: number | null } => !!c);
 
+  const creditItems = group.items.filter((it) => it.is_credit);
+  const hasCredit = creditItems.length > 0;
+
   const handleDeleteGroup = async () => {
     const ids = group.items.map((it) => it.id);
     const confirmMsg = ids.length > 1
@@ -492,6 +497,16 @@ function OrderGroupCard({
             {PRODUCTION_STATUS_LABELS[rep.production_status] || rep.production_status}
           </Badge>
         </div>
+        {hasCredit && (
+          <div className="flex items-center gap-2 mt-1">
+            <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">Crédito</Badge>
+            {creditItems[0].payment_due_date && (
+              <span className="text-xs text-muted-foreground">
+                Vence: {format(new Date(creditItems[0].payment_due_date), "d MMM yyyy", { locale: es })}
+              </span>
+            )}
+          </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-3">
         {/* Payment action banner */}
@@ -641,6 +656,10 @@ function OrderGroupCard({
           <div className="text-xs text-primary">🎨 Solicitud de diseño vinculada</div>
         )}
 
+        {hasCredit && creditItems.map((it) => (
+          <CreditPaymentsBlock key={it.id} order={it} showHeader={creditItems.length > 1} />
+        ))}
+
         <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
           <span>{rep.advisor_name}</span>
           <span>{format(new Date(group.oldestCreatedAt), "d MMM yyyy HH:mm", { locale: es })}</span>
@@ -766,6 +785,73 @@ function PaymentConfirmDialog({ order }: { order: Order }) {
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function CreditPaymentsBlock({ order, showHeader }: { order: Order; showHeader: boolean }) {
+  const { role } = useAuth();
+  const queryClient = useQueryClient();
+  const total = Number(order.total_amount) || 0;
+  const paid = Number(order.abono) || 0;
+  const balance = Math.max(total - paid, 0);
+
+  const canEditDueDate =
+    role === "admin" || role === "contabilidad" || role === "asesor_comercial";
+
+  const handleDueDateChange = async (val: string) => {
+    const { error } = await supabase
+      .from("orders")
+      .update({ payment_due_date: val || null })
+      .eq("id", order.id);
+    if (error) {
+      toast.error("No se pudo actualizar la fecha", { description: error.message });
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["orders"] });
+    toast.success("Fecha de pago actualizada");
+  };
+
+  return (
+    <div className="rounded-lg border border-purple-200 bg-purple-50/50 p-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-semibold text-purple-900">
+          {showHeader ? `Abonos — ${order.product}` : "Abonos del pedido"}
+        </p>
+        <AddPaymentDialog orderId={order.id} pendingBalance={balance} />
+      </div>
+      <div className="grid grid-cols-3 gap-2 text-xs">
+        <div>
+          <div className="text-muted-foreground">Total</div>
+          <div className="font-medium">${total.toLocaleString("es-CO")}</div>
+        </div>
+        <div>
+          <div className="text-muted-foreground">Pagado</div>
+          <div className="font-medium text-green-700">${paid.toLocaleString("es-CO")}</div>
+        </div>
+        <div>
+          <div className="text-muted-foreground">Saldo</div>
+          <div className={`font-medium ${balance > 0 ? "text-destructive" : "text-green-700"}`}>
+            ${balance.toLocaleString("es-CO")}
+          </div>
+        </div>
+      </div>
+      {canEditDueDate && (
+        <div className="flex items-center gap-2 text-xs">
+          <Label className="text-xs">Fecha pactada de pago:</Label>
+          <Input
+            type="date"
+            className="h-7 w-auto text-xs"
+            defaultValue={order.payment_due_date || ""}
+            onBlur={(e) => {
+              if (e.target.value !== (order.payment_due_date || "")) {
+                handleDueDateChange(e.target.value);
+              }
+            }}
+          />
+        </div>
+      )}
+      <PaymentsList orderId={order.id} total={total} />
+    </div>
   );
 }
 

@@ -1,67 +1,70 @@
-## Corte de Rollos — Nueva pestaña en Producción
+## Resumen
 
-Una pestaña dentro de **Producción** para registrar el corte de rollos grandes (150 cm) de plástico **calor** o **frío** en rollos pequeños (15–28 cm), con código, peso y registro de uso.
+Habilitar un flujo de **pedidos a crédito** exclusivo para el asesor **Ilian Hernandez**. Sus pedidos se marcan automáticamente como crédito, soportan **múltiples abonos** (con monto, fecha, comprobante y notas), y Logística puede **despacharlos sin pago completo** registrando una fecha límite, generando una **alerta a Contabilidad** para el cobro.
 
-### Flujo
+## 1. Nueva tabla de abonos
 
-**1. Cortar rollo grande → genera rollos pequeños**
-Formulario para registrar el corte:
-- Tipo: Calor o Frío
-- Medida de corte (cm): 15–28
-- Cantidad de rollos pequeños generados
-- Peso inicial de cada rollo (gramos) — un campo por rollo
-- Operario que cortó (texto libre)
+Tabla `order_payments` para registrar cada pago de un pedido:
 
-Al guardar, se crea un registro por cada rollo pequeño con código autogenerado:
-- **Formato:** `RC-28-0306` (Calor, 28 cm, 03 jun) o `RF-20-0306` (Frío, 20 cm)
-- Si hay varios el mismo día con misma medida y tipo, se agrega sufijo: `RC-28-0306-A`, `-B`, `-C`...
+- `order_id`, `amount`, `payment_date`, `proof_url`, `notes`, `method`, `recorded_by`, `recorded_by_name`
+- Trigger que recalcula `orders.abono` (suma de pagos) y marca `payment_complete` cuando la suma ≥ `total_amount`.
+- RLS: el asesor dueño del pedido, admin y contabilidad pueden insertar/ver; logística puede ver.
 
-**2. Listado de rollos pequeños (estado: disponible)**
-Tabla/cards con: código, tipo, medida, peso inicial, fecha de corte, operario.
-Filtros por tipo y estado (disponible / en uso / consumido).
+## 2. Campos nuevos en `orders`
 
-**3. Montar rollo para producción**
-Botón "Iniciar uso" en un rollo disponible:
-- Operario (texto libre)
-- Notas: qué se va a hacer con el rollo
-- Hora de inicio (automática)
-- Estado pasa a **en uso**
+- `is_credit` (boolean) — pedido a crédito.
+- `payment_due_date` (date) — fecha límite pactada para terminar de pagar.
+- `credit_dispatched_pending_payment` (boolean) — despachado sin pago completo.
 
-**4. Finalizar uso del rollo**
-Botón "Finalizar":
-- Peso final (gramos)
-- Notas finales (qué se produjo, observaciones)
-- Hora de finalización (automática)
-- Estado pasa a **consumido**
+## 3. Marca automática para Ilian
 
-La tarjeta muestra: peso inicial, peso final, diferencia (gramos consumidos), duración, operario, notas.
+Trigger `BEFORE INSERT` en `orders`: si `advisor_id = '<Ilian>'` entonces `is_credit = true`. Configurable por UUID fijo (más adelante se podría escalar a un flag en `profiles`).
 
-### Detalles técnicos
+## 4. UI — Asesor (Ilian)
 
-**Nueva tabla `roll_cuts`** en la base de datos:
-- `id`, `code` (único), `tipo` (calor/frio), `medida_cm`, `peso_inicial_g`, `peso_final_g`
-- `cortado_por`, `cortado_at`
-- `montado_por`, `montado_at`, `notas_inicio`
-- `finalizado_por`, `finalizado_at`, `notas_final`
-- `status` (disponible / en_uso / consumido)
-- RLS: producción + admin gestionan; visual y otros roles autorizados pueden ver
+En **Mis pedidos** y en el detalle del pedido:
 
-**Frontend:**
-- Nueva pestaña en `src/pages/Produccion.tsx` (o dentro del flujo de Magical Warmers, ya que aplica a cuerpos calor/frío). **Propongo agregarla como nueva sección en la vista principal de Producción**, accesible tanto desde Magical Warmers como independientemente, ya que los rollos abastecen la producción de cuerpos.
-- Componentes nuevos:
-  - `RollCutsView.tsx` — pestaña/tab principal con listado + filtros
-  - `CreateRollCutDialog.tsx` — formulario de corte (genera N rollos)
-  - `StartRollUsageDialog.tsx` — montar rollo
-  - `FinishRollUsageDialog.tsx` — finalizar con peso final
-  - `RollCutCard.tsx` — tarjeta de cada rollo con su historial
+- Badge "Crédito" + fecha de pago pactada (editable).
+- Sección **"Abonos"** con lista cronológica: monto · fecha · comprobante · notas · quién lo registró.
+- Botón **"Registrar abono"** → diálogo con monto, fecha, archivo (bucket `payment-proofs`), notas.
+- Resumen: total · pagado · saldo pendiente.
 
-**Sin cálculos automáticos** de unidades por ahora — solo se registran pesos y notas. Más adelante podemos agregar cálculo automático si defines el peso estándar por referencia.
+Para los demás asesores el flujo actual de pago único no cambia.
 
-### Ubicación de la pestaña
+## 5. UI — Logística
 
-Dentro de `/produccion`, agregar tabs en la parte superior:
-- **Magical Warmers** (actual)
-- **Sweatspot** (actual)
-- **Corte de Rollos** (nuevo) — visible para roles de producción y admin
+Para pedidos con `is_credit = true`:
 
-¿Procedo con esta implementación?
+- Pueden aparecer en "Listos para despacho" aunque `payment_complete = false`, mostrando badge **"Crédito — saldo $X"** y la fecha pactada.
+- En el diálogo de despacho: campo obligatorio **"Fecha de pago pactada"** (pre-llena con `payment_due_date` si existe).
+- Al despachar: marca `credit_dispatched_pending_payment = true` y dispara la notificación.
+
+## 6. Alerta a Contabilidad
+
+Trigger en `orders` al pasar a `credit_dispatched_pending_payment = true`:
+
+- Crea `notification` con `target_role = 'contabilidad'`: "Pedido a crédito despachado — {cliente} — saldo $X — vence {fecha}".
+- En `AccountingDashboard` agregar panel **"Pedidos a crédito pendientes de cobro"** con: cliente, asesor, saldo, fecha pactada, semáforo (verde/amarillo/rojo según días restantes), enlace al pedido y a sus abonos.
+
+## 7. Detalles técnicos
+
+- **Tabla `order_payments`**: GRANTs explícitos + RLS (asesor dueño / admin / contabilidad / logística-read).
+- **Trigger recalculo**: `AFTER INSERT/UPDATE/DELETE ON order_payments` → actualiza `orders.abono` y `payment_complete`.
+- **`isOrderFullyPaid` (src/hooks/useOrders.ts)**: sin cambios; al recalcular `abono` y `payment_complete` automáticamente queda consistente.
+- **Logística (src/pages/Logistica.tsx)**: ajustar `readyOrders` para incluir pedidos `is_credit && production_status === 'listo'` aunque no estén pagados.
+- **`payment-proofs` bucket**: ya existe, se reutiliza.
+- **Asesor ID Ilian**: `cdc6ce92-406f-467a-8f27-595c0cbe956a` (hardcoded en el trigger).
+
+## Archivos a crear / tocar
+
+```text
+supabase/migrations/<nuevo>.sql         (tabla, triggers, RLS, grants)
+src/hooks/useOrderPayments.ts           (CRUD abonos)
+src/components/ventas/PaymentsList.tsx  (lista cronológica)
+src/components/ventas/AddPaymentDialog.tsx
+src/components/ventas/MisPedidos.tsx    (mostrar abonos + badge crédito)
+src/pages/Logistica.tsx                 (incluir créditos en "listos")
+src/components/logistics/DispatchConfirmDialog.tsx (fecha pago)
+src/components/contabilidad/CreditOrdersPanel.tsx (nuevo)
+src/components/contabilidad/AccountingDashboard.tsx (montar panel)
+```

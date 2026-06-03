@@ -1087,6 +1087,56 @@ export type Database = {
         }
         Relationships: []
       }
+      order_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          method: string | null
+          notes: string | null
+          order_id: string
+          payment_date: string
+          proof_url: string | null
+          recorded_by: string | null
+          recorded_by_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          method?: string | null
+          notes?: string | null
+          order_id: string
+          payment_date?: string
+          proof_url?: string | null
+          recorded_by?: string | null
+          recorded_by_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          method?: string | null
+          notes?: string | null
+          order_id?: string
+          payment_date?: string
+          proof_url?: string | null
+          recorded_by?: string | null
+          recorded_by_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           abono: number | null
@@ -1100,6 +1150,7 @@ export type Database = {
           client_nit: string | null
           client_phone: string | null
           created_at: string
+          credit_dispatched_pending_payment: boolean
           delivery_date: string | null
           dispatch_notes: string | null
           dispatched_at: string | null
@@ -1112,12 +1163,14 @@ export type Database = {
           invoice_notes: string | null
           invoice_number: string | null
           invoice_status: string
+          is_credit: boolean
           is_recompra: boolean
           logo_url: string | null
           numero_guia: string | null
           observations: string | null
           payment_complete: boolean | null
           payment_date: string | null
+          payment_due_date: string | null
           payment_method: string | null
           payment_proof_url: string | null
           personalization: string | null
@@ -1150,6 +1203,7 @@ export type Database = {
           client_nit?: string | null
           client_phone?: string | null
           created_at?: string
+          credit_dispatched_pending_payment?: boolean
           delivery_date?: string | null
           dispatch_notes?: string | null
           dispatched_at?: string | null
@@ -1162,12 +1216,14 @@ export type Database = {
           invoice_notes?: string | null
           invoice_number?: string | null
           invoice_status?: string
+          is_credit?: boolean
           is_recompra?: boolean
           logo_url?: string | null
           numero_guia?: string | null
           observations?: string | null
           payment_complete?: boolean | null
           payment_date?: string | null
+          payment_due_date?: string | null
           payment_method?: string | null
           payment_proof_url?: string | null
           personalization?: string | null
@@ -1200,6 +1256,7 @@ export type Database = {
           client_nit?: string | null
           client_phone?: string | null
           created_at?: string
+          credit_dispatched_pending_payment?: boolean
           delivery_date?: string | null
           dispatch_notes?: string | null
           dispatched_at?: string | null
@@ -1212,12 +1269,14 @@ export type Database = {
           invoice_notes?: string | null
           invoice_number?: string | null
           invoice_status?: string
+          is_credit?: boolean
           is_recompra?: boolean
           logo_url?: string | null
           numero_guia?: string | null
           observations?: string | null
           payment_complete?: boolean | null
           payment_date?: string | null
+          payment_due_date?: string | null
           payment_method?: string | null
           payment_proof_url?: string | null
           personalization?: string | null

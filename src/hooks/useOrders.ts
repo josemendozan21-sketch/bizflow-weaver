@@ -47,6 +47,9 @@ export interface Order {
   shipping_cost: number | null;
   returned_at: string | null;
   return_notes: string | null;
+  is_credit: boolean | null;
+  payment_due_date: string | null;
+  credit_dispatched_pending_payment: boolean | null;
 }
 
 type PaymentFields = Pick<Order, "sale_type" | "total_amount" | "abono" | "payment_method" | "payment_complete" | "payment_proof_url">;

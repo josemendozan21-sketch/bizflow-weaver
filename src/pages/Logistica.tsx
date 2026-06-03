@@ -310,6 +310,10 @@ const Logistica = () => {
     if (o.sale_type === "menor") {
       return o.production_status === "listo";
     }
+    // Pedidos a crédito: pueden despacharse aunque no estén totalmente pagados.
+    if (o.is_credit) {
+      return o.production_status === "listo";
+    }
     // Wholesale: must be in "listo" stage AND payment complete
     const productionDone = o.production_status === "listo";
     const paid = isOrderFullyPaid(o);
@@ -319,6 +323,7 @@ const Logistica = () => {
   // Pending: wholesale orders not yet ready (production not done or not paid)
   const pendingOrders = allOrders.filter((o) => {
     if (o.sale_type === "menor") return false;
+    if (o.is_credit) return false;
     if (o.dispatched_at) return false;
     if (o.production_status === "despachado" || o.production_status === "entregado") return false;
     const productionDone = o.production_status === "listo";
@@ -669,6 +674,17 @@ function GroupDispatchDialog({ group }: { group: ShipmentGroup }) {
 
   const isBogoexpress = transportadora === "bogoexpress";
 
+  // Crédito: si algún item del grupo es a crédito y no está completamente pagado,
+  // exigimos fecha pactada de pago y marcamos la bandera de despacho con saldo.
+  const creditItems = group.items.filter((it) => it.is_credit);
+  const hasCreditPending = creditItems.some((it) => !isOrderFullyPaid(it));
+  const initialDueDate = creditItems.find((it) => it.payment_due_date)?.payment_due_date || "";
+  const [paymentDueDate, setPaymentDueDate] = useState<string>(initialDueDate);
+  const creditBalance = creditItems.reduce(
+    (s, it) => s + Math.max((Number(it.total_amount) || 0) - (Number(it.abono) || 0), 0),
+    0,
+  );
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) setGuiaFile(file);
@@ -707,6 +723,20 @@ function GroupDispatchDialog({ group }: { group: ShipmentGroup }) {
     if (error) {
       toast.error("Error al despachar", { description: error.message });
       return;
+    }
+
+    // Marcar pedidos a crédito con saldo pendiente para alertar a contabilidad
+    if (hasCreditPending) {
+      const pendingCreditIds = creditItems
+        .filter((it) => !isOrderFullyPaid(it))
+        .map((it) => it.id);
+      await supabase
+        .from("orders")
+        .update({
+          credit_dispatched_pending_payment: true,
+          payment_due_date: paymentDueDate || null,
+        })
+        .in("id", pendingCreditIds);
     }
 
     queryClient.invalidateQueries({ queryKey: ["orders"] });
@@ -772,6 +802,7 @@ function GroupDispatchDialog({ group }: { group: ShipmentGroup }) {
   };
 
   const canSubmit = transportadora && (isBogoexpress || numeroGuia.trim() || dispatchNotes.trim());
+  const canSubmitFinal = canSubmit && (!hasCreditPending || !!paymentDueDate);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -799,6 +830,25 @@ function GroupDispatchDialog({ group }: { group: ShipmentGroup }) {
         <p className="text-sm text-muted-foreground">
           Envío de <span className="font-semibold text-foreground">{group.clientName}</span> — {group.items.length} item(s), {group.totalUnits} unidades en total
         </p>
+        {hasCreditPending && (
+          <div className="rounded-md border border-purple-300 bg-purple-50 p-3 text-xs space-y-2">
+            <p className="text-purple-900 font-medium">
+              Pedido a crédito — saldo pendiente ${creditBalance.toLocaleString("es-CO")}
+            </p>
+            <p className="text-purple-800">
+              Se despachará sin pago completo. Contabilidad recibirá una alerta para hacer seguimiento.
+            </p>
+            <div className="space-y-1">
+              <Label className="text-xs">Fecha pactada de pago *</Label>
+              <Input
+                type="date"
+                value={paymentDueDate}
+                onChange={(e) => setPaymentDueDate(e.target.value)}
+                className="h-8"
+              />
+            </div>
+          </div>
+        )}
         <div className="space-y-4 pt-2">
           <div className="space-y-1.5">
             <Label>Transportadora</Label>
@@ -852,7 +902,7 @@ function GroupDispatchDialog({ group }: { group: ShipmentGroup }) {
             <Textarea value={dispatchNotes} onChange={(e) => setDispatchNotes(e.target.value)} placeholder="Ej: Se envió por moto propia, entrega en punto..." />
           </div>
 
-          <Button className="w-full" onClick={handleConfirm} disabled={!canSubmit || uploading}>
+          <Button className="w-full" onClick={handleConfirm} disabled={!canSubmitFinal || uploading}>
             <Truck className="h-4 w-4 mr-1" />
             {uploading ? "Subiendo..." : "Marcar como despachado"}
           </Button>
@@ -902,6 +952,17 @@ function ShipmentGroupCard({
             {group.brands.map((b) => (
               <Badge key={b} variant={b === "magical" ? "default" : "secondary"} className="text-xs">{brandLabel(b)}</Badge>
             ))}
+            {group.items.some((it) => it.is_credit) && (
+              <Badge className="bg-purple-100 text-purple-800 text-xs hover:bg-purple-100">
+                Crédito
+                {(() => {
+                  const saldo = group.items
+                    .filter((it) => it.is_credit)
+                    .reduce((s, it) => s + Math.max((Number(it.total_amount) || 0) - (Number(it.abono) || 0), 0), 0);
+                  return saldo > 0 ? ` · saldo $${saldo.toLocaleString("es-CO")}` : "";
+                })()}
+              </Badge>
+            )}
             <AdvisorHeaderBadge items={group.items} />
           </div>
           <p className="text-xs text-muted-foreground mt-1">
