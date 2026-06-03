@@ -674,6 +674,17 @@ function GroupDispatchDialog({ group }: { group: ShipmentGroup }) {
 
   const isBogoexpress = transportadora === "bogoexpress";
 
+  // Crédito: si algún item del grupo es a crédito y no está completamente pagado,
+  // exigimos fecha pactada de pago y marcamos la bandera de despacho con saldo.
+  const creditItems = group.items.filter((it) => it.is_credit);
+  const hasCreditPending = creditItems.some((it) => !isOrderFullyPaid(it));
+  const initialDueDate = creditItems.find((it) => it.payment_due_date)?.payment_due_date || "";
+  const [paymentDueDate, setPaymentDueDate] = useState<string>(initialDueDate);
+  const creditBalance = creditItems.reduce(
+    (s, it) => s + Math.max((Number(it.total_amount) || 0) - (Number(it.abono) || 0), 0),
+    0,
+  );
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) setGuiaFile(file);
@@ -712,6 +723,20 @@ function GroupDispatchDialog({ group }: { group: ShipmentGroup }) {
     if (error) {
       toast.error("Error al despachar", { description: error.message });
       return;
+    }
+
+    // Marcar pedidos a crédito con saldo pendiente para alertar a contabilidad
+    if (hasCreditPending) {
+      const pendingCreditIds = creditItems
+        .filter((it) => !isOrderFullyPaid(it))
+        .map((it) => it.id);
+      await supabase
+        .from("orders")
+        .update({
+          credit_dispatched_pending_payment: true,
+          payment_due_date: paymentDueDate || null,
+        })
+        .in("id", pendingCreditIds);
     }
 
     queryClient.invalidateQueries({ queryKey: ["orders"] });
