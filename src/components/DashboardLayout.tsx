@@ -3,6 +3,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Outlet } from "react-router-dom";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { AIAssistant } from "@/components/AIAssistant";
 
 export function DashboardLayout() {
   return (
@@ -23,6 +24,7 @@ export function DashboardLayout() {
             </ErrorBoundary>
           </main>
         </div>
+        <AIAssistant />
       </div>
     </SidebarProvider>
   );
