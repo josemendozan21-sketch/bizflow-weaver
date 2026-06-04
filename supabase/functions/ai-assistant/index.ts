@@ -217,8 +217,9 @@ serve(async (req) => {
     if (userErr || !userData?.user) return jres({ error: "unauthorized" }, 401);
     const userId = userData.user.id;
 
-    const { data: roleRow } = await admin.from("user_roles").select("role").eq("user_id", userId).maybeSingle();
-    const role = (roleRow?.role as string) ?? "asesor_comercial";
+    const { data: roleRows } = await admin.from("user_roles").select("role").eq("user_id", userId);
+    const roles = (roleRows ?? []).map((r: any) => String(r.role)).filter(Boolean);
+    const role = roles.join(", ") || "asesor_comercial";
     const { data: profile } = await admin.from("profiles").select("full_name").eq("id", userId).maybeSingle();
     const advisorName = (profile as any)?.full_name ?? null;
 
@@ -235,6 +236,7 @@ Usuario actual: ${advisorName ?? "(sin nombre)"} (rol: ${role}, user_id: ${userI
 Reglas:
 - Usa las herramientas para responder con datos reales. No inventes.
 - Si el usuario es asesor_comercial, los datos ya están filtrados a sus propios pedidos.
+- Para ubicar pedidos por nombre, busca coincidencias parciales y acepta nombres sin tildes: "andres lopez" debe encontrar "Andrés López".
 - Responde corto y claro en español, en formato útil (listas, tablas markdown).
 - Si una búsqueda no devuelve resultados, dilo y sugiere ajustar filtros.
 - Para "¿dónde está el pedido X?" busca por cliente o producto y reporta production_status, fecha, transportadora y guía si aplica.`,
@@ -271,7 +273,7 @@ Reglas:
         for (const tc of msg.tool_calls) {
           let args: any = {};
           try { args = JSON.parse(tc.function.arguments || "{}"); } catch {}
-          const result = await runTool(tc.function.name, args, { admin, userId, role, advisorName });
+          const result = await runTool(tc.function.name, args, { admin, userId, role, roles, advisorName });
           convo.push({
             role: "tool",
             tool_call_id: tc.id,
