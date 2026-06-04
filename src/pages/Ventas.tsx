@@ -2676,7 +2676,6 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
                 </div>
               )}
 
-              <FileField label="Adjuntar soporte de pago (si aplica)" name="payment_proof" value={genericPaymentProofFile} onChange={setGenericPaymentProofFile} />
             </fieldset>
           )}
 
