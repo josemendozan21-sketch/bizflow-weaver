@@ -54,6 +54,97 @@ function toAccountingOrder(o: Order): AccountingOrder {
   };
 }
 
+function DownloadInvoicesExport({ allOrders }: { allOrders: Order[] }) {
+  const [mode, setMode] = useState<"todos" | "mes" | "dia" | "rango">("mes");
+  const today = new Date().toISOString().slice(0, 10);
+  const [month, setMonth] = useState(today.slice(0, 7));
+  const [day, setDay] = useState(today);
+  const [from, setFrom] = useState(today);
+  const [to, setTo] = useState(today);
+  const [open, setOpen] = useState(false);
+
+  const handleDownload = () => {
+    let filtered = allOrders;
+    let label = "todos";
+    if (mode === "mes") {
+      filtered = allOrders.filter((o) => (o.created_at ?? "").slice(0, 7) === month);
+      label = month;
+    } else if (mode === "dia") {
+      filtered = allOrders.filter((o) => (o.created_at ?? "").slice(0, 10) === day);
+      label = day;
+    } else if (mode === "rango") {
+      filtered = allOrders.filter((o) => {
+        const d = (o.created_at ?? "").slice(0, 10);
+        return d >= from && d <= to;
+      });
+      label = `${from}_a_${to}`;
+    }
+    if (filtered.length === 0) {
+      toast.error("No hay pedidos en el período seleccionado");
+      return;
+    }
+    exportOrdersFullReport(filtered, `contabilidad_${label}.xlsx`);
+    toast.success(`${filtered.length} pedido(s) exportados`);
+    setOpen(false);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline">
+          <Download className="h-4 w-4 mr-2" />
+          Descargar Excel (pagos, IVA, comisiones)
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 space-y-3" align="start">
+        <div>
+          <Label className="text-sm">Período</Label>
+          <div className="grid grid-cols-4 gap-1 mt-1">
+            {(["mes", "dia", "rango", "todos"] as const).map((m) => (
+              <Button
+                key={m}
+                size="sm"
+                variant={mode === m ? "default" : "outline"}
+                onClick={() => setMode(m)}
+                className="text-xs h-8"
+              >
+                {m === "mes" ? "Mes" : m === "dia" ? "Día" : m === "rango" ? "Rango" : "Todos"}
+              </Button>
+            ))}
+          </div>
+        </div>
+        {mode === "mes" && (
+          <div>
+            <Label className="text-sm">Mes</Label>
+            <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
+          </div>
+        )}
+        {mode === "dia" && (
+          <div>
+            <Label className="text-sm">Día</Label>
+            <Input type="date" value={day} onChange={(e) => setDay(e.target.value)} />
+          </div>
+        )}
+        {mode === "rango" && (
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-sm">Desde</Label>
+              <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-sm">Hasta</Label>
+              <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+            </div>
+          </div>
+        )}
+        <Button className="w-full" onClick={handleDownload}>
+          <Download className="h-4 w-4 mr-2" /> Descargar
+        </Button>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function canInvoice(o: Order): boolean {
   if (o.sale_type === "menor") return isOrderFullyPaid(o);
   if (o.sale_type === "mayor") return !!o.client_nit;
