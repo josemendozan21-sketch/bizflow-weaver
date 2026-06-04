@@ -1,6 +1,14 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
+async function sha256Hex(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input)
+  const buf = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -46,6 +54,26 @@ Deno.serve(async (req) => {
 
     const SWEATSPOT_WEB_ADVISOR_ID = '00000000-0000-0000-0000-000000000001'
 
+    // Dedup determinístico: si el cliente envía external_order_id lo usamos,
+    // si no, generamos un hash estable del payload + ventana de 10 min para
+    // bloquear reentregas duplicadas del webhook (mismo pedido, segundos aparte)
+    // sin bloquear recompras legítimas días después.
+    const providedExternalId = body.external_order_id
+      ? String(body.external_order_id).trim()
+      : null
+    const dedupWindow = Math.floor(Date.now() / (1000 * 60 * 10)) // bucket 10 min
+    const dedupKey = providedExternalId
+      ? providedExternalId
+      : 'sw:' + (await sha256Hex([
+          client_name,
+          product,
+          String(quantity),
+          String(body.client_phone ?? ''),
+          String(body.client_email ?? ''),
+          String(body.total_amount ?? ''),
+          String(dedupWindow),
+        ].join('|'))).slice(0, 32)
+
     const order = {
       // Pedidos que entran desde la web de Sweatspot SIEMPRE son ventas al detal
       // de producto terminado de la marca Sweatspot. Forzamos estos valores para
@@ -79,6 +107,7 @@ Deno.serve(async (req) => {
       // directamente como "listo" para que aparezcan en Logística y se pueda
       // generar el rótulo de envío sin pasar por producción.
       production_status: 'listo',
+      external_order_id: dedupKey,
     }
 
     const supabase = createClient(
@@ -86,9 +115,31 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     )
 
+    // Si ya existe un pedido con este dedupKey, lo devolvemos como duplicado
+    const { data: existing } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('external_order_id', dedupKey)
+      .maybeSingle()
+    if (existing) {
+      return new Response(
+        JSON.stringify({ ok: true, duplicate: true, order_id: existing.id }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+
     const { data, error } = await supabase.from('orders').insert(order).select().single()
 
     if (error) {
+      // Si chocamos con el índice único de external_order_id, es un duplicado
+      // por carrera concurrente — devolvemos OK para que el webhook no reintente.
+      if (String(error.message).includes('orders_external_order_id_unique_idx') ||
+          String((error as any).code) === '23505') {
+        return new Response(
+          JSON.stringify({ ok: true, duplicate: true }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        )
+      }
       console.error('Insert error:', error)
       return new Response(JSON.stringify({ error: error.message }), {
         status: 500,
