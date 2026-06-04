@@ -7,6 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Upload, Download, Clock, FileText, ExternalLink, BarChart3, Wallet, Trash2, AlertTriangle, Mail, Percent, Users, Target } from "lucide-react";
 import AccountingDashboard from "@/components/contabilidad/AccountingDashboard";
 import MonthlyAnalysis from "@/components/contabilidad/MonthlyAnalysis";
@@ -327,20 +330,7 @@ const Contabilidad = () => {
 
       {!isReadOnly && (
         <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            onClick={() => {
-              if (allOrders.length === 0) {
-                toast.error("No hay pedidos para exportar");
-                return;
-              }
-              exportOrdersFullReport(allOrders);
-              toast.success(`${allOrders.length} pedido(s) exportados`);
-            }}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Descargar Excel completo (pagos, IVA, comisiones)
-          </Button>
+          <DownloadInvoicesExport allOrders={allOrders} />
         </div>
       )}
 
