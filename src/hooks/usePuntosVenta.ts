@@ -105,6 +105,7 @@ export type PosSale = {
   recorded_by: string;
   recorded_by_name: string | null;
   sale_date: string;
+  payment_proof_url?: string | null;
 };
 
 
