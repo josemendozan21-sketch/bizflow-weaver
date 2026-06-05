@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Edit, Package, AlertTriangle, Upload, ImageIcon, Tag } from "lucide-react";
+import { Plus, Edit, Package, AlertTriangle, Upload, ImageIcon, Tag, ExternalLink } from "lucide-react";
 import { PosProduct, useUpsertPosProduct, uploadPosProductPhoto } from "@/hooks/usePuntosVenta";
 import { toast } from "sonner";
 
@@ -88,19 +88,36 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
               <div>
                 <p className="text-sm font-medium mb-2">Selecciona una marca</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                  {brands.map(([brand, count]) => (
-                    <button
-                      key={brand}
-                      onClick={() => setSelectedBrand(brand)}
-                      className="rounded-lg border p-4 text-left transition hover:bg-accent hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Tag className="h-4 w-4 text-primary" />
-                        <span className="font-semibold text-sm truncate">{brand}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">{count} producto{count !== 1 ? "s" : ""}</p>
-                    </button>
-                  ))}
+                  {brands.map(([brand, count]) => {
+                    const isNutrition = brand.trim().toLowerCase() === "sweatspot nutrición";
+                    const handleClick = () => {
+                      if (isNutrition) {
+                        window.open(`/puntos-venta/nutricion?location=${locationId}`, "_blank");
+                      } else {
+                        setSelectedBrand(brand);
+                      }
+                    };
+                    return (
+                      <button
+                        key={brand}
+                        onClick={handleClick}
+                        className="rounded-lg border p-4 text-left transition hover:bg-accent hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <div className="flex items-center gap-2">
+                          {isNutrition ? (
+                            <ExternalLink className="h-4 w-4 text-primary" />
+                          ) : (
+                            <Tag className="h-4 w-4 text-primary" />
+                          )}
+                          <span className="font-semibold text-sm truncate">{brand}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {count} producto{count !== 1 ? "s" : ""}
+                          {isNutrition ? " · ver proveedores" : ""}
+                        </p>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ) : (

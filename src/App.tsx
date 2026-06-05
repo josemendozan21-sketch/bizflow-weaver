@@ -22,6 +22,7 @@ import Galeria from "./pages/Galeria";
 import FeriaPOS from "./pages/FeriaPOS";
 import Presupuesto from "./pages/Presupuesto";
 import PuntosVenta from "./pages/PuntosVenta";
+import NutricionProveedores from "./pages/NutricionProveedores";
 import Personal from "./pages/Personal";
 import Documentos from "./pages/Documentos";
 import NotFound from "./pages/NotFound";
@@ -153,6 +154,7 @@ const App = () => (
                 <Route path="/feria-pos" element={<ProtectedRoute path="/feria-pos"><FeriaPOS /></ProtectedRoute>} />
                 <Route path="/presupuesto" element={<ProtectedRoute path="/presupuesto"><Presupuesto /></ProtectedRoute>} />
                 <Route path="/puntos-venta" element={<ProtectedRoute path="/puntos-venta"><PuntosVenta /></ProtectedRoute>} />
+                <Route path="/puntos-venta/nutricion" element={<ProtectedRoute path="/puntos-venta"><NutricionProveedores /></ProtectedRoute>} />
                 <Route path="/personal" element={<ProtectedRoute path="/personal"><Personal /></ProtectedRoute>} />
                 <Route path="/documentos" element={<ProtectedRoute path="/documentos"><Documentos /></ProtectedRoute>} />
                   </Route>

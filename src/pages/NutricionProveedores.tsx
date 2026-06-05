@@ -1,0 +1,86 @@
+import { useMemo } from "react";
+import { useSearchParams, Link } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, Truck, Package } from "lucide-react";
+import { usePosLocations, usePosProducts } from "@/hooks/usePuntosVenta";
+
+const NUTRITION_BRAND = "Sweatspot Nutrición";
+
+export default function NutricionProveedores() {
+  const [params] = useSearchParams();
+  const locationId = params.get("location") ?? "";
+  const { data: locations = [] } = usePosLocations();
+  const { data: products = [] } = usePosProducts(locationId || null);
+  const location = locations.find((l) => l.id === locationId);
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, typeof products>();
+    for (const p of products) {
+      if ((p.brand ?? "").trim() !== NUTRITION_BRAND) continue;
+      const sup = (p.supplier ?? "Sin proveedor").trim() || "Sin proveedor";
+      if (!map.has(sup)) map.set(sup, [] as any);
+      (map.get(sup) as any).push(p);
+    }
+    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [products]);
+
+  return (
+    <div className="space-y-4 p-4 max-w-5xl mx-auto">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <h1 className="text-lg font-semibold flex items-center gap-2">
+            <Truck className="h-5 w-5 text-primary" /> Proveedores de Nutrición
+          </h1>
+          <p className="text-xs text-muted-foreground">
+            {location ? `${location.name} · ${location.city}` : "Punto de venta"}
+          </p>
+        </div>
+        <Button asChild variant="outline" size="sm">
+          <Link to="/puntos-venta"><ArrowLeft className="h-4 w-4 mr-1" /> Volver</Link>
+        </Button>
+      </div>
+
+      {grouped.length === 0 ? (
+        <Card className="p-10 text-center text-sm text-muted-foreground">
+          No hay productos de nutrición registrados.
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {grouped.map(([supplier, items]) => {
+            const total = items.reduce((s: number, p: any) => s + Number(p.available || 0), 0);
+            return (
+              <Card key={supplier}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-2">
+                      <Truck className="h-4 w-4 text-primary" /> {supplier}
+                    </span>
+                    <Badge variant="outline" className="text-xs">{items.length} productos · {total} und</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-1.5">
+                  {(items as any[]).map((p) => (
+                    <div key={p.id} className="flex items-center justify-between text-sm border-b last:border-0 py-1">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium">{p.name}</p>
+                        {p.notes && <p className="text-[10px] text-muted-foreground truncate">{p.notes}</p>}
+                      </div>
+                      <div className="text-right pl-2">
+                        <p className="text-xs font-semibold">${Number(p.sale_price).toLocaleString()}</p>
+                        <p className="text-[10px] text-muted-foreground flex items-center gap-1 justify-end">
+                          <Package className="h-3 w-3" />{Number(p.available)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
