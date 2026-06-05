@@ -33,6 +33,17 @@ export async function uploadPosCashProof(file: File, locationId: string) {
   return data.publicUrl;
 }
 
+export async function uploadPosSaleProof(file: File, locationId: string) {
+  const ext = file.name.split(".").pop() || "jpg";
+  const path = `${locationId}/sales/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await supabase.storage
+    .from("pos-cash-proofs")
+    .upload(path, file, { upsert: false, contentType: file.type });
+  if (error) throw error;
+  const { data } = supabase.storage.from("pos-cash-proofs").getPublicUrl(path);
+  return data.publicUrl;
+}
+
 export type PosCashWithdrawal = {
   id: string;
   location_id: string;
