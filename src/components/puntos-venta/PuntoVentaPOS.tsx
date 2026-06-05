@@ -436,8 +436,30 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
             )}
             <p className="text-[10px] text-muted-foreground mt-1">Opcional. Si no lo tienes ahora, lo puedes adjuntar luego en "Ventas del día".</p>
           </div>
-          <Button onClick={handleConfirm} disabled={sale.isPending || uploadingProof || cart.length === 0} className="w-full">
-            {uploadingProof ? "Subiendo soporte..." : sale.isPending ? "Registrando..." : `Cobrar ${fmt(total)}`}
+          <div>
+            <Label>Foto de mercancía entregada</Label>
+            {merchFile ? (
+              <div className="flex items-center justify-between gap-2 p-2 border rounded text-sm">
+                <span className="truncate flex items-center gap-2">
+                  <Camera className="h-4 w-4 text-primary shrink-0" />
+                  {merchFile.name}
+                </span>
+                <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={() => setMerchFile(null)}>
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ) : (
+              <Input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={(e) => setMerchFile(e.target.files?.[0] ?? null)}
+              />
+            )}
+            <p className="text-[10px] text-muted-foreground mt-1">Opcional. Foto de lo que se lleva el cliente. También se puede adjuntar luego.</p>
+          </div>
+          <Button onClick={handleConfirm} disabled={sale.isPending || uploadingProof || uploadingMerch || cart.length === 0} className="w-full">
+            {uploadingProof || uploadingMerch ? "Subiendo foto..." : sale.isPending ? "Registrando..." : `Cobrar ${fmt(total)}`}
           </Button>
         </CardContent>
       </Card>
