@@ -11,10 +11,12 @@ import { CartItem, CONSUMIDOR_FINAL, PosProduct, useRegisterPosSale } from "@/ho
 import { toast } from "sonner";
 
 type Props = { locationId: string; products: PosProduct[] };
+const NUTRITION_BRAND = "Sweatspot Nutrición";
 
 export function PuntoVentaPOS({ locationId, products }: Props) {
   const [search, setSearch] = useState("");
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+  const [selectedSupplier, setSelectedSupplier] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState("efectivo");
   const [clientName, setClientName] = useState("");
@@ -44,14 +46,31 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
     () =>
       available
         .filter((p) => !selectedBrand || (p.brand ?? "Sin marca").trim() === selectedBrand)
+        .filter((p) => !selectedSupplier || ((p.supplier ?? "Sin proveedor").trim() || "Sin proveedor") === selectedSupplier)
         .filter(
           (p) =>
             !search ||
             p.name.toLowerCase().includes(search.toLowerCase()) ||
-            (p.brand ?? "").toLowerCase().includes(search.toLowerCase())
+            (p.brand ?? "").toLowerCase().includes(search.toLowerCase()) ||
+            (p.supplier ?? "").toLowerCase().includes(search.toLowerCase())
         ),
-    [available, selectedBrand, search]
+    [available, selectedBrand, selectedSupplier, search]
   );
+
+  const isNutritionSelected = selectedBrand === NUTRITION_BRAND;
+
+  const nutritionSuppliers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const map = new Map<string, PosProduct[]>();
+    for (const p of available) {
+      if ((p.brand ?? "Sin marca").trim() !== NUTRITION_BRAND) continue;
+      const supplier = (p.supplier ?? "Sin proveedor").trim() || "Sin proveedor";
+      if (q && !supplier.toLowerCase().includes(q) && !p.name.toLowerCase().includes(q)) continue;
+      if (!map.has(supplier)) map.set(supplier, []);
+      map.get(supplier)?.push(p);
+    }
+    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [available, search]);
 
   const total = cart.reduce((a, b) => a + Number(b.product.sale_price) * b.quantity, 0);
   const totalUnits = cart.reduce((a, b) => a + b.quantity, 0);
@@ -139,6 +158,47 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
 
   const isSearching = search.trim().length > 0;
 
+  const goBack = () => {
+    if (selectedSupplier) {
+      setSelectedSupplier(null);
+    } else {
+      setSelectedBrand(null);
+    }
+    setSearch("");
+  };
+
+  const renderProducts = () => {
+    if (filtered.length === 0) {
+      return <p className="text-sm text-muted-foreground text-center py-8">No hay productos disponibles.</p>;
+    }
+
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {filtered.map((p) => (
+          <button
+            key={p.id}
+            onClick={() => addToCart(p)}
+            className="text-left p-3 rounded-md border hover:border-primary hover:bg-accent transition"
+          >
+            <div className="aspect-square w-full mb-2 rounded bg-muted overflow-hidden flex items-center justify-center">
+              {p.photo_url ? (
+                <img src={p.photo_url} alt={p.name} className="w-full h-full object-cover" loading="lazy" />
+              ) : (
+                <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+              )}
+            </div>
+            <p className="font-medium text-sm truncate">{p.name}</p>
+            {p.brand && <p className="text-xs text-muted-foreground truncate">{p.brand}</p>}
+            <div className="flex items-center justify-between mt-2">
+              <span className="font-bold text-sm">${Number(p.sale_price).toLocaleString()}</span>
+              <Badge variant="outline" className="text-xs">{Number(p.available)}</Badge>
+            </div>
+          </button>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="grid lg:grid-cols-[1fr_380px] gap-4">
       <Card>
@@ -146,8 +206,8 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
           <CardTitle className="text-base">Productos disponibles</CardTitle>
           <div className="flex items-center gap-2 mt-2">
             {selectedBrand && (
-              <Button variant="outline" size="sm" onClick={() => { setSelectedBrand(null); setSearch(""); }}>
-                ← Marcas
+              <Button variant="outline" size="sm" onClick={goBack}>
+                {selectedSupplier ? "← Proveedores" : "← Marcas"}
               </Button>
             )}
             <div className="relative flex-1">
@@ -160,47 +220,43 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
               />
             </div>
           </div>
-          {selectedBrand && !isSearching && (
-            <Badge variant="outline" className="mt-1 w-fit">{selectedBrand}</Badge>
+          {selectedBrand && (!isSearching || isNutritionSelected) && (
+            <Badge variant="outline" className="mt-1 w-fit">
+              {selectedSupplier ? `${selectedBrand} · ${selectedSupplier}` : selectedBrand}
+            </Badge>
           )}
         </CardHeader>
         <CardContent>
           {available.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">No hay productos disponibles.</p>
-          ) : isSearching ? (
-            filtered.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">No hay productos que coincidan.</p>
+          ) : isNutritionSelected && !selectedSupplier ? (
+            nutritionSuppliers.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">No hay proveedores que coincidan.</p>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {filtered.map((p) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {nutritionSuppliers.map(([supplier, items]) => (
                   <button
-                    key={p.id}
-                    onClick={() => addToCart(p)}
-                    className="text-left p-3 rounded-md border hover:border-primary hover:bg-accent transition"
+                    key={supplier}
+                    onClick={() => { setSelectedSupplier(supplier); setSearch(""); }}
+                    className="rounded-lg border p-4 text-left transition hover:bg-accent hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary"
                   >
-                    <div className="aspect-square w-full mb-2 rounded bg-muted overflow-hidden flex items-center justify-center">
-                      {p.photo_url ? (
-                        <img src={p.photo_url} alt={p.name} className="w-full h-full object-cover" loading="lazy" />
-                      ) : (
-                        <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
-                      )}
+                    <div className="flex items-center gap-2">
+                      <Tag className="h-4 w-4 text-primary" />
+                      <span className="font-semibold text-sm truncate">{supplier}</span>
                     </div>
-                    <p className="font-medium text-sm truncate">{p.name}</p>
-                    {p.brand && <p className="text-xs text-muted-foreground truncate">{p.brand}</p>}
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="font-bold text-sm">${Number(p.sale_price).toLocaleString()}</span>
-                      <Badge variant="outline" className="text-xs">{Number(p.available)}</Badge>
-                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{items.length} producto{items.length !== 1 ? "s" : ""}</p>
                   </button>
                 ))}
               </div>
             )
+          ) : isSearching ? (
+            renderProducts()
           ) : !selectedBrand ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {brands.map(([brand, count]) => (
                 <button
                   key={brand}
-                  onClick={() => setSelectedBrand(brand)}
+                  onClick={() => { setSelectedBrand(brand); setSelectedSupplier(null); }}
                   className="rounded-lg border p-4 text-left transition hover:bg-accent hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <div className="flex items-center gap-2">
@@ -216,29 +272,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
               No hay productos disponibles.
             </p>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {filtered.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => addToCart(p)}
-                  className="text-left p-3 rounded-md border hover:border-primary hover:bg-accent transition"
-                >
-                  <div className="aspect-square w-full mb-2 rounded bg-muted overflow-hidden flex items-center justify-center">
-                    {p.photo_url ? (
-                      <img src={p.photo_url} alt={p.name} className="w-full h-full object-cover" loading="lazy" />
-                    ) : (
-                      <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
-                    )}
-                  </div>
-                  <p className="font-medium text-sm truncate">{p.name}</p>
-                  {p.brand && <p className="text-xs text-muted-foreground truncate">{p.brand}</p>}
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="font-bold text-sm">${Number(p.sale_price).toLocaleString()}</span>
-                    <Badge variant="outline" className="text-xs">{Number(p.available)}</Badge>
-                  </div>
-                </button>
-              ))}
-            </div>
+            renderProducts()
           )}
         </CardContent>
       </Card>
