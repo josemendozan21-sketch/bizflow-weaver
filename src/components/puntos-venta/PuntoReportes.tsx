@@ -66,7 +66,7 @@ export function PuntoReportes({ sales, movements, products, locationId, location
         <TabsTrigger value="resumen"><BarChart3 className="h-4 w-4 mr-1" /> Resumen</TabsTrigger>
         <TabsTrigger value="ventas-dia"><Receipt className="h-4 w-4 mr-1" /> Ventas del día</TabsTrigger>
         <TabsTrigger value="retiros"><Wallet className="h-4 w-4 mr-1" /> Caja</TabsTrigger>
-        <TabsTrigger value="movimientos"><Package className="h-4 w-4 mr-1" /> Movimientos</TabsTrigger>
+        
       </TabsList>
 
       <TabsContent value="resumen" className="space-y-4">
