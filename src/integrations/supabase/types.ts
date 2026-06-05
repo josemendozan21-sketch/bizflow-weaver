@@ -1859,6 +1859,7 @@ export type Database = {
           location_id: string
           notes: string | null
           payment_method: string | null
+          payment_proof_url: string | null
           recorded_by: string
           recorded_by_name: string | null
           sale_date: string
@@ -1878,6 +1879,7 @@ export type Database = {
           location_id: string
           notes?: string | null
           payment_method?: string | null
+          payment_proof_url?: string | null
           recorded_by: string
           recorded_by_name?: string | null
           sale_date?: string
@@ -1897,6 +1899,7 @@ export type Database = {
           location_id?: string
           notes?: string | null
           payment_method?: string | null
+          payment_proof_url?: string | null
           recorded_by?: string
           recorded_by_name?: string | null
           sale_date?: string
