@@ -136,34 +136,6 @@ export function PuntoReportes({ sales, movements, products, locationId, location
       <TabsContent value="retiros">
         <PuntoRetiros locationId={locationId} />
       </TabsContent>
-
-      <TabsContent value="movimientos">
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Movimientos recientes de inventario</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {movements.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">Sin movimientos.</p>
-          ) : (
-            <div className="space-y-1 max-h-[300px] overflow-y-auto text-sm">
-              {movements.slice(0, 50).map((m) => (
-                <div key={m.id} className="flex justify-between border-b py-2">
-                  <div>
-                    <span className={m.direction === "entrada" ? "text-green-600" : "text-red-600"}>
-                      {m.direction === "entrada" ? "+" : "−"}{Number(m.quantity)}
-                    </span>{" "}
-                    <span className="font-medium">{m.product_name}</span>
-                    <p className="text-xs text-muted-foreground">{m.source} {m.supplier ? `· ${m.supplier}` : ""}</p>
-                  </div>
-                  <span className="text-xs text-muted-foreground">{new Date(m.created_at).toLocaleDateString()}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      </TabsContent>
     </Tabs>
   );
 }
