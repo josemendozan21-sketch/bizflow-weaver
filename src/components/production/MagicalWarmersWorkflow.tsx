@@ -91,6 +91,7 @@ const CANONICAL_REFERENCES = [
   "Bacteria", "Antifaz", "Gafas pequeñas", "Pélvica", "Pelvica",
   "Mariposas", "Mariposa",
   "Gorro quimioterapia", "Gorro Quimioterapia", "Gorro",
+  "Tornillo 3D",
 ];
 
 /** Sweatspot references that are actually produced in-house (termos).
