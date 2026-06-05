@@ -20,6 +20,9 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
   const [clientName, setClientName] = useState("");
   const [clientDoc, setClientDoc] = useState("");
   const [clientEmail, setClientEmail] = useState("");
+  const [clientPhone, setClientPhone] = useState("");
+  const [clientAddress, setClientAddress] = useState("");
+  const [clientCity, setClientCity] = useState("");
   const [notes, setNotes] = useState("");
   const sale = useRegisterPosSale(locationId);
 
@@ -105,6 +108,9 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
         client_name: clientName || undefined,
         client_document: clientDoc || undefined,
         client_email: clientEmail || undefined,
+        client_phone: clientPhone || undefined,
+        client_address: clientAddress || undefined,
+        client_city: clientCity || undefined,
         notes: notes || undefined,
       });
       toast.success(`Venta registrada por $${total.toLocaleString()}`);
@@ -112,6 +118,9 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
       setClientName("");
       setClientDoc("");
       setClientEmail("");
+      setClientPhone("");
+      setClientAddress("");
+      setClientCity("");
       setNotes("");
     } catch (e: any) {
       toast.error(e.message ?? "Error al registrar venta");
@@ -122,6 +131,9 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
     setClientName(CONSUMIDOR_FINAL.client_name);
     setClientDoc(CONSUMIDOR_FINAL.client_document);
     setClientEmail(CONSUMIDOR_FINAL.client_email);
+    setClientPhone(CONSUMIDOR_FINAL.client_phone);
+    setClientAddress(CONSUMIDOR_FINAL.client_address);
+    setClientCity(CONSUMIDOR_FINAL.client_city);
     toast.success("Datos de Consumidor Final cargados");
   };
 
@@ -307,6 +319,20 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
               <Label>Email</Label>
               <Input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} />
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label>Teléfono</Label>
+              <Input value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} />
+            </div>
+            <div>
+              <Label>Ciudad</Label>
+              <Input value={clientCity} onChange={(e) => setClientCity(e.target.value)} />
+            </div>
+          </div>
+          <div>
+            <Label>Dirección</Label>
+            <Input value={clientAddress} onChange={(e) => setClientAddress(e.target.value)} />
           </div>
           <div>
             <Label>Método de pago</Label>

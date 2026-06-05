@@ -1847,6 +1847,8 @@ export type Database = {
       }
       pos_sales: {
         Row: {
+          client_address: string | null
+          client_city: string | null
           client_document: string | null
           client_email: string | null
           client_name: string | null
@@ -1864,6 +1866,8 @@ export type Database = {
           total_cost: number
         }
         Insert: {
+          client_address?: string | null
+          client_city?: string | null
           client_document?: string | null
           client_email?: string | null
           client_name?: string | null
@@ -1881,6 +1885,8 @@ export type Database = {
           total_cost?: number
         }
         Update: {
+          client_address?: string | null
+          client_city?: string | null
           client_document?: string | null
           client_email?: string | null
           client_name?: string | null
