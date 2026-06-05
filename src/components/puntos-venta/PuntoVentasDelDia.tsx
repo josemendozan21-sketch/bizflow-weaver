@@ -3,8 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Download, FileDown, Package2, Receipt, Camera, ImageIcon, Loader2 } from "lucide-react";
-import { PosSale, usePosSaleItems, uploadPosSaleProof, useAttachPosSaleProof } from "@/hooks/usePuntosVenta";
+import { Download, FileDown, Package2, Receipt, Camera, ImageIcon, Loader2, Box } from "lucide-react";
+import { PosSale, usePosSaleItems, uploadPosSaleProof, useAttachPosSaleProof, useAttachPosSaleMerchandise } from "@/hooks/usePuntosVenta";
 import { downloadSalePdf, saleDocType, type InvoiceLocation } from "@/lib/posInvoicePdf";
 import { downloadCsvDay, downloadInvoicesZip } from "@/lib/posExports";
 import { toast } from "sonner";
@@ -15,8 +15,11 @@ export function PuntoVentasDelDia({ sales, location, locationId }: Props) {
   const today = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(today);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [uploadingMerchId, setUploadingMerchId] = useState<string | null>(null);
   const inputsRef = useRef<Record<string, HTMLInputElement | null>>({});
+  const merchInputsRef = useRef<Record<string, HTMLInputElement | null>>({});
   const attach = useAttachPosSaleProof(locationId);
+  const attachMerch = useAttachPosSaleMerchandise(locationId);
 
   const handleAttach = async (saleId: string, file: File) => {
     try {
@@ -28,6 +31,19 @@ export function PuntoVentasDelDia({ sales, location, locationId }: Props) {
       toast.error(e.message ?? "Error al subir soporte");
     } finally {
       setUploadingId(null);
+    }
+  };
+
+  const handleAttachMerch = async (saleId: string, file: File) => {
+    try {
+      setUploadingMerchId(saleId);
+      const url = await uploadPosSaleProof(file, locationId);
+      await attachMerch.mutateAsync({ saleId, url });
+      toast.success("Foto de mercancía adjuntada");
+    } catch (e: any) {
+      toast.error(e.message ?? "Error al subir foto");
+    } finally {
+      setUploadingMerchId(null);
     }
   };
 
@@ -106,6 +122,7 @@ export function PuntoVentasDelDia({ sales, location, locationId }: Props) {
                     <th className="text-right">Total</th>
                     <th>Pago</th>
                     <th>Soporte</th>
+                    <th>Mercancía</th>
                     <th>Vendedor</th>
                     <th></th>
                   </tr>
@@ -164,6 +181,43 @@ export function PuntoVentasDelDia({ sales, location, locationId }: Props) {
                                 <Loader2 className="h-3 w-3 animate-spin" />
                               ) : (
                                 <><Camera className="h-3 w-3 mr-1" /> Adjuntar</>
+                              )}
+                            </Button>
+                          )}
+                        </td>
+                        <td className="text-xs">
+                          <input
+                            ref={(el) => { merchInputsRef.current[s.id] = el; }}
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) handleAttachMerch(s.id, f);
+                              e.target.value = "";
+                            }}
+                          />
+                          {s.merchandise_photo_url ? (
+                            <div className="flex items-center gap-1">
+                              <a href={s.merchandise_photo_url} target="_blank" rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-primary hover:underline">
+                                <ImageIcon className="h-3.5 w-3.5" /> Ver
+                              </a>
+                              <Button size="sm" variant="ghost" className="h-6 px-1.5 text-[10px]"
+                                onClick={() => merchInputsRef.current[s.id]?.click()}
+                                disabled={uploadingMerchId === s.id}>
+                                Cambiar
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]"
+                              onClick={() => merchInputsRef.current[s.id]?.click()}
+                              disabled={uploadingMerchId === s.id}>
+                              {uploadingMerchId === s.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <><Box className="h-3 w-3 mr-1" /> Foto</>
                               )}
                             </Button>
                           )}

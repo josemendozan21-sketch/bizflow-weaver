@@ -106,6 +106,7 @@ export type PosSale = {
   recorded_by_name: string | null;
   sale_date: string;
   payment_proof_url?: string | null;
+  merchandise_photo_url?: string | null;
 };
 
 
@@ -414,6 +415,20 @@ export function useAttachPosSaleProof(locationId: string) {
   });
 }
 
+export function useAttachPosSaleMerchandise(locationId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ saleId, url }: { saleId: string; url: string }) => {
+      const { error } = await supabase
+        .from("pos_sales")
+        .update({ merchandise_photo_url: url } as any)
+        .eq("id", saleId);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pos_sales", locationId] }),
+  });
+}
+
 export type CartItem = {
   product: PosProduct;
   quantity: number;
@@ -437,6 +452,7 @@ export function useRegisterPosSale(locationId: string) {
       notes?: string;
       override_unit_prices?: Record<string, number>;
       payment_proof_url?: string | null;
+      merchandise_photo_url?: string | null;
     }) => {
       const priceFor = (id: string, fallback: number) =>
         input.override_unit_prices && input.override_unit_prices[id] != null
@@ -483,7 +499,8 @@ export function useRegisterPosSale(locationId: string) {
           recorded_by: user!.id,
           recorded_by_name: user!.email,
           payment_proof_url: input.payment_proof_url ?? null,
-        })
+          merchandise_photo_url: input.merchandise_photo_url ?? null,
+        } as any)
         .select()
         .single();
       if (sErr) throw sErr;

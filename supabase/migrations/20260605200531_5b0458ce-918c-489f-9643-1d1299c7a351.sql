@@ -1,0 +1,1 @@
+ALTER TABLE public.pos_sales ADD COLUMN IF NOT EXISTS merchandise_photo_url text;

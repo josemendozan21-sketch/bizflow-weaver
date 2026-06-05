@@ -1857,6 +1857,7 @@ export type Database = {
           discount: number
           id: string
           location_id: string
+          merchandise_photo_url: string | null
           notes: string | null
           payment_method: string | null
           payment_proof_url: string | null
@@ -1877,6 +1878,7 @@ export type Database = {
           discount?: number
           id?: string
           location_id: string
+          merchandise_photo_url?: string | null
           notes?: string | null
           payment_method?: string | null
           payment_proof_url?: string | null
@@ -1897,6 +1899,7 @@ export type Database = {
           discount?: number
           id?: string
           location_id?: string
+          merchandise_photo_url?: string | null
           notes?: string | null
           payment_method?: string | null
           payment_proof_url?: string | null
