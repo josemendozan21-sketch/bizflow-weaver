@@ -130,7 +130,7 @@ export function PuntoReportes({ sales, movements, products, locationId, location
       </TabsContent>
 
       <TabsContent value="ventas-dia">
-        <PuntoVentasDelDia sales={sales} location={location} />
+        <PuntoVentasDelDia sales={sales} location={location} locationId={locationId} />
       </TabsContent>
 
       <TabsContent value="retiros">

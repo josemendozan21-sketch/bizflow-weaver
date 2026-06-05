@@ -6,8 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ShoppingCart, Plus, Minus, Trash2, Search, UserCheck, ImageIcon, Tag } from "lucide-react";
-import { CartItem, CONSUMIDOR_FINAL, PosProduct, useRegisterPosSale } from "@/hooks/usePuntosVenta";
+import { ShoppingCart, Plus, Minus, Trash2, Search, UserCheck, ImageIcon, Tag, Camera, X } from "lucide-react";
+import { CartItem, CONSUMIDOR_FINAL, PosProduct, useRegisterPosSale, uploadPosSaleProof } from "@/hooks/usePuntosVenta";
 import { toast } from "sonner";
 
 type Props = { locationId: string; products: PosProduct[] };
@@ -26,6 +26,8 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
   const [clientAddress, setClientAddress] = useState("");
   const [clientCity, setClientCity] = useState("");
   const [notes, setNotes] = useState("");
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [uploadingProof, setUploadingProof] = useState(false);
   const sale = useRegisterPosSale(locationId);
 
   const available = useMemo(
@@ -121,6 +123,15 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
       return;
     }
     try {
+      let payment_proof_url: string | null = null;
+      if (proofFile) {
+        setUploadingProof(true);
+        try {
+          payment_proof_url = await uploadPosSaleProof(proofFile, locationId);
+        } finally {
+          setUploadingProof(false);
+        }
+      }
       await sale.mutateAsync({
         items: cart,
         payment_method: paymentMethod,
@@ -131,6 +142,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
         client_address: clientAddress || undefined,
         client_city: clientCity || undefined,
         notes: notes || undefined,
+        payment_proof_url,
       });
       toast.success(`Venta registrada por $${total.toLocaleString()}`);
       setCart([]);
@@ -141,6 +153,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
       setClientAddress("");
       setClientCity("");
       setNotes("");
+      setProofFile(null);
     } catch (e: any) {
       toast.error(e.message ?? "Error al registrar venta");
     }
@@ -388,8 +401,30 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
             <Label>Notas</Label>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
           </div>
-          <Button onClick={handleConfirm} disabled={sale.isPending || cart.length === 0} className="w-full">
-            {sale.isPending ? "Registrando..." : `Cobrar ${fmt(total)}`}
+          <div>
+            <Label>Soporte de pago (Nequi, Bold, etc.)</Label>
+            {proofFile ? (
+              <div className="flex items-center justify-between gap-2 p-2 border rounded text-sm">
+                <span className="truncate flex items-center gap-2">
+                  <Camera className="h-4 w-4 text-primary shrink-0" />
+                  {proofFile.name}
+                </span>
+                <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={() => setProofFile(null)}>
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ) : (
+              <Input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={(e) => setProofFile(e.target.files?.[0] ?? null)}
+              />
+            )}
+            <p className="text-[10px] text-muted-foreground mt-1">Opcional. Si no lo tienes ahora, lo puedes adjuntar luego en "Ventas del día".</p>
+          </div>
+          <Button onClick={handleConfirm} disabled={sale.isPending || uploadingProof || cart.length === 0} className="w-full">
+            {uploadingProof ? "Subiendo soporte..." : sale.isPending ? "Registrando..." : `Cobrar ${fmt(total)}`}
           </Button>
         </CardContent>
       </Card>

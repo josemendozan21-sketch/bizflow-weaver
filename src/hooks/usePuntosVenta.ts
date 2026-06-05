@@ -33,6 +33,17 @@ export async function uploadPosCashProof(file: File, locationId: string) {
   return data.publicUrl;
 }
 
+export async function uploadPosSaleProof(file: File, locationId: string) {
+  const ext = file.name.split(".").pop() || "jpg";
+  const path = `${locationId}/sales/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await supabase.storage
+    .from("pos-cash-proofs")
+    .upload(path, file, { upsert: false, contentType: file.type });
+  if (error) throw error;
+  const { data } = supabase.storage.from("pos-cash-proofs").getPublicUrl(path);
+  return data.publicUrl;
+}
+
 export type PosCashWithdrawal = {
   id: string;
   location_id: string;
@@ -94,7 +105,9 @@ export type PosSale = {
   recorded_by: string;
   recorded_by_name: string | null;
   sale_date: string;
+  payment_proof_url?: string | null;
 };
+
 
 export type PosSaleItem = {
   id: string;
@@ -387,6 +400,20 @@ export function useRegisterPosEntry(locationId: string) {
   });
 }
 
+export function useAttachPosSaleProof(locationId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ saleId, url }: { saleId: string; url: string }) => {
+      const { error } = await supabase
+        .from("pos_sales")
+        .update({ payment_proof_url: url } as any)
+        .eq("id", saleId);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pos_sales", locationId] }),
+  });
+}
+
 export type CartItem = {
   product: PosProduct;
   quantity: number;
@@ -409,6 +436,7 @@ export function useRegisterPosSale(locationId: string) {
       split?: { method: string; amount: number };
       notes?: string;
       override_unit_prices?: Record<string, number>;
+      payment_proof_url?: string | null;
     }) => {
       const priceFor = (id: string, fallback: number) =>
         input.override_unit_prices && input.override_unit_prices[id] != null
@@ -454,6 +482,7 @@ export function useRegisterPosSale(locationId: string) {
           notes: finalNotes,
           recorded_by: user!.id,
           recorded_by_name: user!.email,
+          payment_proof_url: input.payment_proof_url ?? null,
         })
         .select()
         .single();
