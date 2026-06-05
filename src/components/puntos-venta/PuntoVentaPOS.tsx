@@ -401,8 +401,30 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
             <Label>Notas</Label>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
           </div>
-          <Button onClick={handleConfirm} disabled={sale.isPending || cart.length === 0} className="w-full">
-            {sale.isPending ? "Registrando..." : `Cobrar ${fmt(total)}`}
+          <div>
+            <Label>Soporte de pago (Nequi, Bold, etc.)</Label>
+            {proofFile ? (
+              <div className="flex items-center justify-between gap-2 p-2 border rounded text-sm">
+                <span className="truncate flex items-center gap-2">
+                  <Camera className="h-4 w-4 text-primary shrink-0" />
+                  {proofFile.name}
+                </span>
+                <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={() => setProofFile(null)}>
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ) : (
+              <Input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={(e) => setProofFile(e.target.files?.[0] ?? null)}
+              />
+            )}
+            <p className="text-[10px] text-muted-foreground mt-1">Opcional. Si no lo tienes ahora, lo puedes adjuntar luego en "Ventas del día".</p>
+          </div>
+          <Button onClick={handleConfirm} disabled={sale.isPending || uploadingProof || cart.length === 0} className="w-full">
+            {uploadingProof ? "Subiendo soporte..." : sale.isPending ? "Registrando..." : `Cobrar ${fmt(total)}`}
           </Button>
         </CardContent>
       </Card>
