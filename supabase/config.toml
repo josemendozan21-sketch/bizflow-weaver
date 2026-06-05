@@ -4,3 +4,6 @@ verify_jwt = true
 
 [functions.create-real-user]
 verify_jwt = true
+
+[functions.process-email-queue]
+verify_jwt = true
