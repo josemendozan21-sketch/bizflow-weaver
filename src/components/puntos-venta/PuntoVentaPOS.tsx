@@ -28,6 +28,8 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
   const [notes, setNotes] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [uploadingProof, setUploadingProof] = useState(false);
+  const [merchFile, setMerchFile] = useState<File | null>(null);
+  const [uploadingMerch, setUploadingMerch] = useState(false);
   const sale = useRegisterPosSale(locationId);
 
   const available = useMemo(
@@ -132,6 +134,15 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
           setUploadingProof(false);
         }
       }
+      let merchandise_photo_url: string | null = null;
+      if (merchFile) {
+        setUploadingMerch(true);
+        try {
+          merchandise_photo_url = await uploadPosSaleProof(merchFile, locationId);
+        } finally {
+          setUploadingMerch(false);
+        }
+      }
       await sale.mutateAsync({
         items: cart,
         payment_method: paymentMethod,
@@ -143,6 +154,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
         client_city: clientCity || undefined,
         notes: notes || undefined,
         payment_proof_url,
+        merchandise_photo_url,
       });
       toast.success(`Venta registrada por $${total.toLocaleString()}`);
       setCart([]);
@@ -154,6 +166,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
       setClientCity("");
       setNotes("");
       setProofFile(null);
+      setMerchFile(null);
     } catch (e: any) {
       toast.error(e.message ?? "Error al registrar venta");
     }
