@@ -452,6 +452,7 @@ export function useRegisterPosSale(locationId: string) {
       notes?: string;
       override_unit_prices?: Record<string, number>;
       payment_proof_url?: string | null;
+      merchandise_photo_url?: string | null;
     }) => {
       const priceFor = (id: string, fallback: number) =>
         input.override_unit_prices && input.override_unit_prices[id] != null
@@ -498,6 +499,7 @@ export function useRegisterPosSale(locationId: string) {
           recorded_by: user!.id,
           recorded_by_name: user!.email,
           payment_proof_url: input.payment_proof_url ?? null,
+          merchandise_photo_url: input.merchandise_photo_url ?? null,
         })
         .select()
         .single();
