@@ -107,6 +107,7 @@ export type PosSale = {
   sale_date: string;
 };
 
+
 export type PosSaleItem = {
   id: string;
   sale_id: string;
