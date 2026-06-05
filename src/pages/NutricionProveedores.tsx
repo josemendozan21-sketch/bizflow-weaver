@@ -3,7 +3,7 @@ import { useSearchParams, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Truck, Package } from "lucide-react";
+import { ArrowLeft, Truck, Package, Tag } from "lucide-react";
 import { usePosLocations, usePosProducts } from "@/hooks/usePuntosVenta";
 
 const NUTRITION_BRAND = "Sweatspot Nutrición";
@@ -56,9 +56,8 @@ export default function NutricionProveedores() {
           No hay productos de nutrición registrados.
         </Card>
       ) : !current ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {grouped.map(([supplier, items]) => {
-            const total = items.reduce((s: number, p: any) => s + Number(p.available || 0), 0);
             return (
               <button
                 key={supplier}
@@ -66,11 +65,11 @@ export default function NutricionProveedores() {
                 className="rounded-lg border p-4 text-left transition hover:bg-accent hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <div className="flex items-center gap-2">
-                  <Truck className="h-5 w-5 text-primary" />
-                  <span className="font-semibold">{supplier}</span>
+                  <Tag className="h-4 w-4 text-primary" />
+                  <span className="font-semibold text-sm truncate">{supplier}</span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {items.length} producto{items.length !== 1 ? "s" : ""} · {total} und en stock
+                  {items.length} producto{items.length !== 1 ? "s" : ""}
                 </p>
               </button>
             );
