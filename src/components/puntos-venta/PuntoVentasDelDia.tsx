@@ -185,7 +185,6 @@ export function PuntoVentasDelDia({ sales, location, locationId }: Props) {
                             </Button>
                           )}
                         </td>
-                        <td className="text-xs">{s.recorded_by_name ?? "—"}</td>
                         <td className="text-xs">
                           <input
                             ref={(el) => { merchInputsRef.current[s.id] = el; }}
@@ -223,6 +222,7 @@ export function PuntoVentasDelDia({ sales, location, locationId }: Props) {
                             </Button>
                           )}
                         </td>
+                        <td className="text-xs">{s.recorded_by_name ?? "—"}</td>
                         <td className="text-right">
                           <Button size="sm" variant="ghost"
                             onClick={() => downloadSalePdf({ sale: s, items: its, location })}>
