@@ -400,6 +400,20 @@ export function useRegisterPosEntry(locationId: string) {
   });
 }
 
+export function useAttachPosSaleProof(locationId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ saleId, url }: { saleId: string; url: string }) => {
+      const { error } = await supabase
+        .from("pos_sales")
+        .update({ payment_proof_url: url } as any)
+        .eq("id", saleId);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pos_sales", locationId] }),
+  });
+}
+
 export type CartItem = {
   product: PosProduct;
   quantity: number;
