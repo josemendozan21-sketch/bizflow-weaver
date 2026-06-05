@@ -4,8 +4,11 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export const CONSUMIDOR_FINAL = {
   client_name: "Consumidor Final",
-  client_document: "222222222222",
-  client_email: "",
+  client_document: "1234567891",
+  client_email: "afadf12323@gmail.com",
+  client_phone: "",
+  client_address: "Calle 123 # 45-65",
+  client_city: "Bogotá",
 };
 
 export async function uploadPosProductPhoto(file: File, locationId: string) {
@@ -81,6 +84,8 @@ export type PosSale = {
   client_phone: string | null;
   client_email: string | null;
   client_document: string | null;
+  client_address?: string | null;
+  client_city?: string | null;
   discount: number;
   payment_method: string | null;
   total_amount: number;
@@ -398,6 +403,8 @@ export function useRegisterPosSale(locationId: string) {
       client_phone?: string;
       client_email?: string;
       client_document?: string;
+      client_address?: string;
+      client_city?: string;
       discount?: number;
       split?: { method: string; amount: number };
       notes?: string;
@@ -438,6 +445,8 @@ export function useRegisterPosSale(locationId: string) {
           client_phone: input.client_phone ?? null,
           client_email: input.client_email ?? null,
           client_document: input.client_document ?? null,
+          client_address: input.client_address ?? null,
+          client_city: input.client_city ?? null,
           discount,
           payment_method: paymentLabel,
           total_amount,
