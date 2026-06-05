@@ -500,7 +500,7 @@ export function useRegisterPosSale(locationId: string) {
           recorded_by_name: user!.email,
           payment_proof_url: input.payment_proof_url ?? null,
           merchandise_photo_url: input.merchandise_photo_url ?? null,
-        })
+        } as any)
         .select()
         .single();
       if (sErr) throw sErr;
