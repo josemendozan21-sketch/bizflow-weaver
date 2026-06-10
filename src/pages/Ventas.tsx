@@ -1663,6 +1663,15 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     const logoNombre = ((fd.get("ss_logo_nombre") as string) || "").trim();
     const fechaRequerida = fd.get("ss_fechaRequerida") as string;
 
+    // Nombre/referencia del logo OBLIGATORIO para pedidos mayor con logo
+    if (!ssNoLogo && !logoNombre) {
+      toast.error("Referencia del logo requerida", {
+        description: "Escriba un nombre claro para identificar el logo (ej: Logo Coca-Cola v2).",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
     // Validate all lines
     for (const line of ssLines) {
       if (!line.tamano || !line.colorSilicona || !line.colorTinta || !line.units) {
