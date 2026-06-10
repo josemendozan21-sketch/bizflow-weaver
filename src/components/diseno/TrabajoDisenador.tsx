@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { LogoPreview } from "./LogoPreview";
 
 interface Props {
   requests: LogoRequest[];
@@ -200,7 +201,7 @@ function DesignerCard({ request: req }: { request: LogoRequest }) {
               )}
             </div>
             <div className="border rounded-lg p-2 bg-muted/20 flex items-center justify-center min-h-[80px]">
-              <img src={req.original_logo_url} alt="Original" className="max-h-20 object-contain" />
+              <LogoPreview url={req.original_logo_url} alt="Original" />
             </div>
           </div>
           <div className="space-y-1.5">
