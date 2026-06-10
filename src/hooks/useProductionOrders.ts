@@ -278,11 +278,13 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
       // If current stage is produccion_cuerpos, add produced quantity to body_stock
       if (po.current_stage === "produccion_cuerpos" && po.molde) {
         const qtyToAdd = confirmedQuantity ?? po.quantity;
+        const { resolveCanonicalBodyRef } = await import("@/lib/canonicalBodyRef");
+        const canonicalMolde = await resolveCanonicalBodyRef(po.brand, po.molde);
         const { data: existing } = await supabase
           .from("body_stock")
           .select("*")
           .eq("brand", po.brand)
-          .ilike("referencia", po.molde)
+          .ilike("referencia", canonicalMolde)
           .maybeSingle();
 
         if (existing) {
@@ -293,7 +295,7 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
         } else {
           await supabase
             .from("body_stock")
-            .insert({ brand: po.brand, referencia: po.molde, available: qtyToAdd });
+            .insert({ brand: po.brand, referencia: canonicalMolde, available: qtyToAdd });
         }
 
         // Mirror as an inventory movement (entrada) so Inventarios sees it
@@ -305,7 +307,7 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
             .select("id")
             .eq("brand", po.brand)
             .eq("category", "cuerpos_referencias")
-            .ilike("name", po.molde)
+            .ilike("name", canonicalMolde)
             .maybeSingle();
 
           if (!stockItem) {
@@ -314,7 +316,7 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
               .insert({
                 brand: po.brand,
                 category: "cuerpos_referencias",
-                name: po.molde,
+                name: canonicalMolde,
                 available: 0,
                 in_process: 0,
               } as any)
@@ -326,7 +328,7 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
           const { data: { user: authUser } } = await supabase.auth.getUser();
           await supabase.from("inventory_movements").insert({
             stock_item_id: stockItem?.id ?? null,
-            item_name: po.molde,
+            item_name: canonicalMolde,
             brand: po.brand,
             category: "cuerpos_referencias",
             quantity: qtyToAdd,
@@ -592,7 +594,12 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
           .single();
 
         if (task) {
-          const refName = task.referencia;
+          const { resolveCanonicalBodyRef } = await import("@/lib/canonicalBodyRef");
+          const refName = await resolveCanonicalBodyRef(
+            "magical",
+            task.referencia,
+            (task as any).tipo_plastico,
+          );
           const { data: existing } = await supabase
             .from("body_stock")
             .select("*")
