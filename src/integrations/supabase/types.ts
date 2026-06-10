@@ -1058,6 +1058,7 @@ export type Database = {
           designer_id: string | null
           designer_name: string | null
           id: string
+          logo_name: string | null
           original_logo_url: string
           product: string
           status: Database["public"]["Enums"]["logo_request_status"]
@@ -1078,6 +1079,7 @@ export type Database = {
           designer_id?: string | null
           designer_name?: string | null
           id?: string
+          logo_name?: string | null
           original_logo_url: string
           product: string
           status?: Database["public"]["Enums"]["logo_request_status"]
@@ -1098,6 +1100,7 @@ export type Database = {
           designer_id?: string | null
           designer_name?: string | null
           id?: string
+          logo_name?: string | null
           original_logo_url?: string
           product?: string
           status?: Database["public"]["Enums"]["logo_request_status"]
