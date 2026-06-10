@@ -564,10 +564,11 @@ export const MagicalWarmersWorkflow = () => {
                 const qty = parseInt(finalizeActualQty, 10);
                 if (!qty || qty <= 0) { toast.error("Ingrese una cantidad válida."); return; }
                 if (!finalizeFabricatedBy.trim()) { toast.error("Indique quién fabricó."); return; }
-                // Canonicalize reference: strip any trailing "(Frío)"/"(Calor)" then append the task's tipo.
-                const tipoLabel = finalizeTask.tipo_plastico === "frio" ? "Frío" : "Calor";
+                // Canonicalize reference: strip any trailing tipo suffix then append the canonical one.
+                // DB convention: "frio" -> "(Frío)", "calor" -> "(Térmico)".
+                const tipoLabel = finalizeTask.tipo_plastico === "frio" ? "Frío" : "Térmico";
                 const baseRef = finalizeTask.referencia
-                  .replace(/\s*\((Frío|Frio|Calor)\)\s*$/i, "")
+                  .replace(/\s*\((Frío|Frio|Calor|Térmico|Termico)\)\s*$/i, "")
                   .trim();
                 const canonicalRef = `${baseRef} (${tipoLabel})`;
                 const { error: updErr } = await supabase
