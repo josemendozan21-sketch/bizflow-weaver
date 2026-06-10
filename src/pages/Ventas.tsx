@@ -1477,7 +1477,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
               <FileField label="Adjuntar RUT de la empresa (opcional)" name="mw_rut" value={rutFileState} onChange={setRutFileState} accept="image/*,.pdf" />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="mw_logo_nombre">Nombre o referencia del logo</Label>
+              <Label htmlFor="mw_logo_nombre">Nombre o referencia del logo *</Label>
               <Input
                 id="mw_logo_nombre"
                 name="mw_logo_nombre"
@@ -2198,7 +2198,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
               <FileField label="Adjuntar RUT de la empresa (opcional)" name="ss_rut" value={ssRutFileState} onChange={setSsRutFileState} accept="image/*,.pdf" />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="ss_logo_nombre">Nombre o referencia del logo</Label>
+              <Label htmlFor="ss_logo_nombre">Nombre o referencia del logo *</Label>
               <Input
                 id="ss_logo_nombre"
                 name="ss_logo_nombre"
