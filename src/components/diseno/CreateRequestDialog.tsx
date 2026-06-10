@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 export function CreateRequestDialog() {
   const [open, setOpen] = useState(false);
   const [clientName, setClientName] = useState("");
+  const [logoName, setLogoName] = useState("");
   const [brand, setBrand] = useState("");
   const [product, setProduct] = useState("");
   const [comments, setComments] = useState("");
@@ -38,8 +39,8 @@ export function CreateRequestDialog() {
   };
 
   const handleSubmit = async () => {
-    if (!clientName.trim() || !brand.trim() || !product.trim() || !logoFile || !user) {
-      toast({ title: "Campos requeridos", description: "Completa cliente, marca, producto y logo.", variant: "destructive" });
+    if (!clientName.trim() || !logoName.trim() || !brand.trim() || !product.trim() || !logoFile || !user) {
+      toast({ title: "Campos requeridos", description: "Completa cliente, nombre del logo, marca, producto y logo.", variant: "destructive" });
       return;
     }
     setUploading(true);
@@ -47,6 +48,7 @@ export function CreateRequestDialog() {
       const logoUrl = await uploadLogoFile(logoFile, "originals");
       await createRequest.mutateAsync({
         client_name: clientName.trim(),
+        logo_name: logoName.trim(),
         brand: brand.trim(),
         product: product.trim(),
         original_logo_url: logoUrl,
@@ -66,6 +68,7 @@ export function CreateRequestDialog() {
 
   const resetForm = () => {
     setClientName("");
+    setLogoName("");
     setBrand("");
     setProduct("");
     setComments("");
@@ -93,6 +96,17 @@ export function CreateRequestDialog() {
               <Label>Marca *</Label>
               <Input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="Ej: Sweatspot" />
             </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Nombre del logo *</Label>
+            <Input
+              value={logoName}
+              onChange={(e) => setLogoName(e.target.value)}
+              placeholder="Ej: Logo principal Aura, Versión blanca, Isotipo 2026"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Identifica este logo para que diseño y estampado lo reconozcan después.
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label>Producto *</Label>

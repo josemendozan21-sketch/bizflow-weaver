@@ -152,7 +152,12 @@ function ApprovedCard({ request: req, role }: { request: LogoRequest; role: stri
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div>
-            <CardTitle className="text-base">{req.client_name}</CardTitle>
+            <CardTitle className="text-base">
+              {req.client_name}
+              {req.logo_name && (
+                <span className="block text-xs font-normal text-primary mt-0.5">🎨 {req.logo_name}</span>
+              )}
+            </CardTitle>
             <p className="text-sm text-muted-foreground">{req.brand} · {req.product}</p>
           </div>
           <Badge className="bg-green-100 text-green-800 border-green-200">
