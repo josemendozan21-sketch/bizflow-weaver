@@ -3,7 +3,8 @@ import { useSearchParams, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Truck, Package, Tag, Camera, ImageIcon, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ArrowLeft, Truck, Package, Tag, Camera, ImageIcon, Loader2, Search } from "lucide-react";
 import { usePosLocations, usePosProducts, useUpsertPosProduct, uploadPosProductPhoto } from "@/hooks/usePuntosVenta";
 import { toast } from "sonner";
 
@@ -16,6 +17,7 @@ export default function NutricionProveedores() {
   const { data: products = [] } = usePosProducts(locationId || null);
   const location = locations.find((l) => l.id === locationId);
   const [selected, setSelected] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const upsert = useUpsertPosProduct(locationId);
   const inputsRef = useRef<Record<string, HTMLInputElement | null>>({});
   const [uploadingId, setUploadingId] = useState<string | null>(null);
@@ -61,6 +63,14 @@ export default function NutricionProveedores() {
 
   const current = selected ? grouped.find(([s]) => s === selected) : null;
 
+  const q = search.trim().toLowerCase();
+  const filteredGroups = q
+    ? grouped.filter(([sup, items]) =>
+        sup.toLowerCase().includes(q) ||
+        (items as any[]).some((p) => p.name.toLowerCase().includes(q))
+      )
+    : grouped;
+
   return (
     <div className="space-y-4 p-4 max-w-5xl mx-auto">
       <div className="flex items-center justify-between gap-2">
@@ -88,8 +98,23 @@ export default function NutricionProveedores() {
           No hay productos de nutrición registrados.
         </Card>
       ) : !current ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-          {grouped.map(([supplier, items]) => {
+        <>
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar proveedor o producto…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-8"
+            />
+          </div>
+          {filteredGroups.length === 0 ? (
+            <Card className="p-6 text-center text-sm text-muted-foreground">
+              No hay proveedores que coincidan.
+            </Card>
+          ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {filteredGroups.map(([supplier, items]) => {
             return (
               <button
                 key={supplier}
@@ -106,7 +131,9 @@ export default function NutricionProveedores() {
               </button>
             );
           })}
-        </div>
+          </div>
+          )}
+        </>
       ) : (
         <Card>
           <CardHeader className="pb-2">
