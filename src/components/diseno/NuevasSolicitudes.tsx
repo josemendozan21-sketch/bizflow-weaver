@@ -39,7 +39,12 @@ export function NuevasSolicitudes({ requests }: Props) {
             <Card key={req.id}>
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
-                  <CardTitle className="text-base">{req.client_name}</CardTitle>
+                  <CardTitle className="text-base">
+                    {req.client_name}
+                    {req.logo_name && (
+                      <span className="block text-xs font-normal text-primary mt-0.5">🎨 {req.logo_name}</span>
+                    )}
+                  </CardTitle>
                   <StatusBadge status={req.status} />
                 </div>
                 <p className="text-sm text-muted-foreground">{req.brand} · {req.product}</p>
