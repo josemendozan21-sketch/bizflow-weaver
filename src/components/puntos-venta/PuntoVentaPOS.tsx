@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { ShoppingCart, Plus, Minus, Trash2, Search, UserCheck, ImageIcon, Tag, Camera, X } from "lucide-react";
 import { Loader2 } from "lucide-react";
-import { CartItem, CONSUMIDOR_FINAL, PosProduct, useRegisterPosSale, uploadPosSaleProof, useUpsertPosProduct, uploadPosProductPhoto } from "@/hooks/usePuntosVenta";
+import { CartItem, CONSUMIDOR_FINAL, PosProduct, useRegisterPosSale, uploadPosSaleProof, useUpsertPosProduct, uploadPosProductPhoto, thumbUrl } from "@/hooks/usePuntosVenta";
 import { toast } from "sonner";
 
 type Props = { locationId: string; products: PosProduct[] };
@@ -247,7 +247,19 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
             >
               <div className="aspect-square w-full mb-2 rounded bg-muted overflow-hidden flex items-center justify-center">
                 {p.photo_url ? (
-                  <img src={p.photo_url} alt={p.name} className="w-full h-full object-cover" loading="lazy" />
+                  <img
+                    src={thumbUrl(p.photo_url, 320) ?? p.photo_url}
+                    alt={p.name}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                    width={160}
+                    height={160}
+                    onError={(e) => {
+                      const img = e.currentTarget;
+                      if (p.photo_url && img.src !== p.photo_url) img.src = p.photo_url;
+                    }}
+                  />
                 ) : (
                   <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
                 )}
