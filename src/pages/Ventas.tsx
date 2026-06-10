@@ -801,6 +801,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       const result = await createLogoRequestFromOrder({
         brand: "Magical Warmers",
         clientName,
+        logoName: logoNombre,
         product: referencia,
         advisorId: user.id,
         advisorName: user.email || "Asesor",
@@ -1710,6 +1711,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       const result = await createLogoRequestFromOrder({
         brand: "Sweatspot",
         clientName,
+        logoName: logoNombre,
         product: firstRef,
         advisorId: user.id,
         advisorName: user.email || "Asesor",
