@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { LogoPreview } from "./LogoPreview";
 
 interface Props {
   requests: LogoRequest[];
@@ -160,11 +161,11 @@ function ApprovedCard({ request: req, role }: { request: LogoRequest; role: stri
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="border rounded-lg p-3 bg-muted/20 flex items-center justify-center">
-          <img
-            src={req.adjusted_logo_url || req.original_logo_url}
+        <div className="border rounded-lg p-3 bg-muted/20 flex items-center justify-center min-h-[96px]">
+          <LogoPreview
+            url={req.adjusted_logo_url || req.original_logo_url}
             alt="Logo aprobado"
-            className="max-h-24 object-contain"
+            maxHeightClass="max-h-24"
           />
         </div>
 
