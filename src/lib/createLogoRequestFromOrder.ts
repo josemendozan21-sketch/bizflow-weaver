@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface OrderLogoData {
   brand: "Magical Warmers" | "Sweatspot";
   clientName: string;
+  logoName?: string;
   product: string;
   advisorId: string;
   advisorName: string;
@@ -46,6 +47,7 @@ export async function createLogoRequestFromOrder(data: OrderLogoData): Promise<{
     const { error: insertError } = await supabase.from("logo_requests").insert({
       brand: data.brand,
       client_name: data.clientName,
+      logo_name: data.logoName || null,
       product: data.product,
       advisor_id: data.advisorId,
       advisor_name: data.advisorName,
