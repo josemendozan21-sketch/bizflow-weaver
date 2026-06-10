@@ -564,6 +564,12 @@ export const MagicalWarmersWorkflow = () => {
                 const qty = parseInt(finalizeActualQty, 10);
                 if (!qty || qty <= 0) { toast.error("Ingrese una cantidad válida."); return; }
                 if (!finalizeFabricatedBy.trim()) { toast.error("Indique quién fabricó."); return; }
+                // Canonicalize reference: strip any trailing "(Frío)"/"(Calor)" then append the task's tipo.
+                const tipoLabel = finalizeTask.tipo_plastico === "frio" ? "Frío" : "Calor";
+                const baseRef = finalizeTask.referencia
+                  .replace(/\s*\((Frío|Frio|Calor)\)\s*$/i, "")
+                  .trim();
+                const canonicalRef = `${baseRef} (${tipoLabel})`;
                 const { error: updErr } = await supabase
                   .from("body_production_tasks")
                   .update({
@@ -571,6 +577,7 @@ export const MagicalWarmersWorkflow = () => {
                     unidades: qty,
                     fabricated_by: finalizeFabricatedBy.trim(),
                     completed_at: new Date().toISOString(),
+                    referencia: canonicalRef,
                   })
                   .eq("id", finalizeTask.id);
                 if (updErr) { toast.error(`Error al finalizar: ${updErr.message}`); return; }
@@ -579,7 +586,7 @@ export const MagicalWarmersWorkflow = () => {
                   .from("body_stock")
                   .select("*")
                   .eq("brand", "magical")
-                  .ilike("referencia", finalizeTask.referencia)
+                  .ilike("referencia", canonicalRef)
                   .maybeSingle();
                 if (existing) {
                   await supabase
@@ -589,7 +596,7 @@ export const MagicalWarmersWorkflow = () => {
                 } else {
                   await supabase
                     .from("body_stock")
-                    .insert({ brand: "magical", referencia: finalizeTask.referencia, available: qty });
+                    .insert({ brand: "magical", referencia: canonicalRef, available: qty });
                 }
                 // Sync stock_items (cuerpos_referencias) so it appears in inventarios view
                 const { data: stockRow } = await supabase
@@ -597,7 +604,7 @@ export const MagicalWarmersWorkflow = () => {
                   .select("id, available, in_process")
                   .eq("brand", "magical")
                   .eq("category", "cuerpos_referencias")
-                  .ilike("name", finalizeTask.referencia)
+                  .ilike("name", canonicalRef)
                   .maybeSingle();
                 if (stockRow) {
                   const estimated = Number(finalizeTask.unidades || 0);
@@ -611,7 +618,7 @@ export const MagicalWarmersWorkflow = () => {
                     .eq("id", stockRow.id);
                 } else {
                   await supabase.from("stock_items").insert({
-                    name: finalizeTask.referencia,
+                    name: canonicalRef,
                     brand: "magical",
                     category: "cuerpos_referencias",
                     available: qty,
@@ -623,10 +630,10 @@ export const MagicalWarmersWorkflow = () => {
                 await supabase.from("notifications").insert({
                   target_role: "inventarios",
                   title: "Cuerpos finalizados — recibir inventario",
-                  message: `${qty} uds de "${finalizeTask.referencia}" finalizadas por ${finalizeFabricatedBy.trim()}. Inventario actualizado, listo para recepción.`,
+                  message: `${qty} uds de "${canonicalRef}" finalizadas por ${finalizeFabricatedBy.trim()}. Inventario actualizado, pendiente de verificación en recepción.`,
                   type: "success",
                 } as any);
-                toast.success(`${qty} uds de "${finalizeTask.referencia}" enviadas a inventario.`);
+                toast.success(`${qty} uds de "${canonicalRef}" enviadas a inventario.`);
                 setFinalizeTask(null);
               }}
             >
