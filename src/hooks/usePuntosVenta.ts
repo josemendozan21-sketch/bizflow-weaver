@@ -12,14 +12,47 @@ export const CONSUMIDOR_FINAL = {
 };
 
 export async function uploadPosProductPhoto(file: File, locationId: string) {
-  const ext = file.name.split(".").pop() || "jpg";
-  const path = `${locationId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const compressed = await compressImage(file, 900, 0.8);
+  const path = `${locationId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
   const { error } = await supabase.storage
     .from("pos-product-photos")
-    .upload(path, file, { upsert: false, contentType: file.type });
+    .upload(path, compressed, { upsert: false, contentType: "image/jpeg", cacheControl: "31536000" });
   if (error) throw error;
   const { data } = supabase.storage.from("pos-product-photos").getPublicUrl(path);
   return data.publicUrl;
+}
+
+/** Resize + re-encode an image client-side to keep uploads small and fast. */
+async function compressImage(file: File, maxSize = 900, quality = 0.8): Promise<Blob> {
+  if (!file.type.startsWith("image/")) return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
+    const w = Math.round(bitmap.width * scale);
+    const h = Math.round(bitmap.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    const blob: Blob | null = await new Promise((resolve) =>
+      canvas.toBlob((b) => resolve(b), "image/jpeg", quality)
+    );
+    return blob ?? file;
+  } catch {
+    return file;
+  }
+}
+
+/** Build a thumbnail URL using Supabase Storage image transforms (falls back gracefully). */
+export function thumbUrl(publicUrl: string | null | undefined, width = 320): string | null {
+  if (!publicUrl) return null;
+  if (publicUrl.includes("/storage/v1/object/public/")) {
+    return publicUrl.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/") +
+      `?width=${width}&quality=70&resize=cover`;
+  }
+  return publicUrl;
 }
 
 export async function uploadPosCashProof(file: File, locationId: string) {
