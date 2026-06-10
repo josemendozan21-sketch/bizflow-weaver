@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ShoppingCart, Plus, Minus, Trash2, Search, UserCheck, ImageIcon, Tag, Camera, X } from "lucide-react";
-import { CartItem, CONSUMIDOR_FINAL, PosProduct, useRegisterPosSale, uploadPosSaleProof } from "@/hooks/usePuntosVenta";
+import { Loader2 } from "lucide-react";
+import { CartItem, CONSUMIDOR_FINAL, PosProduct, useRegisterPosSale, uploadPosSaleProof, useUpsertPosProduct, uploadPosProductPhoto } from "@/hooks/usePuntosVenta";
 import { toast } from "sonner";
 
 type Props = { locationId: string; products: PosProduct[] };
@@ -31,6 +32,40 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
   const [merchFile, setMerchFile] = useState<File | null>(null);
   const [uploadingMerch, setUploadingMerch] = useState(false);
   const sale = useRegisterPosSale(locationId);
+  const upsertProduct = useUpsertPosProduct(locationId);
+  const photoInputsRef = useRef<Record<string, HTMLInputElement | null>>({});
+  const [uploadingPhotoId, setUploadingPhotoId] = useState<string | null>(null);
+
+  const handleProductPhoto = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    product: PosProduct
+  ) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploadingPhotoId(product.id);
+    try {
+      const url = await uploadPosProductPhoto(file, locationId);
+      await upsertProduct.mutateAsync({
+        id: product.id,
+        name: product.name,
+        brand: product.brand,
+        supplier: product.supplier,
+        category: product.category,
+        sale_price: product.sale_price,
+        min_stock: product.min_stock,
+        unit: product.unit,
+        photo_url: url,
+        active: product.active,
+        notes: product.notes,
+      });
+      toast.success("Foto cargada");
+    } catch (err: any) {
+      toast.error(err.message ?? "Error al subir foto");
+    } finally {
+      setUploadingPhotoId(null);
+    }
+  };
 
   const available = useMemo(
     () => products.filter((p) => p.active && Number(p.available) > 0),
@@ -201,25 +236,53 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {filtered.map((p) => (
-          <button
+          <div
             key={p.id}
-            onClick={() => addToCart(p)}
-            className="text-left p-3 rounded-md border hover:border-primary hover:bg-accent transition"
+            className="relative text-left p-3 rounded-md border hover:border-primary hover:bg-accent transition"
           >
-            <div className="aspect-square w-full mb-2 rounded bg-muted overflow-hidden flex items-center justify-center">
-              {p.photo_url ? (
-                <img src={p.photo_url} alt={p.name} className="w-full h-full object-cover" loading="lazy" />
+            <button
+              type="button"
+              onClick={() => addToCart(p)}
+              className="w-full text-left"
+            >
+              <div className="aspect-square w-full mb-2 rounded bg-muted overflow-hidden flex items-center justify-center">
+                {p.photo_url ? (
+                  <img src={p.photo_url} alt={p.name} className="w-full h-full object-cover" loading="lazy" />
+                ) : (
+                  <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+                )}
+              </div>
+              <p className="font-medium text-sm truncate">{p.name}</p>
+              {p.brand && <p className="text-xs text-muted-foreground truncate">{p.brand}</p>}
+              <div className="flex items-center justify-between mt-2">
+                <span className="font-bold text-sm">${Number(p.sale_price).toLocaleString()}</span>
+                <Badge variant="outline" className="text-xs">{Number(p.available)}</Badge>
+              </div>
+            </button>
+            <input
+              ref={(el) => (photoInputsRef.current[p.id] = el)}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={(e) => handleProductPhoto(e, p)}
+            />
+            <Button
+              type="button"
+              size="icon"
+              variant="secondary"
+              className="absolute top-1.5 right-1.5 h-7 w-7 shadow"
+              onClick={(e) => { e.stopPropagation(); photoInputsRef.current[p.id]?.click(); }}
+              disabled={uploadingPhotoId === p.id}
+              title={p.photo_url ? "Cambiar foto" : "Subir foto"}
+            >
+              {uploadingPhotoId === p.id ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+                <Camera className="h-3.5 w-3.5" />
               )}
-            </div>
-            <p className="font-medium text-sm truncate">{p.name}</p>
-            {p.brand && <p className="text-xs text-muted-foreground truncate">{p.brand}</p>}
-            <div className="flex items-center justify-between mt-2">
-              <span className="font-bold text-sm">${Number(p.sale_price).toLocaleString()}</span>
-              <Badge variant="outline" className="text-xs">{Number(p.available)}</Badge>
-            </div>
-          </button>
+            </Button>
+          </div>
         ))}
       </div>
     );
