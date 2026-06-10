@@ -728,6 +728,15 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const logoNombre = ((fd.get("mw_logo_nombre") as string) || "").trim();
     const fechaRequerida = fd.get("mw_fechaRequerida") as string;
 
+    // Nombre/referencia del logo OBLIGATORIO para pedidos mayor con logo
+    if (!noLogo && !logoNombre) {
+      toast.error("Referencia del logo requerida", {
+        description: "Escriba un nombre claro para identificar el logo (ej: Logo Coca-Cola v2).",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
     // Validar molde nuevo si está activo
     if (moldeNuevo) {
       if (!moldeNombre.trim()) {
@@ -792,6 +801,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       const result = await createLogoRequestFromOrder({
         brand: "Magical Warmers",
         clientName,
+        logoName: logoNombre,
         product: referencia,
         advisorId: user.id,
         advisorName: user.email || "Asesor",
@@ -1468,7 +1478,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
               <FileField label="Adjuntar RUT de la empresa (opcional)" name="mw_rut" value={rutFileState} onChange={setRutFileState} accept="image/*,.pdf" />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="mw_logo_nombre">Nombre o referencia del logo</Label>
+              <Label htmlFor="mw_logo_nombre">Nombre o referencia del logo *</Label>
               <Input
                 id="mw_logo_nombre"
                 name="mw_logo_nombre"
@@ -1654,6 +1664,15 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     const logoNombre = ((fd.get("ss_logo_nombre") as string) || "").trim();
     const fechaRequerida = fd.get("ss_fechaRequerida") as string;
 
+    // Nombre/referencia del logo OBLIGATORIO para pedidos mayor con logo
+    if (!ssNoLogo && !logoNombre) {
+      toast.error("Referencia del logo requerida", {
+        description: "Escriba un nombre claro para identificar el logo (ej: Logo Coca-Cola v2).",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
     // Validate all lines
     for (const line of ssLines) {
       if (!line.tamano || !line.colorSilicona || !line.colorTinta || !line.units) {
@@ -1692,6 +1711,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       const result = await createLogoRequestFromOrder({
         brand: "Sweatspot",
         clientName,
+        logoName: logoNombre,
         product: firstRef,
         advisorId: user.id,
         advisorName: user.email || "Asesor",
@@ -2180,7 +2200,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
               <FileField label="Adjuntar RUT de la empresa (opcional)" name="ss_rut" value={ssRutFileState} onChange={setSsRutFileState} accept="image/*,.pdf" />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="ss_logo_nombre">Nombre o referencia del logo</Label>
+              <Label htmlFor="ss_logo_nombre">Nombre o referencia del logo *</Label>
               <Input
                 id="ss_logo_nombre"
                 name="ss_logo_nombre"
