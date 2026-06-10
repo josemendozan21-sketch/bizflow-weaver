@@ -46,7 +46,7 @@ export function NuevasSolicitudes({ requests }: Props) {
               <CardContent className="space-y-3">
                 <div className="border rounded-lg p-2 bg-muted/20 flex items-center justify-center min-h-20">
                   {req.original_logo_url && req.original_logo_url.startsWith("http") ? (
-                    <img src={req.original_logo_url} alt="Logo original" className="max-h-20 object-contain" />
+                    <LogoPreview url={req.original_logo_url} alt="Logo original" />
                   ) : (
                     <div className="text-xs text-muted-foreground text-center px-2 py-3 flex items-center gap-2">
                       <FileImage className="h-4 w-4" />
