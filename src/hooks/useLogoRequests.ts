@@ -15,6 +15,7 @@ export type LogoRequestStatus =
 export interface LogoRequest {
   id: string;
   client_name: string;
+  logo_name: string | null;
   brand: string;
   product: string;
   original_logo_url: string;
