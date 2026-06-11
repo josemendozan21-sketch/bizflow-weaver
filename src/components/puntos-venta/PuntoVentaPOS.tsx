@@ -14,6 +14,14 @@ import { toast } from "sonner";
 type Props = { locationId: string; products: PosProduct[] };
 const NUTRITION_BRAND = "Sweatspot Nutrición";
 
+const normalizeText = (value: string | null | undefined) =>
+  (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
 export function PuntoVentaPOS({ locationId, products }: Props) {
   const [search, setSearch] = useState("");
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
@@ -110,14 +118,6 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
     }
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [available, search]);
-
-  const normalizeText = (value: string | null | undefined) =>
-    (value ?? "")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, " ")
-      .trim();
 
   const displayByProductId = useMemo(() => {
     const productsWithPhotos = products.filter(
