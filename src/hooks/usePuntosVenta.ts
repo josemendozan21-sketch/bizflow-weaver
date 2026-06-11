@@ -481,6 +481,7 @@ export function useRegisterPosSale(locationId: string) {
       client_document?: string;
       client_address?: string;
       client_city?: string;
+      customer_id?: string | null;
       discount?: number;
       split?: { method: string; amount: number };
       notes?: string;
@@ -525,6 +526,7 @@ export function useRegisterPosSale(locationId: string) {
           client_document: input.client_document ?? null,
           client_address: input.client_address ?? null,
           client_city: input.client_city ?? null,
+          customer_id: input.customer_id ?? null,
           discount,
           payment_method: paymentLabel,
           total_amount,

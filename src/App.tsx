@@ -25,6 +25,7 @@ import PuntosVenta from "./pages/PuntosVenta";
 import NutricionProveedores from "./pages/NutricionProveedores";
 import Personal from "./pages/Personal";
 import Documentos from "./pages/Documentos";
+import Clientes from "./pages/Clientes";
 import NotFound from "./pages/NotFound";
 import Install from "./pages/Install";
 import { ReactNode } from "react";
@@ -157,6 +158,7 @@ const App = () => (
                 <Route path="/puntos-venta/nutricion" element={<ProtectedRoute path="/puntos-venta"><NutricionProveedores /></ProtectedRoute>} />
                 <Route path="/personal" element={<ProtectedRoute path="/personal"><Personal /></ProtectedRoute>} />
                 <Route path="/documentos" element={<ProtectedRoute path="/documentos"><Documentos /></ProtectedRoute>} />
+                <Route path="/clientes" element={<ProtectedRoute path="/clientes"><Clientes /></ProtectedRoute>} />
                   </Route>
                   <Route path="*" element={<NotFound />} />
                 </Routes>

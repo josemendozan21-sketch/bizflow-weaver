@@ -1,70 +1,121 @@
-## Resumen
+## CRM de Clientes — Plan de implementación
 
-Habilitar un flujo de **pedidos a crédito** exclusivo para el asesor **Ilian Hernandez**. Sus pedidos se marcan automáticamente como crédito, soportan **múltiples abonos** (con monto, fecha, comprobante y notas), y Logística puede **despacharlos sin pago completo** registrando una fecha límite, generando una **alerta a Contabilidad** para el cobro.
+Construir un módulo de clientes integrado al POS, con perfil 360°, historial de compras, métricas, y campos preparados para fidelización futura (puntos, niveles, cupones, referidos).
 
-## 1. Nueva tabla de abonos
+---
 
-Tabla `order_payments` para registrar cada pago de un pedido:
+### 1. Base de datos (migración)
 
-- `order_id`, `amount`, `payment_date`, `proof_url`, `notes`, `method`, `recorded_by`, `recorded_by_name`
-- Trigger que recalcula `orders.abono` (suma de pagos) y marca `payment_complete` cuando la suma ≥ `total_amount`.
-- RLS: el asesor dueño del pedido, admin y contabilidad pueden insertar/ver; logística puede ver.
+**Tabla `customers`** (nueva)
+- Identidad: `document` (cédula/NIT, único), `full_name`, `phone`, `email`, `city`, `address`, `birth_date`
+- Segmentación: `sport` (running, trail, ciclismo, triatlón, gym, crossfit, senderismo, otro), `notes`, `tags` (text[])
+- Estado: `status` (activo/inactivo — derivado por última compra, almacenado como caché)
+- Fidelización (preparado, no activo): `points_current` (0), `points_accumulated` (0), `tier` ('Bronze'), `last_redemption_at`
+- Referidos (preparado): `referred_by` (FK customers), `referral_code` (único, autogenerado)
+- Métricas cacheadas (actualizadas vía trigger): `purchase_count`, `total_spent`, `avg_ticket`, `last_purchase_at`, `first_purchase_at`
+- Auditoría: `created_by` (uuid), `created_at`, `updated_at`
 
-## 2. Campos nuevos en `orders`
+**Tablas preparadas (vacías, listas para activarse):**
+- `customer_loyalty_movements` — entradas/salidas de puntos (`type`: earn/redeem/adjust, `points`, `sale_id`, `reason`)
+- `customer_coupons` — código, descuento, vigencia, usos, customer_id (nullable = público)
+- `loyalty_tiers` — config de niveles (Bronze/Silver/Gold/Platinum, umbrales, multiplicador)
+- `marketing_campaigns` — segmento, canal, fechas (para futuro)
 
-- `is_credit` (boolean) — pedido a crédito.
-- `payment_due_date` (date) — fecha límite pactada para terminar de pagar.
-- `credit_dispatched_pending_payment` (boolean) — despachado sin pago completo.
+**Integración con ventas existentes:**
+- `pos_sales.customer_id` (FK customers, nullable) — además del `client_document` actual
+- Trigger `AFTER INSERT/UPDATE/DELETE` en `pos_sales` que recalcula métricas del cliente vinculado
+- Migración de datos: para `pos_sales` existentes con `client_document`, crear/vincular `customer_id` automáticamente
 
-## 3. Marca automática para Ilian
+**RLS:**
+- Lectura: admin, contabilidad, pos_punto (de cualquier ciudad — base compartida)
+- Escritura: admin y pos_punto
+- GRANTs explícitos a `authenticated` y `service_role`
 
-Trigger `BEFORE INSERT` en `orders`: si `advisor_id = '<Ilian>'` entonces `is_credit = true`. Configurable por UUID fijo (más adelante se podría escalar a un flag en `profiles`).
+---
 
-## 4. UI — Asesor (Ilian)
+### 2. Hook `useCustomers` (`src/hooks/useCustomers.ts`)
 
-En **Mis pedidos** y en el detalle del pedido:
+- `useCustomers(filters)` — listado con búsqueda por documento/nombre/teléfono/ciudad
+- `useCustomer(id)` — perfil + métricas
+- `useCustomerByDocument(doc)` — lookup instantáneo desde POS
+- `useCustomerSales(customer_id)` — historial cronológico con items
+- `useCreateCustomer`, `useUpdateCustomer`
+- `useCustomerDashboardMetrics` — agregados (nuevos del mes, activos 30d, inactivos 90d+, top 20)
 
-- Badge "Crédito" + fecha de pago pactada (editable).
-- Sección **"Abonos"** con lista cronológica: monto · fecha · comprobante · notas · quién lo registró.
-- Botón **"Registrar abono"** → diálogo con monto, fecha, archivo (bucket `payment-proofs`), notas.
-- Resumen: total · pagado · saldo pendiente.
+---
 
-Para los demás asesores el flujo actual de pago único no cambia.
+### 3. Integración con POS (`PuntoVentaPOS.tsx` + `PuntoVentaDetalle.tsx`)
 
-## 5. UI — Logística
+**Nuevo componente `CustomerLookupBar`** colocado al inicio del flujo de venta:
+- Input grande "Cédula / teléfono" con autocomplete (debounced)
+- Si existe → tarjeta compacta: nombre, ciudad, teléfono, compras, total gastado, ticket promedio, última compra, badge de estado/nivel
+- Si no existe → botón "Crear cliente nuevo" → dialog inline con campos mínimos (cédula, nombre, teléfono, ciudad, deporte) sin perder el carrito
+- Botón "Cambiar / Quitar cliente" y soporte para "Consumidor Final"
 
-Para pedidos con `is_credit = true`:
+**Flujo actualizado:**
+1. Buscar/crear cliente
+2. Agregar productos al carrito
+3. Finalizar venta (la venta queda con `customer_id` además de los campos legacy de client)
 
-- Pueden aparecer en "Listos para despacho" aunque `payment_complete = false`, mostrando badge **"Crédito — saldo $X"** y la fecha pactada.
-- En el diálogo de despacho: campo obligatorio **"Fecha de pago pactada"** (pre-llena con `payment_due_date` si existe).
-- Al despachar: marca `credit_dispatched_pending_payment = true` y dispara la notificación.
+---
 
-## 6. Alerta a Contabilidad
+### 4. Sección "Clientes" (nuevo módulo)
 
-Trigger en `orders` al pasar a `credit_dispatched_pending_payment = true`:
+**Ruta:** `/clientes` — entrada nueva en `AppSidebar` con icono `Users` (o `Contact`), visible para admin, contabilidad, pos_punto.
 
-- Crea `notification` con `target_role = 'contabilidad'`: "Pedido a crédito despachado — {cliente} — saldo $X — vence {fecha}".
-- En `AccountingDashboard` agregar panel **"Pedidos a crédito pendientes de cobro"** con: cliente, asesor, saldo, fecha pactada, semáforo (verde/amarillo/rojo según días restantes), enlace al pedido y a sus abonos.
+**Páginas:**
+- `src/pages/Clientes.tsx` — listado + filtros + crear
+- `src/pages/ClienteDetalle.tsx` (o dialog/drawer) — perfil completo
 
-## 7. Detalles técnicos
+**Listado (`CustomersList.tsx`):**
+- Tabla: Nombre · Cédula · Teléfono · Ciudad · Compras · Total · Última compra · Registro · Estado
+- Filtros: búsqueda libre (nombre/cédula/teléfono), ciudad (select), deporte, estado (activo/inactivo), ordenamiento
+- Paginación / virtualización si crece
+- Botón "Nuevo cliente"
 
-- **Tabla `order_payments`**: GRANTs explícitos + RLS (asesor dueño / admin / contabilidad / logística-read).
-- **Trigger recalculo**: `AFTER INSERT/UPDATE/DELETE ON order_payments` → actualiza `orders.abono` y `payment_complete`.
-- **`isOrderFullyPaid` (src/hooks/useOrders.ts)**: sin cambios; al recalcular `abono` y `payment_complete` automáticamente queda consistente.
-- **Logística (src/pages/Logistica.tsx)**: ajustar `readyOrders` para incluir pedidos `is_credit && production_status === 'listo'` aunque no estén pagados.
-- **`payment-proofs` bucket**: ya existe, se reutiliza.
-- **Asesor ID Ilian**: `cdc6ce92-406f-467a-8f27-595c0cbe956a` (hardcoded en el trigger).
+**Perfil (`CustomerProfile.tsx`):**
+- Header: nombre, badges (estado, nivel, deporte), acciones (editar)
+- Tarjetas de métricas: compras, total gastado, ticket promedio, última compra, días desde última compra, puntos actuales (preview)
+- Tabs:
+  - **Información** — todos los campos + editar inline
+  - **Historial de compras** — tabla cronológica con fecha, factura, productos (con cantidades), total, ubicación
+  - **Fidelización** — placeholder con puntos/nivel (visible pero "próximamente")
 
-## Archivos a crear / tocar
+---
 
-```text
-supabase/migrations/<nuevo>.sql         (tabla, triggers, RLS, grants)
-src/hooks/useOrderPayments.ts           (CRUD abonos)
-src/components/ventas/PaymentsList.tsx  (lista cronológica)
-src/components/ventas/AddPaymentDialog.tsx
-src/components/ventas/MisPedidos.tsx    (mostrar abonos + badge crédito)
-src/pages/Logistica.tsx                 (incluir créditos en "listos")
-src/components/logistics/DispatchConfirmDialog.tsx (fecha pago)
-src/components/contabilidad/CreditOrdersPanel.tsx (nuevo)
-src/components/contabilidad/AccountingDashboard.tsx (montar panel)
-```
+### 5. Dashboard de clientes
+
+**En `PuntoReportes.tsx`** (solo admin y contabilidad — no para `pos_punto`):
+- KPIs: clientes registrados, nuevos este mes, activos 30d, inactivos 90d+, valor promedio por cliente
+- Top 20 clientes por compras (tabla con link al perfil)
+
+---
+
+### 6. UX/UI
+
+- Mantener el sistema visual actual (shadcn + tokens semánticos del proyecto, sin colores nuevos)
+- Búsqueda instantánea con debounce 200ms y atajo de teclado (Enter para confirmar)
+- Diseño responsive: la tarjeta del cliente en POS colapsa a una fila compacta en tablet
+- Estados de carga y vacíos consistentes con el resto del ERP
+
+---
+
+### Detalles técnicos
+
+- Los triggers recalculan métricas para evitar agregaciones costosas en cada render
+- El campo `client_document` actual en `pos_sales` se conserva (compatibilidad); el nuevo `customer_id` es la fuente de verdad cuando exista
+- Backfill: una sola consulta que agrupa ventas existentes por `client_document` y crea customers
+- `referral_code` se genera con `substr(md5(random()::text), 1, 8)` por defecto
+- Index en `customers(document)`, `customers(phone)`, `pos_sales(customer_id)`
+
+---
+
+### Orden de ejecución
+
+1. Migración (tabla `customers` + tablas preparatorias + FK + trigger + backfill + RLS/GRANTs)
+2. Hook `useCustomers`
+3. Sección `/clientes` (listado + perfil) + entrada en sidebar
+4. Integración en POS (`CustomerLookupBar` + flujo)
+5. Dashboard de clientes en reportes
+
+¿Apruebas el plan para proceder?
