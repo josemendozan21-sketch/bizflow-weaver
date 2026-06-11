@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useRef, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Edit, Package, AlertTriangle, Upload, ImageIcon, Tag, ExternalLink } from "lucide-react";
+import { Plus, Edit, Package, AlertTriangle, Upload, ImageIcon, Tag, ExternalLink, Camera, Loader2 } from "lucide-react";
 import { PosProduct, useUpsertPosProduct, uploadPosProductPhoto } from "@/hooks/usePuntosVenta";
 import { toast } from "sonner";
 
@@ -22,6 +22,39 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const upsert = useUpsertPosProduct(locationId);
+  const photoInputsRef = useRef<Record<string, HTMLInputElement | null>>({});
+  const [uploadingPhotoId, setUploadingPhotoId] = useState<string | null>(null);
+
+  const handleQuickPhoto = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    p: PosProduct
+  ) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploadingPhotoId(p.id);
+    try {
+      const url = await uploadPosProductPhoto(file, locationId);
+      await upsert.mutateAsync({
+        id: p.id,
+        name: p.name,
+        brand: p.brand,
+        supplier: p.supplier,
+        category: p.category,
+        sale_price: p.sale_price,
+        min_stock: p.min_stock,
+        unit: p.unit,
+        photo_url: url,
+        active: p.active,
+        notes: p.notes,
+      });
+      toast.success("Foto cargada");
+    } catch (err: any) {
+      toast.error(err.message ?? "Error al subir foto");
+    } finally {
+      setUploadingPhotoId(null);
+    }
+  };
 
   const brands = useMemo(() => {
     const map = new Map<string, number>();
@@ -172,6 +205,31 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
                           <p className="font-bold">${Number(p.sale_price).toLocaleString()}</p>
                           <p className="text-xs text-muted-foreground">{Number(p.available)} {p.unit}</p>
                         </div>
+                        {canEdit && (
+                          <>
+                            <input
+                              ref={(el) => (photoInputsRef.current[p.id] = el)}
+                              type="file"
+                              accept="image/*"
+                              capture="environment"
+                              className="hidden"
+                              onChange={(e) => handleQuickPhoto(e, p)}
+                            />
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => photoInputsRef.current[p.id]?.click()}
+                              disabled={uploadingPhotoId === p.id}
+                              title={p.photo_url ? "Cambiar foto" : "Subir foto"}
+                            >
+                              {uploadingPhotoId === p.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Camera className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </>
+                        )}
                         {canEdit && (
                           <Dialog open={open && editing?.id === p.id} onOpenChange={(v) => { setOpen(v); if (!v) setEditing(null); }}>
                             <DialogTrigger asChild>
