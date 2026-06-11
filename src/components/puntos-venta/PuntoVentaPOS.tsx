@@ -588,6 +588,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
               <span className="text-sm font-semibold">Total a pagar</span>
               <span className="text-2xl font-bold">{fmt(totalAfter)}</span>
             </div>
+          </div>
 
           <div>
             <Label>Cliente (opcional)</Label>
