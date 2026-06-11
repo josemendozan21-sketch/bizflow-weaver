@@ -683,7 +683,9 @@ const WholesaleOrdersInbox = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {delivering?.target === "produccion"
+              {isSweatspotKit
+                ? "Entregar Kit a Estampación"
+                : delivering?.target === "produccion"
                 ? "Solicitar producción de cuerpos"
                 : `Entregar a ${delivering ? TARGET_LABEL[delivering.target] : ""}`}
             </DialogTitle>
@@ -692,11 +694,32 @@ const WholesaleOrdersInbox = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div>
-              <Label>{delivering?.target === "produccion" ? "Cantidad a producir" : "Cantidad a entregar"}</Label>
-              <Input type="number" value={qty} onChange={(e) => setQty(e.target.value)} min="1" />
-            </div>
-            {delivering?.target === "produccion" && (
+            {isSweatspotKit ? (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Pedido de {delivering?.order.quantity} uds. Ajusta cantidades del kit a entregar:
+                </p>
+                {activeKit.map((c) => (
+                  <div key={c.key}>
+                    <Label>{c.label}</Label>
+                    <Input
+                      type="number" min="1"
+                      value={kitQuantities[c.key] ?? ""}
+                      onChange={(e) => setKitQuantities((p) => ({ ...p, [c.key]: e.target.value }))}
+                    />
+                    {!c.itemName && (
+                      <p className="text-[11px] text-destructive mt-1">Falta color/tamaño en el pedido para resolver esta referencia.</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div>
+                <Label>{delivering?.target === "produccion" ? "Cantidad a producir" : "Cantidad a entregar"}</Label>
+                <Input type="number" value={qty} onChange={(e) => setQty(e.target.value)} min="1" />
+              </div>
+            )}
+            {delivering?.target === "produccion" && !isSweatspotKit && (
               <div>
                 <Label>Tipo de plástico</Label>
                 <Select value={plastico} onValueChange={(v) => setPlastico(v as "frio" | "calor")}>
@@ -717,7 +740,9 @@ const WholesaleOrdersInbox = () => {
           <DialogFooter>
             <Button variant="ghost" onClick={() => setDelivering(null)}>Cancelar</Button>
             <Button onClick={confirmDeliver} disabled={busy}>
-              {delivering?.target === "produccion" ? "Crear orden de producción" : "Confirmar entrega"}
+              {isSweatspotKit
+                ? "Confirmar entrega del kit"
+                : delivering?.target === "produccion" ? "Crear orden de producción" : "Confirmar entrega"}
             </Button>
           </DialogFooter>
         </DialogContent>
