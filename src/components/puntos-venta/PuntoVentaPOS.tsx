@@ -15,6 +15,7 @@ import { CustomerLookupBar } from "@/components/clientes/CustomerLookupBar";
 
 type Props = { locationId: string; products: PosProduct[] };
 const NUTRITION_BRAND = "Sweatspot Nutrición";
+const DISCOUNT_OPTIONS = [0, 5, 10, 15, 20] as const;
 
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "")
@@ -38,6 +39,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
   const [clientCity, setClientCity] = useState("");
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [notes, setNotes] = useState("");
+  const [discountPct, setDiscountPct] = useState<number>(0);
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [uploadingProof, setUploadingProof] = useState(false);
   const [merchFile, setMerchFile] = useState<File | null>(null);
@@ -155,10 +157,12 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
 
   const total = cart.reduce((a, b) => a + Number(b.product.sale_price) * b.quantity, 0);
   const totalUnits = cart.reduce((a, b) => a + b.quantity, 0);
+  const discountAmount = Math.round((total * discountPct) / 100);
+  const totalAfter = Math.max(0, total - discountAmount);
   // Precios incluyen IVA 19% — desglosamos base e IVA
   const ivaRate = 0.19;
-  const base = total / (1 + ivaRate);
-  const iva = total - base;
+  const base = totalAfter / (1 + ivaRate);
+  const iva = totalAfter - base;
   const fmt = (n: number) =>
     `$${Math.round(n).toLocaleString("es-CO")}`;
 
@@ -246,11 +250,14 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
         client_address: clientAddress || undefined,
         client_city: clientCity || undefined,
         customer_id: customer?.id ?? null,
-        notes: notes || undefined,
+        notes: discountPct > 0
+          ? `[Descuento ${discountPct}%] ${notes}`.trim()
+          : (notes || undefined),
+        discount: discountAmount,
         payment_proof_url,
         merchandise_photo_url,
       });
-      toast.success(`Venta registrada por $${total.toLocaleString()}`);
+      toast.success(`Venta registrada por ${fmt(totalAfter)}`);
       setCart([]);
       setCustomer(null);
       setClientName("");
@@ -260,6 +267,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
       setClientAddress("");
       setClientCity("");
       setNotes("");
+      setDiscountPct(0);
       setProofFile(null);
       setMerchFile(null);
     } catch (e: any) {
