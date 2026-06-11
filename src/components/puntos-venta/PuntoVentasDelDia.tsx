@@ -3,8 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Download, FileDown, Package2, Receipt, Camera, ImageIcon, Loader2, Box } from "lucide-react";
-import { PosSale, usePosSaleItems, uploadPosSaleProof, useAttachPosSaleProof, useAttachPosSaleMerchandise } from "@/hooks/usePuntosVenta";
+import { Download, FileDown, Package2, Receipt, Camera, ImageIcon, Loader2, Box, Pencil, Trash2 } from "lucide-react";
+import { PosSale, usePosSaleItems, uploadPosSaleProof, useAttachPosSaleProof, useAttachPosSaleMerchandise, useDeletePosSale, useUpdatePosSale } from "@/hooks/usePuntosVenta";
+import { useAuth } from "@/contexts/AuthContext";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { downloadSalePdf, saleDocType, type InvoiceLocation } from "@/lib/posInvoicePdf";
 import { downloadCsvDay, downloadInvoicesZip } from "@/lib/posExports";
 import { toast } from "sonner";
@@ -12,6 +17,8 @@ import { toast } from "sonner";
 type Props = { sales: PosSale[]; location: InvoiceLocation; locationId: string };
 
 export function PuntoVentasDelDia({ sales, location, locationId }: Props) {
+  const { role } = useAuth();
+  const isAdmin = role === "admin";
   const today = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(today);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
@@ -20,6 +27,52 @@ export function PuntoVentasDelDia({ sales, location, locationId }: Props) {
   const merchInputsRef = useRef<Record<string, HTMLInputElement | null>>({});
   const attach = useAttachPosSaleProof(locationId);
   const attachMerch = useAttachPosSaleMerchandise(locationId);
+  const deleteSale = useDeletePosSale(locationId);
+  const updateSale = useUpdatePosSale(locationId);
+  const [editing, setEditing] = useState<PosSale | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    client_name: "",
+    client_document: "",
+    client_phone: "",
+    client_email: "",
+    payment_method: "efectivo",
+    notes: "",
+  });
+
+  const openEdit = (s: PosSale) => {
+    setEditing(s);
+    setEditForm({
+      client_name: s.client_name ?? "",
+      client_document: s.client_document ?? "",
+      client_phone: s.client_phone ?? "",
+      client_email: s.client_email ?? "",
+      payment_method: s.payment_method ?? "efectivo",
+      notes: s.notes ?? "",
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!editing) return;
+    try {
+      await updateSale.mutateAsync({ saleId: editing.id, ...editForm });
+      toast.success("Venta actualizada");
+      setEditing(null);
+    } catch (e: any) {
+      toast.error(e.message ?? "Error al actualizar venta");
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingId) return;
+    try {
+      await deleteSale.mutateAsync(deletingId);
+      toast.success("Venta eliminada y stock restituido");
+      setDeletingId(null);
+    } catch (e: any) {
+      toast.error(e.message ?? "Error al eliminar venta");
+    }
+  };
 
   const handleAttach = async (saleId: string, file: File) => {
     try {
@@ -224,10 +277,24 @@ export function PuntoVentasDelDia({ sales, location, locationId }: Props) {
                         </td>
                         <td className="text-xs">{s.recorded_by_name ?? "—"}</td>
                         <td className="text-right">
-                          <Button size="sm" variant="ghost"
-                            onClick={() => downloadSalePdf({ sale: s, items: its, location })}>
-                            <Download className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button size="sm" variant="ghost" title="Descargar PDF"
+                              onClick={() => downloadSalePdf({ sale: s, items: its, location })}>
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            {isAdmin && (
+                              <>
+                                <Button size="sm" variant="ghost" title="Editar venta" onClick={() => openEdit(s)}>
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="ghost" title="Eliminar venta"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => setDeletingId(s.id)}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -238,6 +305,78 @@ export function PuntoVentasDelDia({ sales, location, locationId }: Props) {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar venta</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Cliente</Label>
+                <Input value={editForm.client_name} onChange={(e) => setEditForm({ ...editForm, client_name: e.target.value })} />
+              </div>
+              <div>
+                <Label>Documento</Label>
+                <Input value={editForm.client_document} onChange={(e) => setEditForm({ ...editForm, client_document: e.target.value })} />
+              </div>
+              <div>
+                <Label>Teléfono</Label>
+                <Input value={editForm.client_phone} onChange={(e) => setEditForm({ ...editForm, client_phone: e.target.value })} />
+              </div>
+              <div>
+                <Label>Email</Label>
+                <Input value={editForm.client_email} onChange={(e) => setEditForm({ ...editForm, client_email: e.target.value })} />
+              </div>
+            </div>
+            <div>
+              <Label>Método de pago</Label>
+              <Select value={editForm.payment_method} onValueChange={(v) => setEditForm({ ...editForm, payment_method: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="efectivo">Efectivo</SelectItem>
+                  <SelectItem value="tarjeta">Tarjeta / Datáfono</SelectItem>
+                  <SelectItem value="nequi">Nequi</SelectItem>
+                  <SelectItem value="transferencia">Transferencia</SelectItem>
+                  <SelectItem value="factura">Factura DIAN</SelectItem>
+                  <SelectItem value="otro">Otro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Notas</Label>
+              <Input value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Para corregir productos o cantidades, elimina la venta y vuélvela a registrar. Eliminar restituye el stock automáticamente.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditing(null)}>Cancelar</Button>
+            <Button onClick={saveEdit} disabled={updateSale.isPending}>
+              {updateSale.isPending ? "Guardando…" : "Guardar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deletingId} onOpenChange={(o) => !o && setDeletingId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar esta venta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará la venta, sus ítems y los movimientos de inventario asociados. El stock de los productos vendidos será devuelto automáticamente. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
