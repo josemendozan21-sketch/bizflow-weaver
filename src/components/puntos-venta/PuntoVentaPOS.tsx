@@ -10,6 +10,8 @@ import { ShoppingCart, Plus, Minus, Trash2, Search, UserCheck, ImageIcon, Tag, C
 import { Loader2 } from "lucide-react";
 import { CartItem, CONSUMIDOR_FINAL, PosProduct, useRegisterPosSale, uploadPosSaleProof, useUpsertPosProduct, uploadPosProductPhoto } from "@/hooks/usePuntosVenta";
 import { toast } from "sonner";
+import { Customer } from "@/hooks/useCustomers";
+import { CustomerLookupBar } from "@/components/clientes/CustomerLookupBar";
 
 type Props = { locationId: string; products: PosProduct[] };
 const NUTRITION_BRAND = "Sweatspot Nutrición";
@@ -34,6 +36,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
   const [clientPhone, setClientPhone] = useState("");
   const [clientAddress, setClientAddress] = useState("");
   const [clientCity, setClientCity] = useState("");
+  const [customer, setCustomer] = useState<Customer | null>(null);
   const [notes, setNotes] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [uploadingProof, setUploadingProof] = useState(false);
@@ -193,6 +196,21 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
   const removeItem = (id: string) =>
     setCart((prev) => prev.filter((c) => c.product.id !== id));
 
+  const handleCustomerChange = (c: Customer | null) => {
+    setCustomer(c);
+    if (c) {
+      setClientName(c.full_name);
+      setClientDoc(c.document ?? "");
+      setClientEmail(c.email ?? "");
+      setClientPhone(c.phone ?? "");
+      setClientAddress(c.address ?? "");
+      setClientCity(c.city ?? "");
+    } else {
+      setClientName(""); setClientDoc(""); setClientEmail("");
+      setClientPhone(""); setClientAddress(""); setClientCity("");
+    }
+  };
+
   const handleConfirm = async () => {
     if (cart.length === 0) {
       toast.error("Agrega productos");
@@ -226,12 +244,14 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
         client_phone: clientPhone || undefined,
         client_address: clientAddress || undefined,
         client_city: clientCity || undefined,
+        customer_id: customer?.id ?? null,
         notes: notes || undefined,
         payment_proof_url,
         merchandise_photo_url,
       });
       toast.success(`Venta registrada por $${total.toLocaleString()}`);
       setCart([]);
+      setCustomer(null);
       setClientName("");
       setClientDoc("");
       setClientEmail("");
@@ -477,6 +497,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          <CustomerLookupBar customer={customer} onCustomerChange={handleCustomerChange} />
           {cart.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">Sin items</p>
           ) : (
