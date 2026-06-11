@@ -140,7 +140,7 @@ export function PuntoReportes({ sales, movements, products, locationId, location
       </TabsContent>
 
       <TabsContent value="retiros">
-        <PuntoRetiros locationId={locationId} />
+        <PuntoRetiros locationId={locationId} cashBase={cashBase} />
       </TabsContent>
     </Tabs>
   );
