@@ -552,11 +552,42 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
               <span className="text-muted-foreground">IVA 19%</span>
               <span className="font-medium">{fmt(iva)}</span>
             </div>
+            <div className="pt-1.5 border-t space-y-1.5">
+              <div>
+                <Label className="text-xs text-muted-foreground">Descuento</Label>
+                <div className="flex gap-1 mt-1">
+                  {DISCOUNT_OPTIONS.map((pct) => (
+                    <Button
+                      key={pct}
+                      type="button"
+                      size="sm"
+                      variant={discountPct === pct ? "default" : "outline"}
+                      className="flex-1 h-7 text-xs px-0"
+                      onClick={() => setDiscountPct(pct)}
+                      disabled={cart.length === 0}
+                    >
+                      {pct === 0 ? "Sin" : `${pct}%`}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              {discountPct > 0 && (
+                <>
+                  <div className="flex justify-between text-sm text-muted-foreground line-through">
+                    <span>Total sin descuento</span>
+                    <span>{fmt(total)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-destructive font-medium">
+                    <span>Descuento {discountPct}%</span>
+                    <span>− {fmt(discountAmount)}</span>
+                  </div>
+                </>
+              )}
+            </div>
             <div className="flex justify-between items-center pt-1.5 border-t">
               <span className="text-sm font-semibold">Total a pagar</span>
-              <span className="text-2xl font-bold">{fmt(total)}</span>
+              <span className="text-2xl font-bold">{fmt(totalAfter)}</span>
             </div>
-          </div>
 
           <div>
             <Label>Cliente (opcional)</Label>
@@ -656,7 +687,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
             <p className="text-[10px] text-muted-foreground mt-1">Opcional. Foto de lo que se lleva el cliente. También se puede adjuntar luego.</p>
           </div>
           <Button onClick={handleConfirm} disabled={sale.isPending || uploadingProof || uploadingMerch || cart.length === 0} className="w-full">
-            {uploadingProof || uploadingMerch ? "Subiendo foto..." : sale.isPending ? "Registrando..." : `Cobrar ${fmt(total)}`}
+            {uploadingProof || uploadingMerch ? "Subiendo foto..." : sale.isPending ? "Registrando..." : `Cobrar ${fmt(totalAfter)}`}
           </Button>
         </CardContent>
       </Card>
