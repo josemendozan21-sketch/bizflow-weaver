@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   PosSale, PosMovement, PosProduct,
-  usePosCashWithdrawals, usePosSaleItems,
+  usePosCashWithdrawals,
 } from "@/hooks/usePuntosVenta";
 import { TrendingUp, DollarSign, Package, History, Receipt, Banknote, BarChart3, Wallet } from "lucide-react";
 import { PuntoVentasDelDia } from "./PuntoVentasDelDia";
@@ -29,18 +29,8 @@ export function PuntoReportes({ sales, movements, products, locationId, location
   const { role } = useAuth();
   const isAdmin = role === "admin";
   const today = new Date().toISOString().slice(0, 10);
-  const recentSales = useMemo(() => sales.slice(0, 50), [sales]);
-  const recentIds = useMemo(() => recentSales.map((s) => s.id), [recentSales]);
-  const { data: recentItems = [] } = usePosSaleItems(recentIds);
-  const itemsBySale = useMemo(() => {
-    const map: Record<string, typeof recentItems> = {};
-    for (const it of recentItems) {
-      (map[it.sale_id] ||= []).push(it);
-    }
-    return map;
-  }, [recentItems]);
+  const todaySales = useMemo(() => sales.filter((s) => s.sale_date.slice(0, 10) === today), [sales, today]);
   const totals = useMemo(() => {
-    const todaySales = sales.filter((s) => s.sale_date.slice(0, 10) === today);
     const totalToday = todaySales.reduce((a, b) => a + Number(b.total_amount), 0);
     const totalAll = sales.reduce((a, b) => a + Number(b.total_amount), 0);
     const profitAll = sales.reduce(
@@ -72,7 +62,7 @@ export function PuntoReportes({ sales, movements, products, locationId, location
       withdrawalsToday,
       cashOnHand: cashBase + efectivo - withdrawalsToday,
     };
-  }, [sales, products, today, withdrawals, cashBase]);
+  }, [sales, products, today, withdrawals, cashBase, todaySales]);
 
   return (
     <Tabs defaultValue="resumen" className="space-y-4">
@@ -123,35 +113,22 @@ export function PuntoReportes({ sales, movements, products, locationId, location
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {sales.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">Aún no hay ventas.</p>
+          {todaySales.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">Aún no hay ventas hoy.</p>
           ) : (
             <div className="space-y-1 max-h-[400px] overflow-y-auto">
-              {recentSales.map((s) => {
-                const its = itemsBySale[s.id] ?? [];
-                return (
-                  <div key={s.id} className="flex justify-between items-start text-sm border-b py-2 gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium">${Number(s.total_amount).toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(s.sale_date).toLocaleString()} · {s.payment_method ?? "—"}
-                        {s.client_name ? ` · ${s.client_name}` : ""}
-                      </p>
-                      {its.length > 0 && (
-                        <ul className="mt-1 text-xs text-muted-foreground list-disc list-inside">
-                          {its.map((it) => (
-                            <li key={it.id}>
-                              {it.quantity}× {it.product_name}
-                              {it.brand ? ` (${it.brand})` : ""} — ${Number(it.line_total).toLocaleString()}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">{s.recorded_by_name}</span>
+              {todaySales.map((s) => (
+                <div key={s.id} className="flex justify-between items-center text-sm border-b py-2 gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium">${Number(s.total_amount).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(s.sale_date).toLocaleString()} · {s.payment_method ?? "—"}
+                      {s.client_name ? ` · ${s.client_name}` : ""}
+                    </p>
                   </div>
-                );
-              })}
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">{s.recorded_by_name}</span>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>
@@ -163,7 +140,7 @@ export function PuntoReportes({ sales, movements, products, locationId, location
       </TabsContent>
 
       <TabsContent value="retiros">
-        <PuntoRetiros locationId={locationId} />
+        <PuntoRetiros locationId={locationId} cashBase={cashBase} />
       </TabsContent>
     </Tabs>
   );

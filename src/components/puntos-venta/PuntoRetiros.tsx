@@ -18,9 +18,9 @@ import { toast } from "sonner";
 import { openSignedUrl } from "@/lib/signedUrl";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-type Props = { locationId: string };
+type Props = { locationId: string; cashBase?: number };
 
-export function PuntoRetiros({ locationId }: Props) {
+export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
   const { role } = useAuth();
   const isAdmin = role === "admin" || role === "contabilidad";
   const isPos = role === "pos_punto";
@@ -48,7 +48,7 @@ export function PuntoRetiros({ locationId }: Props) {
   const approvedConsignaciones = withdrawals
     .filter((w) => w.status === "aprobado" && w.movement_type === "consignacion")
     .reduce((a, b) => a + Number(b.amount), 0);
-  const cashOnHand = cashSalesToday - approvedRetiros - approvedConsignaciones;
+  const cashOnHand = cashBase + cashSalesToday - approvedRetiros - approvedConsignaciones;
 
   const reset = () => {
     setAmount(""); setConcept(""); setNotes(""); setFile(null); setShowForm(false); setMovementType("retiro");
@@ -85,10 +85,14 @@ export function PuntoRetiros({ locationId }: Props) {
         )}
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <div className="rounded-lg border p-3">
             <div className="text-xs text-muted-foreground flex items-center gap-1"><Banknote className="h-3 w-3" /> Efectivo en caja</div>
             <div className="text-lg font-bold">${cashOnHand.toLocaleString()}</div>
+          </div>
+          <div className="rounded-lg border p-3">
+            <div className="text-xs text-muted-foreground">Base de caja</div>
+            <div className="text-lg font-bold">${cashBase.toLocaleString()}</div>
           </div>
           <div className="rounded-lg border p-3">
             <div className="text-xs text-muted-foreground">Ventas efectivo (hoy)</div>
