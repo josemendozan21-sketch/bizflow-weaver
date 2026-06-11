@@ -1699,6 +1699,7 @@ export type Database = {
       pos_locations: {
         Row: {
           address: string | null
+          cash_base: number
           city: string
           created_at: string
           id: string
@@ -1709,6 +1710,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          cash_base?: number
           city: string
           created_at?: string
           id?: string
@@ -1719,6 +1721,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          cash_base?: number
           city?: string
           created_at?: string
           id?: string
