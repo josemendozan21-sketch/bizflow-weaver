@@ -784,10 +784,16 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       const ext = paymentProofFile.name.split(".").pop();
       const path = `initial_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.${ext}`;
       const { error: uploadErr } = await supabase.storage.from("payment-proofs").upload(path, paymentProofFile);
-      if (!uploadErr) {
-        const { data: urlData } = supabase.storage.from("payment-proofs").getPublicUrl(path);
-        paymentProofUrl = urlData.publicUrl;
+      if (uploadErr) {
+        console.error("[Ventas magical] Error subiendo soporte de pago:", uploadErr);
+        toast.error("No se pudo subir el soporte de pago", {
+          description: (uploadErr.message || "Error desconocido") + ". El pedido no fue creado. Intente de nuevo.",
+        });
+        setIsSubmitting(false);
+        return;
       }
+      const { data: urlData } = supabase.storage.from("payment-proofs").getPublicUrl(path);
+      paymentProofUrl = urlData.publicUrl;
     }
 
     // Upload logo once if provided. En recompras NO se crea solicitud
@@ -1695,10 +1701,16 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       const ext = ssPaymentProofFile.name.split(".").pop();
       const path = `initial_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.${ext}`;
       const { error: uploadErr } = await supabase.storage.from("payment-proofs").upload(path, ssPaymentProofFile);
-      if (!uploadErr) {
-        const { data: urlData } = supabase.storage.from("payment-proofs").getPublicUrl(path);
-        ssPaymentProofUrl = urlData.publicUrl;
+      if (uploadErr) {
+        console.error("[Ventas sweatspot] Error subiendo soporte de pago:", uploadErr);
+        toast.error("No se pudo subir el soporte de pago", {
+          description: (uploadErr.message || "Error desconocido") + ". El pedido no fue creado. Intente de nuevo.",
+        });
+        setIsSubmitting(false);
+        return;
       }
+      const { data: urlData } = supabase.storage.from("payment-proofs").getPublicUrl(path);
+      ssPaymentProofUrl = urlData.publicUrl;
     }
 
     // Auto-create design request once if logo was uploaded.
