@@ -8,11 +8,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { ShoppingCart, Plus, Minus, Trash2, Search, UserCheck, ImageIcon, Tag, Camera, X } from "lucide-react";
 import { Loader2 } from "lucide-react";
-import { CartItem, CONSUMIDOR_FINAL, PosProduct, useRegisterPosSale, uploadPosSaleProof, useUpsertPosProduct, uploadPosProductPhoto, thumbUrl } from "@/hooks/usePuntosVenta";
+import { CartItem, CONSUMIDOR_FINAL, PosProduct, useRegisterPosSale, uploadPosSaleProof, useUpsertPosProduct, uploadPosProductPhoto } from "@/hooks/usePuntosVenta";
 import { toast } from "sonner";
 
 type Props = { locationId: string; products: PosProduct[] };
 const NUTRITION_BRAND = "Sweatspot Nutrición";
+
+const normalizeText = (value: string | null | undefined) =>
+  (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 
 export function PuntoVentaPOS({ locationId, products }: Props) {
   const [search, setSearch] = useState("");
@@ -110,6 +118,37 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
     }
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [available, search]);
+
+  const displayByProductId = useMemo(() => {
+    const productsWithPhotos = products.filter(
+      (p) => (p.brand ?? "").trim() === NUTRITION_BRAND && p.photo_url
+    );
+    const map = new Map<string, { name: string; photoUrl: string | null }>();
+
+    for (const p of products) {
+      const productName = normalizeText(p.name);
+      const productNotes = normalizeText(p.notes);
+      const match = !p.photo_url && (p.brand ?? "").trim() === NUTRITION_BRAND
+        ? productsWithPhotos.find((candidate) => {
+            if (candidate.id === p.id || Number(candidate.sale_price) !== Number(p.sale_price)) return false;
+            const candidateName = normalizeText(candidate.name);
+            if (candidateName.startsWith(productName) || productName.startsWith(candidateName)) return true;
+            if (productName.includes("gel escarabajos") && candidateName.includes("gel escarabajos")) {
+              if (productName.includes("electrolitos") && candidateName.includes("electrolitos")) return true;
+              if ((productName.includes("fruc") || productName.includes("cafe") || productNotes.includes("gelfrucafe")) && candidateName.includes("cafe")) return true;
+            }
+            return false;
+          })
+        : null;
+
+      map.set(p.id, {
+        name: match && normalizeText(match.name).length > productName.length ? match.name : p.name,
+        photoUrl: p.photo_url ?? match?.photo_url ?? null,
+      });
+    }
+
+    return map;
+  }, [products]);
 
   const total = cart.reduce((a, b) => a + Number(b.product.sale_price) * b.quantity, 0);
   const totalUnits = cart.reduce((a, b) => a + b.quantity, 0);
@@ -233,23 +272,79 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
       return <p className="text-sm text-muted-foreground text-center py-8">No hay productos disponibles.</p>;
     }
 
+    if (isNutritionSelected) {
+      return (
+        <div className="space-y-1.5">
+          {filtered.map((p) => {
+            const display = displayByProductId.get(p.id);
+            const displayName = display?.name ?? p.name;
+            const displayPhoto = display?.photoUrl ?? p.photo_url;
+            return (
+              <div key={p.id} className="flex items-center gap-2 rounded-md border p-2 transition hover:border-primary hover:bg-accent">
+                <button type="button" onClick={() => addToCart({ ...p, name: displayName, photo_url: displayPhoto })} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                  <div className="h-14 w-14 rounded bg-muted overflow-hidden flex items-center justify-center shrink-0">
+                    {displayPhoto ? (
+                      <img src={displayPhoto} alt={displayName} className="h-full w-full object-cover" loading="lazy" decoding="async" width={56} height={56} />
+                    ) : (
+                      <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium leading-tight break-words">{displayName}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{p.supplier ?? p.brand}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-xs font-bold">${Number(p.sale_price).toLocaleString()}</p>
+                    <Badge variant="outline" className="text-[10px] px-1 py-0">{Number(p.available)}</Badge>
+                  </div>
+                </button>
+                <input
+                  ref={(el) => (photoInputsRef.current[p.id] = el)}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => handleProductPhoto(e, p)}
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 shrink-0"
+                  onClick={() => photoInputsRef.current[p.id]?.click()}
+                  disabled={uploadingPhotoId === p.id}
+                  title={p.photo_url ? "Cambiar foto" : "Subir foto"}
+                >
+                  {uploadingPhotoId === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-        {filtered.map((p) => (
+        {filtered.map((p) => {
+          const display = displayByProductId.get(p.id);
+          const displayName = display?.name ?? p.name;
+          const displayPhoto = display?.photoUrl ?? p.photo_url;
+          return (
           <div
             key={p.id}
             className="relative text-left p-2 rounded-md border hover:border-primary hover:bg-accent transition"
           >
             <button
               type="button"
-              onClick={() => addToCart(p)}
+              onClick={() => addToCart({ ...p, name: displayName, photo_url: displayPhoto })}
               className="w-full text-left"
             >
               <div className="aspect-square w-full mb-1.5 rounded bg-muted overflow-hidden flex items-center justify-center">
-                {p.photo_url ? (
+                {displayPhoto ? (
                   <img
-                    src={p.photo_url}
-                    alt={p.name}
+                    src={displayPhoto}
+                    alt={displayName}
                     className="w-full h-full object-cover"
                     loading="lazy"
                     decoding="async"
@@ -260,7 +355,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
                   <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
                 )}
               </div>
-              <p className="font-medium text-xs leading-tight break-words">{p.name}</p>
+              <p className="font-medium text-xs leading-tight break-words">{displayName}</p>
               {p.brand && <p className="text-[10px] text-muted-foreground truncate">{p.brand}</p>}
               <div className="flex items-center justify-between mt-1">
                 <span className="font-bold text-xs">${Number(p.sale_price).toLocaleString()}</span>
@@ -291,7 +386,8 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
               )}
             </Button>
           </div>
-        ))}
+          );
+        })}
       </div>
     );
   };
