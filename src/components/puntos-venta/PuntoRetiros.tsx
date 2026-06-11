@@ -85,10 +85,14 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
         )}
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <div className="rounded-lg border p-3">
             <div className="text-xs text-muted-foreground flex items-center gap-1"><Banknote className="h-3 w-3" /> Efectivo en caja</div>
             <div className="text-lg font-bold">${cashOnHand.toLocaleString()}</div>
+          </div>
+          <div className="rounded-lg border p-3">
+            <div className="text-xs text-muted-foreground">Base de caja</div>
+            <div className="text-lg font-bold">${cashBase.toLocaleString()}</div>
           </div>
           <div className="rounded-lg border p-3">
             <div className="text-xs text-muted-foreground">Ventas efectivo (hoy)</div>
