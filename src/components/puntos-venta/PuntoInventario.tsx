@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Edit, Package, AlertTriangle, Upload, ImageIcon, Tag, ExternalLink, Camera, Loader2 } from "lucide-react";
 import { PosProduct, useUpsertPosProduct, uploadPosProductPhoto } from "@/hooks/usePuntosVenta";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 type Props = {
@@ -17,6 +18,8 @@ type Props = {
 };
 
 export function PuntoInventario({ locationId, products, canEdit }: Props) {
+  const { role } = useAuth();
+  const isAdmin = role === "admin";
   const [editing, setEditing] = useState<PosProduct | null>(null);
   const [open, setOpen] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
@@ -98,7 +101,7 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
         <CardTitle className="text-base flex items-center gap-2">
           <Package className="h-5 w-5 text-primary" /> Catálogo del punto ({products.length})
         </CardTitle>
-        {canEdit && (
+        {canEdit && isAdmin && (
           <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditing(null); }}>
             <DialogTrigger asChild>
               <Button size="sm" onClick={() => setEditing(null)}>
