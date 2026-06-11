@@ -48,7 +48,7 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
   const approvedConsignaciones = withdrawals
     .filter((w) => w.status === "aprobado" && w.movement_type === "consignacion")
     .reduce((a, b) => a + Number(b.amount), 0);
-  const cashOnHand = cashSalesToday - approvedRetiros - approvedConsignaciones;
+  const cashOnHand = cashBase + cashSalesToday - approvedRetiros - approvedConsignaciones;
 
   const reset = () => {
     setAmount(""); setConcept(""); setNotes(""); setFile(null); setShowForm(false); setMovementType("retiro");
