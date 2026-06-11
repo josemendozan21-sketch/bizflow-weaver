@@ -18,9 +18,9 @@ import { toast } from "sonner";
 import { openSignedUrl } from "@/lib/signedUrl";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-type Props = { locationId: string };
+type Props = { locationId: string; cashBase?: number };
 
-export function PuntoRetiros({ locationId }: Props) {
+export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
   const { role } = useAuth();
   const isAdmin = role === "admin" || role === "contabilidad";
   const isPos = role === "pos_punto";
