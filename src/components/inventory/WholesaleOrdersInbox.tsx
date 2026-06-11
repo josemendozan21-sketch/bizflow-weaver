@@ -46,6 +46,37 @@ const TARGET_LABEL: Record<Target, string> = {
 
 type BandejaView = "menu" | "mayor" | "detal";
 
+// ---------- Sweatspot kit helpers ----------
+type KitComponent = {
+  key: "silicona" | "cuello" | "boquilla";
+  label: string;
+  itemName: string;       // resolved stock_items.name
+  defaultQty: number;
+  category: "materia_prima";
+};
+
+const normalizeSize = (product: string): string | null => {
+  // "Termo 250 ML Juguetón" -> "250ml"; we only support 250ml / 500ml siliconas in stock today.
+  const m = product.match(/(\d{2,4})\s*ml/i);
+  if (!m) return null;
+  return `${m[1]}ml`;
+};
+
+const capitalize = (s: string) => s ? s[0].toUpperCase() + s.slice(1).toLowerCase() : s;
+
+const buildSweatspotKit = (order: MayorOrder): KitComponent[] => {
+  const qty = order.quantity;
+  const color = capitalize((order as any).silicone_color || "");
+  const size = normalizeSize(order.product); // "250ml" | "500ml" | null
+  const siliconaName = color && size ? `Silicona ${color} ${size}` : "";
+  const cuelloName = color ? `Cuello ${color}` : "";
+  return [
+    { key: "silicona", label: `Siliconas${siliconaName ? ` (${siliconaName})` : ""}`, itemName: siliconaName, defaultQty: qty + 2, category: "materia_prima" },
+    { key: "cuello", label: `Cuellos${cuelloName ? ` (${cuelloName})` : ""}`, itemName: cuelloName, defaultQty: qty, category: "materia_prima" },
+    { key: "boquilla", label: "Boquillas", itemName: "Boquillas", defaultQty: qty, category: "materia_prima" },
+  ];
+};
+
 const WholesaleOrdersInbox = () => {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -57,6 +88,13 @@ const WholesaleOrdersInbox = () => {
   const [plastico, setPlastico] = useState<"frio" | "calor">("frio");
   const [busy, setBusy] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [kitQuantities, setKitQuantities] = useState<Record<string, string>>({});
+
+  const isSweatspotKit = delivering?.order.brand === "sweatspot" && delivering?.target === "estampacion";
+  const activeKit = useMemo(
+    () => (isSweatspotKit && delivering ? buildSweatspotKit(delivering.order) : []),
+    [isSweatspotKit, delivering]
+  );
 
   const filterOrders = (list: MayorOrder[]) => {
     if (!searchQuery.trim()) return list;
@@ -98,7 +136,7 @@ const WholesaleOrdersInbox = () => {
       // (sin entrega a estampación ni orden de producción de cuerpos creada).
       const { data, error } = await supabase
         .from("orders")
-        .select("id,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations")
+        .select("id,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color")
         .eq("sale_type", "mayor")
         .gte("created_at", "2026-05-15")
         .neq("production_status", "despachado")
@@ -114,7 +152,7 @@ const WholesaleOrdersInbox = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations")
+        .select("id,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color")
         .eq("sale_type", "menor")
         .in("production_status", ACTIVE_STATUSES)
         .gte("created_at", "2026-05-15")
@@ -194,11 +232,61 @@ const WholesaleOrdersInbox = () => {
     setQty(String(order.quantity));
     setObs("");
     setPlastico("frio");
+    if (order.brand === "sweatspot" && target === "estampacion") {
+      const kit = buildSweatspotKit(order);
+      const init: Record<string, string> = {};
+      kit.forEach((c) => { init[c.key] = String(c.defaultQty); });
+      setKitQuantities(init);
+    } else {
+      setKitQuantities({});
+    }
   };
 
   const confirmDeliver = async () => {
     if (!delivering || !user) return;
     const { order, target } = delivering;
+
+    // ---- Sweatspot kit flow ----
+    if (order.brand === "sweatspot" && target === "estampacion") {
+      const kit = buildSweatspotKit(order);
+      const rows = kit.map((c) => ({ c, q: Number(kitQuantities[c.key] || 0) }));
+      const invalid = rows.find((r) => !r.q || r.q <= 0);
+      if (invalid) { toast.error(`Cantidad inválida para ${invalid.c.label}`); return; }
+      const missingRef = rows.find((r) => !r.c.itemName);
+      if (missingRef) {
+        toast.error("Falta color/tamaño en el pedido para resolver el kit (silicona/cuello).");
+        return;
+      }
+      setBusy(true);
+      const movements = rows.map((r) => {
+        const stock = stockItems.find(
+          (s) => s.brand === "sweatspot" && s.category === "materia_prima" &&
+                 s.name.toLowerCase() === r.c.itemName.toLowerCase()
+        );
+        return {
+          stock_item_id: stock?.id ?? null,
+          item_name: r.c.itemName,
+          brand: "sweatspot",
+          category: "materia_prima" as const,
+          quantity: r.q,
+          direction: "entrega" as const,
+          area: "estampacion" as const,
+          reason: `Kit Sweatspot — Pedido de ${order.client_name}` + (obs ? ` — ${obs}` : ""),
+          order_id: order.id,
+          recorded_by: user.id,
+          recorded_by_name: user.email || "Inventarios",
+        };
+      });
+      const { error } = await supabase.from("inventory_movements").insert(movements as any);
+      setBusy(false);
+      if (error) { toast.error(error.message); return; }
+      toast.success(`Kit entregado a Estampación (${rows.map(r => `${r.q} ${r.c.key}`).join(", ")}).`);
+      setDelivering(null);
+      qc.invalidateQueries({ queryKey: ["mayor-orders-inbox"] });
+      qc.invalidateQueries({ queryKey: ["mayor-orders-delivered"] });
+      return;
+    }
+
     const quantity = Number(qty);
     if (!quantity || quantity <= 0) {
       toast.error("Cantidad inválida");
@@ -255,6 +343,7 @@ const WholesaleOrdersInbox = () => {
   };
 
   const renderCard = (o: MayorOrder, isDelivered: boolean, kind: "mayor" | "detal" = "mayor") => {
+    const isSweatspotMayor = kind === "mayor" && o.brand === "sweatspot";
     // For mayor: check blank bodies (cuerpos) — those are what get sent to Estampación.
     // For detal: check finished product.
     const item = findStockItem(o, kind === "mayor" ? "cuerpos_referencias" : "producto_terminado");
@@ -262,7 +351,9 @@ const WholesaleOrdersInbox = () => {
     // If production already finalized cuerpos for this order, force-show only Estampación.
     const producedReady = kind === "mayor" && producedIds.has(o.id);
     const enough = producedReady || (stock !== null && stock >= o.quantity);
-    const stockBadge = stock === null
+    const stockBadge = isSweatspotMayor
+      ? <Badge className="bg-blue-600 hover:bg-blue-700 text-white">Entrega por kit</Badge>
+      : stock === null
       ? (producedReady
           ? <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">Cuerpos producidos</Badge>
           : <Badge variant="outline">Sin referencia en stock</Badge>)
@@ -319,6 +410,13 @@ const WholesaleOrdersInbox = () => {
                 <Button size="sm" variant="default" className="w-full gap-1.5"
                   onClick={() => openDeliver(o, "logistica")}>
                   <Truck className="h-3.5 w-3.5" /> Entregar a Logística
+                </Button>
+              </div>
+            ) : isSweatspotMayor ? (
+              <div className="pt-1">
+                <Button size="sm" variant="default" className="w-full gap-1.5"
+                  onClick={() => openDeliver(o, "estampacion")}>
+                  <Paintbrush className="h-3.5 w-3.5" /> Entregar Kit a Estampación
                 </Button>
               </div>
             ) : (
@@ -585,7 +683,9 @@ const WholesaleOrdersInbox = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {delivering?.target === "produccion"
+              {isSweatspotKit
+                ? "Entregar Kit a Estampación"
+                : delivering?.target === "produccion"
                 ? "Solicitar producción de cuerpos"
                 : `Entregar a ${delivering ? TARGET_LABEL[delivering.target] : ""}`}
             </DialogTitle>
@@ -594,11 +694,32 @@ const WholesaleOrdersInbox = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div>
-              <Label>{delivering?.target === "produccion" ? "Cantidad a producir" : "Cantidad a entregar"}</Label>
-              <Input type="number" value={qty} onChange={(e) => setQty(e.target.value)} min="1" />
-            </div>
-            {delivering?.target === "produccion" && (
+            {isSweatspotKit ? (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Pedido de {delivering?.order.quantity} uds. Ajusta cantidades del kit a entregar:
+                </p>
+                {activeKit.map((c) => (
+                  <div key={c.key}>
+                    <Label>{c.label}</Label>
+                    <Input
+                      type="number" min="1"
+                      value={kitQuantities[c.key] ?? ""}
+                      onChange={(e) => setKitQuantities((p) => ({ ...p, [c.key]: e.target.value }))}
+                    />
+                    {!c.itemName && (
+                      <p className="text-[11px] text-destructive mt-1">Falta color/tamaño en el pedido para resolver esta referencia.</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div>
+                <Label>{delivering?.target === "produccion" ? "Cantidad a producir" : "Cantidad a entregar"}</Label>
+                <Input type="number" value={qty} onChange={(e) => setQty(e.target.value)} min="1" />
+              </div>
+            )}
+            {delivering?.target === "produccion" && !isSweatspotKit && (
               <div>
                 <Label>Tipo de plástico</Label>
                 <Select value={plastico} onValueChange={(v) => setPlastico(v as "frio" | "calor")}>
@@ -619,7 +740,9 @@ const WholesaleOrdersInbox = () => {
           <DialogFooter>
             <Button variant="ghost" onClick={() => setDelivering(null)}>Cancelar</Button>
             <Button onClick={confirmDeliver} disabled={busy}>
-              {delivering?.target === "produccion" ? "Crear orden de producción" : "Confirmar entrega"}
+              {isSweatspotKit
+                ? "Confirmar entrega del kit"
+                : delivering?.target === "produccion" ? "Crear orden de producción" : "Confirmar entrega"}
             </Button>
           </DialogFooter>
         </DialogContent>
