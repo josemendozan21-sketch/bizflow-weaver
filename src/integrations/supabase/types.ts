@@ -402,6 +402,192 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_coupons: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          customer_id: string | null
+          discount_type: string
+          discount_value: number
+          id: string
+          max_uses: number | null
+          uses_count: number
+          valid_from: string | null
+          valid_to: string | null
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          customer_id?: string | null
+          discount_type?: string
+          discount_value?: number
+          id?: string
+          max_uses?: number | null
+          uses_count?: number
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          customer_id?: string | null
+          discount_type?: string
+          discount_value?: number
+          id?: string
+          max_uses?: number | null
+          uses_count?: number
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_coupons_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_loyalty_movements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          id: string
+          movement_type: string
+          points: number
+          reason: string | null
+          sale_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          customer_id: string
+          id?: string
+          movement_type: string
+          points: number
+          reason?: string | null
+          sale_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string
+          id?: string
+          movement_type?: string
+          points?: number
+          reason?: string | null
+          sale_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_loyalty_movements_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
+        Row: {
+          address: string | null
+          avg_ticket: number
+          birth_date: string | null
+          city: string | null
+          created_at: string
+          created_by: string | null
+          document: string | null
+          email: string | null
+          first_purchase_at: string | null
+          full_name: string
+          id: string
+          last_purchase_at: string | null
+          last_redemption_at: string | null
+          notes: string | null
+          phone: string | null
+          points_accumulated: number
+          points_current: number
+          purchase_count: number
+          referral_code: string | null
+          referred_by: string | null
+          sport: string | null
+          status: string
+          tags: string[]
+          tier: string
+          total_spent: number
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          avg_ticket?: number
+          birth_date?: string | null
+          city?: string | null
+          created_at?: string
+          created_by?: string | null
+          document?: string | null
+          email?: string | null
+          first_purchase_at?: string | null
+          full_name: string
+          id?: string
+          last_purchase_at?: string | null
+          last_redemption_at?: string | null
+          notes?: string | null
+          phone?: string | null
+          points_accumulated?: number
+          points_current?: number
+          purchase_count?: number
+          referral_code?: string | null
+          referred_by?: string | null
+          sport?: string | null
+          status?: string
+          tags?: string[]
+          tier?: string
+          total_spent?: number
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          avg_ticket?: number
+          birth_date?: string | null
+          city?: string | null
+          created_at?: string
+          created_by?: string | null
+          document?: string | null
+          email?: string | null
+          first_purchase_at?: string | null
+          full_name?: string
+          id?: string
+          last_purchase_at?: string | null
+          last_redemption_at?: string | null
+          notes?: string | null
+          phone?: string | null
+          points_accumulated?: number
+          points_current?: number
+          purchase_count?: number
+          referral_code?: string | null
+          referred_by?: string | null
+          sport?: string | null
+          status?: string
+          tags?: string[]
+          tier?: string
+          total_spent?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -1105,6 +1291,72 @@ export type Database = {
           product?: string
           status?: Database["public"]["Enums"]["logo_request_status"]
           updated_at?: string
+        }
+        Relationships: []
+      }
+      loyalty_tiers: {
+        Row: {
+          benefits: string | null
+          created_at: string
+          display_order: number
+          id: string
+          min_total_spent: number
+          name: string
+          points_multiplier: number
+        }
+        Insert: {
+          benefits?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          min_total_spent?: number
+          name: string
+          points_multiplier?: number
+        }
+        Update: {
+          benefits?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          min_total_spent?: number
+          name?: string
+          points_multiplier?: number
+        }
+        Relationships: []
+      }
+      marketing_campaigns: {
+        Row: {
+          channel: string | null
+          created_at: string
+          created_by: string | null
+          ends_at: string | null
+          id: string
+          name: string
+          segment_filter: Json | null
+          starts_at: string | null
+          status: string
+        }
+        Insert: {
+          channel?: string | null
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          name: string
+          segment_filter?: Json | null
+          starts_at?: string | null
+          status?: string
+        }
+        Update: {
+          channel?: string | null
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          name?: string
+          segment_filter?: Json | null
+          starts_at?: string | null
+          status?: string
         }
         Relationships: []
       }
@@ -1860,6 +2112,7 @@ export type Database = {
           client_name: string | null
           client_phone: string | null
           created_at: string
+          customer_id: string | null
           discount: number
           id: string
           location_id: string
@@ -1881,6 +2134,7 @@ export type Database = {
           client_name?: string | null
           client_phone?: string | null
           created_at?: string
+          customer_id?: string | null
           discount?: number
           id?: string
           location_id: string
@@ -1902,6 +2156,7 @@ export type Database = {
           client_name?: string | null
           client_phone?: string | null
           created_at?: string
+          customer_id?: string | null
           discount?: number
           id?: string
           location_id?: string
@@ -1916,6 +2171,13 @@ export type Database = {
           total_cost?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "pos_sales_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pos_sales_location_id_fkey"
             columns: ["location_id"]
@@ -2636,6 +2898,10 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      recalc_customer_metrics: {
+        Args: { _customer_id: string }
+        Returns: undefined
       }
     }
     Enums: {
