@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { ShoppingCart, Plus, Minus, Trash2, Search, UserCheck, ImageIcon, Tag, Camera, X } from "lucide-react";
 import { Loader2 } from "lucide-react";
-import { CartItem, CONSUMIDOR_FINAL, PosProduct, useRegisterPosSale, uploadPosSaleProof, useUpsertPosProduct, uploadPosProductPhoto, thumbUrl } from "@/hooks/usePuntosVenta";
+import { CartItem, CONSUMIDOR_FINAL, PosProduct, useRegisterPosSale, uploadPosSaleProof, useUpsertPosProduct, uploadPosProductPhoto } from "@/hooks/usePuntosVenta";
 import { toast } from "sonner";
 
 type Props = { locationId: string; products: PosProduct[] };
@@ -110,6 +110,45 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
     }
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [available, search]);
+
+  const normalizeText = (value: string | null | undefined) =>
+    (value ?? "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+
+  const displayByProductId = useMemo(() => {
+    const productsWithPhotos = products.filter(
+      (p) => (p.brand ?? "").trim() === NUTRITION_BRAND && p.photo_url
+    );
+    const map = new Map<string, { name: string; photoUrl: string | null }>();
+
+    for (const p of products) {
+      const productName = normalizeText(p.name);
+      const productNotes = normalizeText(p.notes);
+      const match = !p.photo_url && (p.brand ?? "").trim() === NUTRITION_BRAND
+        ? productsWithPhotos.find((candidate) => {
+            if (candidate.id === p.id || Number(candidate.sale_price) !== Number(p.sale_price)) return false;
+            const candidateName = normalizeText(candidate.name);
+            if (candidateName.startsWith(productName) || productName.startsWith(candidateName)) return true;
+            if (productName.includes("gel escarabajos") && candidateName.includes("gel escarabajos")) {
+              if (productName.includes("electrolitos") && candidateName.includes("electrolitos")) return true;
+              if ((productName.includes("fruc") || productName.includes("cafe") || productNotes.includes("gelfrucafe")) && candidateName.includes("cafe")) return true;
+            }
+            return false;
+          })
+        : null;
+
+      map.set(p.id, {
+        name: match && normalizeText(match.name).length > productName.length ? match.name : p.name,
+        photoUrl: p.photo_url ?? match?.photo_url ?? null,
+      });
+    }
+
+    return map;
+  }, [products]);
 
   const total = cart.reduce((a, b) => a + Number(b.product.sale_price) * b.quantity, 0);
   const totalUnits = cart.reduce((a, b) => a + b.quantity, 0);
