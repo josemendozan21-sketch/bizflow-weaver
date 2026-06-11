@@ -3,12 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   PosSale, PosMovement, PosProduct,
-  usePosCashWithdrawals,
+  usePosCashWithdrawals, usePosSaleItems,
 } from "@/hooks/usePuntosVenta";
 import { TrendingUp, DollarSign, Package, History, Receipt, Banknote, BarChart3, Wallet } from "lucide-react";
 import { PuntoVentasDelDia } from "./PuntoVentasDelDia";
 import { PuntoRetiros } from "./PuntoRetiros";
 import type { InvoiceLocation } from "@/lib/posInvoicePdf";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Props = {
   sales: PosSale[];
@@ -25,7 +26,19 @@ function methodMatches(method: string | null | undefined, target: string) {
 
 export function PuntoReportes({ sales, movements, products, locationId, location, cashBase = 0 }: Props) {
   const { data: withdrawals = [] } = usePosCashWithdrawals(locationId);
+  const { role } = useAuth();
+  const isAdmin = role === "admin";
   const today = new Date().toISOString().slice(0, 10);
+  const recentSales = useMemo(() => sales.slice(0, 50), [sales]);
+  const recentIds = useMemo(() => recentSales.map((s) => s.id), [recentSales]);
+  const { data: recentItems = [] } = usePosSaleItems(recentIds);
+  const itemsBySale = useMemo(() => {
+    const map: Record<string, typeof recentItems> = {};
+    for (const it of recentItems) {
+      (map[it.sale_id] ||= []).push(it);
+    }
+    return map;
+  }, [recentItems]);
   const totals = useMemo(() => {
     const todaySales = sales.filter((s) => s.sale_date.slice(0, 10) === today);
     const totalToday = todaySales.reduce((a, b) => a + Number(b.total_amount), 0);
@@ -74,7 +87,9 @@ export function PuntoReportes({ sales, movements, products, locationId, location
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Stat icon={<DollarSign className="h-4 w-4" />} label="Ventas hoy" value={`$${totals.totalToday.toLocaleString()}`} sub={`${totals.countToday} ticket(s)`} />
         <Stat icon={<TrendingUp className="h-4 w-4" />} label="Ventas totales" value={`$${totals.totalAll.toLocaleString()}`} />
-        <Stat icon={<TrendingUp className="h-4 w-4" />} label="Utilidad acumulada" value={`$${totals.profitAll.toLocaleString()}`} />
+        {isAdmin && (
+          <Stat icon={<TrendingUp className="h-4 w-4" />} label="Utilidad acumulada" value={`$${totals.profitAll.toLocaleString()}`} />
+        )}
         <Stat icon={<Package className="h-4 w-4" />} label="Valor inventario" value={`$${totals.inventoryValue.toLocaleString()}`} />
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -112,18 +127,31 @@ export function PuntoReportes({ sales, movements, products, locationId, location
             <p className="text-sm text-muted-foreground text-center py-4">Aún no hay ventas.</p>
           ) : (
             <div className="space-y-1 max-h-[400px] overflow-y-auto">
-              {sales.slice(0, 50).map((s) => (
-                <div key={s.id} className="flex justify-between items-center text-sm border-b py-2">
-                  <div>
-                    <p className="font-medium">${Number(s.total_amount).toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(s.sale_date).toLocaleString()} · {s.payment_method ?? "—"}
-                      {s.client_name ? ` · ${s.client_name}` : ""}
-                    </p>
+              {recentSales.map((s) => {
+                const its = itemsBySale[s.id] ?? [];
+                return (
+                  <div key={s.id} className="flex justify-between items-start text-sm border-b py-2 gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium">${Number(s.total_amount).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(s.sale_date).toLocaleString()} · {s.payment_method ?? "—"}
+                        {s.client_name ? ` · ${s.client_name}` : ""}
+                      </p>
+                      {its.length > 0 && (
+                        <ul className="mt-1 text-xs text-muted-foreground list-disc list-inside">
+                          {its.map((it) => (
+                            <li key={it.id}>
+                              {it.quantity}× {it.product_name}
+                              {it.brand ? ` (${it.brand})` : ""} — ${Number(it.line_total).toLocaleString()}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">{s.recorded_by_name}</span>
                   </div>
-                  <span className="text-xs text-muted-foreground">{s.recorded_by_name}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
