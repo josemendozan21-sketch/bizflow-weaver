@@ -274,10 +274,11 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
 
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-        {filtered.map((p) => (
+        {filtered.map((p) => {
           const display = displayByProductId.get(p.id);
           const displayName = display?.name ?? p.name;
           const displayPhoto = display?.photoUrl ?? p.photo_url;
+          return (
           <div
             key={p.id}
             className="relative text-left p-2 rounded-md border hover:border-primary hover:bg-accent transition"
@@ -333,7 +334,8 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
               )}
             </Button>
           </div>
-        ))}
+          );
+        })}
       </div>
     );
   };
