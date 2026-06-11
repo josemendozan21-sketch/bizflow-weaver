@@ -281,7 +281,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
             const displayPhoto = display?.photoUrl ?? p.photo_url;
             return (
               <div key={p.id} className="flex items-center gap-2 rounded-md border p-2 transition hover:border-primary hover:bg-accent">
-                <button type="button" onClick={() => addToCart(p)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                <button type="button" onClick={() => addToCart({ ...p, name: displayName, photo_url: displayPhoto })} className="flex min-w-0 flex-1 items-center gap-2 text-left">
                   <div className="h-14 w-14 rounded bg-muted overflow-hidden flex items-center justify-center shrink-0">
                     {displayPhoto ? (
                       <img src={displayPhoto} alt={displayName} className="h-full w-full object-cover" loading="lazy" decoding="async" width={56} height={56} />
@@ -337,7 +337,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
           >
             <button
               type="button"
-              onClick={() => addToCart(p)}
+              onClick={() => addToCart({ ...p, name: displayName, photo_url: displayPhoto })}
               className="w-full text-left"
             >
               <div className="aspect-square w-full mb-1.5 rounded bg-muted overflow-hidden flex items-center justify-center">
