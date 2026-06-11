@@ -234,41 +234,37 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
     }
 
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
         {filtered.map((p) => (
           <div
             key={p.id}
-            className="relative text-left p-3 rounded-md border hover:border-primary hover:bg-accent transition"
+            className="relative text-left p-2 rounded-md border hover:border-primary hover:bg-accent transition"
           >
             <button
               type="button"
               onClick={() => addToCart(p)}
               className="w-full text-left"
             >
-              <div className="aspect-square w-full mb-2 rounded bg-muted overflow-hidden flex items-center justify-center">
+              <div className="aspect-square w-full mb-1.5 rounded bg-muted overflow-hidden flex items-center justify-center">
                 {p.photo_url ? (
                   <img
-                    src={thumbUrl(p.photo_url, 320) ?? p.photo_url}
+                    src={p.photo_url}
                     alt={p.name}
                     className="w-full h-full object-cover"
                     loading="lazy"
                     decoding="async"
-                    width={160}
-                    height={160}
-                    onError={(e) => {
-                      const img = e.currentTarget;
-                      if (p.photo_url && img.src !== p.photo_url) img.src = p.photo_url;
-                    }}
+                    width={120}
+                    height={120}
                   />
                 ) : (
-                  <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+                  <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
                 )}
               </div>
-              <p className="font-medium text-sm truncate">{p.name}</p>
-              {p.brand && <p className="text-xs text-muted-foreground truncate">{p.brand}</p>}
-              <div className="flex items-center justify-between mt-2">
-                <span className="font-bold text-sm">${Number(p.sale_price).toLocaleString()}</span>
-                <Badge variant="outline" className="text-xs">{Number(p.available)}</Badge>
+              <p className="font-medium text-xs leading-tight break-words">{p.name}</p>
+              {p.brand && <p className="text-[10px] text-muted-foreground truncate">{p.brand}</p>}
+              <div className="flex items-center justify-between mt-1">
+                <span className="font-bold text-xs">${Number(p.sale_price).toLocaleString()}</span>
+                <Badge variant="outline" className="text-[10px] px-1 py-0">{Number(p.available)}</Badge>
               </div>
             </button>
             <input
@@ -283,15 +279,15 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
               type="button"
               size="icon"
               variant="secondary"
-              className="absolute top-1.5 right-1.5 h-7 w-7 shadow"
+              className="absolute top-1 right-1 h-6 w-6 shadow"
               onClick={(e) => { e.stopPropagation(); photoInputsRef.current[p.id]?.click(); }}
               disabled={uploadingPhotoId === p.id}
               title={p.photo_url ? "Cambiar foto" : "Subir foto"}
             >
               {uploadingPhotoId === p.id ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="h-3 w-3 animate-spin" />
               ) : (
-                <Camera className="h-3.5 w-3.5" />
+                <Camera className="h-3 w-3" />
               )}
             </Button>
           </div>
