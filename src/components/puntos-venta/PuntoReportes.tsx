@@ -16,13 +16,14 @@ type Props = {
   products: PosProduct[];
   locationId: string;
   location: InvoiceLocation;
+  cashBase?: number;
 };
 
 function methodMatches(method: string | null | undefined, target: string) {
   return (method ?? "").toLowerCase().split("+").some((p) => p.trim() === target);
 }
 
-export function PuntoReportes({ sales, movements, products, locationId, location }: Props) {
+export function PuntoReportes({ sales, movements, products, locationId, location, cashBase = 0 }: Props) {
   const { data: withdrawals = [] } = usePosCashWithdrawals(locationId);
   const today = new Date().toISOString().slice(0, 10);
   const totals = useMemo(() => {
@@ -56,9 +57,9 @@ export function PuntoReportes({ sales, movements, products, locationId, location
       otros: byMethod("transferencia") + byMethod("otro"),
       countToday: todaySales.length,
       withdrawalsToday,
-      cashOnHand: efectivo - withdrawalsToday,
+      cashOnHand: cashBase + efectivo - withdrawalsToday,
     };
-  }, [sales, products, today, withdrawals]);
+  }, [sales, products, today, withdrawals, cashBase]);
 
   return (
     <Tabs defaultValue="resumen" className="space-y-4">
@@ -79,7 +80,7 @@ export function PuntoReportes({ sales, movements, products, locationId, location
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <Stat icon={<Banknote className="h-4 w-4" />} label="Efectivo en caja hoy"
           value={`$${totals.cashOnHand.toLocaleString()}`}
-          sub={`Ventas $${totals.efectivo.toLocaleString()} − Retiros $${totals.withdrawalsToday.toLocaleString()}`} />
+          sub={`Base $${cashBase.toLocaleString()} + Ventas $${totals.efectivo.toLocaleString()} − Retiros $${totals.withdrawalsToday.toLocaleString()}`} />
         <Stat icon={<DollarSign className="h-4 w-4" />} label="Tarjeta hoy"
           value={`$${totals.tarjeta.toLocaleString()}`} />
         <Stat icon={<DollarSign className="h-4 w-4" />} label="Nequi / Transf hoy"
