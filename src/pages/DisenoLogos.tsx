@@ -42,12 +42,11 @@ const DisenoLogos = () => {
   // Estampacion only sees the Aprobación tab (read-only)
   if (isEstampacion) {
     const aprobadosList = filteredForEstampacion.filter((r) => r.status === "aprobado");
-    const historicList = filteredForEstampacion.filter((r) => ["aprobado", "finalizado"].includes(r.status));
     return (
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Diseño de Logos</h1>
-          <p className="text-muted-foreground">Logos aprobados para estampación</p>
+          <p className="text-muted-foreground">Logos aprobados pendientes de estampación</p>
         </div>
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -58,18 +57,10 @@ const DisenoLogos = () => {
             className="pl-9"
           />
         </div>
-        <Tabs defaultValue="aprobados">
-          <TabsList className="grid w-full grid-cols-2 max-w-md">
-            <TabsTrigger value="aprobados">Pendientes ({aprobadosList.length})</TabsTrigger>
-            <TabsTrigger value="todos">Todos los aprobados ({historicList.length})</TabsTrigger>
-          </TabsList>
-          <TabsContent value="aprobados">
-            <AprobacionAsesor requests={filteredForEstampacion} />
-          </TabsContent>
-          <TabsContent value="todos">
-            <AprobacionAsesor requests={historicList.map((r) => ({ ...r, status: "aprobado" as any }))} />
-          </TabsContent>
-        </Tabs>
+        <div className="text-sm text-muted-foreground">
+          {aprobadosList.length} pendiente(s) por estampar
+        </div>
+        <AprobacionAsesor requests={filteredForEstampacion} />
       </div>
     );
   }
