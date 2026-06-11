@@ -15,6 +15,7 @@ import { CustomerLookupBar } from "@/components/clientes/CustomerLookupBar";
 
 type Props = { locationId: string; products: PosProduct[] };
 const NUTRITION_BRAND = "Sweatspot Nutrición";
+const DISCOUNT_OPTIONS = [0, 5, 10, 15, 20] as const;
 
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "")
@@ -38,6 +39,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
   const [clientCity, setClientCity] = useState("");
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [notes, setNotes] = useState("");
+  const [discountPct, setDiscountPct] = useState<number>(0);
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [uploadingProof, setUploadingProof] = useState(false);
   const [merchFile, setMerchFile] = useState<File | null>(null);
@@ -155,10 +157,12 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
 
   const total = cart.reduce((a, b) => a + Number(b.product.sale_price) * b.quantity, 0);
   const totalUnits = cart.reduce((a, b) => a + b.quantity, 0);
+  const discountAmount = Math.round((total * discountPct) / 100);
+  const totalAfter = Math.max(0, total - discountAmount);
   // Precios incluyen IVA 19% — desglosamos base e IVA
   const ivaRate = 0.19;
-  const base = total / (1 + ivaRate);
-  const iva = total - base;
+  const base = totalAfter / (1 + ivaRate);
+  const iva = totalAfter - base;
   const fmt = (n: number) =>
     `$${Math.round(n).toLocaleString("es-CO")}`;
 
@@ -246,11 +250,14 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
         client_address: clientAddress || undefined,
         client_city: clientCity || undefined,
         customer_id: customer?.id ?? null,
-        notes: notes || undefined,
+        notes: discountPct > 0
+          ? `[Descuento ${discountPct}%] ${notes}`.trim()
+          : (notes || undefined),
+        discount: discountAmount,
         payment_proof_url,
         merchandise_photo_url,
       });
-      toast.success(`Venta registrada por $${total.toLocaleString()}`);
+      toast.success(`Venta registrada por ${fmt(totalAfter)}`);
       setCart([]);
       setCustomer(null);
       setClientName("");
@@ -260,6 +267,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
       setClientAddress("");
       setClientCity("");
       setNotes("");
+      setDiscountPct(0);
       setProofFile(null);
       setMerchFile(null);
     } catch (e: any) {
@@ -544,9 +552,41 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
               <span className="text-muted-foreground">IVA 19%</span>
               <span className="font-medium">{fmt(iva)}</span>
             </div>
+            <div className="pt-1.5 border-t space-y-1.5">
+              <div>
+                <Label className="text-xs text-muted-foreground">Descuento</Label>
+                <div className="flex gap-1 mt-1">
+                  {DISCOUNT_OPTIONS.map((pct) => (
+                    <Button
+                      key={pct}
+                      type="button"
+                      size="sm"
+                      variant={discountPct === pct ? "default" : "outline"}
+                      className="flex-1 h-7 text-xs px-0"
+                      onClick={() => setDiscountPct(pct)}
+                      disabled={cart.length === 0}
+                    >
+                      {pct === 0 ? "Sin" : `${pct}%`}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              {discountPct > 0 && (
+                <>
+                  <div className="flex justify-between text-sm text-muted-foreground line-through">
+                    <span>Total sin descuento</span>
+                    <span>{fmt(total)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-destructive font-medium">
+                    <span>Descuento {discountPct}%</span>
+                    <span>− {fmt(discountAmount)}</span>
+                  </div>
+                </>
+              )}
+            </div>
             <div className="flex justify-between items-center pt-1.5 border-t">
               <span className="text-sm font-semibold">Total a pagar</span>
-              <span className="text-2xl font-bold">{fmt(total)}</span>
+              <span className="text-2xl font-bold">{fmt(totalAfter)}</span>
             </div>
           </div>
 
@@ -648,7 +688,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
             <p className="text-[10px] text-muted-foreground mt-1">Opcional. Foto de lo que se lleva el cliente. También se puede adjuntar luego.</p>
           </div>
           <Button onClick={handleConfirm} disabled={sale.isPending || uploadingProof || uploadingMerch || cart.length === 0} className="w-full">
-            {uploadingProof || uploadingMerch ? "Subiendo foto..." : sale.isPending ? "Registrando..." : `Cobrar ${fmt(total)}`}
+            {uploadingProof || uploadingMerch ? "Subiendo foto..." : sale.isPending ? "Registrando..." : `Cobrar ${fmt(totalAfter)}`}
           </Button>
         </CardContent>
       </Card>

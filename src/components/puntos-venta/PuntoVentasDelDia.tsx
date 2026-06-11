@@ -184,13 +184,27 @@ export function PuntoVentasDelDia({ sales, location, locationId }: Props) {
                   {filtered.map((s) => {
                     const tipo = saleDocType(s.payment_method);
                     const its = itemsBySale[s.id] ?? [];
+                    const hasDiscount = Number(s.discount ?? 0) > 0;
                     return (
-                      <tr key={s.id} className="border-b">
+                      <tr
+                        key={s.id}
+                        className={
+                          hasDiscount
+                            ? "border-b bg-destructive/10 text-destructive-foreground/90"
+                            : "border-b"
+                        }
+                        title={hasDiscount ? `Venta con descuento de $${Number(s.discount).toLocaleString()}` : undefined}
+                      >
                         <td className="py-2">{new Date(s.sale_date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</td>
                         <td>
                           <Badge variant={tipo === "factura" ? "default" : "secondary"}>
                             {tipo === "factura" ? "Factura DIAN" : "Remisión"}
                           </Badge>
+                          {hasDiscount && (
+                            <Badge variant="destructive" className="ml-1">
+                              Desc. ${Number(s.discount).toLocaleString()}
+                            </Badge>
+                          )}
                         </td>
                         <td>
                           <div className="font-medium">{s.client_name || "—"}</div>
