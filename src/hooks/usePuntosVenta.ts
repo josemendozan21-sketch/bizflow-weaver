@@ -213,6 +213,10 @@ export function usePosProducts(locationId: string | null) {
       if (error) throw error;
       return (data as PosProduct[]) ?? [];
     },
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
+    refetchInterval: 30000,
+    staleTime: 0,
   });
 }
 
