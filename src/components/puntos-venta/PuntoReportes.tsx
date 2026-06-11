@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   PosSale, PosMovement, PosProduct,
-  usePosCashWithdrawals, usePosSaleItems,
+  usePosCashWithdrawals,
 } from "@/hooks/usePuntosVenta";
 import { TrendingUp, DollarSign, Package, History, Receipt, Banknote, BarChart3, Wallet } from "lucide-react";
 import { PuntoVentasDelDia } from "./PuntoVentasDelDia";
@@ -29,18 +29,8 @@ export function PuntoReportes({ sales, movements, products, locationId, location
   const { role } = useAuth();
   const isAdmin = role === "admin";
   const today = new Date().toISOString().slice(0, 10);
-  const recentSales = useMemo(() => sales.slice(0, 50), [sales]);
-  const recentIds = useMemo(() => recentSales.map((s) => s.id), [recentSales]);
-  const { data: recentItems = [] } = usePosSaleItems(recentIds);
-  const itemsBySale = useMemo(() => {
-    const map: Record<string, typeof recentItems> = {};
-    for (const it of recentItems) {
-      (map[it.sale_id] ||= []).push(it);
-    }
-    return map;
-  }, [recentItems]);
+  const todaySales = useMemo(() => sales.filter((s) => s.sale_date.slice(0, 10) === today), [sales, today]);
   const totals = useMemo(() => {
-    const todaySales = sales.filter((s) => s.sale_date.slice(0, 10) === today);
     const totalToday = todaySales.reduce((a, b) => a + Number(b.total_amount), 0);
     const totalAll = sales.reduce((a, b) => a + Number(b.total_amount), 0);
     const profitAll = sales.reduce(
@@ -72,7 +62,7 @@ export function PuntoReportes({ sales, movements, products, locationId, location
       withdrawalsToday,
       cashOnHand: cashBase + efectivo - withdrawalsToday,
     };
-  }, [sales, products, today, withdrawals, cashBase]);
+  }, [sales, products, today, withdrawals, cashBase, todaySales]);
 
   return (
     <Tabs defaultValue="resumen" className="space-y-4">
