@@ -272,6 +272,58 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
       return <p className="text-sm text-muted-foreground text-center py-8">No hay productos disponibles.</p>;
     }
 
+    if (isNutritionSelected) {
+      return (
+        <div className="space-y-1.5">
+          {filtered.map((p) => {
+            const display = displayByProductId.get(p.id);
+            const displayName = display?.name ?? p.name;
+            const displayPhoto = display?.photoUrl ?? p.photo_url;
+            return (
+              <div key={p.id} className="flex items-center gap-2 rounded-md border p-2 transition hover:border-primary hover:bg-accent">
+                <button type="button" onClick={() => addToCart(p)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                  <div className="h-14 w-14 rounded bg-muted overflow-hidden flex items-center justify-center shrink-0">
+                    {displayPhoto ? (
+                      <img src={displayPhoto} alt={displayName} className="h-full w-full object-cover" loading="lazy" decoding="async" width={56} height={56} />
+                    ) : (
+                      <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium leading-tight break-words">{displayName}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{p.supplier ?? p.brand}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-xs font-bold">${Number(p.sale_price).toLocaleString()}</p>
+                    <Badge variant="outline" className="text-[10px] px-1 py-0">{Number(p.available)}</Badge>
+                  </div>
+                </button>
+                <input
+                  ref={(el) => (photoInputsRef.current[p.id] = el)}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => handleProductPhoto(e, p)}
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 shrink-0"
+                  onClick={() => photoInputsRef.current[p.id]?.click()}
+                  disabled={uploadingPhotoId === p.id}
+                  title={p.photo_url ? "Cambiar foto" : "Subir foto"}
+                >
+                  {uploadingPhotoId === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
         {filtered.map((p) => {
