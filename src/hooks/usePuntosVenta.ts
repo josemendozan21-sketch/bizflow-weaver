@@ -102,6 +102,7 @@ export type PosLocation = {
   address: string | null;
   status: string;
   notes: string | null;
+  cash_base: number;
 };
 
 export type PosProduct = {
