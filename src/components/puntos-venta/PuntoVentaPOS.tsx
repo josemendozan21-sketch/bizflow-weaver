@@ -79,7 +79,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
   };
 
   const available = useMemo(
-    () => products.filter((p) => p.active && Number(p.available) > 0),
+    () => products.filter((p) => p.active),
     [products]
   );
 
@@ -167,12 +167,14 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
       const found = prev.find((c) => c.product.id === p.id);
       if (found) {
         if (found.quantity + 1 > Number(p.available)) {
-          toast.error("Sin stock suficiente");
-          return prev;
+          toast.warning("Vendiendo sin stock disponible");
         }
         return prev.map((c) =>
           c.product.id === p.id ? { ...c, quantity: c.quantity + 1 } : c
         );
+      }
+      if (Number(p.available) <= 0) {
+        toast.warning("Vendiendo sin stock disponible");
       }
       return [...prev, { product: p, quantity: 1 }];
     });
@@ -185,8 +187,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
         const newQty = c.quantity + delta;
         if (newQty <= 0) return [];
         if (newQty > Number(c.product.available)) {
-          toast.error("Sin stock suficiente");
-          return [c];
+          toast.warning("Vendiendo sin stock disponible");
         }
         return [{ ...c, quantity: newQty }];
       })
