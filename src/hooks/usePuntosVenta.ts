@@ -12,7 +12,7 @@ export const CONSUMIDOR_FINAL = {
 };
 
 export async function uploadPosProductPhoto(file: File, locationId: string) {
-  const compressed = await compressImage(file, 900, 0.8);
+  const compressed = await compressImage(file, 600, 0.65);
   const path = `${locationId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
   const { error } = await supabase.storage
     .from("pos-product-photos")
