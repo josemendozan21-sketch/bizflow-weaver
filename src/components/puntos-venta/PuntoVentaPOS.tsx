@@ -275,6 +275,9 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
         {filtered.map((p) => (
+          const display = displayByProductId.get(p.id);
+          const displayName = display?.name ?? p.name;
+          const displayPhoto = display?.photoUrl ?? p.photo_url;
           <div
             key={p.id}
             className="relative text-left p-2 rounded-md border hover:border-primary hover:bg-accent transition"
@@ -285,10 +288,10 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
               className="w-full text-left"
             >
               <div className="aspect-square w-full mb-1.5 rounded bg-muted overflow-hidden flex items-center justify-center">
-                {p.photo_url ? (
+                {displayPhoto ? (
                   <img
-                    src={p.photo_url}
-                    alt={p.name}
+                    src={displayPhoto}
+                    alt={displayName}
                     className="w-full h-full object-cover"
                     loading="lazy"
                     decoding="async"
@@ -299,7 +302,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
                   <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
                 )}
               </div>
-              <p className="font-medium text-xs leading-tight break-words">{p.name}</p>
+              <p className="font-medium text-xs leading-tight break-words">{displayName}</p>
               {p.brand && <p className="text-[10px] text-muted-foreground truncate">{p.brand}</p>}
               <div className="flex items-center justify-between mt-1">
                 <span className="font-bold text-xs">${Number(p.sale_price).toLocaleString()}</span>
