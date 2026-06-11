@@ -128,6 +128,7 @@ export default function PuntosVenta() {
               products={products}
               locationId={locationId}
               location={{ name: location.name, city: location.city, address: location.address }}
+              cashBase={Number(location.cash_base ?? 0)}
             />
           )}
         </TabsContent>
