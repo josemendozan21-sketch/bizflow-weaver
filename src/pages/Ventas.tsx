@@ -2731,6 +2731,20 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
               <Input id="generic_paymentDate" type="date" value={genericPaymentDate} onChange={(e) => setGenericPaymentDate(e.target.value)} />
               <p className="text-xs text-muted-foreground">Si el pago fue hoy déjala como está; si fue otro día selecciónala.</p>
             </div>
+            <div className="space-y-1.5 pt-2">
+              <Label htmlFor="generic_paymentProof">Soporte de pago (opcional)</Label>
+              <Input
+                id="generic_paymentProof"
+                type="file"
+                accept="image/*,.pdf"
+                onChange={(e) => setGenericPaymentProofFile(e.target.files?.[0] || null)}
+                className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary"
+              />
+              {genericPaymentProofFile && (
+                <p className="text-xs text-muted-foreground">Adjunto: {genericPaymentProofFile.name}</p>
+              )}
+              <p className="text-xs text-muted-foreground">Adjunte el comprobante para revisión en contabilidad.</p>
+            </div>
           </fieldset>
 
           <div className="space-y-1.5">
