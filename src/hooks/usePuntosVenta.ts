@@ -467,6 +467,77 @@ export function useAttachPosSaleMerchandise(locationId: string) {
   });
 }
 
+export function useUpdatePosSale(locationId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      saleId: string;
+      client_name?: string | null;
+      client_document?: string | null;
+      client_phone?: string | null;
+      client_email?: string | null;
+      payment_method?: string | null;
+      notes?: string | null;
+    }) => {
+      const { saleId, ...rest } = input;
+      const { error } = await supabase
+        .from("pos_sales")
+        .update(rest as any)
+        .eq("id", saleId);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pos_sales", locationId] }),
+  });
+}
+
+export function useDeletePosSale(locationId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (saleId: string) => {
+      // 1. Fetch items so we can restore stock
+      const { data: items, error: iErr } = await supabase
+        .from("pos_sale_items")
+        .select("*")
+        .eq("sale_id", saleId);
+      if (iErr) throw iErr;
+
+      // 2. Restore stock per item
+      for (const it of items ?? []) {
+        if (!it.pos_product_id) continue;
+        const { data: prod } = await supabase
+          .from("pos_products")
+          .select("available")
+          .eq("id", it.pos_product_id)
+          .maybeSingle();
+        if (prod) {
+          await supabase
+            .from("pos_products")
+            .update({ available: Number(prod.available) + Number(it.quantity) })
+            .eq("id", it.pos_product_id);
+        }
+      }
+
+      // 3. Delete related movements (linked by reference_id)
+      await supabase
+        .from("pos_inventory_movements")
+        .delete()
+        .eq("reference_id", saleId);
+
+      // 4. Delete sale items
+      await supabase.from("pos_sale_items").delete().eq("sale_id", saleId);
+
+      // 5. Delete the sale
+      const { error: sErr } = await supabase.from("pos_sales").delete().eq("id", saleId);
+      if (sErr) throw sErr;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pos_sales", locationId] });
+      qc.invalidateQueries({ queryKey: ["pos_products", locationId] });
+      qc.invalidateQueries({ queryKey: ["pos_movements", locationId] });
+    },
+  });
+}
+
 export type CartItem = {
   product: PosProduct;
   quantity: number;
