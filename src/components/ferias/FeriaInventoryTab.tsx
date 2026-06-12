@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Send, CheckCircle2, Pencil, Check, X } from "lucide-react";
+import { Trash2, Plus, Send, CheckCircle2, Pencil, Check, X, Target } from "lucide-react";
 import { useFeriaInventory, useAddFeriaInventory, useDeleteFeriaInventory, useUpdateFeriaInventory, useFeriaSales, useFeriaDispatchRequest, useCreateDispatchRequest } from "@/hooks/useFerias";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInventory } from "@/hooks/useInventory";
@@ -26,43 +26,42 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   const upd = useUpdateFeriaInventory();
   const { stockItems } = useInventory();
 
-  // Selection format: "magical|<name> (<Frío|Térmico>)"  or  "sweatspot|<name> - <color>"
-  const [selectedKey, setSelectedKey] = useState("");
+  // Independent brand + product + color selectors so admin can plan any combination
+  const [brand, setBrand] = useState<"magical" | "sweatspot" | "">("");
+  const [productName, setProductName] = useState("");
+  const [color, setColor] = useState("");
   const [form, setForm] = useState({ quantity_assigned: "", unit_price: "", unit_cost: "", notes: "" });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ quantity_assigned: "", unit_price: "", unit_cost: "" });
 
-  const magicalOptions = useMemo(() => {
-    const seen = new Set<string>();
-    const opts: { value: string; label: string }[] = [];
+  // Distinct product names per brand (color is selected separately so admin can project any color)
+  const productsByBrand = useMemo(() => {
+    const map: Record<string, { names: Set<string>; colorsByName: Record<string, Set<string>> }> = {
+      magical: { names: new Set(), colorsByName: {} },
+      sweatspot: { names: new Set(), colorsByName: {} },
+    };
     stockItems
-      .filter((it) => it.brand === "magical" && it.category === "producto_terminado")
+      .filter((it) => (it.brand === "magical" || it.brand === "sweatspot") && it.category === "producto_terminado")
       .forEach((it) => {
-        const label = it.product_type ? `${it.name} (${it.product_type})` : it.name;
-        const value = `magical|${label}`;
-        if (!seen.has(value)) {
-          seen.add(value);
-          opts.push({ value, label });
-        }
+        const b = it.brand as "magical" | "sweatspot";
+        map[b].names.add(it.name);
+        if (!map[b].colorsByName[it.name]) map[b].colorsByName[it.name] = new Set();
+        if (it.color) map[b].colorsByName[it.name].add(it.color);
+        if (b === "magical" && it.product_type) map[b].colorsByName[it.name].add(it.product_type);
       });
-    return opts.sort((a, b) => a.label.localeCompare(b.label, "es"));
+    return map;
   }, [stockItems]);
 
-  const sweatspotOptions = useMemo(() => {
-    const seen = new Set<string>();
-    const opts: { value: string; label: string }[] = [];
-    stockItems
-      .filter((it) => it.brand === "sweatspot" && it.category === "producto_terminado")
-      .forEach((it) => {
-        const label = it.color ? `${it.name} - ${it.color}` : it.name;
-        const value = `sweatspot|${label}`;
-        if (!seen.has(value)) {
-          seen.add(value);
-          opts.push({ value, label });
-        }
-      });
-    return opts.sort((a, b) => a.label.localeCompare(b.label, "es"));
-  }, [stockItems]);
+  const SWEATSPOT_COMMON_COLORS = ["Negro", "Blanco", "Azul", "Rosado", "Morado", "Verde Militar", "Rojo", "Gris", "Beige", "Único"];
+  const MAGICAL_VARIANTS = ["Frío", "Térmico"];
+
+  const currentProducts = brand ? Array.from(productsByBrand[brand].names).sort((a, b) => a.localeCompare(b, "es")) : [];
+  const currentColors = useMemo(() => {
+    if (!brand || !productName) return [];
+    const fromStock = Array.from(productsByBrand[brand].colorsByName[productName] || []);
+    const extras = brand === "sweatspot" ? SWEATSPOT_COMMON_COLORS : MAGICAL_VARIANTS;
+    return Array.from(new Set([...fromStock, ...extras])).sort((a, b) => a.localeCompare(b, "es"));
+  }, [brand, productName, productsByBrand]);
 
   const soldByProduct = sales.reduce<Record<string, number>>((acc, s) => {
     const k = `${s.brand}|${s.product_name}`;
@@ -71,12 +70,12 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   }, {});
 
   const handleAdd = async () => {
-    if (!selectedKey || !form.quantity_assigned) return;
-    const [brand, productName] = selectedKey.split("|");
+    if (!brand || !productName || !form.quantity_assigned) return;
+    const label = color ? `${productName}${brand === "magical" ? ` (${color})` : ` - ${color}`}` : productName;
     await add.mutateAsync({
       feria_id: feriaId,
       brand,
-      product_name: productName,
+      product_name: label,
       quantity_assigned: parseInt(form.quantity_assigned, 10),
       quantity_returned: 0,
       quantity_dispatched: 0,
@@ -85,9 +84,22 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
       unit_cost: parseFloat(form.unit_cost) || 0,
       notes: form.notes || null,
     });
-    setSelectedKey("");
+    setBrand("");
+    setProductName("");
+    setColor("");
     setForm({ quantity_assigned: "", unit_price: "", unit_cost: "", notes: "" });
   };
+
+  // Projection summary
+  const projection = useMemo(() => {
+    const totalUnits = inventory.reduce((a, b) => a + (b.quantity_assigned || 0), 0);
+    const expectedRevenue = inventory.reduce((a, b) => a + (b.quantity_assigned || 0) * (b.unit_price || 0), 0);
+    const expectedCost = inventory.reduce((a, b) => a + (b.quantity_assigned || 0) * (b.unit_cost || 0), 0);
+    const expectedMargin = expectedRevenue - expectedCost;
+    const soldUnits = sales.reduce((a, s) => a + (s.quantity || 0), 0);
+    const progress = totalUnits > 0 ? Math.round((soldUnits / totalUnits) * 100) : 0;
+    return { totalUnits, expectedRevenue, expectedCost, expectedMargin, soldUnits, progress };
+  }, [inventory, sales]);
 
   return (
     <div className="space-y-4">
@@ -112,7 +124,7 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
       {canManage && (
       <Card className="p-4">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <h3 className="font-semibold">Asignar producto</h3>
+          <h3 className="font-semibold">Asignar producto / Proyección</h3>
           {canSend && inventory.length > 0 && (
             <Button size="sm" onClick={() => sendToLogistics.mutate(feriaId)} disabled={sendToLogistics.isPending}>
               <Send className="mr-2 h-4 w-4" />
@@ -120,37 +132,72 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
             </Button>
           )}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-          <div className="md:col-span-2">
-            <Label>Producto (Magical o Sweatspot)</Label>
-            <Select value={selectedKey} onValueChange={setSelectedKey}>
-              <SelectTrigger><SelectValue placeholder="Seleccionar referencia..." /></SelectTrigger>
-              <SelectContent className="max-h-80">
-                <SelectGroup>
-                  <SelectLabel>Magical Warmers</SelectLabel>
-                  {magicalOptions.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
-                </SelectGroup>
-                <SelectGroup>
-                  <SelectLabel>Sweatspot</SelectLabel>
-                  {sweatspotOptions.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
-                </SelectGroup>
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
+          <div>
+            <Label>Marca</Label>
+            <Select value={brand} onValueChange={(v) => { setBrand(v as any); setProductName(""); setColor(""); }}>
+              <SelectTrigger><SelectValue placeholder="Marca..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="magical">Magical Warmers</SelectItem>
+                <SelectItem value="sweatspot">Sweatspot</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div>
+            <Label>Producto</Label>
+            <Select value={productName} onValueChange={(v) => { setProductName(v); setColor(""); }} disabled={!brand}>
+              <SelectTrigger><SelectValue placeholder={brand ? "Producto..." : "Marca primero"} /></SelectTrigger>
+              <SelectContent className="max-h-80">
+                {currentProducts.map((n) => (
+                  <SelectItem key={n} value={n}>{n}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>{brand === "magical" ? "Variante" : "Color"}</Label>
+            <Select value={color} onValueChange={setColor} disabled={!productName}>
+              <SelectTrigger><SelectValue placeholder={productName ? "Color..." : "Producto primero"} /></SelectTrigger>
+              <SelectContent className="max-h-80">
+                {currentColors.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              className="mt-1 h-7 text-xs"
+              placeholder="O escribe color/variante personalizado"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
+              disabled={!productName}
+            />
           </div>
           <div><Label>Cantidad</Label><Input type="number" value={form.quantity_assigned} onChange={(e) => setForm({ ...form, quantity_assigned: e.target.value })} /></div>
           <div><Label>Costo unitario</Label><Input type="number" value={form.unit_cost} onChange={(e) => setForm({ ...form, unit_cost: e.target.value })} /></div>
           <div><Label>Precio venta</Label><Input type="number" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} /></div>
-          <div className="md:col-span-5 flex justify-end">
-            <Button onClick={handleAdd} disabled={!selectedKey || !form.quantity_assigned}>
+          <div className="md:col-span-6 flex justify-end">
+            <Button onClick={handleAdd} disabled={!brand || !productName || !form.quantity_assigned}>
               <Plus className="mr-2 h-4 w-4" />Agregar referencia
             </Button>
           </div>
         </div>
       </Card>
+      )}
+
+      {canSeeFinancials && inventory.length > 0 && (
+        <Card className="p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Target className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold">Proyección de venta</h3>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+            <div><div className="text-muted-foreground text-xs">Unidades planificadas</div><div className="text-lg font-bold">{projection.totalUnits}</div></div>
+            <div><div className="text-muted-foreground text-xs">Ingresos esperados</div><div className="text-lg font-bold">${projection.expectedRevenue.toLocaleString()}</div></div>
+            <div><div className="text-muted-foreground text-xs">Costo esperado</div><div className="text-lg font-bold">${projection.expectedCost.toLocaleString()}</div></div>
+            <div><div className="text-muted-foreground text-xs">Margen esperado</div><div className="text-lg font-bold text-emerald-600">${projection.expectedMargin.toLocaleString()}</div></div>
+            <div><div className="text-muted-foreground text-xs">Avance ventas</div><div className="text-lg font-bold">{projection.soldUnits} / {projection.totalUnits} ({projection.progress}%)</div></div>
+          </div>
+        </Card>
       )}
 
       <Card>
