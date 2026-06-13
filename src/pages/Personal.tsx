@@ -639,6 +639,11 @@ function WeeklyReport() {
                                   <span className="text-muted-foreground">
                                     ({hoursBetween(r.check_in_at, r.check_out_at).toFixed(2)}h)
                                   </span>
+                                  {r.notes && (
+                                    <span className="ml-1 text-amber-600" title={r.notes}>
+                                      <MessageSquare className="inline h-3 w-3" />
+                                    </span>
+                                  )}
                                 </li>
                               ))}
                             </ul>
