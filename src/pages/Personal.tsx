@@ -7,11 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Camera, Clock, LogIn, LogOut, Loader2, Users, Video, Upload } from "lucide-react";
+import { Camera, Clock, LogIn, LogOut, Loader2, Users, Video, Upload, MessageSquare } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
 
 type Area = "estampacion" | "produccion" | "logistica";
 
