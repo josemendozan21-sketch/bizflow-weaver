@@ -7,11 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Camera, Clock, LogIn, LogOut, Loader2, Users, Video, Upload } from "lucide-react";
+import { Camera, Clock, LogIn, LogOut, Loader2, Users, Video, Upload, MessageSquare } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
 
 type Area = "estampacion" | "produccion" | "logistica";
 
@@ -244,6 +245,12 @@ function StaffCard({
             </a>
           )}
         </div>
+        {attendance?.notes && (
+          <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1 flex items-start gap-1">
+            <MessageSquare className="h-3 w-3 mt-0.5 shrink-0" />
+            <span>{attendance.notes}</span>
+          </p>
+        )}
         <div className="flex gap-2">
           {!hasCheckIn && (
             <ClockActionDialog
@@ -283,6 +290,7 @@ function ClockActionDialog({
   const [saving, setSaving] = useState(false);
   const [mode, setMode] = useState<"camera" | "upload">("camera");
   const [streaming, setStreaming] = useState(false);
+  const [note, setNote] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const { user } = useAuth();
@@ -319,6 +327,7 @@ function ClockActionDialog({
     if (!open) {
       stopCamera();
       setFile(null);
+      setNote("");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, mode]);
@@ -365,7 +374,7 @@ function ClockActionDialog({
         if (attendance) {
           const { error } = await supabase
             .from("staff_attendance")
-            .update({ check_in_at: nowIso, check_in_photo_url: photoUrl, recorded_by: user?.id ?? null })
+            .update({ check_in_at: nowIso, check_in_photo_url: photoUrl, recorded_by: user?.id ?? null, notes: note || attendance.notes })
             .eq("id", attendance.id);
           if (error) throw error;
         } else {
@@ -375,6 +384,7 @@ function ClockActionDialog({
             check_in_at: nowIso,
             check_in_photo_url: photoUrl,
             recorded_by: user?.id ?? null,
+            notes: note || null,
           });
           if (error) throw error;
         }
@@ -390,6 +400,7 @@ function ClockActionDialog({
       }
       setOpen(false);
       setFile(null);
+      setNote("");
       onDone();
     } catch (err: any) {
       toast.error("Error al registrar", { description: err.message });
@@ -489,6 +500,19 @@ function ClockActionDialog({
                   className="max-h-48 rounded border object-contain"
                 />
               )}
+            </div>
+          )}
+
+          {type === "in" && (
+            <div className="space-y-2">
+              <Label htmlFor="note">Comentario (motivo de llegada tarde, etc.)</Label>
+              <Textarea
+                id="note"
+                placeholder="Escribe aquí el motivo..."
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                className="min-h-[80px]"
+              />
             </div>
           )}
 
@@ -615,6 +639,11 @@ function WeeklyReport() {
                                   <span className="text-muted-foreground">
                                     ({hoursBetween(r.check_in_at, r.check_out_at).toFixed(2)}h)
                                   </span>
+                                  {r.notes && (
+                                    <span className="ml-1 text-amber-600" title={r.notes}>
+                                      <MessageSquare className="inline h-3 w-3" />
+                                    </span>
+                                  )}
                                 </li>
                               ))}
                             </ul>
