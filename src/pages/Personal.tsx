@@ -321,6 +321,7 @@ function ClockActionDialog({
     if (!open) {
       stopCamera();
       setFile(null);
+      setNote("");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, mode]);
