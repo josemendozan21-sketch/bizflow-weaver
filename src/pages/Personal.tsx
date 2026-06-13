@@ -368,7 +368,7 @@ function ClockActionDialog({
         if (attendance) {
           const { error } = await supabase
             .from("staff_attendance")
-            .update({ check_in_at: nowIso, check_in_photo_url: photoUrl, recorded_by: user?.id ?? null })
+            .update({ check_in_at: nowIso, check_in_photo_url: photoUrl, recorded_by: user?.id ?? null, notes: note || attendance.notes })
             .eq("id", attendance.id);
           if (error) throw error;
         } else {
@@ -378,6 +378,7 @@ function ClockActionDialog({
             check_in_at: nowIso,
             check_in_photo_url: photoUrl,
             recorded_by: user?.id ?? null,
+            notes: note || null,
           });
           if (error) throw error;
         }
@@ -393,6 +394,7 @@ function ClockActionDialog({
       }
       setOpen(false);
       setFile(null);
+      setNote("");
       onDone();
     } catch (err: any) {
       toast.error("Error al registrar", { description: err.message });
