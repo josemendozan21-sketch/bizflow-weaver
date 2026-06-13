@@ -284,6 +284,7 @@ function ClockActionDialog({
   const [saving, setSaving] = useState(false);
   const [mode, setMode] = useState<"camera" | "upload">("camera");
   const [streaming, setStreaming] = useState(false);
+  const [note, setNote] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const { user } = useAuth();
