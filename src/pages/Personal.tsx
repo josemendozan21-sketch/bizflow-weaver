@@ -497,6 +497,19 @@ function ClockActionDialog({
             </div>
           )}
 
+          {type === "in" && (
+            <div className="space-y-2">
+              <Label htmlFor="note">Comentario (motivo de llegada tarde, etc.)</Label>
+              <Textarea
+                id="note"
+                placeholder="Escribe aquí el motivo..."
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                className="min-h-[80px]"
+              />
+            </div>
+          )}
+
           <Button className="w-full" onClick={submit} disabled={saving || !file}>
             {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Camera className="h-4 w-4 mr-1" />}
             Confirmar {type === "in" ? "ingreso" : "salida"}
