@@ -582,59 +582,54 @@ export const MagicalWarmersWorkflow = () => {
                   })
                   .eq("id", finalizeTask.id);
                 if (updErr) { toast.error(`Error al finalizar: ${updErr.message}`); return; }
-                // Add real units to body_stock
-                const { data: existing } = await supabase
-                  .from("body_stock")
-                  .select("*")
-                  .eq("brand", "magical")
-                  .ilike("referencia", canonicalRef)
-                  .maybeSingle();
-                if (existing) {
-                  await supabase
-                    .from("body_stock")
-                    .update({ available: existing.available + qty })
-                    .eq("id", existing.id);
-                } else {
-                  await supabase
-                    .from("body_stock")
-                    .insert({ brand: "magical", referencia: canonicalRef, available: qty });
-                }
-                // Sync stock_items (cuerpos_referencias) so it appears in inventarios view
-                const { data: stockRow } = await supabase
+                // Ensure a stock_items row exists (trigger requires it), but don't add stock yet.
+                let { data: stockRow } = await supabase
                   .from("stock_items")
-                  .select("id, available, in_process")
+                  .select("id")
                   .eq("brand", "magical")
                   .eq("category", "cuerpos_referencias")
                   .ilike("name", canonicalRef)
                   .maybeSingle();
-                if (stockRow) {
-                  const estimated = Number(finalizeTask.unidades || 0);
-                  const newInProcess = Math.max(Number(stockRow.in_process || 0) - estimated, 0);
-                  await supabase
-                    .from("stock_items")
-                    .update({
-                      available: Number(stockRow.available || 0) + qty,
-                      in_process: newInProcess,
-                    } as any)
-                    .eq("id", stockRow.id);
-                } else {
-                  await supabase.from("stock_items").insert({
+                if (!stockRow) {
+                  const { data: created } = await supabase.from("stock_items").insert({
                     name: canonicalRef,
                     brand: "magical",
                     category: "cuerpos_referencias",
-                    available: qty,
+                    available: 0,
+                    in_process: 0,
                     unit: "unidades",
                     min_stock: 0,
-                  } as any);
+                  } as any).select("id").single();
+                  stockRow = created;
                 }
-                // Notify inventarios so they can receive / verify the new stock
+                // Register a PENDING-RECEPTION inventory movement.
+                // Stock will be added to body_stock + stock_items only when Inventarios
+                // confirms reception from the Historial de movimientos.
+                const { data: { user: authUser } } = await supabase.auth.getUser();
+                await supabase.from("inventory_movements").insert({
+                  stock_item_id: stockRow?.id ?? null,
+                  item_name: canonicalRef,
+                  brand: "magical",
+                  category: "cuerpos_referencias",
+                  quantity: qty,
+                  direction: "retorno",
+                  area: "produccion",
+                  movement_kind: "entrada",
+                  purpose: `Cuerpos fabricados por ${finalizeFabricatedBy.trim()}`,
+                  reason: `AUTO_REQ: Pendiente de recepción en Inventarios`,
+                  requested_by_name: finalizeFabricatedBy.trim(),
+                  recorded_by: authUser?.id ?? null,
+                  recorded_by_name: authUser?.email ?? "Producción",
+                  reception_confirmed: false,
+                } as any);
+                // Notify inventarios so they can confirm reception
                 await supabase.from("notifications").insert({
                   target_role: "inventarios",
-                  title: "Cuerpos finalizados — recibir inventario",
-                  message: `${qty} uds de "${canonicalRef}" finalizadas por ${finalizeFabricatedBy.trim()}. Inventario actualizado, pendiente de verificación en recepción.`,
+                  title: "Cuerpos finalizados — confirmar recepción",
+                  message: `${qty} uds de "${canonicalRef}" finalizadas por ${finalizeFabricatedBy.trim()}. Confirma la recepción desde el Historial de movimientos.`,
                   type: "success",
                 } as any);
-                toast.success(`${qty} uds de "${canonicalRef}" enviadas a inventario.`);
+                toast.success(`${qty} uds de "${canonicalRef}" enviadas a Inventarios para confirmación.`);
                 setFinalizeTask(null);
               }}
             >

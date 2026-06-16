@@ -1087,6 +1087,10 @@ export type Database = {
           purpose: string | null
           quantity: number
           reason: string | null
+          reception_confirmed: boolean
+          reception_confirmed_at: string | null
+          reception_confirmed_by: string | null
+          reception_confirmed_by_name: string | null
           recorded_at: string
           recorded_by: string | null
           recorded_by_name: string | null
@@ -1110,6 +1114,10 @@ export type Database = {
           purpose?: string | null
           quantity: number
           reason?: string | null
+          reception_confirmed?: boolean
+          reception_confirmed_at?: string | null
+          reception_confirmed_by?: string | null
+          reception_confirmed_by_name?: string | null
           recorded_at?: string
           recorded_by?: string | null
           recorded_by_name?: string | null
@@ -1133,6 +1141,10 @@ export type Database = {
           purpose?: string | null
           quantity?: number
           reason?: string | null
+          reception_confirmed?: boolean
+          reception_confirmed_at?: string | null
+          reception_confirmed_by?: string | null
+          reception_confirmed_by_name?: string | null
           recorded_at?: string
           recorded_by?: string | null
           recorded_by_name?: string | null
