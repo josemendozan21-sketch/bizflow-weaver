@@ -22,6 +22,8 @@ import { useInventory, getStockStatus, type SupabaseStockItem } from "@/hooks/us
 import type { InventoryCategory, InventoryBrand } from "@/stores/inventoryStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { baseRefName } from "@/lib/canonicalBodyRef";
 
 type StockStatus = "ok" | "bajo" | "critico";
 
@@ -84,7 +86,13 @@ const CategorizedInventoryPanel = ({
   const [addOpen, setAddOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ available: "", minStock: "" });
-  const [newForm, setNewForm] = useState({ name: "", available: "", unit: "unidades", minStock: "" });
+  const [newForm, setNewForm] = useState({
+    name: "",
+    available: "",
+    unit: "unidades",
+    minStock: "",
+    tipo: "" as "" | "Frío" | "Térmico",
+  });
   const [activeHighlights, setActiveHighlights] = useState<string[]>(highlightItemNames);
   const highlightRef = useRef<HTMLTableRowElement>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -133,21 +141,60 @@ const CategorizedInventoryPanel = ({
       toast.error("Completa todos los campos");
       return;
     }
+    const isMagical = selectedBrand === "magical_warmers";
+    const needsTipo = isMagical && (selectedCategory === "cuerpos_referencias" || selectedCategory === "producto_terminado");
+    if (needsTipo && !newForm.tipo) {
+      toast.error("Selecciona si el producto es de Frío o de Calor (Térmico)");
+      return;
+    }
+    // Canonical name: base WITHOUT suffix in stock_items (product_type carries the tipo).
+    const cleanBase = baseRefName(newForm.name.trim());
+    // Duplicate check within same brand+category (case/accent-insensitive, ignoring suffixes)
+    const dupe = stockItems.find(
+      (s) =>
+        s.brand === dbBrand &&
+        s.category === selectedCategory &&
+        normalize(baseRefName(s.name)) === normalize(cleanBase) &&
+        (!needsTipo || !s.product_type || s.product_type === newForm.tipo)
+    );
+    if (dupe) {
+      toast.error(`Ya existe "${dupe.name}"${dupe.product_type ? ` (${dupe.product_type})` : ""}. Edita el existente para evitar duplicados.`);
+      return;
+    }
     const result = await addStockItem({
       brand: dbBrand,
       category: selectedCategory,
-      name: newForm.name,
+      name: cleanBase,
       available: Number(newForm.available),
       unit: newForm.unit,
       min_stock: Number(newForm.minStock),
+      product_type: needsTipo ? newForm.tipo : null,
     });
-    if (result.success) {
-      toast.success("Ítem agregado al inventario");
-      setNewForm({ name: "", available: "", unit: "unidades", minStock: "" });
-      setAddOpen(false);
-    } else {
+    if (!result.success) {
       toast.error(result.message);
+      return;
     }
+    // For Magical cuerpos: also seed body_stock so Producción lo vea (con sufijo canónico).
+    if (isMagical && selectedCategory === "cuerpos_referencias" && newForm.tipo) {
+      const canonicalRef = `${cleanBase} (${newForm.tipo})`;
+      const { data: existingBody } = await supabase
+        .from("body_stock")
+        .select("id, referencia")
+        .in("brand", ["magical", "magical_warmers"]);
+      const already = (existingBody || []).find(
+        (b: any) => normalize(b.referencia) === normalize(canonicalRef),
+      );
+      if (!already) {
+        await supabase.from("body_stock").insert({
+          brand: "magical",
+          referencia: canonicalRef,
+          available: Number(newForm.available),
+        } as any);
+      }
+    }
+    toast.success("Ítem agregado al inventario");
+    setNewForm({ name: "", available: "", unit: "unidades", minStock: "", tipo: "" });
+    setAddOpen(false);
   };
 
   const startEdit = (item: SupabaseStockItem) => {
