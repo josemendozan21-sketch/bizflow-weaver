@@ -22,6 +22,8 @@ import { useInventory, getStockStatus, type SupabaseStockItem } from "@/hooks/us
 import type { InventoryCategory, InventoryBrand } from "@/stores/inventoryStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { baseRefName } from "@/lib/canonicalBodyRef";
 
 type StockStatus = "ok" | "bajo" | "critico";
 
@@ -84,7 +86,13 @@ const CategorizedInventoryPanel = ({
   const [addOpen, setAddOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ available: "", minStock: "" });
-  const [newForm, setNewForm] = useState({ name: "", available: "", unit: "unidades", minStock: "" });
+  const [newForm, setNewForm] = useState({
+    name: "",
+    available: "",
+    unit: "unidades",
+    minStock: "",
+    tipo: "" as "" | "Frío" | "Térmico",
+  });
   const [activeHighlights, setActiveHighlights] = useState<string[]>(highlightItemNames);
   const highlightRef = useRef<HTMLTableRowElement>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -133,21 +141,60 @@ const CategorizedInventoryPanel = ({
       toast.error("Completa todos los campos");
       return;
     }
+    const isMagical = selectedBrand === "magical_warmers";
+    const needsTipo = isMagical && (selectedCategory === "cuerpos_referencias" || selectedCategory === "producto_terminado");
+    if (needsTipo && !newForm.tipo) {
+      toast.error("Selecciona si el producto es de Frío o de Calor (Térmico)");
+      return;
+    }
+    // Canonical name: base WITHOUT suffix in stock_items (product_type carries the tipo).
+    const cleanBase = baseRefName(newForm.name.trim());
+    // Duplicate check within same brand+category (case/accent-insensitive, ignoring suffixes)
+    const dupe = stockItems.find(
+      (s) =>
+        s.brand === dbBrand &&
+        s.category === selectedCategory &&
+        normalize(baseRefName(s.name)) === normalize(cleanBase) &&
+        (!needsTipo || !s.product_type || s.product_type === newForm.tipo)
+    );
+    if (dupe) {
+      toast.error(`Ya existe "${dupe.name}"${dupe.product_type ? ` (${dupe.product_type})` : ""}. Edita el existente para evitar duplicados.`);
+      return;
+    }
     const result = await addStockItem({
       brand: dbBrand,
       category: selectedCategory,
-      name: newForm.name,
+      name: cleanBase,
       available: Number(newForm.available),
       unit: newForm.unit,
       min_stock: Number(newForm.minStock),
+      product_type: needsTipo ? newForm.tipo : null,
     });
-    if (result.success) {
-      toast.success("Ítem agregado al inventario");
-      setNewForm({ name: "", available: "", unit: "unidades", minStock: "" });
-      setAddOpen(false);
-    } else {
+    if (!result.success) {
       toast.error(result.message);
+      return;
     }
+    // For Magical cuerpos: also seed body_stock so Producción lo vea (con sufijo canónico).
+    if (isMagical && selectedCategory === "cuerpos_referencias" && newForm.tipo) {
+      const canonicalRef = `${cleanBase} (${newForm.tipo})`;
+      const { data: existingBody } = await supabase
+        .from("body_stock")
+        .select("id, referencia")
+        .in("brand", ["magical", "magical_warmers"]);
+      const already = (existingBody || []).find(
+        (b: any) => normalize(b.referencia) === normalize(canonicalRef),
+      );
+      if (!already) {
+        await supabase.from("body_stock").insert({
+          brand: "magical",
+          referencia: canonicalRef,
+          available: Number(newForm.available),
+        } as any);
+      }
+    }
+    toast.success("Ítem agregado al inventario");
+    setNewForm({ name: "", available: "", unit: "unidades", minStock: "", tipo: "" });
+    setAddOpen(false);
   };
 
   const startEdit = (item: SupabaseStockItem) => {
@@ -375,7 +422,53 @@ const CategorizedInventoryPanel = ({
                             <div className="grid gap-1.5">
                               <Label>Nombre *</Label>
                               <Input placeholder="Ej: Gel, Envase…" value={newForm.name} onChange={(e) => setNewForm({ ...newForm, name: e.target.value })} />
+                              {selectedBrand === "magical_warmers" && newForm.name.trim().length > 1 && (() => {
+                                const base = normalize(baseRefName(newForm.name.trim()));
+                                const similar = stockItems.filter(
+                                  (s) => s.brand === dbBrand && s.category === selectedCategory &&
+                                    normalize(baseRefName(s.name)).includes(base),
+                                );
+                                if (similar.length === 0) return null;
+                                return (
+                                  <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-2 text-xs text-amber-700 dark:text-amber-400">
+                                    <div className="font-semibold mb-1 flex items-center gap-1">
+                                      <AlertTriangle className="h-3 w-3" /> Posibles duplicados
+                                    </div>
+                                    <ul className="list-disc ml-4">
+                                      {similar.slice(0, 5).map((s) => (
+                                        <li key={s.id}>{s.name}{s.product_type ? ` — ${s.product_type}` : ""}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                );
+                              })()}
                             </div>
+                            {selectedBrand === "magical_warmers" && (selectedCategory === "cuerpos_referencias" || selectedCategory === "producto_terminado") && (
+                              <div className="grid gap-1.5">
+                                <Label>Tipo de producto *</Label>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <Button
+                                    type="button"
+                                    variant={newForm.tipo === "Frío" ? "default" : "outline"}
+                                    className="gap-1.5"
+                                    onClick={() => setNewForm({ ...newForm, tipo: "Frío" })}
+                                  >
+                                    <Snowflake className="h-4 w-4" /> Frío
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant={newForm.tipo === "Térmico" ? "default" : "outline"}
+                                    className="gap-1.5"
+                                    onClick={() => setNewForm({ ...newForm, tipo: "Térmico" })}
+                                  >
+                                    <Flame className="h-4 w-4" /> Calor (Térmico)
+                                  </Button>
+                                </div>
+                                <p className="text-[11px] text-muted-foreground">
+                                  Se guarda como una sola referencia y aparece automáticamente en Producción, Ventas e Inventarios.
+                                </p>
+                              </div>
+                            )}
                             <div className="grid grid-cols-3 gap-3">
                               <div className="grid gap-1.5">
                                 <Label>Cantidad *</Label>
