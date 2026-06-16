@@ -460,8 +460,14 @@ const WholesaleOrdersInbox = () => {
     );
   };
 
-  const pendingRetail = useMemo(() => retailOrders.filter((o) => !deliveredIds.has(o.id)), [retailOrders, deliveredIds]);
-  const deliveredRetail = useMemo(() => retailOrders.filter((o) => deliveredIds.has(o.id)), [retailOrders, deliveredIds]);
+  const pendingRetail = useMemo(
+    () => retailOrders.filter((o) => !deliveredIds.has(o.id) && NEW_STATUSES.includes(o.production_status)),
+    [retailOrders, deliveredIds]
+  );
+  const deliveredRetail = useMemo(
+    () => retailOrders.filter((o) => deliveredIds.has(o.id) || !NEW_STATUSES.includes(o.production_status)),
+    [retailOrders, deliveredIds]
+  );
 
   if (view === "menu") {
     return (
