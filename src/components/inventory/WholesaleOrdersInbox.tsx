@@ -597,6 +597,7 @@ const WholesaleOrdersInbox = () => {
 
   // view === "mayor"
   const filteredPending = filterOrders(pending);
+  const filteredDelivered = filterOrders(delivered);
   return (
     <div className="space-y-4">
       <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setView("menu")}>
@@ -636,6 +637,23 @@ const WholesaleOrdersInbox = () => {
           )}
         </CardContent>
       </Card>
+
+      {filteredDelivered.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Package className="h-4 w-4 text-muted-foreground" />
+              Entregados recientes
+              <Badge variant="secondary">{filteredDelivered.length}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 md:grid-cols-2">
+              {filteredDelivered.map((o) => renderCard(o, true))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Dialog open={!!delivering} onOpenChange={(o) => !o && setDelivering(null)}>
         <DialogContent>
