@@ -26,6 +26,10 @@ export interface InventoryMovement {
   purpose?: string | null;
   movement_kind?: MovementKind;
   supplier?: string | null;
+  reception_confirmed?: boolean;
+  reception_confirmed_at?: string | null;
+  reception_confirmed_by?: string | null;
+  reception_confirmed_by_name?: string | null;
 }
 
 export interface CreateMovementInput {
