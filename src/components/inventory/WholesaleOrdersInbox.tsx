@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Inbox, Package, Truck, Paintbrush, Factory, Calendar, User as UserIcon, ShoppingBag, ArrowLeft, Search, X, RotateCcw } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Inbox, Package, Truck, Paintbrush, Factory, Calendar, User as UserIcon, ShoppingBag, Search, X, RotateCcw } from "lucide-react";
 
 import { useInventory } from "@/hooks/useInventory";
 import { useAuth } from "@/contexts/AuthContext";
@@ -49,19 +50,18 @@ const TARGET_LABEL: Record<Target, string> = {
   logistica: "Logística",
 };
 
-type BandejaView = "menu" | "mayor" | "detal";
+type BandejaTab = "mayor" | "detal" | "entregados";
 
 // ---------- Sweatspot kit helpers ----------
 type KitComponent = {
   key: "silicona" | "cuello" | "boquilla";
   label: string;
-  itemName: string;       // resolved stock_items.name
+  itemName: string;
   defaultQty: number;
   category: "materia_prima";
 };
 
 const normalizeSize = (product: string): string | null => {
-  // "Termo 250 ML Juguetón" -> "250ml"; we only support 250ml / 500ml siliconas in stock today.
   const m = product.match(/(\d{2,4})\s*ml/i);
   if (!m) return null;
   return `${m[1]}ml`;
@@ -72,7 +72,7 @@ const capitalize = (s: string) => s ? s[0].toUpperCase() + s.slice(1).toLowerCas
 const buildSweatspotKit = (order: MayorOrder): KitComponent[] => {
   const qty = order.quantity;
   const color = capitalize((order as any).silicone_color || "");
-  const size = normalizeSize(order.product); // "250ml" | "500ml" | null
+  const size = normalizeSize(order.product);
   const siliconaName = color && size ? `Silicona ${color} ${size}` : "";
   const cuelloName = color ? `Cuello ${color}` : "";
   return [
@@ -86,7 +86,7 @@ const WholesaleOrdersInbox = () => {
   const { user } = useAuth();
   const qc = useQueryClient();
   const { stockItems } = useInventory();
-  const [view, setView] = useState<BandejaView>("menu");
+  const [activeTab, setActiveTab] = useState<BandejaTab>("mayor");
   const [delivering, setDelivering] = useState<{ order: MayorOrder; target: Target } | null>(null);
   const [qty, setQty] = useState<string>("");
   const [obs, setObs] = useState<string>("");
@@ -95,7 +95,6 @@ const WholesaleOrdersInbox = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [kitQuantities, setKitQuantities] = useState<Record<string, string>>({});
 
-  // Pedidos archivados manualmente desde la bandeja (persistidos en este dispositivo).
   const ARCHIVE_KEY = "inbox-archived-order-ids";
   const [archivedIds, setArchivedIds] = useState<Set<string>>(() => {
     try {
@@ -138,7 +137,6 @@ const WholesaleOrdersInbox = () => {
     );
   };
 
-  // Realtime: pop up toast + refetch when a new order arrives
   useEffect(() => {
     const channel = supabase
       .channel("inventory-orders-inbox")
@@ -191,8 +189,6 @@ const WholesaleOrdersInbox = () => {
     refetchInterval: 15_000,
   });
 
-  // Fetch which orders already had a delivery movement OR an ACTIVE body production task.
-  // Once production finalizes its task, the order reappears in the inbox (only Estampación).
   const { data: orderStates = { deliveredIds: new Set<string>(), producedIds: new Set<string>(), inProductionIds: new Set<string>() } } = useQuery({
     queryKey: ["mayor-orders-delivered"],
     queryFn: async () => {
@@ -214,7 +210,6 @@ const WholesaleOrdersInbox = () => {
           inProductionIds.add(t.order_id);
         }
       });
-      // Si ya hay entrega a estampación, no debe aparecer ni en producidos ni en producción
       producedIds.forEach((id) => { if (deliveredIds.has(id)) producedIds.delete(id); });
       inProductionIds.forEach((id) => { if (deliveredIds.has(id)) inProductionIds.delete(id); });
       return { deliveredIds, producedIds, inProductionIds };
@@ -226,7 +221,6 @@ const WholesaleOrdersInbox = () => {
   const inProductionIds = orderStates.inProductionIds;
 
   const findStockItem = (o: MayorOrder, category: "producto_terminado" | "cuerpos_referencias" = "producto_terminado") => {
-    // Normalize: lowercase, collapse repeated "(frío)/(térmico)" suffixes, trim
     const norm = (s: string) =>
       s
         .toLowerCase()
@@ -240,14 +234,11 @@ const WholesaleOrdersInbox = () => {
     const candidates = stockItems.filter(
       (s) => s.brand === o.brand && s.category === category
     );
-    // 1) exact normalized match (may have duplicates)
     let matches = candidates.filter((s) => norm(s.name) === target);
-    // 2) fall back to base name match (without temperature suffix)
     if (matches.length === 0) {
       matches = candidates.filter((s) => stripTemp(s.name) === targetBase);
     }
     if (matches.length === 0) return undefined;
-    // Aggregate stock across duplicate references to avoid picking a 0-stock duplicate
     const totalAvailable = matches.reduce((sum, s) => sum + (Number(s.available) || 0), 0);
     const primary = matches.reduce((a, b) =>
       (Number(b.available) || 0) > (Number(a.available) || 0) ? b : a
@@ -255,9 +246,6 @@ const WholesaleOrdersInbox = () => {
     return { ...primary, available: totalAvailable };
   };
 
-  // Un pedido sigue en la bandeja mientras no haya tarea de producción activa
-  // ni entrega registrada. Cuando producción lo toma (body_production_tasks activa)
-  // o se entrega, pasa a "Entregados recientes".
   const pending = useMemo(
     () => orders.filter((o) => !deliveredIds.has(o.id) && !archivedIds.has(o.id) && !inProductionIds.has(o.id)),
     [orders, deliveredIds, archivedIds, inProductionIds]
@@ -269,6 +257,15 @@ const WholesaleOrdersInbox = () => {
   const delivered = useMemo(
     () => orders.filter((o) => deliveredIds.has(o.id) || archivedIds.has(o.id)),
     [orders, deliveredIds, archivedIds]
+  );
+
+  const pendingRetail = useMemo(
+    () => retailOrders.filter((o) => !deliveredIds.has(o.id) && !archivedIds.has(o.id)),
+    [retailOrders, deliveredIds, archivedIds]
+  );
+  const deliveredRetail = useMemo(
+    () => retailOrders.filter((o) => deliveredIds.has(o.id) || archivedIds.has(o.id)),
+    [retailOrders, deliveredIds, archivedIds]
   );
 
   const openDeliver = (order: MayorOrder, target: Target) => {
@@ -290,7 +287,6 @@ const WholesaleOrdersInbox = () => {
     if (!delivering || !user) return;
     const { order, target } = delivering;
 
-    // ---- Sweatspot kit flow ----
     if (order.brand === "sweatspot" && target === "estampacion") {
       const kit = buildSweatspotKit(order);
       const rows = kit.map((c) => ({ c, q: Number(kitQuantities[c.key] || 0) }));
@@ -389,11 +385,8 @@ const WholesaleOrdersInbox = () => {
   const renderCard = (o: MayorOrder, isDelivered: boolean, kind: "mayor" | "detal" = "mayor") => {
     const isManuallyArchived = archivedIds.has(o.id) && !deliveredIds.has(o.id);
     const isSweatspotMayor = kind === "mayor" && o.brand === "sweatspot";
-    // For mayor: check blank bodies (cuerpos) — those are what get sent to Estampación.
-    // For detal: check finished product.
     const item = findStockItem(o, kind === "mayor" ? "cuerpos_referencias" : "producto_terminado");
     const stock = item ? Number(item.available) : null;
-    // If production already finalized cuerpos for this order, force-show only Estampación.
     const producedReady = kind === "mayor" && producedIds.has(o.id);
     const enough = producedReady || (stock !== null && stock >= o.quantity);
     const stockBadge = isSweatspotMayor
@@ -525,231 +518,160 @@ const WholesaleOrdersInbox = () => {
     );
   };
 
-  const pendingRetail = useMemo(
-    () => retailOrders.filter((o) => !deliveredIds.has(o.id) && !archivedIds.has(o.id)),
-    [retailOrders, deliveredIds, archivedIds]
+  const SearchBar = () => (
+    <div className="relative">
+      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+      <Input
+        placeholder="Buscar referencia, cliente, producto o asesor…"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        className="pl-9"
+      />
+    </div>
   );
-  const deliveredRetail = useMemo(
-    () => retailOrders.filter((o) => deliveredIds.has(o.id) || archivedIds.has(o.id)),
-    [retailOrders, deliveredIds, archivedIds]
-  );
 
-  if (view === "menu") {
-    return (
-      <div className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2">
-          <button onClick={() => setView("detal")} className="text-left">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <ShoppingBag className="h-5 w-5 text-purple-600" />
-                  Pedidos al detal
-                  <Badge variant="secondary">{pendingRetail.length} pendientes</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <p className="text-sm text-muted-foreground">Entregar productos terminados a Logística para despacho.</p>
-                {pendingRetail.length > 0 && (
-                  <div className="text-xs text-muted-foreground">
-                    Último: {pendingRetail[0]?.client_name} — {pendingRetail[0]?.quantity} × {pendingRetail[0]?.product}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </button>
-
-          <button onClick={() => setView("mayor")} className="text-left">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Inbox className="h-5 w-5 text-blue-600" />
-                  Pedidos al por mayor
-                  <Badge variant="secondary">{pending.length} pendientes</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <p className="text-sm text-muted-foreground">Entregar a Estampación o solicitar producción de cuerpos.</p>
-                {pending.length > 0 && (
-                  <div className="text-xs text-muted-foreground">
-                    Último: {pending[0]?.client_name} — {pending[0]?.quantity.toLocaleString("es-CO")} × {pending[0]?.product}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </button>
-        </div>
-
-      </div>
-    );
-  }
-
-  if (view === "detal") {
-    const filteredPendingRetail = filterOrders(pendingRetail);
-    const filteredDeliveredRetail = filterOrders(deliveredRetail);
-    return (
-      <div className="space-y-4">
-        <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setView("menu")}>
-          <ArrowLeft className="h-4 w-4" /> Volver
-        </Button>
-        <Card>
-          <CardHeader className="pb-3 space-y-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <ShoppingBag className="h-4 w-4" />
-              Pedidos al detal
-              <Badge variant="secondary">{filteredPendingRetail.length} pendientes</Badge>
-            </CardTitle>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar cliente, producto o asesor…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loadingRetail ? (
-              <p className="text-center text-sm text-muted-foreground py-6">Cargando…</p>
-            ) : filteredPendingRetail.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">
-                  {searchQuery.trim() ? "Ningún pedido coincide con la búsqueda." : "No hay pedidos al detal pendientes."}
-                </p>
-              </div>
-            ) : (
-              <div className="grid gap-3 md:grid-cols-2">
-                {filteredPendingRetail.map((o) => renderCard(o, false, "detal"))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Dialog open={!!delivering} onOpenChange={(o) => !o && setDelivering(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {delivering?.target === "produccion"
-                  ? "Solicitar producción de cuerpos"
-                  : `Entregar a ${delivering ? TARGET_LABEL[delivering.target] : ""}`}
-              </DialogTitle>
-              <DialogDescription>
-                {delivering && `${delivering.order.product} — Pedido de ${delivering.order.client_name}`}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-3">
-              <div>
-                <Label>{delivering?.target === "produccion" ? "Cantidad a producir" : "Cantidad a entregar"}</Label>
-                <Input type="number" value={qty} onChange={(e) => setQty(e.target.value)} min="1" />
-              </div>
-              {delivering?.target === "produccion" && (
-                <div>
-                  <Label>Tipo de plástico</Label>
-                  <Select value={plastico} onValueChange={(v) => setPlastico(v as "frio" | "calor")}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="frio">Frío</SelectItem>
-                      <SelectItem value="calor">Calor</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              <div>
-                <Label>Observación (opcional)</Label>
-                <Textarea value={obs} onChange={(e) => setObs(e.target.value)}
-                  placeholder="Ej: pendiente sticker, falta sello..." rows={2} />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="ghost" onClick={() => setDelivering(null)}>Cancelar</Button>
-              <Button onClick={confirmDeliver} disabled={busy}>
-                {delivering?.target === "produccion" ? "Crear orden de producción" : "Confirmar entrega"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-    );
-  }
-
-  // view === "mayor"
-  const filteredPending = filterOrders(pending);
-  const filteredInProduction = filterOrders(inProduction);
-  const filteredDelivered = filterOrders(delivered);
   return (
     <div className="space-y-4">
-      <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setView("menu")}>
-        <ArrowLeft className="h-4 w-4" /> Volver
-      </Button>
-      <Card>
-        <CardHeader className="pb-3 space-y-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Inbox className="h-4 w-4" />
-            Bandeja de pedidos al por mayor
-            <Badge variant="secondary">{filteredPending.length} pendientes</Badge>
-          </CardTitle>
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar referencia, molde, cliente o asesor…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <p className="text-center text-sm text-muted-foreground py-6">Cargando…</p>
-          ) : filteredPending.length === 0 ? (
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as BandejaTab)} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="mayor" className="gap-1.5">
+            <Inbox className="h-4 w-4" /> Al por mayor
+            <Badge variant="secondary" className="ml-1">{pending.length + inProduction.length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="detal" className="gap-1.5">
+            <ShoppingBag className="h-4 w-4" /> Al detal
+            <Badge variant="secondary" className="ml-1">{pendingRetail.length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="entregados" className="gap-1.5">
+            <Package className="h-4 w-4" /> Entregados
+            <Badge variant="secondary" className="ml-1">{delivered.length + deliveredRetail.length}</Badge>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="mayor" className="mt-4 space-y-4">
+          <SearchBar />
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Inbox className="h-4 w-4" />
+                Pendientes de entrega
+                <Badge variant="secondary">{filterOrders(pending).length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <p className="text-center text-sm text-muted-foreground py-6">Cargando…</p>
+              ) : filterOrders(pending).length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">
+                    {searchQuery.trim() ? "Ningún pedido coincide con la búsqueda." : "No hay pedidos al por mayor pendientes de entrega."}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {filterOrders(pending).map((o) => renderCard(o, false))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {filterOrders(inProduction).length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Factory className="h-4 w-4 text-blue-600" />
+                  Producción de cuerpos
+                  <Badge variant="secondary">{filterOrders(inProduction).length}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {filterOrders(inProduction).map((o) => renderCard(o, true))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="detal" className="mt-4 space-y-4">
+          <SearchBar />
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <ShoppingBag className="h-4 w-4" />
+                Pedidos al detal
+                <Badge variant="secondary">{filterOrders(pendingRetail).length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingRetail ? (
+                <p className="text-center text-sm text-muted-foreground py-6">Cargando…</p>
+              ) : filterOrders(pendingRetail).length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">
+                    {searchQuery.trim() ? "Ningún pedido coincide con la búsqueda." : "No hay pedidos al detal pendientes."}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {filterOrders(pendingRetail).map((o) => renderCard(o, false, "detal"))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="entregados" className="mt-4 space-y-4">
+          <SearchBar />
+
+          {filterOrders(delivered).length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                  Entregados al por mayor
+                  <Badge variant="secondary">{filterOrders(delivered).length}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {filterOrders(delivered).map((o) => renderCard(o, true))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {filterOrders(deliveredRetail).length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+                  Entregados al detal
+                  <Badge variant="secondary">{filterOrders(deliveredRetail).length}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {filterOrders(deliveredRetail).map((o) => renderCard(o, true, "detal"))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {filterOrders(delivered).length === 0 && filterOrders(deliveredRetail).length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
               <p className="text-sm">
-                {searchQuery.trim() ? "Ningún pedido coincide con la búsqueda." : "No hay pedidos al por mayor pendientes de entrega."}
+                {searchQuery.trim() ? "Ningún pedido coincide con la búsqueda." : "No hay pedidos entregados."}
               </p>
             </div>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2">
-              {filteredPending.map((o) => renderCard(o, false))}
-            </div>
           )}
-        </CardContent>
-      </Card>
-
-      {filteredInProduction.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Factory className="h-4 w-4 text-blue-600" />
-              Producción de cuerpos
-              <Badge variant="secondary">{filteredInProduction.length}</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 md:grid-cols-2">
-              {filteredInProduction.map((o) => renderCard(o, true))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {filteredDelivered.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Package className="h-4 w-4 text-muted-foreground" />
-              Entregados recientes
-              <Badge variant="secondary">{filteredDelivered.length}</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 md:grid-cols-2">
-              {filteredDelivered.map((o) => renderCard(o, true))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={!!delivering} onOpenChange={(o) => !o && setDelivering(null)}>
         <DialogContent>
