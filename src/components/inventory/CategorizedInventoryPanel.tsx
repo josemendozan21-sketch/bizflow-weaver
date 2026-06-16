@@ -468,7 +468,30 @@ const CategorizedInventoryPanel = ({
                                 );
                               })()}
                             </div>
-                            {selectedBrand === "magical_warmers" && (selectedCategory === "cuerpos_referencias" || selectedCategory === "producto_terminado") && (
+                            {selectedBrand === "magical_warmers" && (
+                              <div className="grid gap-1.5">
+                                <Label>Guardar en categoría *</Label>
+                                <div className="grid grid-cols-2 gap-2">
+                                  {CATEGORIES.filter((c) => c !== "importados").map((cat) => {
+                                    const meta = CATEGORY_META[cat];
+                                    const Icon = meta.icon;
+                                    return (
+                                      <Button
+                                        key={cat}
+                                        type="button"
+                                        variant={((newForm.category as InventoryCategory) || selectedCategory) === cat ? "default" : "outline"}
+                                        className="gap-1.5 justify-start"
+                                        onClick={() => setNewForm({ ...newForm, category: cat })}
+                                      >
+                                        <Icon className="h-4 w-4" />
+                                        {meta.label}
+                                      </Button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                            {selectedBrand === "magical_warmers" && ((newForm.category as InventoryCategory) || selectedCategory) !== "importados" && ((newForm.category as InventoryCategory) || selectedCategory) !== "producto_en_proceso" && ((newForm.category as InventoryCategory) || selectedCategory) !== "materia_prima" && (
                               <div className="grid gap-1.5">
                                 <Label>Tipo de producto *</Label>
                                 <div className="grid grid-cols-3 gap-2">
