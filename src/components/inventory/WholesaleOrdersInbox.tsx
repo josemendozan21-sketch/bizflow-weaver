@@ -9,9 +9,14 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Inbox, Package, Truck, Paintbrush, Factory, Calendar, User as UserIcon, ShoppingBag, ArrowLeft, Search, X, RotateCcw } from "lucide-react";
+
 import { useInventory } from "@/hooks/useInventory";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -104,6 +109,9 @@ const WholesaleOrdersInbox = () => {
     setArchivedIds(new Set(next));
     try { localStorage.setItem(ARCHIVE_KEY, JSON.stringify(Array.from(next))); } catch {}
   };
+
+  const [confirmArchive, setConfirmArchive] = useState<{ id: string; clientName: string } | null>(null);
+
   const archiveOrder = (id: string, clientName: string) => {
     const next = new Set(archivedIds); next.add(id); persistArchived(next);
     toast.success(`Pedido de ${clientName} movido a Entregados recientes.`);
@@ -443,7 +451,7 @@ const WholesaleOrdersInbox = () => {
                 </Button>
                 <Button size="sm" variant="outline" className="gap-1.5"
                   title="Quitar de la bandeja"
-                  onClick={() => archiveOrder(o.id, o.client_name)}>
+                  onClick={() => setConfirmArchive({ id: o.id, clientName: o.client_name })}>
                   <X className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -455,7 +463,7 @@ const WholesaleOrdersInbox = () => {
                 </Button>
                 <Button size="sm" variant="outline" className="gap-1.5"
                   title="Quitar de la bandeja"
-                  onClick={() => archiveOrder(o.id, o.client_name)}>
+                  onClick={() => setConfirmArchive({ id: o.id, clientName: o.client_name })}>
                   <X className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -490,7 +498,7 @@ const WholesaleOrdersInbox = () => {
                 )}
                 <Button size="sm" variant="outline" className="gap-1.5"
                   title="Quitar de la bandeja"
-                  onClick={() => archiveOrder(o.id, o.client_name)}>
+                  onClick={() => setConfirmArchive({ id: o.id, clientName: o.client_name })}>
                   <X className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -786,6 +794,30 @@ const WholesaleOrdersInbox = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!confirmArchive} onOpenChange={(o) => !o && setConfirmArchive(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Quitar de la bandeja?</AlertDialogTitle>
+            <AlertDialogDescription>
+              El pedido de <span className="font-semibold text-foreground">{confirmArchive?.clientName}</span> se moverá a <strong>Entregados recientes</strong>. Podrás restaurarlo desde allí si lo necesitas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setConfirmArchive(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirmArchive) {
+                  archiveOrder(confirmArchive.id, confirmArchive.clientName);
+                  setConfirmArchive(null);
+                }
+              }}
+            >
+              Sí, quitar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
