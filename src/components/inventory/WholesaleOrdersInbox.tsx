@@ -139,7 +139,7 @@ const WholesaleOrdersInbox = () => {
         .select("id,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color")
         .eq("sale_type", "mayor")
         .gte("created_at", "2026-05-15")
-        .neq("production_status", "despachado")
+        .in("production_status", ["pendiente", "diseno"])
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as MayorOrder[];
