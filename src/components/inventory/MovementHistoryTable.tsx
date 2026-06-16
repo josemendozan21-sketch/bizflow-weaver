@@ -4,8 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { History } from "lucide-react";
+import { History, CheckCircle2, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useInventoryMovements } from "@/hooks/useInventoryMovements";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const KIND_LABEL: Record<string, { label: string; cls: string }> = {
   entrada: { label: "Entrada", cls: "border-emerald-500/60 text-emerald-700 dark:text-emerald-400" },
@@ -22,11 +26,77 @@ const CAT_LABEL: Record<string, string> = {
 };
 
 export default function MovementHistoryTable() {
-  const { movements, isLoading } = useInventoryMovements();
+  const { movements, isLoading, refetch } = useInventoryMovements();
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [brandFilter, setBrandFilter] = useState("todas");
   const [catFilter, setCatFilter] = useState("todas");
   const [kindFilter, setKindFilter] = useState("todos");
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+
+  const confirmReception = async (m: typeof movements[number]) => {
+    if (!m.stock_item_id) {
+      toast.error("Movimiento sin ítem de stock asociado.");
+      return;
+    }
+    setConfirmingId(m.id);
+    try {
+      // Read current stock to compute new values
+      const { data: stock, error: stockErr } = await supabase
+        .from("stock_items")
+        .select("available, in_process")
+        .eq("id", m.stock_item_id)
+        .single();
+      if (stockErr || !stock) throw stockErr || new Error("Ítem no encontrado");
+
+      const newAvailable = Number(stock.available || 0) + Number(m.quantity);
+      const newInProcess = Math.max(Number(stock.in_process || 0) - Number(m.quantity), 0);
+
+      const { error: updErr } = await supabase
+        .from("stock_items")
+        .update({ available: newAvailable, in_process: newInProcess } as any)
+        .eq("id", m.stock_item_id);
+      if (updErr) throw updErr;
+
+      // For magical body references, mirror into body_stock so production views stay in sync
+      if (m.category === "cuerpos_referencias" && m.brand === "magical") {
+        const { data: bs } = await supabase
+          .from("body_stock")
+          .select("id, available")
+          .eq("brand", "magical")
+          .ilike("referencia", m.item_name)
+          .maybeSingle();
+        if (bs) {
+          await supabase
+            .from("body_stock")
+            .update({ available: Number(bs.available || 0) + Number(m.quantity) })
+            .eq("id", bs.id);
+        } else {
+          await supabase
+            .from("body_stock")
+            .insert({ brand: "magical", referencia: m.item_name, available: Number(m.quantity) });
+        }
+      }
+
+      const { error: confErr } = await supabase
+        .from("inventory_movements")
+        .update({
+          reception_confirmed: true,
+          reception_confirmed_at: new Date().toISOString(),
+          reception_confirmed_by: user?.id ?? null,
+          reception_confirmed_by_name: user?.email ?? "Inventarios",
+        } as any)
+        .eq("id", m.id);
+      if (confErr) throw confErr;
+
+      toast.success(`Recepción confirmada: ${m.quantity} uds de "${m.item_name}".`);
+      refetch();
+    } catch (err: any) {
+      toast.error(`No se pudo confirmar: ${err?.message || err}`);
+    } finally {
+      setConfirmingId(null);
+    }
+  };
 
   const brands = useMemo(
     () => Array.from(new Set(movements.map((m) => m.brand))).sort(),
@@ -99,24 +169,35 @@ export default function MovementHistoryTable() {
                 <TableHead className="text-right">Cant.</TableHead>
                 <TableHead>Solicita</TableHead>
                 <TableHead>Motivo</TableHead>
+                <TableHead className="text-right">Acción</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading && (
-                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-6">Cargando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-6">Cargando...</TableCell></TableRow>
               )}
               {!isLoading && filtered.length === 0 && (
-                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-6">Sin movimientos</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-6">Sin movimientos</TableCell></TableRow>
               )}
               {filtered.map((m) => {
                 const k = m.movement_kind || (m.direction === "retorno" ? "entrada" : "salida");
                 const meta = KIND_LABEL[k] || KIND_LABEL.salida;
+                const pendingReception = m.reception_confirmed === false;
                 return (
-                  <TableRow key={m.id}>
+                  <TableRow key={m.id} className={pendingReception ? "bg-amber-50/50 dark:bg-amber-950/20" : undefined}>
                     <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                       {new Date(m.recorded_at).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })}
                     </TableCell>
-                    <TableCell><Badge variant="outline" className={meta.cls}>{meta.label}</Badge></TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        <Badge variant="outline" className={meta.cls}>{meta.label}</Badge>
+                        {pendingReception && (
+                          <Badge variant="outline" className="border-amber-500/60 text-amber-700 dark:text-amber-400 text-[10px]">
+                            Pendiente recepción
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-xs">{m.brand}</TableCell>
                     <TableCell className="text-xs">{CAT_LABEL[m.category] || m.category}</TableCell>
                     <TableCell className="font-medium text-sm">{m.item_name}</TableCell>
@@ -124,6 +205,30 @@ export default function MovementHistoryTable() {
                     <TableCell className="text-xs">{m.requested_by_name || "—"}</TableCell>
                     <TableCell className="text-xs max-w-[260px] truncate" title={m.purpose || m.reason || ""}>
                       {m.purpose || m.reason || "—"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {pendingReception ? (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          disabled={confirmingId === m.id}
+                          onClick={() => confirmReception(m)}
+                          className="gap-1"
+                        >
+                          {confirmingId === m.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                          )}
+                          Confirmar recepción
+                        </Button>
+                      ) : m.reception_confirmed_at ? (
+                        <span className="text-[11px] text-muted-foreground">
+                          Recibido {new Date(m.reception_confirmed_at).toLocaleDateString("es-CO")}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 );
