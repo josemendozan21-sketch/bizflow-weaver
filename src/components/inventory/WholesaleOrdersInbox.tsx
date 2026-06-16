@@ -498,7 +498,7 @@ const WholesaleOrdersInbox = () => {
                 )}
                 <Button size="sm" variant="outline" className="gap-1.5"
                   title="Quitar de la bandeja"
-                  onClick={() => archiveOrder(o.id, o.client_name)}>
+                  onClick={() => setConfirmArchive({ id: o.id, clientName: o.client_name })}>
                   <X className="h-3.5 w-3.5" />
                 </Button>
               </div>
