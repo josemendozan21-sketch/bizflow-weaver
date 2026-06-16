@@ -92,6 +92,7 @@ const CategorizedInventoryPanel = ({
     unit: "unidades",
     minStock: "",
     tipo: "" as "" | "Frío" | "Térmico" | "Ambos",
+    category: "" as InventoryCategory | "",
   });
   const [activeHighlights, setActiveHighlights] = useState<string[]>(highlightItemNames);
   const highlightRef = useRef<HTMLTableRowElement>(null);
@@ -141,8 +142,9 @@ const CategorizedInventoryPanel = ({
       toast.error("Completa todos los campos");
       return;
     }
+    const targetCategory = (newForm.category as InventoryCategory) || selectedCategory;
     const isMagical = selectedBrand === "magical_warmers";
-    const needsTipo = isMagical && (selectedCategory === "cuerpos_referencias" || selectedCategory === "producto_terminado");
+    const needsTipo = isMagical && (targetCategory === "cuerpos_referencias" || targetCategory === "producto_terminado");
     if (needsTipo && !newForm.tipo) {
       toast.error("Selecciona si el producto es de Frío o de Calor (Térmico)");
       return;
@@ -158,7 +160,7 @@ const CategorizedInventoryPanel = ({
       const dupe = stockItems.find(
         (s) =>
           s.brand === dbBrand &&
-          s.category === selectedCategory &&
+          s.category === targetCategory &&
           normalize(baseRefName(s.name)) === normalize(cleanBase) &&
           (!needsTipo || !s.product_type || s.product_type === tipo)
       );
@@ -167,7 +169,7 @@ const CategorizedInventoryPanel = ({
       }
       const result = await addStockItem({
         brand: dbBrand,
-        category: selectedCategory,
+        category: targetCategory,
         name: cleanBase,
         available: Number(newForm.available),
         unit: newForm.unit,
@@ -176,7 +178,7 @@ const CategorizedInventoryPanel = ({
       });
       if (!result.success) return { ok: false, msg: result.message };
 
-      if (isMagical && selectedCategory === "cuerpos_referencias" && tipo) {
+      if (isMagical && targetCategory === "cuerpos_referencias" && tipo) {
         const canonicalRef = `${cleanBase} (${tipo})`;
         const { data: existingBody } = await supabase
           .from("body_stock")
@@ -216,7 +218,7 @@ const CategorizedInventoryPanel = ({
       );
       if (errs.length) toast.warning(errs.join(" • "));
     }
-    setNewForm({ name: "", available: "", unit: "unidades", minStock: "", tipo: "" });
+    setNewForm({ name: "", available: "", unit: "unidades", minStock: "", tipo: "", category: "" });
     setAddOpen(false);
   };
 
