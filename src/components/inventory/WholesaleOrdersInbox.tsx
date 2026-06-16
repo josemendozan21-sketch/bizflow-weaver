@@ -675,6 +675,7 @@ const WholesaleOrdersInbox = () => {
 
   // view === "mayor"
   const filteredPending = filterOrders(pending);
+  const filteredInProduction = filterOrders(inProduction);
   const filteredDelivered = filterOrders(delivered);
   return (
     <div className="space-y-4">
@@ -715,6 +716,23 @@ const WholesaleOrdersInbox = () => {
           )}
         </CardContent>
       </Card>
+
+      {filteredInProduction.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Factory className="h-4 w-4 text-blue-600" />
+              Producción de cuerpos
+              <Badge variant="secondary">{filteredInProduction.length}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 md:grid-cols-2">
+              {filteredInProduction.map((o) => renderCard(o, true))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {filteredDelivered.length > 0 && (
         <Card>
