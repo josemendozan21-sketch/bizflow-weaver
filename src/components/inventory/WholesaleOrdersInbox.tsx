@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Inbox, Package, Truck, Paintbrush, Factory, Calendar, User as UserIcon, ShoppingBag, ArrowLeft, Search } from "lucide-react";
+import { Inbox, Package, Truck, Paintbrush, Factory, Calendar, User as UserIcon, ShoppingBag, ArrowLeft, Search, X, RotateCcw } from "lucide-react";
 import { useInventory } from "@/hooks/useInventory";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -89,6 +89,29 @@ const WholesaleOrdersInbox = () => {
   const [busy, setBusy] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [kitQuantities, setKitQuantities] = useState<Record<string, string>>({});
+
+  // Pedidos archivados manualmente desde la bandeja (persistidos en este dispositivo).
+  const ARCHIVE_KEY = "inbox-archived-order-ids";
+  const [archivedIds, setArchivedIds] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(ARCHIVE_KEY);
+      return new Set<string>(raw ? JSON.parse(raw) : []);
+    } catch {
+      return new Set<string>();
+    }
+  });
+  const persistArchived = (next: Set<string>) => {
+    setArchivedIds(new Set(next));
+    try { localStorage.setItem(ARCHIVE_KEY, JSON.stringify(Array.from(next))); } catch {}
+  };
+  const archiveOrder = (id: string, clientName: string) => {
+    const next = new Set(archivedIds); next.add(id); persistArchived(next);
+    toast.success(`Pedido de ${clientName} movido a Entregados recientes.`);
+  };
+  const unarchiveOrder = (id: string) => {
+    const next = new Set(archivedIds); next.delete(id); persistArchived(next);
+    toast.success("Pedido restaurado a la bandeja.");
+  };
 
   const isSweatspotKit = delivering?.order.brand === "sweatspot" && delivering?.target === "estampacion";
   const activeKit = useMemo(
@@ -225,12 +248,12 @@ const WholesaleOrdersInbox = () => {
   // ni entrega registrada. Cuando producción lo toma (body_production_tasks activa)
   // o se entrega, pasa a "Entregados recientes".
   const pending = useMemo(
-    () => orders.filter((o) => !deliveredIds.has(o.id)),
-    [orders, deliveredIds]
+    () => orders.filter((o) => !deliveredIds.has(o.id) && !archivedIds.has(o.id)),
+    [orders, deliveredIds, archivedIds]
   );
   const delivered = useMemo(
-    () => orders.filter((o) => deliveredIds.has(o.id)),
-    [orders, deliveredIds]
+    () => orders.filter((o) => deliveredIds.has(o.id) || archivedIds.has(o.id)),
+    [orders, deliveredIds, archivedIds]
   );
 
   const openDeliver = (order: MayorOrder, target: Target) => {
@@ -349,6 +372,7 @@ const WholesaleOrdersInbox = () => {
   };
 
   const renderCard = (o: MayorOrder, isDelivered: boolean, kind: "mayor" | "detal" = "mayor") => {
+    const isManuallyArchived = archivedIds.has(o.id) && !deliveredIds.has(o.id);
     const isSweatspotMayor = kind === "mayor" && o.brand === "sweatspot";
     // For mayor: check blank bodies (cuerpos) — those are what get sent to Estampación.
     // For detal: check finished product.
@@ -412,17 +436,27 @@ const WholesaleOrdersInbox = () => {
 
           {!isDelivered && (
             kind === "detal" ? (
-              <div className="pt-1">
+              <div className="pt-1 flex gap-2">
                 <Button size="sm" variant="default" className="w-full gap-1.5"
                   onClick={() => openDeliver(o, "logistica")}>
                   <Truck className="h-3.5 w-3.5" /> Entregar a Logística
                 </Button>
+                <Button size="sm" variant="outline" className="gap-1.5"
+                  title="Quitar de la bandeja"
+                  onClick={() => archiveOrder(o.id, o.client_name)}>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
               </div>
             ) : isSweatspotMayor ? (
-              <div className="pt-1">
+              <div className="pt-1 flex gap-2">
                 <Button size="sm" variant="default" className="w-full gap-1.5"
                   onClick={() => openDeliver(o, "estampacion")}>
                   <Paintbrush className="h-3.5 w-3.5" /> Entregar Kit a Estampación
+                </Button>
+                <Button size="sm" variant="outline" className="gap-1.5"
+                  title="Quitar de la bandeja"
+                  onClick={() => archiveOrder(o.id, o.client_name)}>
+                  <X className="h-3.5 w-3.5" />
                 </Button>
               </div>
             ) : (
@@ -454,8 +488,22 @@ const WholesaleOrdersInbox = () => {
                     </Button>
                   </>
                 )}
+                <Button size="sm" variant="outline" className="gap-1.5"
+                  title="Quitar de la bandeja"
+                  onClick={() => archiveOrder(o.id, o.client_name)}>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
               </div>
             )
+          )}
+
+          {isDelivered && isManuallyArchived && (
+            <div className="pt-1">
+              <Button size="sm" variant="ghost" className="w-full gap-1.5"
+                onClick={() => unarchiveOrder(o.id)}>
+                <RotateCcw className="h-3.5 w-3.5" /> Restaurar a la bandeja
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -463,12 +511,12 @@ const WholesaleOrdersInbox = () => {
   };
 
   const pendingRetail = useMemo(
-    () => retailOrders.filter((o) => !deliveredIds.has(o.id)),
-    [retailOrders, deliveredIds]
+    () => retailOrders.filter((o) => !deliveredIds.has(o.id) && !archivedIds.has(o.id)),
+    [retailOrders, deliveredIds, archivedIds]
   );
   const deliveredRetail = useMemo(
-    () => retailOrders.filter((o) => deliveredIds.has(o.id)),
-    [retailOrders, deliveredIds]
+    () => retailOrders.filter((o) => deliveredIds.has(o.id) || archivedIds.has(o.id)),
+    [retailOrders, deliveredIds, archivedIds]
   );
 
   if (view === "menu") {
