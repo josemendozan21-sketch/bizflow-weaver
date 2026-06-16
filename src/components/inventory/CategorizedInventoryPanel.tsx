@@ -450,7 +450,7 @@ const CategorizedInventoryPanel = ({
                               {selectedBrand === "magical_warmers" && newForm.name.trim().length > 1 && (() => {
                                 const base = normalize(baseRefName(newForm.name.trim()));
                                 const similar = stockItems.filter(
-                                  (s) => s.brand === dbBrand && s.category === selectedCategory &&
+                                  (s) => s.brand === dbBrand && s.category === ((newForm.category as InventoryCategory) || selectedCategory) &&
                                     normalize(baseRefName(s.name)).includes(base),
                                 );
                                 if (similar.length === 0) return null;
