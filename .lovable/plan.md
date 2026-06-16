@@ -1,16 +1,19 @@
 ## Objetivo
-En **Inventarios → Bandeja de pedidos → Mayor**, los pedidos que ya fueron entregados a Estampación o que ya tienen una orden de producción de cuerpos activa deben desaparecer de la bandeja (no aparecer como "Entregados" ni duplicados como los que se ven en la captura).
 
-## Cambio
-Archivo: `src/components/inventory/WholesaleOrdersInbox.tsx`
+En la Bandeja de pedidos al por mayor (Inventarios), mostrar en la lista principal "pendientes" únicamente los pedidos recién ingresados. Cualquier pedido que ya esté en una etapa de producción (estampación, producción de cuerpos, dosificación, sellado, recorte, empaque o listo) debe salir de "pendientes".
 
-1. En la query `mayor-orders-inbox`, mantener el filtro por `sale_type=mayor` y `production_status != despachado`.
-2. Usar `orderStates.deliveredIds` (que ya incluye tanto movimientos de entrega como tareas de producción de cuerpos activas) para **excluir** esos pedidos de la lista renderizada en lugar de mostrarlos en una sección "Entregados".
-3. Eliminar la sección visual de "Entregados" del tab Mayor (y su grid correspondiente), dejando solo `pending`.
-4. Si un pedido vuelve a aparecer porque Producción finalizó cuerpos (`producedIds`), se sigue mostrando para que Inventarios pueda entregarlo a Estampación (lógica ya existente: `producedIds` se descarta de `deliveredIds` solo si no hay entrega previa).
+La tarjeta **"Entregados recientes" se mantiene** tal cual.
 
-## Detalle técnico
-- `pending` ya está calculado: `orders.filter(o => !deliveredIds.has(o.id))`.
-- Quitar el bloque que renderiza `delivered.map(...)` y su encabezado en la vista `mayor`.
-- No tocar la pestaña Detal ni la lógica de Sweatspot por kit.
-- No se modifica base de datos: los pedidos siguen existiendo, solo se ocultan de la bandeja cuando ya están en proceso.
+## Cambios en `src/components/inventory/WholesaleOrdersInbox.tsx`
+
+1. **Filtrar `pending` (vista mayor)** — además de excluir `deliveredIds`, exigir que `production_status` esté en `["pendiente", "diseno"]`. Pedidos en `estampacion`, `produccion_cuerpos`, `dosificacion`, `sellado`, `recorte`, `empaque` o `listo` dejan de aparecer en la bandeja principal.
+
+2. **Mover esos pedidos a "Entregados recientes"** — cualquier pedido que no esté en `pendiente`/`diseno` y que no esté ya en `deliveredIds` se agrega a `delivered` para que siga visible en la tarjeta inferior.
+
+3. **Aplicar el mismo criterio a `pendingRetail` / `deliveredRetail`** en la vista detal, manteniendo también su tarjeta de "Entregados recientes".
+
+4. **No modificar las consultas a Supabase** — el filtrado se hace en cliente para que, si un pedido vuelve a `pendiente`, reaparezca automáticamente.
+
+## Resultado
+
+La lista "pendientes" muestra solo pedidos nuevos sin etapa iniciada; los que ya pasaron a producción siguen visibles bajo "Entregados recientes".

@@ -221,8 +221,15 @@ const WholesaleOrdersInbox = () => {
     return { ...primary, available: totalAvailable };
   };
 
-  const pending = useMemo(() => orders.filter((o) => !deliveredIds.has(o.id)), [orders, deliveredIds]);
-  const delivered = useMemo(() => orders.filter((o) => deliveredIds.has(o.id)), [orders, deliveredIds]);
+  const NEW_STATUSES = ["pendiente", "diseno"];
+  const pending = useMemo(
+    () => orders.filter((o) => !deliveredIds.has(o.id) && NEW_STATUSES.includes(o.production_status)),
+    [orders, deliveredIds]
+  );
+  const delivered = useMemo(
+    () => orders.filter((o) => deliveredIds.has(o.id) || !NEW_STATUSES.includes(o.production_status)),
+    [orders, deliveredIds]
+  );
 
   const openDeliver = (order: MayorOrder, target: Target) => {
     setDelivering({ order, target });
@@ -453,8 +460,14 @@ const WholesaleOrdersInbox = () => {
     );
   };
 
-  const pendingRetail = useMemo(() => retailOrders.filter((o) => !deliveredIds.has(o.id)), [retailOrders, deliveredIds]);
-  const deliveredRetail = useMemo(() => retailOrders.filter((o) => deliveredIds.has(o.id)), [retailOrders, deliveredIds]);
+  const pendingRetail = useMemo(
+    () => retailOrders.filter((o) => !deliveredIds.has(o.id) && NEW_STATUSES.includes(o.production_status)),
+    [retailOrders, deliveredIds]
+  );
+  const deliveredRetail = useMemo(
+    () => retailOrders.filter((o) => deliveredIds.has(o.id) || !NEW_STATUSES.includes(o.production_status)),
+    [retailOrders, deliveredIds]
+  );
 
   if (view === "menu") {
     return (
