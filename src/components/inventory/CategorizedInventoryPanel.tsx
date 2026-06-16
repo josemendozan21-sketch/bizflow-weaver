@@ -440,7 +440,7 @@ const CategorizedInventoryPanel = ({
                           <DialogHeader>
                             <DialogTitle>Agregar ítem</DialogTitle>
                             <DialogDescription>
-                              {brandLabel} → {CATEGORY_META[selectedCategory].label}
+                              {brandLabel} → {CATEGORY_META[(newForm.category as InventoryCategory) || selectedCategory].label}
                             </DialogDescription>
                           </DialogHeader>
                           <div className="grid gap-4 py-2">
