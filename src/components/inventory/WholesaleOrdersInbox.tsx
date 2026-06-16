@@ -193,7 +193,7 @@ const WholesaleOrdersInbox = () => {
 
   // Fetch which orders already had a delivery movement OR an ACTIVE body production task.
   // Once production finalizes its task, the order reappears in the inbox (only Estampación).
-  const { data: orderStates = { deliveredIds: new Set<string>(), producedIds: new Set<string>() } } = useQuery({
+  const { data: orderStates = { deliveredIds: new Set<string>(), producedIds: new Set<string>(), inProductionIds: new Set<string>() } } = useQuery({
     queryKey: ["mayor-orders-delivered"],
     queryFn: async () => {
       const [mov, tasks] = await Promise.all([
@@ -204,23 +204,26 @@ const WholesaleOrdersInbox = () => {
       ]);
       const deliveredIds = new Set<string>();
       const producedIds = new Set<string>();
+      const inProductionIds = new Set<string>();
       (mov.data || []).forEach((m: any) => m.order_id && deliveredIds.add(m.order_id));
       (tasks.data || []).forEach((t: any) => {
         if (!t.order_id) return;
         if (t.status === "finalizado") {
           producedIds.add(t.order_id);
         } else {
-          deliveredIds.add(t.order_id);
+          inProductionIds.add(t.order_id);
         }
       });
-      // Orders already entregadas a estampación no deben reaparecer aunque haya tarea finalizada
+      // Si ya hay entrega a estampación, no debe aparecer ni en producidos ni en producción
       producedIds.forEach((id) => { if (deliveredIds.has(id)) producedIds.delete(id); });
-      return { deliveredIds, producedIds };
+      inProductionIds.forEach((id) => { if (deliveredIds.has(id)) inProductionIds.delete(id); });
+      return { deliveredIds, producedIds, inProductionIds };
     },
     refetchInterval: 15_000,
   });
   const deliveredIds = orderStates.deliveredIds;
   const producedIds = orderStates.producedIds;
+  const inProductionIds = orderStates.inProductionIds;
 
   const findStockItem = (o: MayorOrder, category: "producto_terminado" | "cuerpos_referencias" = "producto_terminado") => {
     // Normalize: lowercase, collapse repeated "(frío)/(térmico)" suffixes, trim
@@ -256,8 +259,12 @@ const WholesaleOrdersInbox = () => {
   // ni entrega registrada. Cuando producción lo toma (body_production_tasks activa)
   // o se entrega, pasa a "Entregados recientes".
   const pending = useMemo(
-    () => orders.filter((o) => !deliveredIds.has(o.id) && !archivedIds.has(o.id)),
-    [orders, deliveredIds, archivedIds]
+    () => orders.filter((o) => !deliveredIds.has(o.id) && !archivedIds.has(o.id) && !inProductionIds.has(o.id)),
+    [orders, deliveredIds, archivedIds, inProductionIds]
+  );
+  const inProduction = useMemo(
+    () => orders.filter((o) => inProductionIds.has(o.id) && !deliveredIds.has(o.id) && !archivedIds.has(o.id)),
+    [orders, inProductionIds, deliveredIds, archivedIds]
   );
   const delivered = useMemo(
     () => orders.filter((o) => deliveredIds.has(o.id) || archivedIds.has(o.id)),
@@ -668,6 +675,7 @@ const WholesaleOrdersInbox = () => {
 
   // view === "mayor"
   const filteredPending = filterOrders(pending);
+  const filteredInProduction = filterOrders(inProduction);
   const filteredDelivered = filterOrders(delivered);
   return (
     <div className="space-y-4">
@@ -708,6 +716,23 @@ const WholesaleOrdersInbox = () => {
           )}
         </CardContent>
       </Card>
+
+      {filteredInProduction.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Factory className="h-4 w-4 text-blue-600" />
+              Producción de cuerpos
+              <Badge variant="secondary">{filteredInProduction.length}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 md:grid-cols-2">
+              {filteredInProduction.map((o) => renderCard(o, true))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {filteredDelivered.length > 0 && (
         <Card>
