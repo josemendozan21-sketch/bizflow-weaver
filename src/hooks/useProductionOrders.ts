@@ -280,26 +280,8 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
         const qtyToAdd = confirmedQuantity ?? po.quantity;
         const { resolveCanonicalBodyRef } = await import("@/lib/canonicalBodyRef");
         const canonicalMolde = await resolveCanonicalBodyRef(po.brand, po.molde);
-        const { data: existing } = await supabase
-          .from("body_stock")
-          .select("*")
-          .eq("brand", po.brand)
-          .ilike("referencia", canonicalMolde)
-          .maybeSingle();
-
-        if (existing) {
-          await supabase
-            .from("body_stock")
-            .update({ available: existing.available + qtyToAdd })
-            .eq("id", existing.id);
-        } else {
-          await supabase
-            .from("body_stock")
-            .insert({ brand: po.brand, referencia: canonicalMolde, available: qtyToAdd });
-        }
-
-        // Mirror as an inventory movement (entrada) so Inventarios sees it
-        // in the movement history with date and quantity.
+        // Register the produced bodies as a PENDING-RECEPTION inventory movement.
+        // Stock is NOT added until Inventarios confirms reception from the history view.
         try {
           // Ensure a stock_items row exists for this cuerpo (the trigger requires it)
           let { data: stockItem } = await supabase
@@ -336,10 +318,21 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
             area: "produccion",
             movement_kind: "entrada",
             purpose: `Producción de cuerpos finalizada — ${po.client_name}`,
+            // AUTO_REQ marker tells the trigger to skip the automatic stock update;
+            // stock will be applied when Inventarios confirms reception.
+            reason: `AUTO_REQ: Pendiente de recepción en Inventarios`,
             requested_by_name: "Producción",
             order_id: po.order_id,
             recorded_by: authUser?.id ?? null,
             recorded_by_name: authUser?.email ?? "Producción",
+            reception_confirmed: false,
+          } as any);
+
+          await supabase.from("notifications").insert({
+            target_role: "inventarios",
+            title: "Cuerpos finalizados — confirmar recepción",
+            message: `${qtyToAdd} uds de "${canonicalMolde}" (${po.client_name}). Confirma la recepción desde el Historial de movimientos.`,
+            type: "info",
           } as any);
         } catch (movErr) {
           console.warn("[useProductionOrders] No se pudo registrar movimiento de entrada:", movErr);
