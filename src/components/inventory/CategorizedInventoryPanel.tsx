@@ -91,7 +91,7 @@ const CategorizedInventoryPanel = ({
     available: "",
     unit: "unidades",
     minStock: "",
-    tipo: "" as "" | "Frío" | "Térmico",
+    tipo: "" as "" | "Frío" | "Térmico" | "Ambos",
   });
   const [activeHighlights, setActiveHighlights] = useState<string[]>(highlightItemNames);
   const highlightRef = useRef<HTMLTableRowElement>(null);
