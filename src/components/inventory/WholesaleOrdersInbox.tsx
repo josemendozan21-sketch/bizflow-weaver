@@ -109,6 +109,9 @@ const WholesaleOrdersInbox = () => {
     setArchivedIds(new Set(next));
     try { localStorage.setItem(ARCHIVE_KEY, JSON.stringify(Array.from(next))); } catch {}
   };
+
+  const [confirmArchive, setConfirmArchive] = useState<{ id: string; clientName: string } | null>(null);
+
   const archiveOrder = (id: string, clientName: string) => {
     const next = new Set(archivedIds); next.add(id); persistArchived(next);
     toast.success(`Pedido de ${clientName} movido a Entregados recientes.`);
