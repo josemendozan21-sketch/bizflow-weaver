@@ -469,7 +469,7 @@ const CategorizedInventoryPanel = ({
                             {selectedBrand === "magical_warmers" && (selectedCategory === "cuerpos_referencias" || selectedCategory === "producto_terminado") && (
                               <div className="grid gap-1.5">
                                 <Label>Tipo de producto *</Label>
-                                <div className="grid grid-cols-2 gap-2">
+                                <div className="grid grid-cols-3 gap-2">
                                   <Button
                                     type="button"
                                     variant={newForm.tipo === "Frío" ? "default" : "outline"}
@@ -484,11 +484,21 @@ const CategorizedInventoryPanel = ({
                                     className="gap-1.5"
                                     onClick={() => setNewForm({ ...newForm, tipo: "Térmico" })}
                                   >
-                                    <Flame className="h-4 w-4" /> Calor (Térmico)
+                                    <Flame className="h-4 w-4" /> Calor
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant={newForm.tipo === "Ambos" ? "default" : "outline"}
+                                    className="gap-1.5"
+                                    onClick={() => setNewForm({ ...newForm, tipo: "Ambos" })}
+                                    title="Crea una versión Frío y otra Térmico con la misma cantidad inicial"
+                                  >
+                                    <Snowflake className="h-3.5 w-3.5" />
+                                    <Flame className="h-3.5 w-3.5" /> Ambos
                                   </Button>
                                 </div>
                                 <p className="text-[11px] text-muted-foreground">
-                                  Se guarda como una sola referencia y aparece automáticamente en Producción, Ventas e Inventarios.
+                                  Si eliges "Ambos" se crean dos referencias (Frío y Térmico) con la misma cantidad inicial. Aparecen en Producción, Ventas e Inventarios.
                                 </p>
                               </div>
                             )}
