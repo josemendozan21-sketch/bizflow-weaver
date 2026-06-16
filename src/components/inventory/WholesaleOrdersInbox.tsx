@@ -132,14 +132,11 @@ const WholesaleOrdersInbox = () => {
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["mayor-orders-inbox"],
     queryFn: async () => {
-      // Solo pedidos recién ingresados que aún no han iniciado ningún paso
-      // (sin entrega a estampación ni orden de producción de cuerpos creada).
       const { data, error } = await supabase
         .from("orders")
         .select("id,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color")
         .eq("sale_type", "mayor")
         .gte("created_at", "2026-05-15")
-        .in("production_status", ["pendiente", "diseno"])
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as MayorOrder[];
@@ -600,6 +597,7 @@ const WholesaleOrdersInbox = () => {
 
   // view === "mayor"
   const filteredPending = filterOrders(pending);
+  const filteredDelivered = filterOrders(delivered);
   return (
     <div className="space-y-4">
       <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setView("menu")}>
@@ -639,6 +637,23 @@ const WholesaleOrdersInbox = () => {
           )}
         </CardContent>
       </Card>
+
+      {filteredDelivered.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Package className="h-4 w-4 text-muted-foreground" />
+              Entregados recientes
+              <Badge variant="secondary">{filteredDelivered.length}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 md:grid-cols-2">
+              {filteredDelivered.map((o) => renderCard(o, true))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Dialog open={!!delivering} onOpenChange={(o) => !o && setDelivering(null)}>
         <DialogContent>
