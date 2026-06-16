@@ -92,6 +92,7 @@ const CategorizedInventoryPanel = ({
     unit: "unidades",
     minStock: "",
     tipo: "" as "" | "Frío" | "Térmico" | "Ambos",
+    category: "" as InventoryCategory | "",
   });
   const [activeHighlights, setActiveHighlights] = useState<string[]>(highlightItemNames);
   const highlightRef = useRef<HTMLTableRowElement>(null);
@@ -141,8 +142,9 @@ const CategorizedInventoryPanel = ({
       toast.error("Completa todos los campos");
       return;
     }
+    const targetCategory = (newForm.category as InventoryCategory) || selectedCategory;
     const isMagical = selectedBrand === "magical_warmers";
-    const needsTipo = isMagical && (selectedCategory === "cuerpos_referencias" || selectedCategory === "producto_terminado");
+    const needsTipo = isMagical && (targetCategory === "cuerpos_referencias" || targetCategory === "producto_terminado");
     if (needsTipo && !newForm.tipo) {
       toast.error("Selecciona si el producto es de Frío o de Calor (Térmico)");
       return;
@@ -158,7 +160,7 @@ const CategorizedInventoryPanel = ({
       const dupe = stockItems.find(
         (s) =>
           s.brand === dbBrand &&
-          s.category === selectedCategory &&
+          s.category === targetCategory &&
           normalize(baseRefName(s.name)) === normalize(cleanBase) &&
           (!needsTipo || !s.product_type || s.product_type === tipo)
       );
@@ -167,7 +169,7 @@ const CategorizedInventoryPanel = ({
       }
       const result = await addStockItem({
         brand: dbBrand,
-        category: selectedCategory,
+        category: targetCategory,
         name: cleanBase,
         available: Number(newForm.available),
         unit: newForm.unit,
@@ -176,7 +178,7 @@ const CategorizedInventoryPanel = ({
       });
       if (!result.success) return { ok: false, msg: result.message };
 
-      if (isMagical && selectedCategory === "cuerpos_referencias" && tipo) {
+      if (isMagical && targetCategory === "cuerpos_referencias" && tipo) {
         const canonicalRef = `${cleanBase} (${tipo})`;
         const { data: existingBody } = await supabase
           .from("body_stock")
@@ -216,7 +218,7 @@ const CategorizedInventoryPanel = ({
       );
       if (errs.length) toast.warning(errs.join(" • "));
     }
-    setNewForm({ name: "", available: "", unit: "unidades", minStock: "", tipo: "" });
+    setNewForm({ name: "", available: "", unit: "unidades", minStock: "", tipo: "", category: "" });
     setAddOpen(false);
   };
 
@@ -438,7 +440,7 @@ const CategorizedInventoryPanel = ({
                           <DialogHeader>
                             <DialogTitle>Agregar ítem</DialogTitle>
                             <DialogDescription>
-                              {brandLabel} → {CATEGORY_META[selectedCategory].label}
+                              {brandLabel} → {CATEGORY_META[(newForm.category as InventoryCategory) || selectedCategory].label}
                             </DialogDescription>
                           </DialogHeader>
                           <div className="grid gap-4 py-2">
@@ -448,7 +450,7 @@ const CategorizedInventoryPanel = ({
                               {selectedBrand === "magical_warmers" && newForm.name.trim().length > 1 && (() => {
                                 const base = normalize(baseRefName(newForm.name.trim()));
                                 const similar = stockItems.filter(
-                                  (s) => s.brand === dbBrand && s.category === selectedCategory &&
+                                  (s) => s.brand === dbBrand && s.category === ((newForm.category as InventoryCategory) || selectedCategory) &&
                                     normalize(baseRefName(s.name)).includes(base),
                                 );
                                 if (similar.length === 0) return null;
@@ -466,7 +468,30 @@ const CategorizedInventoryPanel = ({
                                 );
                               })()}
                             </div>
-                            {selectedBrand === "magical_warmers" && (selectedCategory === "cuerpos_referencias" || selectedCategory === "producto_terminado") && (
+                            {selectedBrand === "magical_warmers" && (
+                              <div className="grid gap-1.5">
+                                <Label>Guardar en categoría *</Label>
+                                <div className="grid grid-cols-2 gap-2">
+                                  {CATEGORIES.filter((c) => c !== "importados").map((cat) => {
+                                    const meta = CATEGORY_META[cat];
+                                    const Icon = meta.icon;
+                                    return (
+                                      <Button
+                                        key={cat}
+                                        type="button"
+                                        variant={((newForm.category as InventoryCategory) || selectedCategory) === cat ? "default" : "outline"}
+                                        className="gap-1.5 justify-start"
+                                        onClick={() => setNewForm({ ...newForm, category: cat })}
+                                      >
+                                        <Icon className="h-4 w-4" />
+                                        {meta.label}
+                                      </Button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                            {selectedBrand === "magical_warmers" && ((newForm.category as InventoryCategory) || selectedCategory) !== "importados" && ((newForm.category as InventoryCategory) || selectedCategory) !== "producto_en_proceso" && ((newForm.category as InventoryCategory) || selectedCategory) !== "materia_prima" && (
                               <div className="grid gap-1.5">
                                 <Label>Tipo de producto *</Label>
                                 <div className="grid grid-cols-3 gap-2">
