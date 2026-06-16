@@ -221,13 +221,15 @@ const WholesaleOrdersInbox = () => {
     return { ...primary, available: totalAvailable };
   };
 
-  const NEW_STATUSES = ["pendiente", "diseno"];
+  // Un pedido sigue en la bandeja mientras no haya tarea de producción activa
+  // ni entrega registrada. Cuando producción lo toma (body_production_tasks activa)
+  // o se entrega, pasa a "Entregados recientes".
   const pending = useMemo(
-    () => orders.filter((o) => !deliveredIds.has(o.id) && NEW_STATUSES.includes(o.production_status)),
+    () => orders.filter((o) => !deliveredIds.has(o.id)),
     [orders, deliveredIds]
   );
   const delivered = useMemo(
-    () => orders.filter((o) => deliveredIds.has(o.id) || !NEW_STATUSES.includes(o.production_status)),
+    () => orders.filter((o) => deliveredIds.has(o.id)),
     [orders, deliveredIds]
   );
 
@@ -461,11 +463,11 @@ const WholesaleOrdersInbox = () => {
   };
 
   const pendingRetail = useMemo(
-    () => retailOrders.filter((o) => !deliveredIds.has(o.id) && NEW_STATUSES.includes(o.production_status)),
+    () => retailOrders.filter((o) => !deliveredIds.has(o.id)),
     [retailOrders, deliveredIds]
   );
   const deliveredRetail = useMemo(
-    () => retailOrders.filter((o) => deliveredIds.has(o.id) || !NEW_STATUSES.includes(o.production_status)),
+    () => retailOrders.filter((o) => deliveredIds.has(o.id)),
     [retailOrders, deliveredIds]
   );
 
