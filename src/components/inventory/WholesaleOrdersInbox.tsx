@@ -794,6 +794,30 @@ const WholesaleOrdersInbox = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!confirmArchive} onOpenChange={(o) => !o && setConfirmArchive(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Quitar de la bandeja?</AlertDialogTitle>
+            <AlertDialogDescription>
+              El pedido de <span className="font-semibold text-foreground">{confirmArchive?.clientName}</span> se moverá a <strong>Entregados recientes</strong>. Podrás restaurarlo desde allí si lo necesitas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setConfirmArchive(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirmArchive) {
+                  archiveOrder(confirmArchive.id, confirmArchive.clientName);
+                  setConfirmArchive(null);
+                }
+              }}
+            >
+              Sí, quitar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
