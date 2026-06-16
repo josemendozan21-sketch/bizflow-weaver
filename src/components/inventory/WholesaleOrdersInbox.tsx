@@ -372,6 +372,7 @@ const WholesaleOrdersInbox = () => {
   };
 
   const renderCard = (o: MayorOrder, isDelivered: boolean, kind: "mayor" | "detal" = "mayor") => {
+    const isManuallyArchived = archivedIds.has(o.id) && !deliveredIds.has(o.id);
     const isSweatspotMayor = kind === "mayor" && o.brand === "sweatspot";
     // For mayor: check blank bodies (cuerpos) — those are what get sent to Estampación.
     // For detal: check finished product.
@@ -435,17 +436,27 @@ const WholesaleOrdersInbox = () => {
 
           {!isDelivered && (
             kind === "detal" ? (
-              <div className="pt-1">
+              <div className="pt-1 flex gap-2">
                 <Button size="sm" variant="default" className="w-full gap-1.5"
                   onClick={() => openDeliver(o, "logistica")}>
                   <Truck className="h-3.5 w-3.5" /> Entregar a Logística
                 </Button>
+                <Button size="sm" variant="outline" className="gap-1.5"
+                  title="Quitar de la bandeja"
+                  onClick={() => archiveOrder(o.id, o.client_name)}>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
               </div>
             ) : isSweatspotMayor ? (
-              <div className="pt-1">
+              <div className="pt-1 flex gap-2">
                 <Button size="sm" variant="default" className="w-full gap-1.5"
                   onClick={() => openDeliver(o, "estampacion")}>
                   <Paintbrush className="h-3.5 w-3.5" /> Entregar Kit a Estampación
+                </Button>
+                <Button size="sm" variant="outline" className="gap-1.5"
+                  title="Quitar de la bandeja"
+                  onClick={() => archiveOrder(o.id, o.client_name)}>
+                  <X className="h-3.5 w-3.5" />
                 </Button>
               </div>
             ) : (
@@ -477,8 +488,22 @@ const WholesaleOrdersInbox = () => {
                     </Button>
                   </>
                 )}
+                <Button size="sm" variant="outline" className="gap-1.5"
+                  title="Quitar de la bandeja"
+                  onClick={() => archiveOrder(o.id, o.client_name)}>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
               </div>
             )
+          )}
+
+          {isDelivered && isManuallyArchived && (
+            <div className="pt-1">
+              <Button size="sm" variant="ghost" className="w-full gap-1.5"
+                onClick={() => unarchiveOrder(o.id)}>
+                <RotateCcw className="h-3.5 w-3.5" /> Restaurar a la bandeja
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>
