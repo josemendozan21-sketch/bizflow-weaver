@@ -504,19 +504,6 @@ const WholesaleOrdersInbox = () => {
           </button>
         </div>
 
-        {(delivered.length > 0 || deliveredRetail.length > 0) && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm text-muted-foreground">Entregados recientes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-3 md:grid-cols-2">
-                {deliveredRetail.slice(0, 3).map((o) => renderCard(o, true, "detal"))}
-                {delivered.slice(0, 3).map((o) => renderCard(o, true))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     );
   }
@@ -563,18 +550,6 @@ const WholesaleOrdersInbox = () => {
             )}
           </CardContent>
         </Card>
-        {filteredDeliveredRetail.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm text-muted-foreground">Entregados recientes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-3 md:grid-cols-2">
-                {filteredDeliveredRetail.slice(0, 6).map((o) => renderCard(o, true, "detal"))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         <Dialog open={!!delivering} onOpenChange={(o) => !o && setDelivering(null)}>
           <DialogContent>
@@ -625,7 +600,6 @@ const WholesaleOrdersInbox = () => {
 
   // view === "mayor"
   const filteredPending = filterOrders(pending);
-  const filteredDelivered = filterOrders(delivered);
   return (
     <div className="space-y-4">
       <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setView("menu")}>
@@ -665,19 +639,6 @@ const WholesaleOrdersInbox = () => {
           )}
         </CardContent>
       </Card>
-
-      {filteredDelivered.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm text-muted-foreground">Entregados recientes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 md:grid-cols-2">
-              {filteredDelivered.slice(0, 6).map((o) => renderCard(o, true))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       <Dialog open={!!delivering} onOpenChange={(o) => !o && setDelivering(null)}>
         <DialogContent>
