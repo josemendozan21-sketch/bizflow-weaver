@@ -82,6 +82,23 @@ const buildSweatspotKit = (order: MayorOrder): KitComponent[] => {
   ];
 };
 
+// ---------- Online / multi-item product parser ----------
+type ParsedLine = { name: string; qty: number };
+
+const parseOrderLines = (product: string, fallbackQty: number): ParsedLine[] => {
+  if (!product) return [{ name: product || "", qty: fallbackQty }];
+  const parts = product.split("|").map((p) => p.trim()).filter(Boolean);
+  const lines: ParsedLine[] = parts.map((part) => {
+    const m = part.match(/^(.*?)[\s]*x\s*(\d+)\s*$/i);
+    if (m) return { name: m[1].trim(), qty: Number(m[2]) || 1 };
+    return { name: part, qty: 1 };
+  });
+  if (lines.length === 1 && !/x\s*\d+\s*$/i.test(parts[0])) {
+    lines[0].qty = fallbackQty || 1;
+  }
+  return lines;
+};
+
 const WholesaleOrdersInbox = () => {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -94,6 +111,7 @@ const WholesaleOrdersInbox = () => {
   const [busy, setBusy] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [kitQuantities, setKitQuantities] = useState<Record<string, string>>({});
+  const [lineRows, setLineRows] = useState<Array<{ name: string; qty: string; stockItemId: string }>>([]);
 
   const ARCHIVE_KEY = "inbox-archived-order-ids";
   const [archivedIds, setArchivedIds] = useState<Set<string>>(() => {
