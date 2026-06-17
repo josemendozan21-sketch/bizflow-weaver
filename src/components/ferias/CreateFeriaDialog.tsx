@@ -213,17 +213,28 @@ export function CreateFeriaDialog() {
           </div>
 
           <div className="border rounded-lg p-3 bg-muted/30">
-            <h4 className="font-semibold mb-3 text-sm">Costos de la feria</h4>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-semibold text-sm">Costos de la feria</h4>
+              <div className="text-xs text-muted-foreground">Presupuestado / Real</div>
+            </div>
+            <div className="space-y-2">
               {COST_FIELDS.map((f) => (
-                <div key={f.key}>
-                  <Label className="text-xs">{f.label}</Label>
-                  <Input type="number" value={form[f.key]} onChange={(e) => setForm({ ...form, [f.key]: e.target.value })} />
+                <div key={f.key} className="grid grid-cols-3 gap-2 items-center">
+                  <span className="text-xs col-span-1">{f.label}</span>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Presupuestado</Label>
+                    <Input type="number" className="h-8 text-sm" value={form[f.budgetKey]} onChange={(e) => setForm({ ...form, [f.budgetKey]: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Real</Label>
+                    <Input type="number" className="h-8 text-sm" value={form[f.key]} onChange={(e) => setForm({ ...form, [f.key]: e.target.value })} />
+                  </div>
                 </div>
               ))}
             </div>
-            <div className="flex justify-between mt-3 pt-3 border-t font-semibold">
-              <span>Costo Total</span>
+            <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t font-semibold text-sm">
+              <span>Totales</span>
+              <span>${totalBudget.toLocaleString()}</span>
               <span>${totalCosts.toLocaleString()}</span>
             </div>
           </div>
