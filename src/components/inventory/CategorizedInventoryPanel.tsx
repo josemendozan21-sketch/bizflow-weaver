@@ -411,211 +411,242 @@ const CategorizedInventoryPanel = ({
         </div>
       </div>
 
-      <Tabs value={selectedCategory} onValueChange={(v) => setSelectedCategory(v as InventoryCategory)}>
-        <TabsList className="w-full grid" style={{ gridTemplateColumns: `repeat(${CATEGORIES.length}, minmax(0, 1fr))` }}>
-          {CATEGORIES.map((cat) => {
-            const meta = CATEGORY_META[cat];
-            const Icon = meta.icon;
-            const count = stockItems.filter((i) => i.brand === dbBrand && i.category === cat).length;
-            return (
-              <TabsTrigger key={cat} value={cat} className="gap-1.5 text-xs sm:text-sm">
-                <Icon className="h-4 w-4 hidden sm:block" />
-                {meta.label}
-                {count > 0 && <span className="text-muted-foreground">({count})</span>}
-              </TabsTrigger>
-            );
-          })}
-        </TabsList>
-
-        {CATEGORIES.map((cat) => (
-          <TabsContent key={cat} value={cat}>
-            {cat === "producto_terminado" && selectedBrand === "sweatspot" ? (
-              <SweatspotFinishedProducts />
-            ) : (
-              <Card>
-                <CardHeader className="pb-3">
-                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">
-                      {CATEGORY_META[cat].label} — {brandLabel}
-                    </CardTitle>
-                    {!isReadOnly && (
-                      <Dialog open={addOpen} onOpenChange={setAddOpen}>
-                        <DialogTrigger asChild>
-                          <Button size="sm"><Plus className="h-4 w-4 mr-1" />Agregar ítem</Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-md">
-                          <DialogHeader>
-                            <DialogTitle>Agregar ítem</DialogTitle>
-                            <DialogDescription>
-                              {brandLabel} → {CATEGORY_META[(newForm.category as InventoryCategory) || selectedCategory].label}
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="grid gap-4 py-2">
-                            <div className="grid gap-1.5">
-                              <Label>Nombre *</Label>
-                              <Input placeholder="Ej: Gel, Envase…" value={newForm.name} onChange={(e) => setNewForm({ ...newForm, name: e.target.value })} />
-                              {selectedBrand === "magical_warmers" && newForm.name.trim().length > 1 && (() => {
-                                const base = normalize(baseRefName(newForm.name.trim()));
-                                const similar = stockItems.filter(
-                                  (s) => s.brand === dbBrand && s.category === ((newForm.category as InventoryCategory) || selectedCategory) &&
-                                    normalize(baseRefName(s.name)).includes(base),
-                                );
-                                if (similar.length === 0) return null;
-                                return (
-                                  <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-2 text-xs text-amber-700 dark:text-amber-400">
-                                    <div className="font-semibold mb-1 flex items-center gap-1">
-                                      <AlertTriangle className="h-3 w-3" /> Posibles duplicados
-                                    </div>
-                                    <ul className="list-disc ml-4">
-                                      {similar.slice(0, 5).map((s) => (
-                                        <li key={s.id}>{s.name}{s.product_type ? ` — ${s.product_type}` : ""}</li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                );
-                              })()}
-                            </div>
-                            {selectedBrand === "magical_warmers" && (
-                              <div className="grid gap-1.5">
-                                <Label>Guardar en categoría *</Label>
-                                <div className="grid grid-cols-2 gap-2">
-                                  {CATEGORIES.filter((c) => c !== "importados").map((cat) => {
-                                    const meta = CATEGORY_META[cat];
-                                    const Icon = meta.icon;
-                                    return (
-                                      <Button
-                                        key={cat}
-                                        type="button"
-                                        variant={((newForm.category as InventoryCategory) || selectedCategory) === cat ? "default" : "outline"}
-                                        className="gap-1.5 justify-start"
-                                        onClick={() => setNewForm({ ...newForm, category: cat })}
-                                      >
-                                        <Icon className="h-4 w-4" />
-                                        {meta.label}
-                                      </Button>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            )}
-                            {selectedBrand === "magical_warmers" && ((newForm.category as InventoryCategory) || selectedCategory) !== "importados" && ((newForm.category as InventoryCategory) || selectedCategory) !== "producto_en_proceso" && ((newForm.category as InventoryCategory) || selectedCategory) !== "materia_prima" && (
-                              <div className="grid gap-1.5">
-                                <Label>Tipo de producto *</Label>
-                                <div className="grid grid-cols-3 gap-2">
-                                  <Button
-                                    type="button"
-                                    variant={newForm.tipo === "Frío" ? "default" : "outline"}
-                                    className="gap-1.5"
-                                    onClick={() => setNewForm({ ...newForm, tipo: "Frío" })}
-                                  >
-                                    <Snowflake className="h-4 w-4" /> Frío
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant={newForm.tipo === "Térmico" ? "default" : "outline"}
-                                    className="gap-1.5"
-                                    onClick={() => setNewForm({ ...newForm, tipo: "Térmico" })}
-                                  >
-                                    <Flame className="h-4 w-4" /> Calor
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant={newForm.tipo === "Ambos" ? "default" : "outline"}
-                                    className="gap-1.5"
-                                    onClick={() => setNewForm({ ...newForm, tipo: "Ambos" })}
-                                    title="Crea una versión Frío y otra Térmico con la misma cantidad inicial"
-                                  >
-                                    <Snowflake className="h-3.5 w-3.5" />
-                                    <Flame className="h-3.5 w-3.5" /> Ambos
-                                  </Button>
-                                </div>
-                                <p className="text-[11px] text-muted-foreground">
-                                  Si eliges "Ambos" se crean dos referencias (Frío y Térmico) con la misma cantidad inicial. Aparecen en Producción, Ventas e Inventarios.
-                                </p>
-                              </div>
-                            )}
-                            <div className="grid grid-cols-3 gap-3">
-                              <div className="grid gap-1.5">
-                                <Label>Cantidad *</Label>
-                                <Input type="number" min={0} value={newForm.available} onChange={(e) => setNewForm({ ...newForm, available: e.target.value })} />
-                              </div>
-                              <div className="grid gap-1.5">
-                                <Label>Unidad</Label>
-                                <Select value={newForm.unit} onValueChange={(v) => setNewForm({ ...newForm, unit: v })}>
-                                  <SelectTrigger><SelectValue /></SelectTrigger>
-                                  <SelectContent>
-                                    {UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="grid gap-1.5">
-                                <Label>Mínimo *</Label>
-                                <Input type="number" min={0} value={newForm.minStock} onChange={(e) => setNewForm({ ...newForm, minStock: e.target.value })} />
-                              </div>
-                            </div>
-                          </div>
-                          <DialogFooter>
-                            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancelar</Button>
-                            <Button onClick={handleAdd}>Guardar</Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap items-center gap-2 mb-4">
-                    <div className="relative flex-1 min-w-[180px]">
-                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Buscar producto..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-8 h-9"
-                      />
-                    </div>
-                    <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}>
-                      <SelectTrigger className="h-9 w-[140px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="todos">Todos</SelectItem>
-                        <SelectItem value="termico">🔥 Térmico</SelectItem>
-                        <SelectItem value="frio">❄️ Frío</SelectItem>
-                        <SelectItem value="otros">Otros</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-9 gap-1.5"
-                      onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
-                      title="Ordenar alfabéticamente"
-                    >
-                      {sortDir === "asc" ? <ArrowDownAZ className="h-4 w-4" /> : <ArrowUpAZ className="h-4 w-4" />}
-                      {sortDir === "asc" ? "A-Z" : "Z-A"}
-                    </Button>
-                  </div>
-                  {isLoading ? (
-                    <p className="text-center text-muted-foreground py-8 text-sm">Cargando inventario…</p>
-                  ) : filteredItems.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8 text-sm">
-                      {baseItems.length === 0
-                        ? `No hay ítems registrados en ${CATEGORY_META[cat].label} para ${brandLabel}.`
-                        : "No se encontraron ítems con esos filtros."}
-                    </p>
-                  ) : isGroupedCategory ? (
-                    renderGroupedContent(filteredItems)
-                  ) : (
-                    renderFlatContent(filteredItems)
-                  )}
-                </CardContent>
-              </Card>
-            )}
+      {selectedBrand === "sweatspot" ? (
+        <Tabs value={sweatspotOrigin} onValueChange={(v) => setSweatspotOrigin(v as "todos" | "IMPORTADO" | "NACIONAL")}>
+          <TabsList className="w-full grid grid-cols-3">
+            <TabsTrigger value="todos" className="gap-1.5 text-xs sm:text-sm">
+              <PackageCheck className="h-4 w-4 hidden sm:block" />
+              Todos
+              <span className="text-muted-foreground">({sweatspotAllCount})</span>
+            </TabsTrigger>
+            <TabsTrigger value="IMPORTADO" className="gap-1.5 text-xs sm:text-sm">
+              <Plane className="h-4 w-4 hidden sm:block" />
+              Importados
+              <span className="text-muted-foreground">({sweatspotImportCount})</span>
+            </TabsTrigger>
+            <TabsTrigger value="NACIONAL" className="gap-1.5 text-xs sm:text-sm">
+              <Factory className="h-4 w-4 hidden sm:block" />
+              Producto Nacional
+              <span className="text-muted-foreground">({sweatspotNationalCount})</span>
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="todos">
+            <SweatspotFinishedProducts originFilter="todos" />
           </TabsContent>
-        ))}
-      </Tabs>
+          <TabsContent value="IMPORTADO">
+            <SweatspotFinishedProducts originFilter="IMPORTADO" />
+          </TabsContent>
+          <TabsContent value="NACIONAL">
+            <SweatspotFinishedProducts originFilter="NACIONAL" />
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <Tabs value={selectedCategory} onValueChange={(v) => setSelectedCategory(v as InventoryCategory)}>
+          <TabsList className="w-full grid" style={{ gridTemplateColumns: `repeat(${CATEGORIES.length}, minmax(0, 1fr))` }}>
+            {CATEGORIES.map((cat) => {
+              const meta = CATEGORY_META[cat];
+              const Icon = meta.icon;
+              const count = stockItems.filter((i) => i.brand === dbBrand && i.category === cat).length;
+              return (
+                <TabsTrigger key={cat} value={cat} className="gap-1.5 text-xs sm:text-sm">
+                  <Icon className="h-4 w-4 hidden sm:block" />
+                  {meta.label}
+                  {count > 0 && <span className="text-muted-foreground">({count})</span>}
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+
+          {CATEGORIES.map((cat) => (
+            <TabsContent key={cat} value={cat}>
+              {cat === "producto_terminado" && selectedBrand === "sweatspot" ? (
+                <SweatspotFinishedProducts />
+              ) : (
+                <Card>
+                  <CardHeader className="pb-3">
+                     <div className="flex items-center justify-between">
+                      <CardTitle className="text-base">
+                        {CATEGORY_META[cat].label} — {brandLabel}
+                      </CardTitle>
+                      {!isReadOnly && (
+                        <Dialog open={addOpen} onOpenChange={setAddOpen}>
+                          <DialogTrigger asChild>
+                            <Button size="sm"><Plus className="h-4 w-4 mr-1" />Agregar ítem</Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                              <DialogTitle>Agregar ítem</DialogTitle>
+                              <DialogDescription>
+                                {brandLabel} → {CATEGORY_META[(newForm.category as InventoryCategory) || selectedCategory].label}
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-2">
+                              <div className="grid gap-1.5">
+                                <Label>Nombre *</Label>
+                                <Input placeholder="Ej: Gel, Envase…" value={newForm.name} onChange={(e) => setNewForm({ ...newForm, name: e.target.value })} />
+                                {selectedBrand === "magical_warmers" && newForm.name.trim().length > 1 && (() => {
+                                  const base = normalize(baseRefName(newForm.name.trim()));
+                                  const similar = stockItems.filter(
+                                    (s) => s.brand === dbBrand && s.category === ((newForm.category as InventoryCategory) || selectedCategory) &&
+                                      normalize(baseRefName(s.name)).includes(base),
+                                  );
+                                  if (similar.length === 0) return null;
+                                  return (
+                                    <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-2 text-xs text-amber-700 dark:text-amber-400">
+                                      <div className="font-semibold mb-1 flex items-center gap-1">
+                                        <AlertTriangle className="h-3 w-3" /> Posibles duplicados
+                                      </div>
+                                      <ul className="list-disc ml-4">
+                                        {similar.slice(0, 5).map((s) => (
+                                          <li key={s.id}>{s.name}{s.product_type ? ` — ${s.product_type}` : ""}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                              {selectedBrand === "magical_warmers" && (
+                                <div className="grid gap-1.5">
+                                  <Label>Guardar en categoría *</Label>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    {CATEGORIES.filter((c) => c !== "importados").map((cat) => {
+                                      const meta = CATEGORY_META[cat];
+                                      const Icon = meta.icon;
+                                      return (
+                                        <Button
+                                          key={cat}
+                                          type="button"
+                                          variant={((newForm.category as InventoryCategory) || selectedCategory) === cat ? "default" : "outline"}
+                                          className="gap-1.5 justify-start"
+                                          onClick={() => setNewForm({ ...newForm, category: cat })}
+                                        >
+                                          <Icon className="h-4 w-4" />
+                                          {meta.label}
+                                        </Button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                              {selectedBrand === "magical_warmers" && ((newForm.category as InventoryCategory) || selectedCategory) !== "importados" && ((newForm.category as InventoryCategory) || selectedCategory) !== "producto_en_proceso" && ((newForm.category as InventoryCategory) || selectedCategory) !== "materia_prima" && (
+                                <div className="grid gap-1.5">
+                                  <Label>Tipo de producto *</Label>
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <Button
+                                      type="button"
+                                      variant={newForm.tipo === "Frío" ? "default" : "outline"}
+                                      className="gap-1.5"
+                                      onClick={() => setNewForm({ ...newForm, tipo: "Frío" })}
+                                    >
+                                      <Snowflake className="h-4 w-4" /> Frío
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant={newForm.tipo === "Térmico" ? "default" : "outline"}
+                                      className="gap-1.5"
+                                      onClick={() => setNewForm({ ...newForm, tipo: "Térmico" })}
+                                    >
+                                      <Flame className="h-4 w-4" /> Calor
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant={newForm.tipo === "Ambos" ? "default" : "outline"}
+                                      className="gap-1.5"
+                                      onClick={() => setNewForm({ ...newForm, tipo: "Ambos" })}
+                                      title="Crea una versión Frío y otra Térmico con la misma cantidad inicial"
+                                    >
+                                      <Snowflake className="h-3.5 w-3.5" />
+                                      <Flame className="h-3.5 w-3.5" /> Ambos
+                                    </Button>
+                                  </div>
+                                  <p className="text-[11px] text-muted-foreground">
+                                    Si eliges "Ambos" se crean dos referencias (Frío y Térmico) con la misma cantidad inicial. Aparecen en Producción, Ventas e Inventarios.
+                                  </p>
+                                </div>
+                              )}
+                              <div className="grid grid-cols-3 gap-3">
+                                <div className="grid gap-1.5">
+                                  <Label>Cantidad *</Label>
+                                  <Input type="number" min={0} value={newForm.available} onChange={(e) => setNewForm({ ...newForm, available: e.target.value })} />
+                                </div>
+                                <div className="grid gap-1.5">
+                                  <Label>Unidad</Label>
+                                  <Select value={newForm.unit} onValueChange={(v) => setNewForm({ ...newForm, unit: v })}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      {UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="grid gap-1.5">
+                                  <Label>Mínimo *</Label>
+                                  <Input type="number" min={0} value={newForm.minStock} onChange={(e) => setNewForm({ ...newForm, minStock: e.target.value })} />
+                                </div>
+                              </div>
+                            </div>
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => setAddOpen(false)}>Cancelar</Button>
+                              <Button onClick={handleAdd}>Guardar</Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap items-center gap-2 mb-4">
+                      <div className="relative flex-1 min-w-[180px]">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Buscar producto..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-8 h-9"
+                        />
+                      </div>
+                      <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}>
+                        <SelectTrigger className="h-9 w-[140px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="todos">Todos</SelectItem>
+                          <SelectItem value="termico">🔥 Térmico</SelectItem>
+                          <SelectItem value="frio">❄️ Frío</SelectItem>
+                          <SelectItem value="otros">Otros</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-9 gap-1.5"
+                        onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+                        title="Ordenar alfabéticamente"
+                      >
+                        {sortDir === "asc" ? <ArrowDownAZ className="h-4 w-4" /> : <ArrowUpAZ className="h-4 w-4" />}
+                        {sortDir === "asc" ? "A-Z" : "Z-A"}
+                      </Button>
+                    </div>
+                    {isLoading ? (
+                      <p className="text-center text-muted-foreground py-8 text-sm">Cargando inventario…</p>
+                    ) : filteredItems.length === 0 ? (
+                      <p className="text-center text-muted-foreground py-8 text-sm">
+                        {baseItems.length === 0
+                          ? `No hay ítems registrados en ${CATEGORY_META[cat].label} para ${brandLabel}.`
+                          : "No se encontraron ítems con esos filtros."}
+                      </p>
+                    ) : isGroupedCategory ? (
+                      renderGroupedContent(filteredItems)
+                    ) : (
+                      renderFlatContent(filteredItems)
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+          ))}
+        </Tabs>
+      )}
     </div>
   );
 };
