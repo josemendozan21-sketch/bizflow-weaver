@@ -11,7 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useInventory } from "@/hooks/useInventory";
-import { toast } from "sonner";
 import type { InventoryBrand } from "@/stores/inventoryStore";
 
 const StockIndicator = ({ available, minStock }: { available: number; minStock?: number }) => {
@@ -91,7 +90,7 @@ const FiltersBar = ({
 
 export default function AsesorInventoryView() {
   const [selectedBrand, setSelectedBrand] = useState<InventoryBrand | null>(null);
-  const { bodyStock, stockItems, isLoading, updateStockItem } = useInventory();
+  const { bodyStock, stockItems, isLoading } = useInventory();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("todos");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
