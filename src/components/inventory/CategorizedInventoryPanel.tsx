@@ -74,9 +74,11 @@ const CategorizedInventoryPanel = ({
   const { role } = useAuth();
   const isReadOnly = role !== "admin";
   const baseCategories = role === "asesor_comercial" ? ASESOR_CATEGORIES : ALL_CATEGORIES;
-  // Magical Warmers no tiene productos importados
+  // Magical Warmers no tiene productos importados; Sweatspot no tiene cuerpos de referencia.
   const CATEGORIES = initialBrand === "magical_warmers"
     ? baseCategories.filter((c) => c !== "importados")
+    : initialBrand === "sweatspot"
+    ? baseCategories.filter((c) => c !== "cuerpos_referencias")
     : baseCategories;
   const effectiveInitialCategory = !CATEGORIES.includes(initialCategory)
     ? CATEGORIES[0]
