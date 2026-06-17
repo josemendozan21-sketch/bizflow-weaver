@@ -82,6 +82,23 @@ const buildSweatspotKit = (order: MayorOrder): KitComponent[] => {
   ];
 };
 
+// ---------- Online / multi-item product parser ----------
+type ParsedLine = { name: string; qty: number };
+
+const parseOrderLines = (product: string, fallbackQty: number): ParsedLine[] => {
+  if (!product) return [{ name: product || "", qty: fallbackQty }];
+  const parts = product.split("|").map((p) => p.trim()).filter(Boolean);
+  const lines: ParsedLine[] = parts.map((part) => {
+    const m = part.match(/^(.*?)[\s]*x\s*(\d+)\s*$/i);
+    if (m) return { name: m[1].trim(), qty: Number(m[2]) || 1 };
+    return { name: part, qty: 1 };
+  });
+  if (lines.length === 1 && !/x\s*\d+\s*$/i.test(parts[0])) {
+    lines[0].qty = fallbackQty || 1;
+  }
+  return lines;
+};
+
 const WholesaleOrdersInbox = () => {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -94,6 +111,7 @@ const WholesaleOrdersInbox = () => {
   const [busy, setBusy] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [kitQuantities, setKitQuantities] = useState<Record<string, string>>({});
+  const [lineRows, setLineRows] = useState<Array<{ name: string; qty: string; stockItemId: string }>>([]);
 
   const ARCHIVE_KEY = "inbox-archived-order-ids";
   const [archivedIds, setArchivedIds] = useState<Set<string>>(() => {
@@ -281,6 +299,23 @@ const WholesaleOrdersInbox = () => {
     } else {
       setKitQuantities({});
     }
+    // Para entregas al detal (logística) parseamos pedidos online multi-ítem
+    if (target === "logistica") {
+      const parsed = parseOrderLines(order.product, order.quantity);
+      const cat = "producto_terminado";
+      const rows = parsed.map((p) => {
+        const guess = stockItems.find(
+          (s) =>
+            s.brand === order.brand &&
+            s.category === cat &&
+            s.name.trim().toLowerCase() === p.name.trim().toLowerCase()
+        );
+        return { name: p.name, qty: String(p.qty), stockItemId: guess?.id ?? "" };
+      });
+      setLineRows(rows);
+    } else {
+      setLineRows([]);
+    }
   };
 
   const confirmDeliver = async () => {
@@ -355,6 +390,35 @@ const WholesaleOrdersInbox = () => {
       setBusy(false);
       if (error) { toast.error(error.message); return; }
       toast.success(`Orden de producción creada (${quantity} uds). Los cuerpos volverán a inventario al terminar.`);
+    } else if (target === "logistica" && lineRows.length > 0) {
+      // Pedido al detal (potencialmente multi-ítem desde checkout online)
+      const cat = "producto_terminado";
+      const invalid = lineRows.find((r) => !r.stockItemId || !Number(r.qty) || Number(r.qty) <= 0);
+      if (invalid) {
+        setBusy(false);
+        toast.error(`Asigna ítem y cantidad válida para "${invalid.name}"`);
+        return;
+      }
+      const movements = lineRows.map((r) => {
+        const stock = stockItems.find((s) => s.id === r.stockItemId);
+        return {
+          stock_item_id: r.stockItemId,
+          item_name: stock?.name || r.name,
+          brand: order.brand,
+          category: cat,
+          quantity: Number(r.qty),
+          direction: "entrega" as const,
+          area: "logistica" as const,
+          reason: `Pedido al detal de ${order.client_name}` + (obs ? ` — ${obs}` : ""),
+          order_id: order.id,
+          recorded_by: user.id,
+          recorded_by_name: user.email || "Inventarios",
+        };
+      });
+      const { error } = await supabase.from("inventory_movements").insert(movements as any);
+      setBusy(false);
+      if (error) { toast.error(error.message); return; }
+      toast.success(`Entregado a Logística (${lineRows.length} ${lineRows.length === 1 ? "ítem" : "ítems"}).`);
     } else {
       const cat = target === "estampacion" ? "cuerpos_referencias" : "producto_terminado";
       const item = findStockItem(order, cat);
@@ -706,6 +770,49 @@ const WholesaleOrdersInbox = () => {
                     )}
                   </div>
                 ))}
+              </div>
+            ) : delivering?.target === "logistica" && lineRows.length > 0 ? (
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Mapea cada línea del pedido a su producto en inventario. Las cantidades se descontarán al confirmar.
+                </p>
+                {lineRows.map((r, idx) => {
+                  const options = stockItems
+                    .filter((s) => s.brand === delivering?.order.brand && s.category === "producto_terminado")
+                    .sort((a, b) => a.name.localeCompare(b.name));
+                  return (
+                    <div key={idx} className="border rounded-md p-2 space-y-2">
+                      <div className="text-xs font-medium">{r.name}</div>
+                      <div className="grid grid-cols-[1fr_90px] gap-2">
+                        <Select
+                          value={r.stockItemId}
+                          onValueChange={(v) =>
+                            setLineRows((prev) => prev.map((x, i) => (i === idx ? { ...x, stockItemId: v } : x)))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecciona producto en inventario" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {options.map((s) => (
+                              <SelectItem key={s.id} value={s.id}>
+                                {s.name} · disp. {s.available}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={r.qty}
+                          onChange={(e) =>
+                            setLineRows((prev) => prev.map((x, i) => (i === idx ? { ...x, qty: e.target.value } : x)))
+                          }
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div>
