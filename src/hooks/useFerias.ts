@@ -42,6 +42,25 @@ export interface Feria {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  // Proyección y comisiones
+  target_margin_pct: number;
+  iva_pct: number;
+  commission_tier_1_pct: number;
+  commission_tier_2_pct: number;
+  commission_tier_3_pct: number;
+  commission_tier_1_to_pct: number;
+  commission_tier_2_to_pct: number;
+  scenarios: {
+    pesimista: ScenarioInput;
+    realista: ScenarioInput;
+    optimista: ScenarioInput;
+  };
+}
+
+export interface ScenarioInput {
+  ticket_promedio: number;
+  visitantes_esperados: number;
+  tasa_conversion_pct: number;
 }
 
 export function calcFeriaTotalCost(f: Feria): number {
