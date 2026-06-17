@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Save, CheckCircle2, XCircle, Sparkles } from "lucide-react";
-import { useFeriaSales, useUpdateFeria, type Feria, type ScenarioInput } from "@/hooks/useFerias";
+import { useFeriaSales, useUpdateFeria, useFeriaInventory, type Feria, type ScenarioInput } from "@/hooks/useFerias";
 import { calcBreakEven, calcScenario, proposeCommissions, type CommissionProposal } from "@/lib/feriaProjections";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -29,9 +29,28 @@ function fmt(n: number) {
   return "$" + Math.round(n).toLocaleString();
 }
 
+const SCENARIO_DEFAULTS: Record<keyof Feria["scenarios"], ScenarioInput> = {
+  pesimista: { pct_inventario: 60, pct_comision: 5 },
+  realista: { pct_inventario: 70, pct_comision: 8 },
+  optimista: { pct_inventario: 90, pct_comision: 10 },
+};
+
+function normalizeScenarios(s: any): Feria["scenarios"] {
+  const out: any = {};
+  (Object.keys(SCENARIO_DEFAULTS) as Array<keyof Feria["scenarios"]>).forEach((k) => {
+    const cur = s?.[k] || {};
+    out[k] = {
+      pct_inventario: typeof cur.pct_inventario === "number" ? cur.pct_inventario : SCENARIO_DEFAULTS[k].pct_inventario,
+      pct_comision: typeof cur.pct_comision === "number" ? cur.pct_comision : SCENARIO_DEFAULTS[k].pct_comision,
+    };
+  });
+  return out;
+}
+
 export function FeriaProjectionTab({ feria }: { feria: Feria }) {
   const update = useUpdateFeria();
   const { data: sales = [] } = useFeriaSales(feria.id);
+  const { data: inventory = [] } = useFeriaInventory(feria.id);
   const { data: commissions = [] } = useFeriaCommissions(feria.id);
   const approveOne = useApproveCommission();
   const approveAll = useApproveAllCommissions();
@@ -45,7 +64,7 @@ export function FeriaProjectionTab({ feria }: { feria: Feria }) {
     commission_tier_3_pct: feria.commission_tier_3_pct,
     commission_tier_1_to_pct: feria.commission_tier_1_to_pct,
     commission_tier_2_to_pct: feria.commission_tier_2_to_pct,
-    scenarios: feria.scenarios,
+    scenarios: normalizeScenarios(feria.scenarios),
   });
 
   useEffect(() => {
@@ -57,7 +76,7 @@ export function FeriaProjectionTab({ feria }: { feria: Feria }) {
       commission_tier_3_pct: feria.commission_tier_3_pct,
       commission_tier_1_to_pct: feria.commission_tier_1_to_pct,
       commission_tier_2_to_pct: feria.commission_tier_2_to_pct,
-      scenarios: feria.scenarios,
+      scenarios: normalizeScenarios(feria.scenarios),
     });
   }, [feria]);
 
@@ -65,6 +84,18 @@ export function FeriaProjectionTab({ feria }: { feria: Feria }) {
   const draftFeria: Feria = { ...feria, ...settings };
 
   const be = useMemo(() => calcBreakEven(draftFeria), [draftFeria]);
+  const inventarioConIva = useMemo(
+    () => inventory.reduce((a, i) => a + (Number(i.quantity_assigned) || 0) * (Number(i.unit_price) || 0), 0),
+    [inventory]
+  );
+  const inventarioUnidades = useMemo(
+    () => inventory.reduce((a, i) => a + (Number(i.quantity_assigned) || 0), 0),
+    [inventory]
+  );
+  const inventarioCosto = useMemo(
+    () => inventory.reduce((a, i) => a + (Number(i.quantity_assigned) || 0) * (Number(i.unit_cost) || 0), 0),
+    [inventory]
+  );
   const ventasActualesIva = useMemo(() => sales.reduce((a, s) => a + Number(s.total_amount), 0), [sales]);
   const ventasActualesSinIva = ventasActualesIva / (1 + (feria.iva_pct || 0) / 100);
   const gapIva = be.breakEvenWithIva - ventasActualesIva;
@@ -210,7 +241,7 @@ export function FeriaProjectionTab({ feria }: { feria: Feria }) {
         <div className="grid md:grid-cols-3 gap-3">
           {(Object.keys(SCENARIO_LABEL) as Array<keyof Feria["scenarios"]>).map((key) => {
             const sc = settings.scenarios[key];
-            const res = calcScenario(sc, draftFeria, be);
+            const res = calcScenario(sc, draftFeria, be, inventarioConIva, inventarioUnidades);
             return (
               <div key={key} className={`border rounded-lg p-3 ${SCENARIO_COLOR[key]}`}>
                 <div className="flex items-center justify-between mb-2">
@@ -223,32 +254,42 @@ export function FeriaProjectionTab({ feria }: { feria: Feria }) {
                 </div>
                 <div className="space-y-2 text-xs">
                   <div>
-                    <Label className="text-[10px]">Visitantes esperados</Label>
-                    <Input type="number" className="h-8" value={sc.visitantes_esperados}
-                      onChange={(e) => setScenario(key, "visitantes_esperados", e.target.value)} />
+                    <Label className="text-[10px]">% mercancía vendida</Label>
+                    <Input type="number" min={0} max={100} className="h-8" value={sc.pct_inventario}
+                      onChange={(e) => setScenario(key, "pct_inventario", e.target.value)} />
                   </div>
                   <div>
-                    <Label className="text-[10px]">Conversión (%)</Label>
-                    <Input type="number" className="h-8" value={sc.tasa_conversion_pct}
-                      onChange={(e) => setScenario(key, "tasa_conversion_pct", e.target.value)} />
-                  </div>
-                  <div>
-                    <Label className="text-[10px]">Ticket promedio (con IVA)</Label>
-                    <Input type="number" className="h-8" value={sc.ticket_promedio}
-                      onChange={(e) => setScenario(key, "ticket_promedio", e.target.value)} />
+                    <Label className="text-[10px]">% comisión asesores</Label>
+                    <Input type="number" min={0} max={100} className="h-8" value={sc.pct_comision}
+                      onChange={(e) => setScenario(key, "pct_comision", e.target.value)} />
                   </div>
                 </div>
                 <div className="mt-3 space-y-1 text-xs border-t pt-2">
                   <div className="flex justify-between"><span>Unidades</span><span className="font-medium">{Math.round(res.unidades).toLocaleString()}</span></div>
                   <div className="flex justify-between"><span>Ingreso con IVA</span><span className="font-medium">{fmt(res.ingresoConIva)}</span></div>
                   <div className="flex justify-between"><span>Ingreso sin IVA</span><span className="font-medium">{fmt(res.ingresoSinIva)}</span></div>
-                  <div className="flex justify-between"><span>Utilidad</span><span className={`font-semibold ${res.utilidad >= 0 ? "text-emerald-600" : "text-destructive"}`}>{fmt(res.utilidad)}</span></div>
+                  <div className="flex justify-between"><span>Excedente sobre BE</span><span className="font-medium">{fmt(res.excedente)}</span></div>
+                  <div className="flex justify-between"><span>Utilidad bruta</span><span className={`font-semibold ${res.utilidad >= 0 ? "text-emerald-600" : "text-destructive"}`}>{fmt(res.utilidad)}</span></div>
+                  <div className="flex justify-between"><span>Comisión ({sc.pct_comision}%)</span><span className="font-medium">{fmt(res.comisionTotal)}</span></div>
+                  <div className="flex justify-between"><span>Utilidad neta</span><span className={`font-semibold ${res.utilidadNeta >= 0 ? "text-emerald-600" : "text-destructive"}`}>{fmt(res.utilidadNeta)}</span></div>
                   <div className="flex justify-between"><span>% vs equilibrio</span><span className="font-medium">{Math.round(res.pctVsEquilibrio)}%</span></div>
                 </div>
               </div>
             );
           })}
         </div>
+        {inventarioConIva === 0 && (
+          <p className="text-xs text-muted-foreground mt-3">
+            Carga el inventario asignado a la feria para que los escenarios proyecten ingresos.
+          </p>
+        )}
+        {inventarioConIva > 0 && (
+          <div className="grid grid-cols-3 gap-2 text-xs mt-3 border-t pt-3">
+            <div><span className="text-muted-foreground">Inventario (uds): </span><span className="font-medium">{inventarioUnidades.toLocaleString()}</span></div>
+            <div><span className="text-muted-foreground">Valor con IVA: </span><span className="font-medium">{fmt(inventarioConIva)}</span></div>
+            <div><span className="text-muted-foreground">Costo mercancía: </span><span className="font-medium">{fmt(inventarioCosto)}</span></div>
+          </div>
+        )}
       </Card>
 
       {/* Commissions proposal */}
