@@ -746,6 +746,68 @@ export type Database = {
         }
         Relationships: []
       }
+      feria_commissions: {
+        Row: {
+          advisor_id: string | null
+          advisor_name: string
+          applied_pct: number
+          approved_at: string | null
+          approved_by: string | null
+          commission_amount: number
+          created_at: string
+          excedente: number
+          feria_id: string
+          id: string
+          notes: string | null
+          sales_with_iva: number
+          sales_without_iva: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          advisor_id?: string | null
+          advisor_name: string
+          applied_pct?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          commission_amount?: number
+          created_at?: string
+          excedente?: number
+          feria_id: string
+          id?: string
+          notes?: string | null
+          sales_with_iva?: number
+          sales_without_iva?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          advisor_id?: string | null
+          advisor_name?: string
+          applied_pct?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          commission_amount?: number
+          created_at?: string
+          excedente?: number
+          feria_id?: string
+          id?: string
+          notes?: string | null
+          sales_with_iva?: number
+          sales_without_iva?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feria_commissions_feria_id_fkey"
+            columns: ["feria_id"]
+            isOneToOne: false
+            referencedRelation: "ferias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feria_dispatch_requests: {
         Row: {
           created_at: string
@@ -998,18 +1060,25 @@ export type Database = {
           budget_tickets_cost: number | null
           budget_transport_cost: number | null
           city: string
+          commission_tier_1_pct: number
+          commission_tier_1_to_pct: number
+          commission_tier_2_pct: number
+          commission_tier_2_to_pct: number
+          commission_tier_3_pct: number
           created_at: string
           created_by: string | null
           employees_cost: number | null
           end_date: string
           food_cost: number | null
           id: string
+          iva_pct: number
           lodging_cost: number | null
           materials_needed: string[] | null
           merchandise_cost: number | null
           name: string
           notes: string | null
           other_costs: number | null
+          scenarios: Json
           setup_date: string | null
           shipping_cost: number | null
           stand_cost: number | null
@@ -1017,6 +1086,7 @@ export type Database = {
           stand_size: string | null
           start_date: string
           status: string
+          target_margin_pct: number
           tickets_cost: number | null
           transport_cost: number | null
           updated_at: string
@@ -1036,18 +1106,25 @@ export type Database = {
           budget_tickets_cost?: number | null
           budget_transport_cost?: number | null
           city: string
+          commission_tier_1_pct?: number
+          commission_tier_1_to_pct?: number
+          commission_tier_2_pct?: number
+          commission_tier_2_to_pct?: number
+          commission_tier_3_pct?: number
           created_at?: string
           created_by?: string | null
           employees_cost?: number | null
           end_date: string
           food_cost?: number | null
           id?: string
+          iva_pct?: number
           lodging_cost?: number | null
           materials_needed?: string[] | null
           merchandise_cost?: number | null
           name: string
           notes?: string | null
           other_costs?: number | null
+          scenarios?: Json
           setup_date?: string | null
           shipping_cost?: number | null
           stand_cost?: number | null
@@ -1055,6 +1132,7 @@ export type Database = {
           stand_size?: string | null
           start_date: string
           status?: string
+          target_margin_pct?: number
           tickets_cost?: number | null
           transport_cost?: number | null
           updated_at?: string
@@ -1074,18 +1152,25 @@ export type Database = {
           budget_tickets_cost?: number | null
           budget_transport_cost?: number | null
           city?: string
+          commission_tier_1_pct?: number
+          commission_tier_1_to_pct?: number
+          commission_tier_2_pct?: number
+          commission_tier_2_to_pct?: number
+          commission_tier_3_pct?: number
           created_at?: string
           created_by?: string | null
           employees_cost?: number | null
           end_date?: string
           food_cost?: number | null
           id?: string
+          iva_pct?: number
           lodging_cost?: number | null
           materials_needed?: string[] | null
           merchandise_cost?: number | null
           name?: string
           notes?: string | null
           other_costs?: number | null
+          scenarios?: Json
           setup_date?: string | null
           shipping_cost?: number | null
           stand_cost?: number | null
@@ -1093,6 +1178,7 @@ export type Database = {
           stand_size?: string | null
           start_date?: string
           status?: string
+          target_margin_pct?: number
           tickets_cost?: number | null
           transport_cost?: number | null
           updated_at?: string

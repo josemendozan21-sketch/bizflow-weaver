@@ -42,6 +42,25 @@ export interface Feria {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  // Proyección y comisiones
+  target_margin_pct: number;
+  iva_pct: number;
+  commission_tier_1_pct: number;
+  commission_tier_2_pct: number;
+  commission_tier_3_pct: number;
+  commission_tier_1_to_pct: number;
+  commission_tier_2_to_pct: number;
+  scenarios: {
+    pesimista: ScenarioInput;
+    realista: ScenarioInput;
+    optimista: ScenarioInput;
+  };
+}
+
+export interface ScenarioInput {
+  ticket_promedio: number;
+  visitantes_esperados: number;
+  tasa_conversion_pct: number;
 }
 
 export function calcFeriaTotalCost(f: Feria): number {
@@ -106,7 +125,7 @@ export function useFerias() {
         .select("*")
         .order("start_date", { ascending: false });
       if (error) throw error;
-      return data as Feria[];
+      return (data as unknown) as Feria[];
     },
   });
 }
@@ -150,7 +169,11 @@ export function useCreateFeria() {
   const { user } = useAuth();
   return useMutation({
     mutationFn: async (
-      input: Omit<Feria, "id" | "created_at" | "updated_at" | "created_by"> & {
+      input: Partial<Omit<Feria, "id" | "created_at" | "updated_at" | "created_by">> & {
+        name: string;
+        city: string;
+        start_date: string;
+        end_date: string;
         initial_inventory?: Array<{
           brand: string;
           product_name: string;
@@ -163,7 +186,7 @@ export function useCreateFeria() {
       const { initial_inventory, ...feriaFields } = input;
       const { data, error } = await supabase
         .from("ferias")
-        .insert({ ...feriaFields, created_by: user?.id })
+        .insert({ ...(feriaFields as any), created_by: user?.id })
         .select()
         .single();
       if (error) throw error;
@@ -205,7 +228,7 @@ export function useUpdateFeria() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Feria> & { id: string }) => {
-      const { error } = await supabase.from("ferias").update(updates).eq("id", id);
+      const { error } = await supabase.from("ferias").update(updates as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
