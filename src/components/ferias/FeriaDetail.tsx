@@ -36,6 +36,12 @@ const COST_BREAKDOWN: Array<{ key: keyof Feria; label: string }> = [
   { key: "other_costs", label: "Otros" },
 ];
 
+const PREDEFINED_MATERIALS = [
+  "Malla exhibición", "Rack para banners", "Banners", "Mesa", "Sillas", "Ganchos",
+  "Tijeras", "Cintas", "Tablas para anotar", "Datáfonos", "Carpa", "Displays",
+  "Iluminación", "Extensiones eléctricas", "Bolsas de empaque", "Etiquetas de precio",
+];
+
 export function FeriaDetail({ feria, onBack }: { feria: Feria; onBack: () => void }) {
   const { data: sales = [] } = useFeriaSales(feria.id);
   const { role } = useAuth();
