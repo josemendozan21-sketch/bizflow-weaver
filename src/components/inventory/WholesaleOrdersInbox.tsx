@@ -771,6 +771,49 @@ const WholesaleOrdersInbox = () => {
                   </div>
                 ))}
               </div>
+            ) : delivering?.target === "logistica" && lineRows.length > 0 ? (
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Mapea cada línea del pedido a su producto en inventario. Las cantidades se descontarán al confirmar.
+                </p>
+                {lineRows.map((r, idx) => {
+                  const options = stockItems
+                    .filter((s) => s.brand === delivering?.order.brand && s.category === "producto_terminado")
+                    .sort((a, b) => a.name.localeCompare(b.name));
+                  return (
+                    <div key={idx} className="border rounded-md p-2 space-y-2">
+                      <div className="text-xs font-medium">{r.name}</div>
+                      <div className="grid grid-cols-[1fr_90px] gap-2">
+                        <Select
+                          value={r.stockItemId}
+                          onValueChange={(v) =>
+                            setLineRows((prev) => prev.map((x, i) => (i === idx ? { ...x, stockItemId: v } : x)))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecciona producto en inventario" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {options.map((s) => (
+                              <SelectItem key={s.id} value={s.id}>
+                                {s.name} · disp. {s.available}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={r.qty}
+                          onChange={(e) =>
+                            setLineRows((prev) => prev.map((x, i) => (i === idx ? { ...x, qty: e.target.value } : x)))
+                          }
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
               <div>
                 <Label>{delivering?.target === "produccion" ? "Cantidad a producir" : "Cantidad a entregar"}</Label>
