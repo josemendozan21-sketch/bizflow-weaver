@@ -124,6 +124,7 @@ export function CreateFeriaDialog() {
   const totalProductsSelected = Object.keys(selectedProducts).length;
 
   const totalCosts = COST_FIELDS.reduce((s, f) => s + (parseFloat(form[f.key]) || 0), 0);
+  const totalBudget = COST_FIELDS.reduce((s, f) => s + (parseFloat(form[f.budgetKey]) || 0), 0);
 
   const toggleMaterial = (m: string) => {
     setForm((p: any) => ({
