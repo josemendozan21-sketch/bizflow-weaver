@@ -663,3 +663,51 @@ export function useRegisterPosSale(locationId: string) {
     },
   });
 }
+
+/**
+ * Registers a courtesy hand-off (no sale, no revenue): decrements stock and
+ * logs a `salida` movement per item with source='cortesia'. Used for special
+ * customers tagged "cortesia" that receive products at no charge.
+ */
+export function useRegisterPosCourtesy(locationId: string) {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async (input: {
+      items: CartItem[];
+      customer_id?: string | null;
+      customer_name: string;
+      notes?: string;
+    }) => {
+      const baseNote = `Cortesía a ${input.customer_name}`;
+      const finalNotes = input.notes ? `${baseNote} — ${input.notes}` : baseNote;
+      for (const it of input.items) {
+        const newAvail = Number(it.product.available) - it.quantity;
+        const { error: upErr } = await supabase
+          .from("pos_products")
+          .update({ available: newAvail })
+          .eq("id", it.product.id);
+        if (upErr) throw upErr;
+        const { error: mErr } = await supabase.from("pos_inventory_movements").insert({
+          location_id: locationId,
+          pos_product_id: it.product.id,
+          product_name: it.product.name,
+          direction: "salida",
+          source: "cortesia",
+          quantity: it.quantity,
+          unit_cost: Number(it.product.avg_cost),
+          unit_price: 0,
+          reference_id: input.customer_id ?? null,
+          notes: finalNotes,
+          recorded_by: user!.id,
+          recorded_by_name: user!.email,
+        });
+        if (mErr) throw mErr;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pos_products", locationId] });
+      qc.invalidateQueries({ queryKey: ["pos_movements", locationId] });
+    },
+  });
+}
