@@ -1,67 +1,80 @@
+## Objetivo
 
-# Rediseño de Escenarios y Comisiones
+Dejar el inventario de Sweatspot exactamente como está en el archivo `Inventario_Sweatspot.xlsx` (≈68 referencias) y permitir que los asesores que venden al por mayor distingan claramente las unidades **CON LOGO** (no marcables sin sobre-estampado) de las unidades **SIN LOGO** (marcables).
 
-## Cambio de enfoque
+---
 
-Los escenarios dejan de depender de visitantes/conversión/ticket y pasan a basarse en **% de mercancía vendida sobre el inventario asignado a la feria**.
+## 1. Reemplazar inventario Sweatspot
 
-### Datos base (ya disponibles en `feria_inventory`)
-- **Inventario valorizado con IVA** = Σ `quantity_assigned × unit_price`
-- **Costo de mercancía** = Σ `quantity_assigned × unit_cost` (informativo)
+Migración que en una sola transacción:
 
-### Tres escenarios fijos (alineados a las comisiones)
-| Escenario | % mercancía vendida | Comisión asociada |
-|---|---|---|
-| Pesimista | 60% | 5% |
-| Realista  | 70% | 8% |
-| Optimista | 90% | 10% |
+1. Borra todas las filas de `stock_items` donde `brand = 'sweatspot'` y `category = 'producto_terminado'`.
+2. Inserta una fila por cada línea del Excel con:
+   - `name`: producto completo (ej. `TERMO 250 ROSADO CORREA`)
+   - `color`: del Excel
+   - `logo`: `'Sweatspot'` si la columna dice `LOGO`, `NULL` si dice `SIN LOGO`
+   - `product_type`: `IMPORTADO` / `NACIONAL` (lo guardamos aquí para filtrar origen)
+   - `sweatspot_category`: derivado de `Referencia`:
+     - `150` → `termos_150`
+     - `250` → `termos_250`
+     - `500` → `termos_500`
+     - `Canguro` → `canguros`
+     - `Chaleco` → `chalecos`
+     - `Imanes`, `MANGAS` → nueva categoría `accesorios`
+   - `available`: del Excel
+   - `min_stock`: 0 (el Excel no trae mínimos)
+   - `unit`: `Unidades`
 
-Los porcentajes (60/70/90 y 5/8/10) serán **editables** por feria desde el mismo tab — no se piden visitantes ni conversión.
+Cada variante (normal, **CORREA**, **JUGUETÓN**) queda como ítem independiente porque ya viene diferenciada en el `name` del Excel.
 
-### Cálculo por escenario
+## 2. Ajustar normalizador / índice único
+
+El trigger `normalize_stock_item_name` y el índice `stock_items_canonical_uniq` actuales colapsan filas que tengan el mismo `(brand, category, lower(name), product_type)`. Como ahora dos filas pueden compartir nombre y diferenciarse solo por `logo`, ampliamos:
+
+- Cambiar el índice único a `(brand, category, lower(name), coalesce(product_type,''), coalesce(logo,''), coalesce(color,''))`.
+- Mantener el trigger que limpia sufijos `(Frío)/(Térmico)` — no aplica a Sweatspot.
+
+## 3. Añadir categoría `accesorios` al filtro
+
+`SweatspotFinishedProducts.tsx` y `stores/inventoryStore.ts`:
+
+- Extender `SweatspotProductCategory` con `'accesorios'`.
+- Agregar chip `Accesorios` en `FILTER_OPTIONS`.
+
+## 4. Vista para asesores mayoristas (CON / SIN LOGO)
+
+En `SweatspotFinishedProducts.tsx` (y en la vista paralela del asesor `AsesorInventoryView.tsx`):
+
+- **Agrupar por producto base** (mismo `name` sin variar logo). Por cada grupo mostrar dos columnas:
+  - `SIN LOGO` (marcable) — destacado
+  - `CON LOGO Sweatspot`
+- Mantener edición inline en cada fila por separado.
+- **Toggle "Solo SIN LOGO (mayoristas con marcación)"** arriba del listado: cuando está activo oculta las filas con logo y suma totales solo de la columna SIN LOGO.
+- Indicador visual claro (badge azul "MARCABLE" en SIN LOGO; badge gris "YA MARCADO" en CON LOGO).
+
+## 5. Detalles técnicos
+
+```text
+Archivo -> tabla stock_items
+  Producto       -> name
+  Color          -> color
+  LOGO/SIN LOGO  -> logo ('Sweatspot' | NULL)
+  IMPORTADO/NAC. -> product_type
+  Referencia     -> sweatspot_category (mapeado)
+  Disponible     -> available
 ```
-ingreso_con_iva  = inventario_total_con_iva × (% vendido)
-ingreso_sin_iva  = ingreso_con_iva / (1 + IVA)
-excedente        = ingreso_sin_iva − punto_equilibrio_sin_iva
-utilidad         = ingreso_con_iva − costos_totales
-comision_total   = max(0, excedente) × (% comisión del escenario)
-utilidad_neta    = utilidad − comision_total
-supera_equilibrio = ingreso_con_iva ≥ punto_equilibrio_con_iva
-```
 
-### UI del tab "Proyección"
-- Sección **Punto de equilibrio** (sin cambios).
-- Sección **Inventario disponible**: muestra unidades totales, valor con IVA y costo de mercancía.
-- Sección **Escenarios de venta** (reemplaza la actual):
-  - 3 tarjetas (Pesimista / Realista / Optimista) cada una con:
-    - Input `% mercancía vendida` (default 60/70/90)
-    - Input `% comisión` (default 5/8/10)
-    - Resumen: ingreso con/sin IVA, excedente sobre equilibrio, utilidad bruta, comisión total, utilidad neta, badge "Supera/No alcanza equilibrio".
-- Sección **Propuesta de comisiones por asesor**: se mantiene igual (sobre ventas reales registradas, usando los tramos actuales del feria). No se toca.
+Archivos a tocar:
 
-## Cambios técnicos
+- `supabase/migrations/<nueva>.sql` (delete + 68 inserts + nuevo índice único)
+- `src/stores/inventoryStore.ts` (agregar `'accesorios'` al type)
+- `src/components/inventory/SweatspotFinishedProducts.tsx` (chip Accesorios, agrupación CON/SIN LOGO, toggle mayorista)
+- `src/components/inventory/AsesorInventoryView.tsx` (mismo toggle y vista de dos columnas para Sweatspot)
 
-### Datos
-- `ferias.scenarios` (jsonb) pasa de `{ ticket_promedio, visitantes_esperados, tasa_conversion_pct }` a:
-  ```json
-  {
-    "pesimista": { "pct_inventario": 60, "pct_comision": 5 },
-    "realista":  { "pct_inventario": 70, "pct_comision": 8 },
-    "optimista": { "pct_inventario": 90, "pct_comision": 10 }
-  }
-  ```
-- Migración: `UPDATE ferias SET scenarios = '<nuevo default>'::jsonb` para resetear el formato anterior (no estaba en uso productivo).
+No se cambia ninguna lógica de descuento de stock, ni el flujo de pedidos, ni POS.
 
-### Código
-- `src/hooks/useFerias.ts`: actualizar interface `ScenarioInput` → `{ pct_inventario, pct_comision }`.
-- `src/lib/feriaProjections.ts`:
-  - `calcScenario(s, feria, be, inventarioConIva)` con la nueva fórmula.
-  - Devuelve además `comision_total` y `utilidad_neta`.
-  - Se mantienen `calcBreakEven` y `proposeCommissions` (ventas reales) sin cambios.
-- `src/components/ferias/FeriaProjectionTab.tsx`: nueva UI de tarjetas con 2 inputs por escenario y nuevas filas de resumen. Usa `useFeriaInventory(feriaId)` para calcular el inventario total con IVA.
-- `EditFeriaDialog.tsx` / `CreateFeriaDialog.tsx`: no requieren cambios (los % se editan inline en el tab).
+## 6. Verificación
 
-## Edge cases
-- Si la feria no tiene inventario cargado: mostrar aviso "Carga el inventario para proyectar escenarios" y los ingresos quedan en $0.
-- Si `punto_equilibrio_sin_iva = 0`: excedente = ingreso_sin_iva (toda la venta entra a comisión).
-- Validación: `pct_inventario` y `pct_comision` entre 0 y 100.
+- Conteo posterior a la migración: `SELECT count(*)` = nº de filas del Excel.
+- Spot check: `TERMO 250 ROSADO JUGUETON SIN LOGO` = 149, `TERMO 250 TRANSPARENTE SIN LOGO` = 263.
+- Pantalla `Inventarios → Sweatspot → Termos 250`: aparecen ambas columnas por color y el toggle mayorista funciona.

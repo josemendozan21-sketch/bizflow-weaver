@@ -1,76 +1,163 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Check, X, Pencil, AlertTriangle, AlertCircle, CheckCircle2 } from "lucide-react";
-import { useInventoryStore, type StockItem, type StockStatus, type SweatspotProductCategory } from "@/stores/inventoryStore";
-import { useInventory } from "@/hooks/useInventory";
+import { Check, X, Pencil, Sparkles } from "lucide-react";
+import { useInventory, type SupabaseStockItem } from "@/hooks/useInventory";
 import { toast } from "sonner";
 
-const FILTER_OPTIONS: { value: SweatspotProductCategory | "todos"; label: string }[] = [
+type SweatCat = "termos_150" | "termos_250" | "termos_500" | "canguros" | "chalecos" | "accesorios";
+
+const FILTER_OPTIONS: { value: SweatCat | "todos"; label: string }[] = [
   { value: "todos", label: "Todos" },
   { value: "termos_150", label: "Termos 150 ml" },
   { value: "termos_250", label: "Termos 250 ml" },
   { value: "termos_500", label: "Termos 500 ml" },
   { value: "canguros", label: "Canguros" },
   { value: "chalecos", label: "Chalecos" },
+  { value: "accesorios", label: "Accesorios" },
 ];
 
-const STATUS_CONFIG: Record<StockStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ElementType }> = {
-  ok: { label: "OK", variant: "secondary", icon: CheckCircle2 },
-  bajo: { label: "Bajo stock", variant: "default", icon: AlertTriangle },
-  critico: { label: "Crítico", variant: "destructive", icon: AlertCircle },
-};
+interface Group {
+  key: string;
+  name: string;
+  color: string | null;
+  productType: string | null;
+  sinLogo: SupabaseStockItem | null;
+  conLogo: SupabaseStockItem | null;
+}
 
 const SweatspotFinishedProducts = () => {
-  const { stockItems, updateStockItem, getStockStatus } = useInventoryStore();
-  const { updateStockItem: updateStockItemDb } = useInventory();
-  const [activeFilter, setActiveFilter] = useState<SweatspotProductCategory | "todos">("todos");
+  const { stockItems, updateStockItem } = useInventory();
+  const [activeFilter, setActiveFilter] = useState<SweatCat | "todos">("todos");
+  const [onlySinLogo, setOnlySinLogo] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ available: "", minStock: "" });
 
-  const allItems = stockItems.filter(
-    (i) => i.brand === "sweatspot" && i.category === "producto_terminado"
+  const allItems = useMemo(
+    () => stockItems.filter((i) => i.brand === "sweatspot" && i.category === "producto_terminado"),
+    [stockItems]
   );
 
-  const filteredItems = activeFilter === "todos"
-    ? allItems
-    : allItems.filter((i) => i.sweatspotCategory === activeFilter);
+  const filteredItems = useMemo(
+    () =>
+      activeFilter === "todos"
+        ? allItems
+        : allItems.filter((i) => i.sweatspot_category === activeFilter),
+    [allItems, activeFilter]
+  );
 
-  const startEdit = (item: StockItem) => {
+  // Group by base name + color + product_type — yields one row per producto base with SIN/CON logo cells.
+  const groups: Group[] = useMemo(() => {
+    const map = new Map<string, Group>();
+    for (const it of filteredItems) {
+      const key = `${it.name.trim().toLowerCase()}|${(it.color || "").trim().toLowerCase()}|${it.product_type || ""}`;
+      let g = map.get(key);
+      if (!g) {
+        g = {
+          key,
+          name: it.name.trim(),
+          color: it.color,
+          productType: it.product_type,
+          sinLogo: null,
+          conLogo: null,
+        };
+        map.set(key, g);
+      }
+      if (it.logo) g.conLogo = it; else g.sinLogo = it;
+    }
+    let arr = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, "es"));
+    if (onlySinLogo) arr = arr.filter((g) => g.sinLogo && g.sinLogo.available > 0);
+    return arr;
+  }, [filteredItems, onlySinLogo]);
+
+  const totals = useMemo(() => {
+    let sin = 0, con = 0;
+    for (const g of groups) {
+      sin += g.sinLogo?.available ?? 0;
+      con += g.conLogo?.available ?? 0;
+    }
+    return { sin, con };
+  }, [groups]);
+
+  const startEdit = (item: SupabaseStockItem) => {
     setEditingId(item.id);
-    setEditForm({ available: String(item.available), minStock: String(item.minStock) });
+    setEditForm({ available: String(item.available), minStock: String(item.min_stock) });
   };
 
-  const saveEdit = (id: string) => {
-    updateStockItem(id, { available: Number(editForm.available), minStock: Number(editForm.minStock) });
-    setEditingId(null);
-    toast.success("Inventario actualizado");
+  const saveEdit = async (id: string) => {
+    const res = await updateStockItem(id, {
+      available: Number(editForm.available),
+      min_stock: Number(editForm.minStock),
+    });
+    if (res.success) {
+      toast.success("Inventario actualizado");
+      setEditingId(null);
+    } else {
+      toast.error(res.message);
+    }
   };
 
-  // Group by logo
-  const byLogo = filteredItems.reduce<Record<string, StockItem[]>>((acc, item) => {
-    const logo = item.logo || "Sin logo";
-    if (!acc[logo]) acc[logo] = [];
-    acc[logo].push(item);
-    return acc;
-  }, {});
-
-  const logoOrder = ["Sin logo", "Sweatspot"];
+  const renderCell = (item: SupabaseStockItem | null, marcable: boolean) => {
+    if (!item) {
+      return <span className="text-xs text-muted-foreground">—</span>;
+    }
+    const isEditing = editingId === item.id;
+    if (isEditing) {
+      return (
+        <div className="flex items-center justify-end gap-1">
+          <Input
+            type="number"
+            min={0}
+            value={editForm.available}
+            onChange={(e) => setEditForm({ ...editForm, available: e.target.value })}
+            className="h-7 w-16 text-right"
+          />
+          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => saveEdit(item.id)}>
+            <Check className="h-4 w-4 text-primary" />
+          </Button>
+          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)}>
+            <X className="h-4 w-4 text-destructive" />
+          </Button>
+        </div>
+      );
+    }
+    return (
+      <div className="flex items-center justify-end gap-2">
+        <span className={`font-semibold tabular-nums ${item.available === 0 ? "text-muted-foreground" : marcable ? "text-blue-700" : ""}`}>
+          {item.available}
+        </span>
+        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => startEdit(item)}>
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    );
+  };
 
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">Producto Terminado — Sweatspot</CardTitle>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <CardTitle className="text-base">Producto Terminado — Sweatspot</CardTitle>
+          <div className="flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5">
+            <Sparkles className="h-3.5 w-3.5 text-blue-600" />
+            <Label htmlFor="only-sin-logo" className="text-xs text-blue-900 cursor-pointer">
+              Solo SIN LOGO (mayoristas con marcación)
+            </Label>
+            <Switch id="only-sin-logo" checked={onlySinLogo} onCheckedChange={setOnlySinLogo} />
+          </div>
+        </div>
         <div className="flex flex-wrap gap-1.5 pt-2">
           {FILTER_OPTIONS.map((f) => {
             const count = f.value === "todos"
               ? allItems.length
-              : allItems.filter((i) => i.sweatspotCategory === f.value).length;
+              : allItems.filter((i) => i.sweatspot_category === f.value).length;
             return (
               <Button
                 key={f.value}
@@ -84,111 +171,55 @@ const SweatspotFinishedProducts = () => {
             );
           })}
         </div>
+        <div className="flex gap-4 pt-2 text-xs text-muted-foreground">
+          <span>
+            <Badge variant="outline" className="border-blue-300 text-blue-700 mr-1">SIN LOGO</Badge>
+            Marcables (mayoristas): <b className="text-blue-700 tabular-nums">{totals.sin}</b> uds
+          </span>
+          {!onlySinLogo && (
+            <span>
+              <Badge variant="secondary" className="mr-1">CON LOGO</Badge>
+              Ya marcado Sweatspot: <b className="tabular-nums">{totals.con}</b> uds
+            </span>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
-        {filteredItems.length === 0 ? (
+        {groups.length === 0 ? (
           <p className="text-center text-muted-foreground py-8 text-sm">
             No hay productos en esta categoría.
           </p>
         ) : (
-          <div className="space-y-6">
-            {logoOrder.filter((l) => byLogo[l]).map((logoKey) => (
-              <div key={logoKey} className="space-y-2">
-                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  Logo: {logoKey}
-                  <Badge variant="outline" className="text-[10px]">{byLogo[logoKey].length}</Badge>
-                </h4>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Producto</TableHead>
-                      <TableHead>Color</TableHead>
-                      <TableHead>Logo</TableHead>
-                      <TableHead className="text-right">Disponible</TableHead>
-                      <TableHead className="text-right">Mínimo</TableHead>
-                      <TableHead className="text-center">Estado</TableHead>
-                      <TableHead className="text-right">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {byLogo[logoKey].map((item) => {
-                      const status = getStockStatus(item);
-                      const sc = STATUS_CONFIG[status];
-                      const StatusIcon = sc.icon;
-                      const isEditing = editingId === item.id;
-
-                      return (
-                        <TableRow
-                          key={item.id}
-                          className={
-                            status === "critico" ? "bg-destructive/5" :
-                            status === "bajo" ? "bg-primary/5" : ""
-                          }
-                        >
-                          <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell>{item.color || "—"}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={item.logo === "Sweatspot" ? "default" : "outline"}
-                              className="text-xs cursor-pointer hover:opacity-80"
-                              onClick={async () => {
-                                const newLogo = item.logo === "Sweatspot" ? null : "Sweatspot";
-                                updateStockItem(item.id, { logo: newLogo } as any);
-                                await updateStockItemDb(item.id, { logo: newLogo });
-                                toast.success(`Logo cambiado a "${newLogo || "Sin logo"}"`);
-                              }}
-                            >
-                              {item.logo || "Sin logo"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {isEditing ? (
-                              <Input type="number" min={0} value={editForm.available}
-                                onChange={(e) => setEditForm({ ...editForm, available: e.target.value })}
-                                className="h-7 w-20 ml-auto text-right" />
-                            ) : (
-                              <span className="font-semibold">{item.available}</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {isEditing ? (
-                              <Input type="number" min={0} value={editForm.minStock}
-                                onChange={(e) => setEditForm({ ...editForm, minStock: e.target.value })}
-                                className="h-7 w-20 ml-auto text-right" />
-                            ) : (
-                              <span>{item.minStock}</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant={sc.variant} className="text-xs gap-1">
-                              <StatusIcon className="h-3 w-3" />
-                              {sc.label}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right space-x-1">
-                            {isEditing ? (
-                              <>
-                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => saveEdit(item.id)}>
-                                  <Check className="h-4 w-4 text-primary" />
-                                </Button>
-                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)}>
-                                  <X className="h-4 w-4 text-destructive" />
-                                </Button>
-                              </>
-                            ) : (
-                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(item)}>
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            ))}
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Producto</TableHead>
+                <TableHead>Color</TableHead>
+                <TableHead>Origen</TableHead>
+                <TableHead className="text-right text-blue-700">SIN LOGO<br/><span className="text-[10px] font-normal">(marcable)</span></TableHead>
+                {!onlySinLogo && (
+                  <TableHead className="text-right">CON LOGO<br/><span className="text-[10px] font-normal">(Sweatspot)</span></TableHead>
+                )}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {groups.map((g) => (
+                <TableRow key={g.key}>
+                  <TableCell className="font-medium">{g.name}</TableCell>
+                  <TableCell>{g.color || "—"}</TableCell>
+                  <TableCell>
+                    {g.productType ? (
+                      <Badge variant="outline" className="text-[10px]">{g.productType}</Badge>
+                    ) : "—"}
+                  </TableCell>
+                  <TableCell className="text-right bg-blue-50/40">{renderCell(g.sinLogo, true)}</TableCell>
+                  {!onlySinLogo && (
+                    <TableCell className="text-right">{renderCell(g.conLogo, false)}</TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
       </CardContent>
     </Card>

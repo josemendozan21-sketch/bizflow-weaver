@@ -49,7 +49,7 @@ export type InventoryBrand = "sweatspot" | "magical_warmers";
 
 export type ProductType = "Térmico" | "Frío" | null;
 
-export type SweatspotProductCategory = "termos_150" | "termos_250" | "termos_500" | "canguros" | "chalecos";
+export type SweatspotProductCategory = "termos_150" | "termos_250" | "termos_500" | "canguros" | "chalecos" | "accesorios";
 
 export interface StockItem {
   id: string;
