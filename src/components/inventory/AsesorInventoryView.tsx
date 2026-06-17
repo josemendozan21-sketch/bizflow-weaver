@@ -8,6 +8,8 @@ import { ArrowLeft, Package, Search, ArrowDownAZ, ArrowUpAZ } from "lucide-react
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useInventory } from "@/hooks/useInventory";
 import { toast } from "sonner";
 import type { InventoryBrand } from "@/stores/inventoryStore";
@@ -93,6 +95,7 @@ export default function AsesorInventoryView() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("todos");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [onlySinLogo, setOnlySinLogo] = useState(false);
 
   const magicalBodies = bodyStock.filter((b) => b.brand.toLowerCase() === "magical");
   const magicalFinished = stockItems.filter((s) => s.brand.toLowerCase() === "magical" && s.category === "producto_terminado");
@@ -134,12 +137,13 @@ export default function AsesorInventoryView() {
   const filteredSweatspotFinished = useMemo(() => {
     return sweatspotFinished
       .filter((i) => (q ? normalize(i.name).includes(q) : true))
+      .filter((i) => (onlySinLogo ? !i.logo : true))
       .sort((a, b) =>
         sortDir === "asc"
           ? a.name.localeCompare(b.name, "es", { sensitivity: "base" })
           : b.name.localeCompare(a.name, "es", { sensitivity: "base" })
       );
-  }, [sweatspotFinished, q, sortDir]);
+  }, [sweatspotFinished, q, sortDir, onlySinLogo]);
 
   const resetFilters = () => {
     setSearch("");
@@ -269,7 +273,17 @@ export default function AsesorInventoryView() {
             <div className="space-y-6">
               {/* Sweatspot — Producto terminado */}
               <Card>
-                <CardHeader><CardTitle>Producto terminado</CardTitle></CardHeader>
+                <CardHeader className="space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <CardTitle>Producto terminado</CardTitle>
+                    <div className="flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5">
+                      <Label htmlFor="asesor-only-sin-logo" className="text-xs text-blue-900 cursor-pointer">
+                        Solo SIN LOGO (mayoristas con marcación)
+                      </Label>
+                      <Switch id="asesor-only-sin-logo" checked={onlySinLogo} onCheckedChange={setOnlySinLogo} />
+                    </div>
+                  </div>
+                </CardHeader>
                 <CardContent>
                   <FiltersBar
                     search={search} setSearch={setSearch}
@@ -284,6 +298,7 @@ export default function AsesorInventoryView() {
                           <TableHead>Producto</TableHead>
                           <TableHead>Color</TableHead>
                           <TableHead>Logo</TableHead>
+                          <TableHead>Origen</TableHead>
                           <TableHead className="text-right">Disponible</TableHead>
                           <TableHead>Unidad</TableHead>
                           <TableHead>Estado</TableHead>
@@ -291,23 +306,17 @@ export default function AsesorInventoryView() {
                       </TableHeader>
                       <TableBody>
                         {filteredSweatspotFinished.map((item) => (
-                          <TableRow key={item.id}>
+                          <TableRow key={item.id} className={!item.logo ? "bg-blue-50/40" : ""}>
                             <TableCell className="font-medium">{item.name}</TableCell>
                             <TableCell>{item.color || "—"}</TableCell>
                             <TableCell>
-                              <Badge
-                                variant={item.logo === "Sweatspot" ? "default" : "outline"}
-                                className="text-xs cursor-pointer hover:opacity-80"
-                                onClick={async () => {
-                                  const newLogo = item.logo === "Sweatspot" ? null : "Sweatspot";
-                                  const res = await updateStockItem(item.id, { logo: newLogo });
-                                  if (res.success) toast.success(`Logo cambiado a "${newLogo || "Sin logo"}"`);
-                                  else toast.error(res.message);
-                                }}
-                              >
-                                {item.logo || "Sin logo"}
-                              </Badge>
+                              {item.logo ? (
+                                <Badge variant="secondary" className="text-[10px]">CON LOGO</Badge>
+                              ) : (
+                                <Badge className="text-[10px] bg-blue-600 hover:bg-blue-700">MARCABLE</Badge>
+                              )}
                             </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{item.product_type || "—"}</TableCell>
                             <TableCell className="text-right">{item.available}</TableCell>
                             <TableCell>{item.unit}</TableCell>
                             <TableCell><StockIndicator available={item.available} /></TableCell>
