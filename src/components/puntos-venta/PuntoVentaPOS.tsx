@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { ShoppingCart, Plus, Minus, Trash2, Search, UserCheck, ImageIcon, Tag, Camera, X } from "lucide-react";
 import { Loader2 } from "lucide-react";
-import { CartItem, CONSUMIDOR_FINAL, PosProduct, useRegisterPosSale, uploadPosSaleProof, useUpsertPosProduct, uploadPosProductPhoto } from "@/hooks/usePuntosVenta";
+import { CartItem, CONSUMIDOR_FINAL, PosProduct, useRegisterPosSale, useRegisterPosCourtesy, uploadPosSaleProof, useUpsertPosProduct, uploadPosProductPhoto } from "@/hooks/usePuntosVenta";
 import { toast } from "sonner";
 import { Customer } from "@/hooks/useCustomers";
 import { CustomerLookupBar } from "@/components/clientes/CustomerLookupBar";
@@ -45,6 +45,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
   const [merchFile, setMerchFile] = useState<File | null>(null);
   const [uploadingMerch, setUploadingMerch] = useState(false);
   const sale = useRegisterPosSale(locationId);
+  const courtesy = useRegisterPosCourtesy(locationId);
   const upsertProduct = useUpsertPosProduct(locationId);
   const photoInputsRef = useRef<Record<string, HTMLInputElement | null>>({});
   const [uploadingPhotoId, setUploadingPhotoId] = useState<string | null>(null);
@@ -163,6 +164,8 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
   const ivaRate = 0.19;
   const base = totalAfter / (1 + ivaRate);
   const iva = totalAfter - base;
+  const isCourtesy = !!customer?.tags?.includes("cortesia");
+  const totalCost = cart.reduce((a, b) => a + Number(b.product.avg_cost) * b.quantity, 0);
   const fmt = (n: number) =>
     `$${Math.round(n).toLocaleString("es-CO")}`;
 
@@ -219,6 +222,28 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
   const handleConfirm = async () => {
     if (cart.length === 0) {
       toast.error("Agrega productos");
+      return;
+    }
+    if (isCourtesy) {
+      try {
+        await courtesy.mutateAsync({
+          items: cart,
+          customer_id: customer?.id ?? null,
+          customer_name: customer?.full_name ?? clientName ?? "Cliente cortesía",
+          notes: notes || undefined,
+        });
+        toast.success(`Entrega de cortesía registrada (costo ${fmt(totalCost)})`);
+        setCart([]);
+        setCustomer(null);
+        setClientName(""); setClientDoc(""); setClientEmail("");
+        setClientPhone(""); setClientAddress(""); setClientCity("");
+        setNotes("");
+        setDiscountPct(0);
+        setProofFile(null);
+        setMerchFile(null);
+      } catch (e: any) {
+        toast.error(e.message ?? "Error al registrar cortesía");
+      }
       return;
     }
     try {
@@ -507,6 +532,15 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
         </CardHeader>
         <CardContent className="space-y-3">
           <CustomerLookupBar customer={customer} onCustomerChange={handleCustomerChange} />
+          {isCourtesy && (
+            <div className="rounded-md border border-amber-500/50 bg-amber-500/10 p-2 text-xs text-amber-900 dark:text-amber-200">
+              <p className="font-semibold">Modo cortesía activado</p>
+              <p className="leading-snug">
+                Cliente con cortesía: <strong>{customer?.full_name}</strong>. No se registrará venta;
+                solo se descontará inventario y se mostrará el costo de los productos.
+              </p>
+            </div>
+          )}
           {cart.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">Sin items</p>
           ) : (
@@ -544,14 +578,19 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
               <span className="text-muted-foreground">Items</span>
               <span className="font-medium">{totalUnits}</span>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Subtotal (sin IVA)</span>
-              <span className="font-medium">{fmt(base)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">IVA 19%</span>
-              <span className="font-medium">{fmt(iva)}</span>
-            </div>
+            {!isCourtesy && (
+              <>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotal (sin IVA)</span>
+                  <span className="font-medium">{fmt(base)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">IVA 19%</span>
+                  <span className="font-medium">{fmt(iva)}</span>
+                </div>
+              </>
+            )}
+            {!isCourtesy && (
             <div className="pt-1.5 border-t space-y-1.5">
               <div>
                 <Label className="text-xs text-muted-foreground">Descuento</Label>
@@ -584,10 +623,18 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
                 </>
               )}
             </div>
-            <div className="flex justify-between items-center pt-1.5 border-t">
-              <span className="text-sm font-semibold">Total a pagar</span>
-              <span className="text-2xl font-bold">{fmt(totalAfter)}</span>
-            </div>
+            )}
+            {isCourtesy ? (
+              <div className="flex justify-between items-center pt-1.5 border-t">
+                <span className="text-sm font-semibold">Costo total (cortesía)</span>
+                <span className="text-2xl font-bold text-amber-600">{fmt(totalCost)}</span>
+              </div>
+            ) : (
+              <div className="flex justify-between items-center pt-1.5 border-t">
+                <span className="text-sm font-semibold">Total a pagar</span>
+                <span className="text-2xl font-bold">{fmt(totalAfter)}</span>
+              </div>
+            )}
           </div>
 
           <div>
@@ -687,8 +734,17 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
             )}
             <p className="text-[10px] text-muted-foreground mt-1">Opcional. Foto de lo que se lleva el cliente. También se puede adjuntar luego.</p>
           </div>
-          <Button onClick={handleConfirm} disabled={sale.isPending || uploadingProof || uploadingMerch || cart.length === 0} className="w-full">
-            {uploadingProof || uploadingMerch ? "Subiendo foto..." : sale.isPending ? "Registrando..." : `Cobrar ${fmt(totalAfter)}`}
+          <Button
+            onClick={handleConfirm}
+            disabled={sale.isPending || courtesy.isPending || uploadingProof || uploadingMerch || cart.length === 0}
+            className="w-full"
+            variant={isCourtesy ? "secondary" : "default"}
+          >
+            {uploadingProof || uploadingMerch
+              ? "Subiendo foto..."
+              : isCourtesy
+                ? (courtesy.isPending ? "Registrando cortesía..." : `Registrar cortesía (costo ${fmt(totalCost)})`)
+                : (sale.isPending ? "Registrando..." : `Cobrar ${fmt(totalAfter)}`)}
           </Button>
         </CardContent>
       </Card>
