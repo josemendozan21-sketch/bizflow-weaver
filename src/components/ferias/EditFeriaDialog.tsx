@@ -15,17 +15,17 @@ const PREDEFINED_MATERIALS = [
   "Iluminación", "Extensiones eléctricas", "Bolsas de empaque", "Etiquetas de precio",
 ];
 
-const COST_FIELDS: Array<{ key: keyof Feria; label: string }> = [
-  { key: "stand_cost", label: "Costo Feria" },
-  { key: "shipping_cost", label: "Envío Mercancía" },
-  { key: "tickets_cost", label: "Tiquetes" },
-  { key: "advertising_cost", label: "Publicidad" },
-  { key: "merchandise_cost", label: "Costo de Mercancía" },
-  { key: "employees_cost", label: "Empleados" },
-  { key: "lodging_cost", label: "Viáticos: Hospedaje" },
-  { key: "transport_cost", label: "Viáticos: Transporte" },
-  { key: "food_cost", label: "Viáticos: Alimentación" },
-  { key: "other_costs", label: "Otros costos" },
+const COST_FIELDS: Array<{ key: keyof Feria; budgetKey: keyof Feria; label: string }> = [
+  { key: "stand_cost", budgetKey: "budget_stand_cost", label: "Costo Feria" },
+  { key: "shipping_cost", budgetKey: "budget_shipping_cost", label: "Envío Mercancía" },
+  { key: "tickets_cost", budgetKey: "budget_tickets_cost", label: "Tiquetes" },
+  { key: "advertising_cost", budgetKey: "budget_advertising_cost", label: "Publicidad" },
+  { key: "merchandise_cost", budgetKey: "budget_merchandise_cost", label: "Costo de Mercancía" },
+  { key: "employees_cost", budgetKey: "budget_employees_cost", label: "Empleados" },
+  { key: "lodging_cost", budgetKey: "budget_lodging_cost", label: "Viáticos: Hospedaje" },
+  { key: "transport_cost", budgetKey: "budget_transport_cost", label: "Viáticos: Transporte" },
+  { key: "food_cost", budgetKey: "budget_food_cost", label: "Viáticos: Alimentación" },
+  { key: "other_costs", budgetKey: "budget_other_costs", label: "Otros costos" },
 ];
 
 export function EditFeriaDialog({ feria }: { feria: Feria }) {
