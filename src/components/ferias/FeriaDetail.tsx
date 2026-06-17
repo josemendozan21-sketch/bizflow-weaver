@@ -24,17 +24,17 @@ const STATUS_COLOR: Record<string, string> = {
   cancelada: "bg-destructive/15 text-destructive border-destructive/30",
 };
 
-const COST_BREAKDOWN: Array<{ key: keyof Feria; label: string }> = [
-  { key: "stand_cost", label: "Costo Feria" },
-  { key: "shipping_cost", label: "Envío Mercancía" },
-  { key: "tickets_cost", label: "Tiquetes" },
-  { key: "advertising_cost", label: "Publicidad" },
-  { key: "merchandise_cost", label: "Costo de Mercancía" },
-  { key: "employees_cost", label: "Empleados" },
-  { key: "lodging_cost", label: "Hospedaje" },
-  { key: "transport_cost", label: "Transporte" },
-  { key: "food_cost", label: "Alimentación" },
-  { key: "other_costs", label: "Otros" },
+const COST_BREAKDOWN: Array<{ key: keyof Feria; budgetKey: keyof Feria; label: string }> = [
+  { key: "stand_cost", budgetKey: "budget_stand_cost", label: "Costo Feria" },
+  { key: "shipping_cost", budgetKey: "budget_shipping_cost", label: "Envío Mercancía" },
+  { key: "tickets_cost", budgetKey: "budget_tickets_cost", label: "Tiquetes" },
+  { key: "advertising_cost", budgetKey: "budget_advertising_cost", label: "Publicidad" },
+  { key: "merchandise_cost", budgetKey: "budget_merchandise_cost", label: "Costo de Mercancía" },
+  { key: "employees_cost", budgetKey: "budget_employees_cost", label: "Empleados" },
+  { key: "lodging_cost", budgetKey: "budget_lodging_cost", label: "Hospedaje" },
+  { key: "transport_cost", budgetKey: "budget_transport_cost", label: "Transporte" },
+  { key: "food_cost", budgetKey: "budget_food_cost", label: "Alimentación" },
+  { key: "other_costs", budgetKey: "budget_other_costs", label: "Otros" },
 ];
 
 const PREDEFINED_MATERIALS = [
