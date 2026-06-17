@@ -30,6 +30,7 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   const [brand, setBrand] = useState<"magical" | "sweatspot" | "">("");
   const [productName, setProductName] = useState("");
   const [color, setColor] = useState("");
+  const [edicionEspecial, setEdicionEspecial] = useState(false);
   const [form, setForm] = useState({ quantity_assigned: "", unit_price: "", unit_cost: "", notes: "" });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ quantity_assigned: "", unit_price: "", unit_cost: "" });
@@ -52,7 +53,7 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
     return map;
   }, [stockItems]);
 
-  const SWEATSPOT_COMMON_COLORS = ["Negro", "Blanco", "Azul", "Rosado", "Morado", "Verde Militar", "Rojo", "Gris", "Beige", "Único"];
+  const SWEATSPOT_COMMON_COLORS = ["Surtidos", "Negro", "Blanco", "Azul", "Rosado", "Morado", "Verde Militar", "Rojo", "Gris", "Beige", "Único"];
   const MAGICAL_VARIANTS = ["Frío", "Térmico"];
 
   const currentProducts = brand ? Array.from(productsByBrand[brand].names).sort((a, b) => a.localeCompare(b, "es")) : [];
@@ -60,7 +61,10 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
     if (!brand || !productName) return [];
     const fromStock = Array.from(productsByBrand[brand].colorsByName[productName] || []);
     const extras = brand === "sweatspot" ? SWEATSPOT_COMMON_COLORS : MAGICAL_VARIANTS;
-    return Array.from(new Set([...fromStock, ...extras])).sort((a, b) => a.localeCompare(b, "es"));
+    const all = Array.from(new Set([...fromStock, ...extras])).sort((a, b) => a.localeCompare(b, "es"));
+    if (brand === "magical") return all;
+    // Sweatspot: keep "Surtidos" at the top for visibility
+    return ["Surtidos", ...all.filter((c) => c !== "Surtidos")];
   }, [brand, productName, productsByBrand]);
 
   const soldByProduct = sales.reduce<Record<string, number>>((acc, s) => {
@@ -71,7 +75,10 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
 
   const handleAdd = async () => {
     if (!brand || !productName || !form.quantity_assigned) return;
-    const label = color ? `${productName}${brand === "magical" ? ` (${color})` : ` - ${color}`}` : productName;
+    const colorLabel = brand === "sweatspot" && edicionEspecial
+      ? (color ? `${color} (Edición Especial)` : "Edición Especial")
+      : color;
+    const label = colorLabel ? `${productName}${brand === "magical" ? ` (${colorLabel})` : ` - ${colorLabel}`}` : productName;
     await add.mutateAsync({
       feria_id: feriaId,
       brand,
@@ -87,6 +94,7 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
     setBrand("");
     setProductName("");
     setColor("");
+    setEdicionEspecial(false);
     setForm({ quantity_assigned: "", unit_price: "", unit_cost: "", notes: "" });
   };
 
@@ -171,6 +179,18 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
               onChange={(e) => setColor(e.target.value)}
               disabled={!productName}
             />
+            {brand === "sweatspot" && (
+              <label className="mt-2 flex items-center gap-2 text-xs cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={edicionEspecial}
+                  onChange={(e) => setEdicionEspecial(e.target.checked)}
+                  disabled={!productName}
+                  className="h-3.5 w-3.5"
+                />
+                <span>Edición Especial</span>
+              </label>
+            )}
           </div>
           <div><Label>Cantidad</Label><Input type="number" value={form.quantity_assigned} onChange={(e) => setForm({ ...form, quantity_assigned: e.target.value })} /></div>
           <div><Label>Costo unitario</Label><Input type="number" value={form.unit_cost} onChange={(e) => setForm({ ...form, unit_cost: e.target.value })} /></div>
