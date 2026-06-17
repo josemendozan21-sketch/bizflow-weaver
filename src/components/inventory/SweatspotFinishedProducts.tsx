@@ -33,7 +33,11 @@ interface Group {
   conLogo: SupabaseStockItem | null;
 }
 
-const SweatspotFinishedProducts = () => {
+interface SweatspotFinishedProductsProps {
+  originFilter?: "todos" | "IMPORTADO" | "NACIONAL";
+}
+
+const SweatspotFinishedProducts = ({ originFilter = "todos" }: SweatspotFinishedProductsProps) => {
   const { stockItems, updateStockItem } = useInventory();
   const [activeFilter, setActiveFilter] = useState<SweatCat | "todos">("todos");
   const [onlySinLogo, setOnlySinLogo] = useState(false);
@@ -45,12 +49,17 @@ const SweatspotFinishedProducts = () => {
     [stockItems]
   );
 
+  const itemsByOrigin = useMemo(
+    () => (originFilter === "todos" ? allItems : allItems.filter((i) => i.product_type === originFilter)),
+    [allItems, originFilter]
+  );
+
   const filteredItems = useMemo(
     () =>
       activeFilter === "todos"
-        ? allItems
-        : allItems.filter((i) => i.sweatspot_category === activeFilter),
-    [allItems, activeFilter]
+        ? itemsByOrigin
+        : itemsByOrigin.filter((i) => i.sweatspot_category === activeFilter),
+    [itemsByOrigin, activeFilter]
   );
 
   // Group by base name + color + product_type — yields one row per producto base with SIN/CON logo cells.
@@ -144,7 +153,14 @@ const SweatspotFinishedProducts = () => {
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <CardTitle className="text-base">Producto Terminado — Sweatspot</CardTitle>
+          <div className="flex items-center gap-2 flex-wrap">
+            <CardTitle className="text-base">Producto Terminado — Sweatspot</CardTitle>
+            {originFilter !== "todos" && (
+              <Badge variant="outline" className="text-xs">
+                {originFilter === "IMPORTADO" ? "Importados" : "Producto Nacional"}
+              </Badge>
+            )}
+          </div>
           <div className="flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5">
             <Sparkles className="h-3.5 w-3.5 text-blue-600" />
             <Label htmlFor="only-sin-logo" className="text-xs text-blue-900 cursor-pointer">
@@ -156,8 +172,8 @@ const SweatspotFinishedProducts = () => {
         <div className="flex flex-wrap gap-1.5 pt-2">
           {FILTER_OPTIONS.map((f) => {
             const count = f.value === "todos"
-              ? allItems.length
-              : allItems.filter((i) => i.sweatspot_category === f.value).length;
+              ? itemsByOrigin.length
+              : itemsByOrigin.filter((i) => i.sweatspot_category === f.value).length;
             return (
               <Button
                 key={f.value}
