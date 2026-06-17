@@ -276,29 +276,54 @@ export function FeriaDetail({ feria, onBack }: { feria: Feria; onBack: () => voi
         {canSeeFinancials && (
           <TabsContent value="costos">
             <Card className="p-4">
-              <h3 className="font-semibold mb-3">Desglose de costos</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold">Desglose de costos</h3>
+                {canEdit && <EditFeriaDialog feria={feria} />}
+              </div>
               <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-2 py-2 border-b text-xs text-muted-foreground font-medium">
+                  <span>Concepto</span>
+                  <span className="text-right">Presupuestado</span>
+                  <span className="text-right">Real</span>
+                </div>
                 {COST_BREAKDOWN.map((c) => {
-                  const value = Number(feria[c.key] || 0);
+                  const real = Number(feria[c.key] || 0);
+                  const budget = Number(feria[c.budgetKey] || 0);
+                  const diff = budget - real;
                   return (
-                    <div key={c.key as string} className="flex justify-between py-2 border-b last:border-0">
+                    <div key={c.key as string} className="grid grid-cols-3 gap-2 py-2 border-b last:border-0 items-center">
                       <span className="text-sm">{c.label}</span>
-                      <span className="text-sm font-medium">${value.toLocaleString()}</span>
+                      <span className="text-sm text-right">${budget.toLocaleString()}</span>
+                      <div className="text-right">
+                        <span className="text-sm font-medium">${real.toLocaleString()}</span>
+                        {diff !== 0 && (
+                          <span className={`text-xs block ${diff > 0 ? "text-emerald-600" : "text-destructive"}`}>
+                            {diff > 0 ? "+" : ""}${diff.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
-                <div className="flex justify-between pt-3 border-t-2 font-bold">
-                  <span>Costo Total</span>
-                  <span className="text-destructive">${totalCosts.toLocaleString()}</span>
+                <div className="grid grid-cols-3 gap-2 pt-3 border-t-2 font-bold">
+                  <span>Total costos</span>
+                  <span className="text-right">${totalBudget.toLocaleString()}</span>
+                  <span className="text-right text-destructive">${totalCosts.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between font-bold">
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t font-bold">
                   <span>Ingreso Total</span>
-                  <span className="text-emerald-600 dark:text-emerald-400">${totalRevenue.toLocaleString()}</span>
+                  <span className="col-span-2 text-right text-emerald-600 dark:text-emerald-400">${totalRevenue.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between pt-2 border-t font-bold text-lg bg-emerald-500/10 px-3 py-2 rounded">
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t font-bold text-lg bg-emerald-500/10 px-3 py-2 rounded">
                   <span>Utilidad</span>
-                  <span className={profit >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-destructive"}>
+                  <span className={`col-span-2 text-right ${profit >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-destructive"}`}>
                     ${profit.toLocaleString()}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t font-bold">
+                  <span>Presupuesto vs real</span>
+                  <span className={`col-span-2 text-right ${budgetVariance >= 0 ? "text-emerald-600" : "text-destructive"}`}>
+                    {budgetVariance >= 0 ? "Sobrante" : "Sobrecosto"}: ${Math.abs(budgetVariance).toLocaleString()}
                   </span>
                 </div>
               </div>
