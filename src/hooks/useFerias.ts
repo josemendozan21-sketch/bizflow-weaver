@@ -13,7 +13,7 @@ export interface Feria {
   setup_date: string | null;
   stand_number: string | null;
   stand_size: string | null;
-  // Costos detallados
+  // Costos detallados (reales)
   stand_cost: number;          // Costo Feria
   shipping_cost: number;       // Envío Mercancía
   tickets_cost: number;        // Tiquetes
@@ -24,6 +24,17 @@ export interface Feria {
   transport_cost: number;      // Viáticos: Transporte
   food_cost: number;           // Viáticos: Alimentación
   other_costs: number;
+  // Presupuestos
+  budget_stand_cost: number;
+  budget_shipping_cost: number;
+  budget_tickets_cost: number;
+  budget_advertising_cost: number;
+  budget_merchandise_cost: number;
+  budget_employees_cost: number;
+  budget_lodging_cost: number;
+  budget_transport_cost: number;
+  budget_food_cost: number;
+  budget_other_costs: number;
   assigned_staff: string[] | null;
   materials_needed: string[] | null;
   status: string;
