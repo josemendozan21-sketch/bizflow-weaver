@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, MapPin, Calendar, Package, Hammer, Users, Pencil, Check, X, Plus } from "lucide-react";
-import { type Feria, useFeriaSales, calcFeriaTotalCost, useUpdateFeria } from "@/hooks/useFerias";
+import { type Feria, useFeriaSales, calcFeriaTotalCost, calcFeriaTotalBudget, useUpdateFeria } from "@/hooks/useFerias";
 import { FeriaInventoryTab } from "./FeriaInventoryTab";
 import { FeriaSalesTab } from "./FeriaSalesTab";
 import { FeriaStaffTab } from "./FeriaStaffTab";
@@ -24,17 +24,17 @@ const STATUS_COLOR: Record<string, string> = {
   cancelada: "bg-destructive/15 text-destructive border-destructive/30",
 };
 
-const COST_BREAKDOWN: Array<{ key: keyof Feria; label: string }> = [
-  { key: "stand_cost", label: "Costo Feria" },
-  { key: "shipping_cost", label: "Envío Mercancía" },
-  { key: "tickets_cost", label: "Tiquetes" },
-  { key: "advertising_cost", label: "Publicidad" },
-  { key: "merchandise_cost", label: "Costo de Mercancía" },
-  { key: "employees_cost", label: "Empleados" },
-  { key: "lodging_cost", label: "Hospedaje" },
-  { key: "transport_cost", label: "Transporte" },
-  { key: "food_cost", label: "Alimentación" },
-  { key: "other_costs", label: "Otros" },
+const COST_BREAKDOWN: Array<{ key: keyof Feria; budgetKey: keyof Feria; label: string }> = [
+  { key: "stand_cost", budgetKey: "budget_stand_cost", label: "Costo Feria" },
+  { key: "shipping_cost", budgetKey: "budget_shipping_cost", label: "Envío Mercancía" },
+  { key: "tickets_cost", budgetKey: "budget_tickets_cost", label: "Tiquetes" },
+  { key: "advertising_cost", budgetKey: "budget_advertising_cost", label: "Publicidad" },
+  { key: "merchandise_cost", budgetKey: "budget_merchandise_cost", label: "Costo de Mercancía" },
+  { key: "employees_cost", budgetKey: "budget_employees_cost", label: "Empleados" },
+  { key: "lodging_cost", budgetKey: "budget_lodging_cost", label: "Hospedaje" },
+  { key: "transport_cost", budgetKey: "budget_transport_cost", label: "Transporte" },
+  { key: "food_cost", budgetKey: "budget_food_cost", label: "Alimentación" },
+  { key: "other_costs", budgetKey: "budget_other_costs", label: "Otros" },
 ];
 
 const PREDEFINED_MATERIALS = [
@@ -108,9 +108,11 @@ export function FeriaDetail({ feria, onBack }: { feria: Feria; onBack: () => voi
   };
 
   const totalCosts = calcFeriaTotalCost(feria);
+  const totalBudget = calcFeriaTotalBudget(feria);
   const totalRevenue = useMemo(() => sales.reduce((s, x) => s + Number(x.total_amount), 0), [sales]);
   const profit = totalRevenue - totalCosts;
   const margin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
+  const budgetVariance = totalBudget - totalCosts;
 
   return (
     <div className="space-y-4">
@@ -274,29 +276,54 @@ export function FeriaDetail({ feria, onBack }: { feria: Feria; onBack: () => voi
         {canSeeFinancials && (
           <TabsContent value="costos">
             <Card className="p-4">
-              <h3 className="font-semibold mb-3">Desglose de costos</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold">Desglose de costos</h3>
+                {canEdit && <EditFeriaDialog feria={feria} />}
+              </div>
               <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-2 py-2 border-b text-xs text-muted-foreground font-medium">
+                  <span>Concepto</span>
+                  <span className="text-right">Presupuestado</span>
+                  <span className="text-right">Real</span>
+                </div>
                 {COST_BREAKDOWN.map((c) => {
-                  const value = Number(feria[c.key] || 0);
+                  const real = Number(feria[c.key] || 0);
+                  const budget = Number(feria[c.budgetKey] || 0);
+                  const diff = budget - real;
                   return (
-                    <div key={c.key as string} className="flex justify-between py-2 border-b last:border-0">
+                    <div key={c.key as string} className="grid grid-cols-3 gap-2 py-2 border-b last:border-0 items-center">
                       <span className="text-sm">{c.label}</span>
-                      <span className="text-sm font-medium">${value.toLocaleString()}</span>
+                      <span className="text-sm text-right">${budget.toLocaleString()}</span>
+                      <div className="text-right">
+                        <span className="text-sm font-medium">${real.toLocaleString()}</span>
+                        {diff !== 0 && (
+                          <span className={`text-xs block ${diff > 0 ? "text-emerald-600" : "text-destructive"}`}>
+                            {diff > 0 ? "+" : ""}${diff.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
-                <div className="flex justify-between pt-3 border-t-2 font-bold">
-                  <span>Costo Total</span>
-                  <span className="text-destructive">${totalCosts.toLocaleString()}</span>
+                <div className="grid grid-cols-3 gap-2 pt-3 border-t-2 font-bold">
+                  <span>Total costos</span>
+                  <span className="text-right">${totalBudget.toLocaleString()}</span>
+                  <span className="text-right text-destructive">${totalCosts.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between font-bold">
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t font-bold">
                   <span>Ingreso Total</span>
-                  <span className="text-emerald-600 dark:text-emerald-400">${totalRevenue.toLocaleString()}</span>
+                  <span className="col-span-2 text-right text-emerald-600 dark:text-emerald-400">${totalRevenue.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between pt-2 border-t font-bold text-lg bg-emerald-500/10 px-3 py-2 rounded">
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t font-bold text-lg bg-emerald-500/10 px-3 py-2 rounded">
                   <span>Utilidad</span>
-                  <span className={profit >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-destructive"}>
+                  <span className={`col-span-2 text-right ${profit >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-destructive"}`}>
                     ${profit.toLocaleString()}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t font-bold">
+                  <span>Presupuesto vs real</span>
+                  <span className={`col-span-2 text-right ${budgetVariance >= 0 ? "text-emerald-600" : "text-destructive"}`}>
+                    {budgetVariance >= 0 ? "Sobrante" : "Sobrecosto"}: ${Math.abs(budgetVariance).toLocaleString()}
                   </span>
                 </div>
               </div>

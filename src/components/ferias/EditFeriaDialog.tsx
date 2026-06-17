@@ -15,17 +15,17 @@ const PREDEFINED_MATERIALS = [
   "Iluminación", "Extensiones eléctricas", "Bolsas de empaque", "Etiquetas de precio",
 ];
 
-const COST_FIELDS: Array<{ key: keyof Feria; label: string }> = [
-  { key: "stand_cost", label: "Costo Feria" },
-  { key: "shipping_cost", label: "Envío Mercancía" },
-  { key: "tickets_cost", label: "Tiquetes" },
-  { key: "advertising_cost", label: "Publicidad" },
-  { key: "merchandise_cost", label: "Costo de Mercancía" },
-  { key: "employees_cost", label: "Empleados" },
-  { key: "lodging_cost", label: "Viáticos: Hospedaje" },
-  { key: "transport_cost", label: "Viáticos: Transporte" },
-  { key: "food_cost", label: "Viáticos: Alimentación" },
-  { key: "other_costs", label: "Otros costos" },
+const COST_FIELDS: Array<{ key: keyof Feria; budgetKey: keyof Feria; label: string }> = [
+  { key: "stand_cost", budgetKey: "budget_stand_cost", label: "Costo Feria" },
+  { key: "shipping_cost", budgetKey: "budget_shipping_cost", label: "Envío Mercancía" },
+  { key: "tickets_cost", budgetKey: "budget_tickets_cost", label: "Tiquetes" },
+  { key: "advertising_cost", budgetKey: "budget_advertising_cost", label: "Publicidad" },
+  { key: "merchandise_cost", budgetKey: "budget_merchandise_cost", label: "Costo de Mercancía" },
+  { key: "employees_cost", budgetKey: "budget_employees_cost", label: "Empleados" },
+  { key: "lodging_cost", budgetKey: "budget_lodging_cost", label: "Viáticos: Hospedaje" },
+  { key: "transport_cost", budgetKey: "budget_transport_cost", label: "Viáticos: Transporte" },
+  { key: "food_cost", budgetKey: "budget_food_cost", label: "Viáticos: Alimentación" },
+  { key: "other_costs", budgetKey: "budget_other_costs", label: "Otros costos" },
 ];
 
 export function EditFeriaDialog({ feria }: { feria: Feria }) {
@@ -50,6 +50,16 @@ export function EditFeriaDialog({ feria }: { feria: Feria }) {
         transport_cost: String(feria.transport_cost || 0),
         food_cost: String(feria.food_cost || 0),
         other_costs: String(feria.other_costs || 0),
+        budget_stand_cost: String(feria.budget_stand_cost || 0),
+        budget_shipping_cost: String(feria.budget_shipping_cost || 0),
+        budget_tickets_cost: String(feria.budget_tickets_cost || 0),
+        budget_advertising_cost: String(feria.budget_advertising_cost || 0),
+        budget_merchandise_cost: String(feria.budget_merchandise_cost || 0),
+        budget_employees_cost: String(feria.budget_employees_cost || 0),
+        budget_lodging_cost: String(feria.budget_lodging_cost || 0),
+        budget_transport_cost: String(feria.budget_transport_cost || 0),
+        budget_food_cost: String(feria.budget_food_cost || 0),
+        budget_other_costs: String(feria.budget_other_costs || 0),
         materials_needed: feria.materials_needed || [],
         status: feria.status,
         notes: feria.notes || "",
@@ -74,6 +84,7 @@ export function EditFeriaDialog({ feria }: { feria: Feria }) {
   };
 
   const totalCosts = COST_FIELDS.reduce((s, f) => s + (parseFloat(form[f.key]) || 0), 0);
+  const totalBudget = COST_FIELDS.reduce((s, f) => s + (parseFloat(form[f.budgetKey]) || 0), 0);
 
   const handleSubmit = async () => {
     await update.mutateAsync({
@@ -92,6 +103,16 @@ export function EditFeriaDialog({ feria }: { feria: Feria }) {
       transport_cost: parseFloat(form.transport_cost) || 0,
       food_cost: parseFloat(form.food_cost) || 0,
       other_costs: parseFloat(form.other_costs) || 0,
+      budget_stand_cost: parseFloat(form.budget_stand_cost) || 0,
+      budget_shipping_cost: parseFloat(form.budget_shipping_cost) || 0,
+      budget_tickets_cost: parseFloat(form.budget_tickets_cost) || 0,
+      budget_advertising_cost: parseFloat(form.budget_advertising_cost) || 0,
+      budget_merchandise_cost: parseFloat(form.budget_merchandise_cost) || 0,
+      budget_employees_cost: parseFloat(form.budget_employees_cost) || 0,
+      budget_lodging_cost: parseFloat(form.budget_lodging_cost) || 0,
+      budget_transport_cost: parseFloat(form.budget_transport_cost) || 0,
+      budget_food_cost: parseFloat(form.budget_food_cost) || 0,
+      budget_other_costs: parseFloat(form.budget_other_costs) || 0,
       materials_needed: form.materials_needed.length > 0 ? form.materials_needed : null,
       status: form.status,
       notes: form.notes || null,
@@ -137,17 +158,28 @@ export function EditFeriaDialog({ feria }: { feria: Feria }) {
           </div>
 
           <div className="border rounded-lg p-3 bg-muted/30">
-            <h4 className="font-semibold mb-3 text-sm">Costos de la feria</h4>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-semibold text-sm">Costos de la feria</h4>
+              <div className="text-xs text-muted-foreground">Presupuestado / Real</div>
+            </div>
+            <div className="space-y-2">
               {COST_FIELDS.map((f) => (
-                <div key={f.key as string}>
-                  <Label className="text-xs">{f.label}</Label>
-                  <Input type="number" value={form[f.key as string]} onChange={(e) => setForm({ ...form, [f.key as string]: e.target.value })} />
+                <div key={f.key as string} className="grid grid-cols-3 gap-2 items-center">
+                  <span className="text-xs col-span-1">{f.label}</span>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Presupuestado</Label>
+                    <Input type="number" className="h-8 text-sm" value={form[f.budgetKey as string]} onChange={(e) => setForm({ ...form, [f.budgetKey as string]: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Real</Label>
+                    <Input type="number" className="h-8 text-sm" value={form[f.key as string]} onChange={(e) => setForm({ ...form, [f.key as string]: e.target.value })} />
+                  </div>
                 </div>
               ))}
             </div>
-            <div className="flex justify-between mt-3 pt-3 border-t font-semibold">
-              <span>Costo Total</span>
+            <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t font-semibold text-sm">
+              <span>Totales</span>
+              <span>${totalBudget.toLocaleString()}</span>
               <span>${totalCosts.toLocaleString()}</span>
             </div>
           </div>

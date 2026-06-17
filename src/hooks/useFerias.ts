@@ -13,7 +13,7 @@ export interface Feria {
   setup_date: string | null;
   stand_number: string | null;
   stand_size: string | null;
-  // Costos detallados
+  // Costos detallados (reales)
   stand_cost: number;          // Costo Feria
   shipping_cost: number;       // Envío Mercancía
   tickets_cost: number;        // Tiquetes
@@ -24,6 +24,17 @@ export interface Feria {
   transport_cost: number;      // Viáticos: Transporte
   food_cost: number;           // Viáticos: Alimentación
   other_costs: number;
+  // Presupuestos
+  budget_stand_cost: number;
+  budget_shipping_cost: number;
+  budget_tickets_cost: number;
+  budget_advertising_cost: number;
+  budget_merchandise_cost: number;
+  budget_employees_cost: number;
+  budget_lodging_cost: number;
+  budget_transport_cost: number;
+  budget_food_cost: number;
+  budget_other_costs: number;
   assigned_staff: string[] | null;
   materials_needed: string[] | null;
   status: string;
@@ -37,6 +48,12 @@ export function calcFeriaTotalCost(f: Feria): number {
   return (f.stand_cost || 0) + (f.shipping_cost || 0) + (f.tickets_cost || 0) +
     (f.advertising_cost || 0) + (f.merchandise_cost || 0) + (f.employees_cost || 0) +
     (f.lodging_cost || 0) + (f.transport_cost || 0) + (f.food_cost || 0) + (f.other_costs || 0);
+}
+
+export function calcFeriaTotalBudget(f: Feria): number {
+  return (f.budget_stand_cost || 0) + (f.budget_shipping_cost || 0) + (f.budget_tickets_cost || 0) +
+    (f.budget_advertising_cost || 0) + (f.budget_merchandise_cost || 0) + (f.budget_employees_cost || 0) +
+    (f.budget_lodging_cost || 0) + (f.budget_transport_cost || 0) + (f.budget_food_cost || 0) + (f.budget_other_costs || 0);
 }
 
 export interface FeriaInventory {

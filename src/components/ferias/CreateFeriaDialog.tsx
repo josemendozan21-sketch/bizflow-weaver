@@ -32,17 +32,17 @@ const PREDEFINED_MATERIALS = [
   "Etiquetas de precio",
 ];
 
-const COST_FIELDS: Array<{ key: string; label: string }> = [
-  { key: "stand_cost", label: "Costo Feria" },
-  { key: "shipping_cost", label: "Envío Mercancía" },
-  { key: "tickets_cost", label: "Tiquetes" },
-  { key: "advertising_cost", label: "Publicidad" },
-  { key: "merchandise_cost", label: "Costo de Mercancía" },
-  { key: "employees_cost", label: "Empleados" },
-  { key: "lodging_cost", label: "Viáticos: Hospedaje" },
-  { key: "transport_cost", label: "Viáticos: Transporte" },
-  { key: "food_cost", label: "Viáticos: Alimentación" },
-  { key: "other_costs", label: "Otros costos" },
+const COST_FIELDS: Array<{ key: string; budgetKey: string; label: string }> = [
+  { key: "stand_cost", budgetKey: "budget_stand_cost", label: "Costo Feria" },
+  { key: "shipping_cost", budgetKey: "budget_shipping_cost", label: "Envío Mercancía" },
+  { key: "tickets_cost", budgetKey: "budget_tickets_cost", label: "Tiquetes" },
+  { key: "advertising_cost", budgetKey: "budget_advertising_cost", label: "Publicidad" },
+  { key: "merchandise_cost", budgetKey: "budget_merchandise_cost", label: "Costo de Mercancía" },
+  { key: "employees_cost", budgetKey: "budget_employees_cost", label: "Empleados" },
+  { key: "lodging_cost", budgetKey: "budget_lodging_cost", label: "Viáticos: Hospedaje" },
+  { key: "transport_cost", budgetKey: "budget_transport_cost", label: "Viáticos: Transporte" },
+  { key: "food_cost", budgetKey: "budget_food_cost", label: "Viáticos: Alimentación" },
+  { key: "other_costs", budgetKey: "budget_other_costs", label: "Otros costos" },
 ];
 
 export function CreateFeriaDialog() {
@@ -55,6 +55,9 @@ export function CreateFeriaDialog() {
     stand_cost: "0", shipping_cost: "0", tickets_cost: "0", advertising_cost: "0",
     merchandise_cost: "0", employees_cost: "0", lodging_cost: "0", transport_cost: "0",
     food_cost: "0", other_costs: "0",
+    budget_stand_cost: "0", budget_shipping_cost: "0", budget_tickets_cost: "0", budget_advertising_cost: "0",
+    budget_merchandise_cost: "0", budget_employees_cost: "0", budget_lodging_cost: "0", budget_transport_cost: "0",
+    budget_food_cost: "0", budget_other_costs: "0",
     materials_needed: [] as string[], status: "planificada", notes: "",
   };
   const [form, setForm] = usePersistedState<any>("draft:createFeria:form", INITIAL_FORM);
@@ -121,6 +124,7 @@ export function CreateFeriaDialog() {
   const totalProductsSelected = Object.keys(selectedProducts).length;
 
   const totalCosts = COST_FIELDS.reduce((s, f) => s + (parseFloat(form[f.key]) || 0), 0);
+  const totalBudget = COST_FIELDS.reduce((s, f) => s + (parseFloat(form[f.budgetKey]) || 0), 0);
 
   const toggleMaterial = (m: string) => {
     setForm((p: any) => ({
@@ -159,6 +163,16 @@ export function CreateFeriaDialog() {
       transport_cost: parseFloat(form.transport_cost) || 0,
       food_cost: parseFloat(form.food_cost) || 0,
       other_costs: parseFloat(form.other_costs) || 0,
+      budget_stand_cost: parseFloat(form.budget_stand_cost) || 0,
+      budget_shipping_cost: parseFloat(form.budget_shipping_cost) || 0,
+      budget_tickets_cost: parseFloat(form.budget_tickets_cost) || 0,
+      budget_advertising_cost: parseFloat(form.budget_advertising_cost) || 0,
+      budget_merchandise_cost: parseFloat(form.budget_merchandise_cost) || 0,
+      budget_employees_cost: parseFloat(form.budget_employees_cost) || 0,
+      budget_lodging_cost: parseFloat(form.budget_lodging_cost) || 0,
+      budget_transport_cost: parseFloat(form.budget_transport_cost) || 0,
+      budget_food_cost: parseFloat(form.budget_food_cost) || 0,
+      budget_other_costs: parseFloat(form.budget_other_costs) || 0,
       assigned_staff: null,
       materials_needed: form.materials_needed.length > 0 ? form.materials_needed : null,
       status: form.status,
@@ -200,17 +214,28 @@ export function CreateFeriaDialog() {
           </div>
 
           <div className="border rounded-lg p-3 bg-muted/30">
-            <h4 className="font-semibold mb-3 text-sm">Costos de la feria</h4>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-semibold text-sm">Costos de la feria</h4>
+              <div className="text-xs text-muted-foreground">Presupuestado / Real</div>
+            </div>
+            <div className="space-y-2">
               {COST_FIELDS.map((f) => (
-                <div key={f.key}>
-                  <Label className="text-xs">{f.label}</Label>
-                  <Input type="number" value={form[f.key]} onChange={(e) => setForm({ ...form, [f.key]: e.target.value })} />
+                <div key={f.key} className="grid grid-cols-3 gap-2 items-center">
+                  <span className="text-xs col-span-1">{f.label}</span>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Presupuestado</Label>
+                    <Input type="number" className="h-8 text-sm" value={form[f.budgetKey]} onChange={(e) => setForm({ ...form, [f.budgetKey]: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Real</Label>
+                    <Input type="number" className="h-8 text-sm" value={form[f.key]} onChange={(e) => setForm({ ...form, [f.key]: e.target.value })} />
+                  </div>
                 </div>
               ))}
             </div>
-            <div className="flex justify-between mt-3 pt-3 border-t font-semibold">
-              <span>Costo Total</span>
+            <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t font-semibold text-sm">
+              <span>Totales</span>
+              <span>${totalBudget.toLocaleString()}</span>
               <span>${totalCosts.toLocaleString()}</span>
             </div>
           </div>

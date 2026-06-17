@@ -987,6 +987,16 @@ export type Database = {
         Row: {
           advertising_cost: number | null
           assigned_staff: string[] | null
+          budget_advertising_cost: number | null
+          budget_employees_cost: number | null
+          budget_food_cost: number | null
+          budget_lodging_cost: number | null
+          budget_merchandise_cost: number | null
+          budget_other_costs: number | null
+          budget_shipping_cost: number | null
+          budget_stand_cost: number | null
+          budget_tickets_cost: number | null
+          budget_transport_cost: number | null
           city: string
           created_at: string
           created_by: string | null
@@ -1015,6 +1025,16 @@ export type Database = {
         Insert: {
           advertising_cost?: number | null
           assigned_staff?: string[] | null
+          budget_advertising_cost?: number | null
+          budget_employees_cost?: number | null
+          budget_food_cost?: number | null
+          budget_lodging_cost?: number | null
+          budget_merchandise_cost?: number | null
+          budget_other_costs?: number | null
+          budget_shipping_cost?: number | null
+          budget_stand_cost?: number | null
+          budget_tickets_cost?: number | null
+          budget_transport_cost?: number | null
           city: string
           created_at?: string
           created_by?: string | null
@@ -1043,6 +1063,16 @@ export type Database = {
         Update: {
           advertising_cost?: number | null
           assigned_staff?: string[] | null
+          budget_advertising_cost?: number | null
+          budget_employees_cost?: number | null
+          budget_food_cost?: number | null
+          budget_lodging_cost?: number | null
+          budget_merchandise_cost?: number | null
+          budget_other_costs?: number | null
+          budget_shipping_cost?: number | null
+          budget_stand_cost?: number | null
+          budget_tickets_cost?: number | null
+          budget_transport_cost?: number | null
           city?: string
           created_at?: string
           created_by?: string | null
