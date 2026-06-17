@@ -60,14 +60,14 @@ export function FeriaDetail({ feria, onBack }: { feria: Feria; onBack: () => voi
   });
   const [customMaterial, setCustomMaterial] = useState("");
 
-  useState(() => {
+  useEffect(() => {
     setInfoForm({
       stand_number: feria.stand_number || "",
       stand_size: feria.stand_size || "",
       materials_needed: feria.materials_needed || [],
       notes: feria.notes || "",
     });
-  });
+  }, [feria]);
 
   const toggleMaterial = (m: string) => {
     setInfoForm((p) => ({
