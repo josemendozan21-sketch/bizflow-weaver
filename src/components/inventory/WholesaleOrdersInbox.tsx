@@ -390,6 +390,35 @@ const WholesaleOrdersInbox = () => {
       setBusy(false);
       if (error) { toast.error(error.message); return; }
       toast.success(`Orden de producción creada (${quantity} uds). Los cuerpos volverán a inventario al terminar.`);
+    } else if (target === "logistica" && lineRows.length > 0) {
+      // Pedido al detal (potencialmente multi-ítem desde checkout online)
+      const cat = "producto_terminado";
+      const invalid = lineRows.find((r) => !r.stockItemId || !Number(r.qty) || Number(r.qty) <= 0);
+      if (invalid) {
+        setBusy(false);
+        toast.error(`Asigna ítem y cantidad válida para "${invalid.name}"`);
+        return;
+      }
+      const movements = lineRows.map((r) => {
+        const stock = stockItems.find((s) => s.id === r.stockItemId);
+        return {
+          stock_item_id: r.stockItemId,
+          item_name: stock?.name || r.name,
+          brand: order.brand,
+          category: cat,
+          quantity: Number(r.qty),
+          direction: "entrega" as const,
+          area: "logistica" as const,
+          reason: `Pedido al detal de ${order.client_name}` + (obs ? ` — ${obs}` : ""),
+          order_id: order.id,
+          recorded_by: user.id,
+          recorded_by_name: user.email || "Inventarios",
+        };
+      });
+      const { error } = await supabase.from("inventory_movements").insert(movements as any);
+      setBusy(false);
+      if (error) { toast.error(error.message); return; }
+      toast.success(`Entregado a Logística (${lineRows.length} ${lineRows.length === 1 ? "ítem" : "ítems"}).`);
     } else {
       const cat = target === "estampacion" ? "cuerpos_referencias" : "producto_terminado";
       const item = findStockItem(order, cat);
