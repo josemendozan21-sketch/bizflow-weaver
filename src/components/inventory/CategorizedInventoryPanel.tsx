@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Beaker, Box, PackageCheck, Layers, Plus, Pencil, Trash2, Check, X, AlertTriangle, AlertCircle, CheckCircle2, Flame, Snowflake, Plane, Search, ArrowDownAZ, ArrowUpAZ,
+  Beaker, Box, PackageCheck, Layers, Plus, Pencil, Trash2, Check, X, AlertTriangle, AlertCircle, CheckCircle2, Flame, Snowflake, Plane, Factory, Search, ArrowDownAZ, ArrowUpAZ,
 } from "lucide-react";
 import { useInventory, getStockStatus, type SupabaseStockItem } from "@/hooks/useInventory";
 import type { InventoryCategory, InventoryBrand } from "@/stores/inventoryStore";
@@ -85,6 +85,7 @@ const CategorizedInventoryPanel = ({
     : initialCategory;
   const [selectedBrand] = useState<InventoryBrand>(initialBrand);
   const [selectedCategory, setSelectedCategory] = useState<InventoryCategory>(effectiveInitialCategory);
+  const [sweatspotOrigin, setSweatspotOrigin] = useState<"todos" | "IMPORTADO" | "NACIONAL">("todos");
   const [addOpen, setAddOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ available: "", minStock: "" });
@@ -247,6 +248,10 @@ const CategorizedInventoryPanel = ({
   const brandItems = stockItems.filter((i) => i.brand === dbBrand);
   const totalCritical = brandItems.filter((i) => getStockStatus(i) === "critico").length;
   const totalLow = brandItems.filter((i) => getStockStatus(i) === "bajo").length;
+
+  const sweatspotAllCount = stockItems.filter((i) => i.brand === "sweatspot" && i.category === "producto_terminado").length;
+  const sweatspotImportCount = stockItems.filter((i) => i.brand === "sweatspot" && i.category === "producto_terminado" && i.product_type === "IMPORTADO").length;
+  const sweatspotNationalCount = stockItems.filter((i) => i.brand === "sweatspot" && i.category === "producto_terminado" && i.product_type === "NACIONAL").length;
 
   const isHighlighted = (itemName: string) => activeHighlights.includes(itemName);
 
