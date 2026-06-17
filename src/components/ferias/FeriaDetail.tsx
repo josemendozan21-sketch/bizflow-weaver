@@ -1,10 +1,14 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, MapPin, Calendar, Package, Hammer, Users } from "lucide-react";
-import { type Feria, useFeriaSales, calcFeriaTotalCost } from "@/hooks/useFerias";
+import { ArrowLeft, MapPin, Calendar, Package, Hammer, Users, Pencil, Check, X, Plus } from "lucide-react";
+import { type Feria, useFeriaSales, calcFeriaTotalCost, useUpdateFeria } from "@/hooks/useFerias";
 import { FeriaInventoryTab } from "./FeriaInventoryTab";
 import { FeriaSalesTab } from "./FeriaSalesTab";
 import { FeriaStaffTab } from "./FeriaStaffTab";
@@ -33,12 +37,75 @@ const COST_BREAKDOWN: Array<{ key: keyof Feria; label: string }> = [
   { key: "other_costs", label: "Otros" },
 ];
 
+const PREDEFINED_MATERIALS = [
+  "Malla exhibición", "Rack para banners", "Banners", "Mesa", "Sillas", "Ganchos",
+  "Tijeras", "Cintas", "Tablas para anotar", "Datáfonos", "Carpa", "Displays",
+  "Iluminación", "Extensiones eléctricas", "Bolsas de empaque", "Etiquetas de precio",
+];
+
 export function FeriaDetail({ feria, onBack }: { feria: Feria; onBack: () => void }) {
   const { data: sales = [] } = useFeriaSales(feria.id);
   const { role } = useAuth();
   const canSeeFinancials = role === "admin" || role === "contabilidad";
   const canManageStaff = role === "admin" || role === "contabilidad" || role === "logistica";
   const canEdit = role === "admin";
+  const update = useUpdateFeria();
+
+  const [editingInfo, setEditingInfo] = useState(false);
+  const [infoForm, setInfoForm] = useState({
+    stand_number: "",
+    stand_size: "",
+    materials_needed: [] as string[],
+    notes: "",
+  });
+  const [customMaterial, setCustomMaterial] = useState("");
+
+  useEffect(() => {
+    setInfoForm({
+      stand_number: feria.stand_number || "",
+      stand_size: feria.stand_size || "",
+      materials_needed: feria.materials_needed || [],
+      notes: feria.notes || "",
+    });
+  }, [feria]);
+
+  const toggleMaterial = (m: string) => {
+    setInfoForm((p) => ({
+      ...p,
+      materials_needed: p.materials_needed.includes(m)
+        ? p.materials_needed.filter((x) => x !== m)
+        : [...p.materials_needed, m],
+    }));
+  };
+
+  const addCustomMaterial = () => {
+    const v = customMaterial.trim();
+    if (!v || infoForm.materials_needed.includes(v)) return;
+    setInfoForm({ ...infoForm, materials_needed: [...infoForm.materials_needed, v] });
+    setCustomMaterial("");
+  };
+
+  const startEditingInfo = () => {
+    setInfoForm({
+      stand_number: feria.stand_number || "",
+      stand_size: feria.stand_size || "",
+      materials_needed: feria.materials_needed || [],
+      notes: feria.notes || "",
+    });
+    setCustomMaterial("");
+    setEditingInfo(true);
+  };
+
+  const saveInfo = async () => {
+    await update.mutateAsync({
+      id: feria.id,
+      stand_number: infoForm.stand_number || null,
+      stand_size: infoForm.stand_size || null,
+      materials_needed: infoForm.materials_needed.length > 0 ? infoForm.materials_needed : null,
+      notes: infoForm.notes || null,
+    });
+    setEditingInfo(false);
+  };
 
   const totalCosts = calcFeriaTotalCost(feria);
   const totalRevenue = useMemo(() => sales.reduce((s, x) => s + Number(x.total_amount), 0), [sales]);
@@ -106,23 +173,99 @@ export function FeriaDetail({ feria, onBack }: { feria: Feria; onBack: () => voi
         </TabsList>
 
         <TabsContent value="info" className="space-y-3">
-          <Card className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <h4 className="font-semibold mb-2">Stand</h4>
-              <p className="text-sm">N°: <span className="text-muted-foreground">{feria.stand_number || "—"}</span></p>
-              <p className="text-sm">Tamaño: <span className="text-muted-foreground">{feria.stand_size || "—"}</span></p>
+          <Card className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold">Información del stand</h3>
+              {canEdit && !editingInfo && (
+                <Button variant="outline" size="sm" onClick={startEditingInfo}>
+                  <Pencil className="mr-2 h-4 w-4" />Editar
+                </Button>
+              )}
+              {canEdit && editingInfo && (
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setEditingInfo(false)}>
+                    <X className="mr-2 h-4 w-4" />Cancelar
+                  </Button>
+                  <Button size="sm" onClick={saveInfo} disabled={update.isPending}>
+                    <Check className="mr-2 h-4 w-4" />Guardar
+                  </Button>
+                </div>
+              )}
             </div>
-            <div>
-              <h4 className="font-semibold mb-2">Materiales</h4>
-              <div className="flex flex-wrap gap-1">
-                {(feria.materials_needed || []).length === 0 ? <span className="text-sm text-muted-foreground">Sin materiales</span> :
-                  feria.materials_needed!.map((s, i) => <Badge key={i} variant="outline">{s}</Badge>)}
+
+            {editingInfo ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-xs">N° Stand</Label>
+                    <Input value={infoForm.stand_number} onChange={(e) => setInfoForm({ ...infoForm, stand_number: e.target.value })} placeholder="Ej. 6 y 7" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Tamaño stand</Label>
+                    <Input value={infoForm.stand_size} onChange={(e) => setInfoForm({ ...infoForm, stand_size: e.target.value })} placeholder="Ej. 2x6" />
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-xs">Materiales</Label>
+                  <div className="flex flex-wrap gap-1">
+                    {PREDEFINED_MATERIALS.map((m) => {
+                      const checked = infoForm.materials_needed.includes(m);
+                      return (
+                        <label key={m} className={`inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded border cursor-pointer transition-colors ${checked ? "bg-primary/10 border-primary/30 text-primary" : "hover:bg-muted"}`}>
+                          <Checkbox checked={checked} onCheckedChange={() => toggleMaterial(m)} className="h-3 w-3" />
+                          <span>{m}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <Input
+                      value={customMaterial}
+                      onChange={(e) => setCustomMaterial(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomMaterial(); } }}
+                      placeholder="Agregar otro material..."
+                      className="text-xs h-8"
+                    />
+                    <Button type="button" variant="outline" size="sm" className="h-8 px-2" onClick={addCustomMaterial}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {infoForm.materials_needed.filter((m) => !PREDEFINED_MATERIALS.includes(m)).length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {infoForm.materials_needed.filter((m) => !PREDEFINED_MATERIALS.includes(m)).map((m) => (
+                        <span key={m} className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                          {m}
+                          <button type="button" onClick={() => toggleMaterial(m)}><X className="h-3 w-3" /></button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="md:col-span-2">
+                  <Label className="text-xs">Notas</Label>
+                  <Textarea value={infoForm.notes} onChange={(e) => setInfoForm({ ...infoForm, notes: e.target.value })} placeholder="Notas adicionales del stand..." />
+                </div>
               </div>
-            </div>
-            {feria.notes && (
-              <div className="md:col-span-2">
-                <h4 className="font-semibold mb-2">Notas</h4>
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{feria.notes}</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-semibold mb-2">Stand</h4>
+                  <p className="text-sm">N°: <span className="text-muted-foreground">{feria.stand_number || "—"}</span></p>
+                  <p className="text-sm">Tamaño: <span className="text-muted-foreground">{feria.stand_size || "—"}</span></p>
+                </div>
+                <div>
+                  <h4 className="font-semibold mb-2">Materiales</h4>
+                  <div className="flex flex-wrap gap-1">
+                    {(feria.materials_needed || []).length === 0 ? <span className="text-sm text-muted-foreground">Sin materiales</span> :
+                      feria.materials_needed!.map((s, i) => <Badge key={i} variant="outline">{s}</Badge>)}
+                  </div>
+                </div>
+                {feria.notes && (
+                  <div className="md:col-span-2">
+                    <h4 className="font-semibold mb-2">Notas</h4>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{feria.notes}</p>
+                  </div>
+                )}
               </div>
             )}
           </Card>
