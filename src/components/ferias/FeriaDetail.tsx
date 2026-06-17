@@ -12,6 +12,7 @@ import { type Feria, useFeriaSales, calcFeriaTotalCost, calcFeriaTotalBudget, us
 import { FeriaInventoryTab } from "./FeriaInventoryTab";
 import { FeriaSalesTab } from "./FeriaSalesTab";
 import { FeriaStaffTab } from "./FeriaStaffTab";
+import { FeriaProjectionTab } from "./FeriaProjectionTab";
 import { EditFeriaDialog } from "./EditFeriaDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
@@ -171,6 +172,7 @@ export function FeriaDetail({ feria: feriaProp, onBack }: { feria: Feria; onBack
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="info">Información</TabsTrigger>
           {canSeeFinancials && <TabsTrigger value="costos">Desglose de costos</TabsTrigger>}
+          {canSeeFinancials && <TabsTrigger value="proyeccion">Proyección</TabsTrigger>}
           <TabsTrigger value="personal"><Users className="mr-2 h-4 w-4" />Personal</TabsTrigger>
           <TabsTrigger value="inventario"><Package className="mr-2 h-4 w-4" />Inventario asignado</TabsTrigger>
           {canSeeFinancials && <TabsTrigger value="ventas">Ventas</TabsTrigger>}
@@ -336,6 +338,7 @@ export function FeriaDetail({ feria: feriaProp, onBack }: { feria: Feria; onBack
         <TabsContent value="personal"><FeriaStaffTab feriaId={feria.id} canManage={canManageStaff} /></TabsContent>
         <TabsContent value="inventario"><FeriaInventoryTab feriaId={feria.id} /></TabsContent>
         {canSeeFinancials && <TabsContent value="ventas"><FeriaSalesTab feriaId={feria.id} /></TabsContent>}
+        {canSeeFinancials && <TabsContent value="proyeccion"><FeriaProjectionTab feria={feria} /></TabsContent>}
       </Tabs>
     </div>
   );
