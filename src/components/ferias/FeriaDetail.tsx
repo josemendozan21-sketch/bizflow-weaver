@@ -108,9 +108,11 @@ export function FeriaDetail({ feria, onBack }: { feria: Feria; onBack: () => voi
   };
 
   const totalCosts = calcFeriaTotalCost(feria);
+  const totalBudget = calcFeriaTotalBudget(feria);
   const totalRevenue = useMemo(() => sales.reduce((s, x) => s + Number(x.total_amount), 0), [sales]);
   const profit = totalRevenue - totalCosts;
   const margin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
+  const budgetVariance = totalBudget - totalCosts;
 
   return (
     <div className="space-y-4">
