@@ -58,9 +58,8 @@ export interface Feria {
 }
 
 export interface ScenarioInput {
-  ticket_promedio: number;
-  visitantes_esperados: number;
-  tasa_conversion_pct: number;
+  pct_inventario: number;
+  pct_comision: number;
 }
 
 export function calcFeriaTotalCost(f: Feria): number {

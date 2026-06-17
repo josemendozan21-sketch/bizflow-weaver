@@ -27,21 +27,32 @@ export interface ScenarioResult {
   ingresoConIva: number;
   ingresoSinIva: number;
   utilidad: number;
+  comisionTotal: number;
+  utilidadNeta: number;
+  excedente: number;
   superaEquilibrio: boolean;
   pctVsEquilibrio: number;
 }
 
-export function calcScenario(s: ScenarioInput, feria: Feria, be: BreakEvenResult): ScenarioResult {
-  const visit = s.visitantes_esperados || 0;
-  const conv = (s.tasa_conversion_pct || 0) / 100;
-  const ticket = s.ticket_promedio || 0;
-  const unidades = visit * conv;
-  const ingresoConIva = unidades * ticket;
+export function calcScenario(
+  s: ScenarioInput,
+  feria: Feria,
+  be: BreakEvenResult,
+  inventarioConIva: number,
+  inventarioUnidades: number
+): ScenarioResult {
+  const pctInv = (s.pct_inventario || 0) / 100;
+  const pctCom = (s.pct_comision || 0) / 100;
+  const ingresoConIva = inventarioConIva * pctInv;
   const ingresoSinIva = ingresoConIva / (1 + (feria.iva_pct || 0) / 100);
+  const unidades = inventarioUnidades * pctInv;
   const utilidad = ingresoConIva - be.costsUsed;
+  const excedente = Math.max(0, ingresoSinIva - be.breakEvenWithoutIva);
+  const comisionTotal = excedente * pctCom;
+  const utilidadNeta = utilidad - comisionTotal;
   const superaEquilibrio = ingresoConIva >= be.breakEvenWithIva;
   const pctVsEquilibrio = be.breakEvenWithIva > 0 ? (ingresoConIva / be.breakEvenWithIva) * 100 : 0;
-  return { unidades, ingresoConIva, ingresoSinIva, utilidad, superaEquilibrio, pctVsEquilibrio };
+  return { unidades, ingresoConIva, ingresoSinIva, utilidad, comisionTotal, utilidadNeta, excedente, superaEquilibrio, pctVsEquilibrio };
 }
 
 export interface CommissionProposal {
