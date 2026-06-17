@@ -50,6 +50,12 @@ export function calcFeriaTotalCost(f: Feria): number {
     (f.lodging_cost || 0) + (f.transport_cost || 0) + (f.food_cost || 0) + (f.other_costs || 0);
 }
 
+export function calcFeriaTotalBudget(f: Feria): number {
+  return (f.budget_stand_cost || 0) + (f.budget_shipping_cost || 0) + (f.budget_tickets_cost || 0) +
+    (f.budget_advertising_cost || 0) + (f.budget_merchandise_cost || 0) + (f.budget_employees_cost || 0) +
+    (f.budget_lodging_cost || 0) + (f.budget_transport_cost || 0) + (f.budget_food_cost || 0) + (f.budget_other_costs || 0);
+}
+
 export interface FeriaInventory {
   id: string;
   feria_id: string;
