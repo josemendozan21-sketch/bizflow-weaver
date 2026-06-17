@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, MapPin, Calendar, Package, Hammer, Users, Pencil, Check, X, Plus } from "lucide-react";
-import { type Feria, useFeriaSales, calcFeriaTotalCost, useUpdateFeria } from "@/hooks/useFerias";
+import { type Feria, useFeriaSales, calcFeriaTotalCost, calcFeriaTotalBudget, useUpdateFeria } from "@/hooks/useFerias";
 import { FeriaInventoryTab } from "./FeriaInventoryTab";
 import { FeriaSalesTab } from "./FeriaSalesTab";
 import { FeriaStaffTab } from "./FeriaStaffTab";
