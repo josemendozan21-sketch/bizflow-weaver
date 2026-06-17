@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, MapPin, Calendar, Package, Hammer, Users, Pencil, Check, X, Plus } from "lucide-react";
-import { type Feria, useFeriaSales, calcFeriaTotalCost, calcFeriaTotalBudget, useUpdateFeria } from "@/hooks/useFerias";
+import { type Feria, useFeriaSales, calcFeriaTotalCost, calcFeriaTotalBudget, useUpdateFeria, useFerias } from "@/hooks/useFerias";
 import { FeriaInventoryTab } from "./FeriaInventoryTab";
 import { FeriaSalesTab } from "./FeriaSalesTab";
 import { FeriaStaffTab } from "./FeriaStaffTab";
@@ -43,7 +43,9 @@ const PREDEFINED_MATERIALS = [
   "Iluminación", "Extensiones eléctricas", "Bolsas de empaque", "Etiquetas de precio",
 ];
 
-export function FeriaDetail({ feria, onBack }: { feria: Feria; onBack: () => void }) {
+export function FeriaDetail({ feria: feriaProp, onBack }: { feria: Feria; onBack: () => void }) {
+  const { data: ferias = [] } = useFerias();
+  const feria = ferias.find((f) => f.id === feriaProp.id) || feriaProp;
   const { data: sales = [] } = useFeriaSales(feria.id);
   const { role } = useAuth();
   const canSeeFinancials = role === "admin" || role === "contabilidad";
