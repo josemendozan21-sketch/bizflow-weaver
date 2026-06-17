@@ -10,6 +10,15 @@ import { useInventoryMovements } from "@/hooks/useInventoryMovements";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { baseRefName } from "@/lib/canonicalBodyRef";
+
+const extractTipo = (ref: string): "Frío" | "Térmico" | null => {
+  const m = ref.match(/\((Frío|Frio|Térmico|Termico|Calor)\)/i);
+  if (!m) return null;
+  const t = m[1].toLowerCase();
+  if (t === "frío" || t === "frio") return "Frío";
+  return "Térmico";
+};
 
 const KIND_LABEL: Record<string, { label: string; cls: string }> = {
   entrada: { label: "Entrada", cls: "border-emerald-500/60 text-emerald-700 dark:text-emerald-400" },
@@ -35,17 +44,37 @@ export default function MovementHistoryTable() {
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
   const confirmReception = async (m: typeof movements[number]) => {
-    if (!m.stock_item_id) {
-      toast.error("Movimiento sin ítem de stock asociado.");
-      return;
-    }
     setConfirmingId(m.id);
     try {
-      // Read current stock to compute new values
+      // For cuerpos_referencias the canonical row is (base name + product_type),
+      // not the suffix-named row that stock_item_id may point to.
+      let targetId: string | null = m.stock_item_id;
+      if (m.category === "cuerpos_referencias") {
+        const base = baseRefName(m.item_name);
+        const tipo = extractTipo(m.item_name);
+        const { data: rows } = await supabase
+          .from("stock_items")
+          .select("id, name, product_type, available, in_process")
+          .eq("category", "cuerpos_referencias")
+          .eq("brand", m.brand);
+        const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+        const canonical = (rows || []).find(
+          (r: any) =>
+            norm(baseRefName(r.name)) === norm(base) &&
+            (!tipo || !r.product_type || r.product_type === tipo)
+        );
+        if (canonical) targetId = canonical.id;
+      }
+
+      if (!targetId) {
+        toast.error("Movimiento sin ítem de stock asociado.");
+        return;
+      }
+
       const { data: stock, error: stockErr } = await supabase
         .from("stock_items")
         .select("available, in_process")
-        .eq("id", m.stock_item_id)
+        .eq("id", targetId)
         .single();
       if (stockErr || !stock) throw stockErr || new Error("Ítem no encontrado");
 
@@ -55,7 +84,7 @@ export default function MovementHistoryTable() {
       const { error: updErr } = await supabase
         .from("stock_items")
         .update({ available: newAvailable, in_process: newInProcess } as any)
-        .eq("id", m.stock_item_id);
+        .eq("id", targetId);
       if (updErr) throw updErr;
 
       // For magical body references, mirror into body_stock so production views stay in sync
