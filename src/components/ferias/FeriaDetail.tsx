@@ -1,10 +1,13 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, MapPin, Calendar, Package, Hammer, Users } from "lucide-react";
-import { type Feria, useFeriaSales, calcFeriaTotalCost } from "@/hooks/useFerias";
+import { ArrowLeft, MapPin, Calendar, Package, Hammer, Users, Pencil, Check, X, Plus } from "lucide-react";
+import { type Feria, useFeriaSales, calcFeriaTotalCost, useUpdateFeria } from "@/hooks/useFerias";
 import { FeriaInventoryTab } from "./FeriaInventoryTab";
 import { FeriaSalesTab } from "./FeriaSalesTab";
 import { FeriaStaffTab } from "./FeriaStaffTab";
