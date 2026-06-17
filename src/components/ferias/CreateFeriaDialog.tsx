@@ -55,6 +55,9 @@ export function CreateFeriaDialog() {
     stand_cost: "0", shipping_cost: "0", tickets_cost: "0", advertising_cost: "0",
     merchandise_cost: "0", employees_cost: "0", lodging_cost: "0", transport_cost: "0",
     food_cost: "0", other_costs: "0",
+    budget_stand_cost: "0", budget_shipping_cost: "0", budget_tickets_cost: "0", budget_advertising_cost: "0",
+    budget_merchandise_cost: "0", budget_employees_cost: "0", budget_lodging_cost: "0", budget_transport_cost: "0",
+    budget_food_cost: "0", budget_other_costs: "0",
     materials_needed: [] as string[], status: "planificada", notes: "",
   };
   const [form, setForm] = usePersistedState<any>("draft:createFeria:form", INITIAL_FORM);
