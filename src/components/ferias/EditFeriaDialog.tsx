@@ -84,6 +84,7 @@ export function EditFeriaDialog({ feria }: { feria: Feria }) {
   };
 
   const totalCosts = COST_FIELDS.reduce((s, f) => s + (parseFloat(form[f.key]) || 0), 0);
+  const totalBudget = COST_FIELDS.reduce((s, f) => s + (parseFloat(form[f.budgetKey]) || 0), 0);
 
   const handleSubmit = async () => {
     await update.mutateAsync({
@@ -102,6 +103,16 @@ export function EditFeriaDialog({ feria }: { feria: Feria }) {
       transport_cost: parseFloat(form.transport_cost) || 0,
       food_cost: parseFloat(form.food_cost) || 0,
       other_costs: parseFloat(form.other_costs) || 0,
+      budget_stand_cost: parseFloat(form.budget_stand_cost) || 0,
+      budget_shipping_cost: parseFloat(form.budget_shipping_cost) || 0,
+      budget_tickets_cost: parseFloat(form.budget_tickets_cost) || 0,
+      budget_advertising_cost: parseFloat(form.budget_advertising_cost) || 0,
+      budget_merchandise_cost: parseFloat(form.budget_merchandise_cost) || 0,
+      budget_employees_cost: parseFloat(form.budget_employees_cost) || 0,
+      budget_lodging_cost: parseFloat(form.budget_lodging_cost) || 0,
+      budget_transport_cost: parseFloat(form.budget_transport_cost) || 0,
+      budget_food_cost: parseFloat(form.budget_food_cost) || 0,
+      budget_other_costs: parseFloat(form.budget_other_costs) || 0,
       materials_needed: form.materials_needed.length > 0 ? form.materials_needed : null,
       status: form.status,
       notes: form.notes || null,
