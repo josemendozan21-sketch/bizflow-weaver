@@ -459,10 +459,7 @@ const CategorizedInventoryPanel = ({
 
           {CATEGORIES.map((cat) => (
             <TabsContent key={cat} value={cat}>
-              {cat === "producto_terminado" && selectedBrand === "sweatspot" ? (
-                <SweatspotFinishedProducts />
-              ) : (
-                <Card>
+              <Card>
                   <CardHeader className="pb-3">
                      <div className="flex items-center justify-between">
                       <CardTitle className="text-base">
@@ -642,7 +639,6 @@ const CategorizedInventoryPanel = ({
                     )}
                   </CardContent>
                 </Card>
-              )}
             </TabsContent>
           ))}
         </Tabs>
