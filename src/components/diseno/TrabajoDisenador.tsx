@@ -115,13 +115,17 @@ function DesignerCard({ request: req }: { request: LogoRequest }) {
         advisor_feedback: null,
       });
 
-      // Update related production_order to move to estampacion
+      // Move related production_orders to estampación — but ONLY those that
+      // haven't already advanced past it. Otherwise an out-of-order logo
+      // approval drags orders already in dosificación / sellado / etc. back
+      // to "estampación pendiente" and forces operators to restart.
       if (req.client_name) {
         await supabase
           .from("production_orders")
           .update({ current_stage: "estampacion", stage_status: "pendiente" })
           .eq("client_name", req.client_name)
-          .eq("brand", req.brand);
+          .eq("brand", req.brand)
+          .in("current_stage", ["pendiente", "diseno", "produccion_cuerpos"]);
       }
 
       sonnerToast.success("Logo aprobado", {
