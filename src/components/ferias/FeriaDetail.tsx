@@ -48,6 +48,63 @@ export function FeriaDetail({ feria, onBack }: { feria: Feria; onBack: () => voi
   const canSeeFinancials = role === "admin" || role === "contabilidad";
   const canManageStaff = role === "admin" || role === "contabilidad" || role === "logistica";
   const canEdit = role === "admin";
+  const update = useUpdateFeria();
+
+  const [editingInfo, setEditingInfo] = useState(false);
+  const [infoForm, setInfoForm] = useState({
+    stand_number: "",
+    stand_size: "",
+    materials_needed: [] as string[],
+    notes: "",
+  });
+  const [customMaterial, setCustomMaterial] = useState("");
+
+  useState(() => {
+    setInfoForm({
+      stand_number: feria.stand_number || "",
+      stand_size: feria.stand_size || "",
+      materials_needed: feria.materials_needed || [],
+      notes: feria.notes || "",
+    });
+  });
+
+  const toggleMaterial = (m: string) => {
+    setInfoForm((p) => ({
+      ...p,
+      materials_needed: p.materials_needed.includes(m)
+        ? p.materials_needed.filter((x) => x !== m)
+        : [...p.materials_needed, m],
+    }));
+  };
+
+  const addCustomMaterial = () => {
+    const v = customMaterial.trim();
+    if (!v || infoForm.materials_needed.includes(v)) return;
+    setInfoForm({ ...infoForm, materials_needed: [...infoForm.materials_needed, v] });
+    setCustomMaterial("");
+  };
+
+  const startEditingInfo = () => {
+    setInfoForm({
+      stand_number: feria.stand_number || "",
+      stand_size: feria.stand_size || "",
+      materials_needed: feria.materials_needed || [],
+      notes: feria.notes || "",
+    });
+    setCustomMaterial("");
+    setEditingInfo(true);
+  };
+
+  const saveInfo = async () => {
+    await update.mutateAsync({
+      id: feria.id,
+      stand_number: infoForm.stand_number || null,
+      stand_size: infoForm.stand_size || null,
+      materials_needed: infoForm.materials_needed.length > 0 ? infoForm.materials_needed : null,
+      notes: infoForm.notes || null,
+    });
+    setEditingInfo(false);
+  };
 
   const totalCosts = calcFeriaTotalCost(feria);
   const totalRevenue = useMemo(() => sales.reduce((s, x) => s + Number(x.total_amount), 0), [sales]);
