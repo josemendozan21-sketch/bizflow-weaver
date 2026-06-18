@@ -861,7 +861,9 @@ const WholesaleOrdersInbox = () => {
                 : delivering?.target === "produccion"
                 ? "Solicitar producción de cuerpos"
                 : delivering?.target === "terminado"
-                ? "Entregar producto terminado"
+                ? (delivering?.order.brand === "sweatspot"
+                    ? "Entregar termos SIN LOGO (para marcar)"
+                    : "Entregar producto terminado")
                 : `Entregar a ${delivering ? TARGET_LABEL[delivering.target] : ""}`}
             </DialogTitle>
             <DialogDescription>
@@ -869,6 +871,27 @@ const WholesaleOrdersInbox = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
+            {delivering?.target === "terminado" && delivering?.order.brand === "sweatspot" && (() => {
+              const markable = findSweatspotMarkableStock(delivering.order);
+              const color = (delivering.order as any).silicone_color as string | undefined;
+              return (
+                <div className="rounded-md border bg-muted/40 p-2 text-xs space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">Color del termo:</span>
+                    {color ? <ColorChip color={color} /> : <span className="text-muted-foreground">sin color en el pedido</span>}
+                  </div>
+                  {markable ? (
+                    <div>
+                      Se descontará de: <span className="font-medium">{markable.name}</span>
+                      {markable.color ? ` · ${markable.color}` : ""} · <Badge variant="outline" className="ml-1">SIN LOGO</Badge>
+                      <span className="ml-2 text-muted-foreground">Disp. {markable.available}</span>
+                    </div>
+                  ) : (
+                    <p className="text-destructive">No hay termos SIN LOGO que coincidan con color y tamaño. Usa “Salir kit”.</p>
+                  )}
+                </div>
+              );
+            })()}
             {isSweatspotKit ? (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">
