@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Store, ShoppingCart, Package, ArrowDownToLine, BarChart3 } from "lucide-react";
+import { Store, ShoppingCart, Package, ArrowDownToLine, BarChart3, CalendarDays } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   usePosLocations,
@@ -16,6 +16,7 @@ import { PuntoInventario } from "@/components/puntos-venta/PuntoInventario";
 import { PuntoEntradaForm } from "@/components/puntos-venta/PuntoEntradaForm";
 import { PuntoVentaPOS } from "@/components/puntos-venta/PuntoVentaPOS";
 import { PuntoReportes } from "@/components/puntos-venta/PuntoReportes";
+import { PuntoCalendario } from "@/components/puntos-venta/PuntoCalendario";
 
 export default function PuntosVenta() {
   const { role } = useAuth();
@@ -43,6 +44,7 @@ export default function PuntosVenta() {
   const { data: movements = [] } = usePosMovements(locationId || null);
 
   const location = locations.find((l) => l.id === locationId);
+  const showCalendar = !!location && /92/.test(location.name);
 
   if (eligible.length === 0) {
     return (
@@ -100,6 +102,9 @@ export default function PuntosVenta() {
             <TabsTrigger value="entradas"><ArrowDownToLine className="h-4 w-4 mr-1" /> Entradas</TabsTrigger>
           )}
           <TabsTrigger value="reportes"><BarChart3 className="h-4 w-4 mr-1" /> Reportes</TabsTrigger>
+          {showCalendar && (
+            <TabsTrigger value="calendario"><CalendarDays className="h-4 w-4 mr-1" /> Calendario</TabsTrigger>
+          )}
         </TabsList>
 
         {!readOnly && (
@@ -132,6 +137,14 @@ export default function PuntosVenta() {
             />
           )}
         </TabsContent>
+
+        {showCalendar && (
+          <TabsContent value="calendario">
+            {locationId && (
+              <PuntoCalendario locationId={locationId} canEdit={canEdit} />
+            )}
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
