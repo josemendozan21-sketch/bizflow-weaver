@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useLogisticsStore } from "@/stores/logisticsStore";
 import { toast } from "sonner";
+import { baseRefName } from "@/lib/canonicalBodyRef";
 
 export interface ProductionOrder {
   id: string;
@@ -284,13 +285,17 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
         // Stock is NOT added until Inventarios confirms reception from the history view.
         try {
           // Ensure a stock_items row exists for this cuerpo (the trigger requires it)
-          let { data: stockItem } = await supabase
+          const tipo = /\((Frío|Frio)\)/i.test(canonicalMolde) ? "Frío" : /\((Térmico|Termico|Calor)\)/i.test(canonicalMolde) ? "Térmico" : null;
+          const base = baseRefName(canonicalMolde);
+          const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+          const { data: stockRows } = await supabase
             .from("stock_items")
-            .select("id")
+            .select("id, name, product_type")
             .eq("brand", po.brand)
-            .eq("category", "cuerpos_referencias")
-            .ilike("name", canonicalMolde)
-            .maybeSingle();
+            .eq("category", "cuerpos_referencias");
+          let stockItem = (stockRows || []).find(
+            (row: any) => norm(baseRefName(row.name)) === norm(base) && (!tipo || !row.product_type || row.product_type === tipo)
+          ) as { id: string } | undefined;
 
           if (!stockItem) {
             const { data: created } = await supabase
@@ -298,9 +303,10 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
               .insert({
                 brand: po.brand,
                 category: "cuerpos_referencias",
-                name: canonicalMolde,
+                name: base,
                 available: 0,
                 in_process: 0,
+                product_type: tipo,
               } as any)
               .select("id")
               .single();
