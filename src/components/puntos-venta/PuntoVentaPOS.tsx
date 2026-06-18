@@ -15,7 +15,7 @@ import { CustomerLookupBar } from "@/components/clientes/CustomerLookupBar";
 
 type Props = { locationId: string; products: PosProduct[] };
 const NUTRITION_BRAND = "Sweatspot Nutrición";
-const DISCOUNT_OPTIONS = [0, 5, 10, 15, 20] as const;
+const DISCOUNT_OPTIONS = [0, 5, 10, 15, 20, 50] as const;
 
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "")
@@ -39,7 +39,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
   const [clientCity, setClientCity] = useState("");
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [notes, setNotes] = useState("");
-  const [discountPct, setDiscountPct] = useState<number>(0);
+  const [itemDiscounts, setItemDiscounts] = useState<Record<string, number>>({});
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [uploadingProof, setUploadingProof] = useState(false);
   const [merchFile, setMerchFile] = useState<File | null>(null);
@@ -156,10 +156,27 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
     return map;
   }, [products]);
 
+  const clampPct = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
+  const discountedUnitPrice = (productId: string, salePrice: number) => {
+    const pct = clampPct(itemDiscounts[productId] ?? 0);
+    return Math.round(Number(salePrice) * (1 - pct / 100));
+  };
+  const overrideUnitPrices = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const c of cart) {
+      const pct = clampPct(itemDiscounts[c.product.id] ?? 0);
+      if (pct > 0) out[c.product.id] = discountedUnitPrice(c.product.id, Number(c.product.sale_price));
+    }
+    return out;
+  }, [cart, itemDiscounts]);
   const total = cart.reduce((a, b) => a + Number(b.product.sale_price) * b.quantity, 0);
   const totalUnits = cart.reduce((a, b) => a + b.quantity, 0);
-  const discountAmount = Math.round((total * discountPct) / 100);
-  const totalAfter = Math.max(0, total - discountAmount);
+  const totalAfter = cart.reduce(
+    (a, b) => a + discountedUnitPrice(b.product.id, Number(b.product.sale_price)) * b.quantity,
+    0
+  );
+  const discountAmount = Math.max(0, total - totalAfter);
+  const hasAnyDiscount = discountAmount > 0;
   // Precios incluyen IVA 19% — desglosamos base e IVA
   const ivaRate = 0.19;
   const base = totalAfter / (1 + ivaRate);
@@ -204,6 +221,9 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
   const removeItem = (id: string) =>
     setCart((prev) => prev.filter((c) => c.product.id !== id));
 
+  const setItemDiscount = (id: string, pct: number) =>
+    setItemDiscounts((prev) => ({ ...prev, [id]: clampPct(pct) }));
+
   const handleCustomerChange = (c: Customer | null) => {
     setCustomer(c);
     if (c) {
@@ -238,7 +258,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
         setClientName(""); setClientDoc(""); setClientEmail("");
         setClientPhone(""); setClientAddress(""); setClientCity("");
         setNotes("");
-        setDiscountPct(0);
+        setItemDiscounts({});
         setProofFile(null);
         setMerchFile(null);
       } catch (e: any) {
@@ -275,10 +295,14 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
         client_address: clientAddress || undefined,
         client_city: clientCity || undefined,
         customer_id: customer?.id ?? null,
-        notes: discountPct > 0
-          ? `[Descuento ${discountPct}%] ${notes}`.trim()
+        notes: hasAnyDiscount
+          ? `[Descuentos por producto: ${cart
+              .filter((c) => (itemDiscounts[c.product.id] ?? 0) > 0)
+              .map((c) => `${c.product.name} ${itemDiscounts[c.product.id]}%`)
+              .join(", ")}] ${notes}`.trim()
           : (notes || undefined),
         discount: discountAmount,
+        override_unit_prices: overrideUnitPrices,
         payment_proof_url,
         merchandise_photo_url,
       });
@@ -292,7 +316,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
       setClientAddress("");
       setClientCity("");
       setNotes("");
-      setDiscountPct(0);
+      setItemDiscounts({});
       setProofFile(null);
       setMerchFile(null);
     } catch (e: any) {
