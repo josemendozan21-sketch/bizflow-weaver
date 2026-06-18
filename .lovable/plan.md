@@ -1,28 +1,15 @@
-## Cambio en bandeja de pedidos al por mayor
+## Ocultar "Mandar a producir cuerpos" cuando hay stock suficiente (Magical mayor)
 
-**Objetivo:** Que los pedidos al por mayor de marcas distintas a Sweatspot (Magical Warmers, etc.) muestren solo 2 botones: **Mandar a producir cuerpos** y **Personalizar — Estampar**. Sweatspot sigue como está (Entregar termos + Salir kit).
+**Archivo:** `src/components/inventory/WholesaleOrdersInbox.tsx`
 
-### Archivo a editar
-`src/components/inventory/WholesaleOrdersInbox.tsx` — rama `else` del `renderCard` (líneas ~654–684).
+### Problema
+En los pedidos al por mayor de Magical (y otras marcas no-Sweatspot), el botón **Mandar a producir cuerpos** aparece incluso cuando el badge indica stock suficiente (ej. Stock: 662 para un pedido de 100 unidades). El usuario reporta que solo debería verse ese botón cuando NO hay stock o el stock es insuficiente.
 
-### Detalle de los botones para Magical mayor
+### Cambio
+En la rama `else` del `renderCard` (líneas ~654-672, pedidos mayor no-Sweatspot), envolver el botón "Mandar a producir cuerpos" en una condicional `{!enough && (...)}` para que solo se renderice cuando `enough === false`.
 
-1. **Mandar a producir cuerpos** → abre `openDeliver(o, "produccion")`. Ícono `Factory`. Es el botón primario cuando NO hay cuerpos suficientes; secundario si ya hay.
-2. **Personalizar — Estampar** → abre `openDeliver(o, "estampacion")`. Ícono `Paintbrush`. Es el botón primario cuando hay cuerpos disponibles (`enough`) o cuando ya fue marcado como `producedReady`; secundario en caso contrario.
-3. Se elimina por completo el botón **Entregar terminado** (y el badge/stock asociado a producto terminado en la tarjeta para no-Sweatspot).
-4. Se conserva el botón `X` para archivar.
+**Resultado esperado:**
+- `enough === true` (hay cuerpos suficientes o ya fueron producidos): solo aparece **Personalizar — Estampar** + botón X.
+- `enough === false` (sin stock o stock parcial): aparece **Personalizar — Estampar** (outline) + **Mandar a producir cuerpos** (default) + botón X.
 
-### Lógica de "primario vs secundario"
-
-- Si `producedReady || enough` (hay cuerpos listos en stock): "Personalizar" es `variant="default"`, "Mandar a producir" es `variant="outline"`.
-- Si no hay cuerpos suficientes: "Mandar a producir" es `variant="default"`, "Personalizar" es `variant="outline"`.
-
-### Badge de stock en la tarjeta (no-Sweatspot)
-
-Cambiar el `stockBadge` para no-Sweatspot: mostrar disponibilidad de **cuerpos/referencias** (lo que mide `enough`) en lugar de producto terminado. Verde si alcanza, ámbar si parcial, rojo si nada.
-
-### No tocar
-
-- Rama `kind === "detal"`.
-- Rama `isSweatspotMayor` (Sweatspot intacto).
-- `confirmDeliver`, `findSweatspotMarkableStock`, kit Sweatspot, diálogo, migraciones.
+Sin cambios en Sweatspot mayor, detal, badges de stock, ni diálogos.
