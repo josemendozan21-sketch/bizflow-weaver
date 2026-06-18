@@ -653,28 +653,16 @@ const WholesaleOrdersInbox = () => {
               </div>
             ) : (
               <div className="flex flex-wrap gap-2 pt-1">
-                <Button size="sm" variant={finishedEnough ? "default" : "outline"} className="flex-1 min-w-[150px] gap-1.5"
-                  onClick={() => openDeliver(o, "terminado")}
-                  title={`Producto terminado disponible: ${finishedStock}`}>
-                  <PackageCheck className="h-3.5 w-3.5" />
-                  Entregar terminado {finishedItem ? `(${finishedStock})` : "(sin stock)"}
+                <Button size="sm" variant={enough ? "default" : "outline"} className="flex-1 min-w-[150px] gap-1.5"
+                  onClick={() => openDeliver(o, "estampacion")}
+                  title={enough ? "Cuerpos disponibles para estampar" : "No hay cuerpos suficientes"}>
+                  <Paintbrush className="h-3.5 w-3.5" /> Personalizar — Estampar
                 </Button>
-                {producedReady ? (
-                  <Button size="sm" variant={finishedEnough ? "outline" : "default"} className="flex-1 min-w-[150px] gap-1.5"
-                    onClick={() => openDeliver(o, "estampacion")}>
-                    <Paintbrush className="h-3.5 w-3.5" /> Personalizar — Estampar
-                  </Button>
-                ) : enough ? (
-                  <Button size="sm" variant={finishedEnough ? "outline" : "default"} className="flex-1 min-w-[150px] gap-1.5"
-                    onClick={() => openDeliver(o, "estampacion")}>
-                    <Paintbrush className="h-3.5 w-3.5" /> Personalizar — Estampar
-                  </Button>
-                ) : (
-                  <Button size="sm" variant={finishedEnough ? "outline" : "default"} className="flex-1 min-w-[150px] gap-1.5"
-                    onClick={() => openDeliver(o, "produccion")}>
-                    <Factory className="h-3.5 w-3.5" /> Personalizar desde cero
-                  </Button>
-                )}
+                <Button size="sm" variant={enough ? "outline" : "default"} className="flex-1 min-w-[150px] gap-1.5"
+                  onClick={() => openDeliver(o, "produccion")}
+                  title="Enviar a producción para fabricar cuerpos">
+                  <Factory className="h-3.5 w-3.5" /> Mandar a producir cuerpos
+                </Button>
                 <Button size="sm" variant="outline" className="gap-1.5"
                   title="Quitar de la bandeja"
                   onClick={() => setConfirmArchive({ id: o.id, clientName: o.client_name })}>
