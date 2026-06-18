@@ -16,7 +16,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Inbox, Package, Truck, Paintbrush, Factory, Calendar, User as UserIcon, ShoppingBag, Search, X, RotateCcw } from "lucide-react";
+import { Inbox, Package, Truck, Paintbrush, Factory, Calendar, User as UserIcon, ShoppingBag, Search, X, RotateCcw, PackageCheck } from "lucide-react";
 
 import { useInventory } from "@/hooks/useInventory";
 import { useAuth } from "@/contexts/AuthContext";
@@ -42,12 +42,13 @@ const ACTIVE_STATUSES = [
   "dosificacion", "sellado", "recorte", "empaque", "listo",
 ];
 
-type Target = "estampacion" | "produccion" | "logistica";
+type Target = "estampacion" | "produccion" | "logistica" | "terminado";
 
 const TARGET_LABEL: Record<Target, string> = {
   estampacion: "Estampación",
   produccion: "Producción",
   logistica: "Logística",
+  terminado: "Logística (producto terminado)",
 };
 
 type BandejaTab = "mayor" | "detal" | "entregados";
@@ -421,16 +422,20 @@ const WholesaleOrdersInbox = () => {
       toast.success(`Entregado a Logística (${lineRows.length} ${lineRows.length === 1 ? "ítem" : "ítems"}).`);
     } else {
       const cat = target === "estampacion" ? "cuerpos_referencias" : "producto_terminado";
+      const area = target === "terminado" ? "logistica" : target;
       const item = findStockItem(order, cat);
+      const reasonPrefix = target === "terminado"
+        ? `Entrega producto terminado — Pedido de ${order.client_name}`
+        : `Pedido al por mayor de ${order.client_name}`;
       const { error } = await supabase.from("inventory_movements").insert({
         stock_item_id: item?.id ?? null,
-        item_name: order.product,
+        item_name: item?.name ?? order.product,
         brand: order.brand,
         category: cat,
         quantity,
         direction: "entrega",
-        area: target,
-        reason: `Pedido al por mayor de ${order.client_name}` + (obs ? ` — ${obs}` : ""),
+        area,
+        reason: reasonPrefix + (obs ? ` — ${obs}` : ""),
         order_id: order.id,
         recorded_by: user.id,
         recorded_by_name: user.email || "Inventarios",
@@ -451,6 +456,9 @@ const WholesaleOrdersInbox = () => {
     const isSweatspotMayor = kind === "mayor" && o.brand === "sweatspot";
     const item = findStockItem(o, kind === "mayor" ? "cuerpos_referencias" : "producto_terminado");
     const stock = item ? Number(item.available) : null;
+    const finishedItem = kind === "mayor" ? findStockItem(o, "producto_terminado") : null;
+    const finishedStock = finishedItem ? Number(finishedItem.available) : 0;
+    const finishedEnough = finishedStock >= o.quantity;
     const producedReady = kind === "mayor" && producedIds.has(o.id);
     const enough = producedReady || (stock !== null && stock >= o.quantity);
     const stockBadge = isSweatspotMayor
@@ -520,45 +528,48 @@ const WholesaleOrdersInbox = () => {
                 </Button>
               </div>
             ) : isSweatspotMayor ? (
-              <div className="pt-1 flex gap-2">
-                <Button size="sm" variant="default" className="w-full gap-1.5"
-                  onClick={() => openDeliver(o, "estampacion")}>
-                  <Paintbrush className="h-3.5 w-3.5" /> Entregar Kit a Estampación
-                </Button>
-                <Button size="sm" variant="outline" className="gap-1.5"
-                  title="Quitar de la bandeja"
-                  onClick={() => setConfirmArchive({ id: o.id, clientName: o.client_name })}>
-                  <X className="h-3.5 w-3.5" />
-                </Button>
+              <div className="pt-1 space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant={finishedEnough ? "default" : "outline"} className="flex-1 min-w-[150px] gap-1.5"
+                    onClick={() => openDeliver(o, "terminado")}
+                    title={`Producto terminado disponible: ${finishedStock}`}>
+                    <PackageCheck className="h-3.5 w-3.5" />
+                    Entregar terminado {finishedItem ? `(${finishedStock})` : "(sin stock)"}
+                  </Button>
+                  <Button size="sm" variant={finishedEnough ? "outline" : "default"} className="flex-1 min-w-[150px] gap-1.5"
+                    onClick={() => openDeliver(o, "estampacion")}>
+                    <Paintbrush className="h-3.5 w-3.5" /> Personalizar (Kit)
+                  </Button>
+                  <Button size="sm" variant="outline" className="gap-1.5"
+                    title="Quitar de la bandeja"
+                    onClick={() => setConfirmArchive({ id: o.id, clientName: o.client_name })}>
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="flex flex-wrap gap-2 pt-1">
+                <Button size="sm" variant={finishedEnough ? "default" : "outline"} className="flex-1 min-w-[150px] gap-1.5"
+                  onClick={() => openDeliver(o, "terminado")}
+                  title={`Producto terminado disponible: ${finishedStock}`}>
+                  <PackageCheck className="h-3.5 w-3.5" />
+                  Entregar terminado {finishedItem ? `(${finishedStock})` : "(sin stock)"}
+                </Button>
                 {producedReady ? (
-                  <Button size="sm" variant="default" className="flex-1 min-w-[140px] gap-1.5"
+                  <Button size="sm" variant={finishedEnough ? "outline" : "default"} className="flex-1 min-w-[150px] gap-1.5"
                     onClick={() => openDeliver(o, "estampacion")}>
-                    <Paintbrush className="h-3.5 w-3.5" /> Entregar a Estampación
-                  </Button>
-                ) : (stock === null || stock === 0) ? (
-                  <Button size="sm" variant="default" className="flex-1 min-w-[140px] gap-1.5"
-                    onClick={() => openDeliver(o, "produccion")}>
-                    <Factory className="h-3.5 w-3.5" /> Producir cuerpos
+                    <Paintbrush className="h-3.5 w-3.5" /> Personalizar — Estampar
                   </Button>
                 ) : enough ? (
-                  <Button size="sm" variant="default" className="flex-1 min-w-[140px] gap-1.5"
+                  <Button size="sm" variant={finishedEnough ? "outline" : "default"} className="flex-1 min-w-[150px] gap-1.5"
                     onClick={() => openDeliver(o, "estampacion")}>
-                    <Paintbrush className="h-3.5 w-3.5" /> Entregar a Estampación
+                    <Paintbrush className="h-3.5 w-3.5" /> Personalizar — Estampar
                   </Button>
                 ) : (
-                  <>
-                    <Button size="sm" variant="outline" className="flex-1 min-w-[140px] gap-1.5"
-                      onClick={() => openDeliver(o, "estampacion")}>
-                      <Paintbrush className="h-3.5 w-3.5" /> Entregar a Estampación
-                    </Button>
-                    <Button size="sm" variant="default" className="flex-1 min-w-[140px] gap-1.5"
-                      onClick={() => openDeliver(o, "produccion")}>
-                      <Factory className="h-3.5 w-3.5" /> Producir cuerpos
-                    </Button>
-                  </>
+                  <Button size="sm" variant={finishedEnough ? "outline" : "default"} className="flex-1 min-w-[150px] gap-1.5"
+                    onClick={() => openDeliver(o, "produccion")}>
+                    <Factory className="h-3.5 w-3.5" /> Personalizar desde cero
+                  </Button>
                 )}
                 <Button size="sm" variant="outline" className="gap-1.5"
                   title="Quitar de la bandeja"
@@ -745,6 +756,8 @@ const WholesaleOrdersInbox = () => {
                 ? "Entregar Kit a Estampación"
                 : delivering?.target === "produccion"
                 ? "Solicitar producción de cuerpos"
+                : delivering?.target === "terminado"
+                ? "Entregar producto terminado"
                 : `Entregar a ${delivering ? TARGET_LABEL[delivering.target] : ""}`}
             </DialogTitle>
             <DialogDescription>
