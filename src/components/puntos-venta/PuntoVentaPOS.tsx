@@ -570,27 +570,71 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
           ) : (
             <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
               {cart.map((c) => {
-                const lineTotal = Number(c.product.sale_price) * c.quantity;
+                const pct = clampPct(itemDiscounts[c.product.id] ?? 0);
+                const unit = Number(c.product.sale_price);
+                const discUnit = discountedUnitPrice(c.product.id, unit);
+                const lineTotal = unit * c.quantity;
+                const lineAfter = discUnit * c.quantity;
                 return (
-                  <div key={c.product.id} className="flex items-center gap-2 p-2 rounded-md border bg-card">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{c.product.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {fmt(Number(c.product.sale_price))} c/u · Subtotal {fmt(lineTotal)}
-                      </p>
+                  <div key={c.product.id} className="p-2 rounded-md border bg-card space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{c.product.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {pct > 0 ? (
+                            <>
+                              <span className="line-through">{fmt(unit)}</span>{" "}
+                              <span className="text-destructive font-medium">{fmt(discUnit)}</span> c/u · Subtotal{" "}
+                              <span className="line-through">{fmt(lineTotal)}</span>{" "}
+                              <span className="text-destructive font-medium">{fmt(lineAfter)}</span>
+                            </>
+                          ) : (
+                            <>{fmt(unit)} c/u · Subtotal {fmt(lineTotal)}</>
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => updateQty(c.product.id, -1)}>
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <span className="text-sm w-6 text-center font-semibold">{c.quantity}</span>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => updateQty(c.product.id, 1)}>
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => removeItem(c.product.id)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => updateQty(c.product.id, -1)}>
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <span className="text-sm w-6 text-center font-semibold">{c.quantity}</span>
-                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => updateQty(c.product.id, 1)}>
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => removeItem(c.product.id)}>
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
+                    {!isCourtesy && (
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className="text-[10px] text-muted-foreground mr-1">Desc:</span>
+                        {DISCOUNT_OPTIONS.map((opt) => (
+                          <Button
+                            key={opt}
+                            type="button"
+                            size="sm"
+                            variant={pct === opt ? "default" : "outline"}
+                            className="h-6 px-1.5 text-[10px]"
+                            onClick={() => setItemDiscount(c.product.id, opt)}
+                          >
+                            {opt === 0 ? "Sin" : `${opt}%`}
+                          </Button>
+                        ))}
+                        <div className="flex items-center gap-1 ml-1">
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={pct === 0 && !(c.product.id in itemDiscounts) ? "" : pct}
+                            onChange={(e) => setItemDiscount(c.product.id, Number(e.target.value) || 0)}
+                            placeholder="%"
+                            className="h-6 w-14 text-[10px] px-1.5"
+                          />
+                          <span className="text-[10px] text-muted-foreground">%</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -615,38 +659,18 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
               </>
             )}
             {!isCourtesy && (
-            <div className="pt-1.5 border-t space-y-1.5">
-              <div>
-                <Label className="text-xs text-muted-foreground">Descuento</Label>
-                <div className="flex gap-1 mt-1">
-                  {DISCOUNT_OPTIONS.map((pct) => (
-                    <Button
-                      key={pct}
-                      type="button"
-                      size="sm"
-                      variant={discountPct === pct ? "default" : "outline"}
-                      className="flex-1 h-7 text-xs px-0"
-                      onClick={() => setDiscountPct(pct)}
-                      disabled={cart.length === 0}
-                    >
-                      {pct === 0 ? "Sin" : `${pct}%`}
-                    </Button>
-                  ))}
+            hasAnyDiscount && (
+              <div className="pt-1.5 border-t space-y-1.5">
+                <div className="flex justify-between text-sm text-muted-foreground line-through">
+                  <span>Total sin descuento</span>
+                  <span>{fmt(total)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-destructive font-medium">
+                  <span>Descuento total</span>
+                  <span>− {fmt(discountAmount)}</span>
                 </div>
               </div>
-              {discountPct > 0 && (
-                <>
-                  <div className="flex justify-between text-sm text-muted-foreground line-through">
-                    <span>Total sin descuento</span>
-                    <span>{fmt(total)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm text-destructive font-medium">
-                    <span>Descuento {discountPct}%</span>
-                    <span>− {fmt(discountAmount)}</span>
-                  </div>
-                </>
-              )}
-            </div>
+            )
             )}
             {isCourtesy ? (
               <div className="flex justify-between items-center pt-1.5 border-t">
