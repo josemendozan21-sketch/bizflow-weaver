@@ -33,6 +33,7 @@ import {
   Snowflake,
   ShieldCheck,
   Search,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useProductionOrders, type ProductionOrder, type BodyTask, type ProductionStageLog } from "@/hooks/useProductionOrders";
