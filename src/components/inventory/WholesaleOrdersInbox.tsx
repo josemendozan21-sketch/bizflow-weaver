@@ -70,6 +70,57 @@ const normalizeSize = (product: string): string | null => {
 
 const capitalize = (s: string) => s ? s[0].toUpperCase() + s.slice(1).toLowerCase() : s;
 
+// ---------- Sweatspot color swatch ----------
+const COLOR_SWATCH: Record<string, string> = {
+  rosado: "#f9a8d4",
+  rosa: "#f9a8d4",
+  salmon: "#fda4af",
+  rojo: "#dc2626",
+  azul: "#2563eb",
+  morado: "#7c3aed",
+  negro: "#111827",
+  blanco: "#f9fafb",
+  amarillo: "#facc15",
+  "verde militar": "#4d5d3a",
+  "verde biche": "#84cc16",
+  verde: "#22c55e",
+  transparente: "transparent",
+  naranja: "#fb923c",
+  gris: "#9ca3af",
+};
+
+const normalizeColor = (s?: string | null) =>
+  (s || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+const swatchFor = (color?: string | null): string | null => {
+  const c = normalizeColor(color);
+  if (!c) return null;
+  return COLOR_SWATCH[c] ?? null;
+};
+
+const ColorChip = ({ color }: { color?: string | null }) => {
+  if (!color) return null;
+  const hex = swatchFor(color);
+  const isTransparent = normalizeColor(color) === "transparente";
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium">
+      <span
+        className="inline-block h-2.5 w-2.5 rounded-full border"
+        style={{
+          background: isTransparent
+            ? "repeating-linear-gradient(45deg,#fff,#fff 2px,#cbd5e1 2px,#cbd5e1 4px)"
+            : hex ?? "#e5e7eb",
+        }}
+      />
+      {color}
+    </span>
+  );
+};
+
 const buildSweatspotKit = (order: MayorOrder): KitComponent[] => {
   const qty = order.quantity;
   const color = capitalize((order as any).silicone_color || "");
