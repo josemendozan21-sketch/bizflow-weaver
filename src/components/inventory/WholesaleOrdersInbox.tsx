@@ -502,9 +502,21 @@ const WholesaleOrdersInbox = () => {
       toast.success(`Entregado a Logística (${lineRows.length} ${lineRows.length === 1 ? "ítem" : "ítems"}).`);
     } else {
       const cat = target === "estampacion" ? "cuerpos_referencias" : "producto_terminado";
-      const area = target === "terminado" ? "logistica" : target;
-      const item = findStockItem(order, cat);
-      const reasonPrefix = target === "terminado"
+      const isSweatspotMarkable = target === "terminado" && order.brand === "sweatspot";
+      const area = target === "terminado"
+        ? (isSweatspotMarkable ? "estampacion" : "logistica")
+        : target;
+      const item = isSweatspotMarkable
+        ? findSweatspotMarkableStock(order)
+        : findStockItem(order, cat);
+      if (isSweatspotMarkable && !item) {
+        setBusy(false);
+        toast.error("No hay termos SIN LOGO que coincidan con color y tamaño. Usa Salir kit.");
+        return;
+      }
+      const reasonPrefix = isSweatspotMarkable
+        ? `Entrega termos SIN LOGO para marcación — Pedido de ${order.client_name}`
+        : target === "terminado"
         ? `Entrega producto terminado — Pedido de ${order.client_name}`
         : `Pedido al por mayor de ${order.client_name}`;
       const { error } = await supabase.from("inventory_movements").insert({
