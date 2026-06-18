@@ -711,3 +711,98 @@ export function useRegisterPosCourtesy(locationId: string) {
     },
   });
 }
+
+/* =========================================================================
+ * Calendario del punto (turnos, días cerrados, refuerzos, actividades)
+ * =======================================================================*/
+export type PosCalendarEventType = "turno" | "cerrado" | "refuerzo" | "actividad";
+
+export type PosCalendarEvent = {
+  id: string;
+  location_id: string;
+  event_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  event_type: PosCalendarEventType;
+  title: string;
+  notes: string | null;
+  assigned_to: string | null;
+  created_by: string | null;
+  created_by_name: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export function usePosCalendarEvents(locationId: string | null) {
+  return useQuery({
+    queryKey: ["pos_calendar_events", locationId],
+    queryFn: async () => {
+      if (!locationId) return [] as PosCalendarEvent[];
+      const { data, error } = await supabase
+        .from("pos_calendar_events")
+        .select("*")
+        .eq("location_id", locationId)
+        .order("event_date", { ascending: true })
+        .order("start_time", { ascending: true, nullsFirst: true });
+      if (error) throw error;
+      return (data ?? []) as PosCalendarEvent[];
+    },
+    enabled: !!locationId,
+  });
+}
+
+export function useUpsertPosCalendarEvent(locationId: string) {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async (input: {
+      id?: string;
+      event_date: string;
+      start_time?: string | null;
+      end_time?: string | null;
+      event_type: PosCalendarEventType;
+      title: string;
+      notes?: string | null;
+      assigned_to?: string | null;
+    }) => {
+      const payload = {
+        location_id: locationId,
+        event_date: input.event_date,
+        start_time: input.start_time ?? null,
+        end_time: input.end_time ?? null,
+        event_type: input.event_type,
+        title: input.title,
+        notes: input.notes ?? null,
+        assigned_to: input.assigned_to ?? null,
+        created_by: user?.id ?? null,
+        created_by_name: user?.email ?? null,
+      };
+      if (input.id) {
+        const { error } = await supabase
+          .from("pos_calendar_events")
+          .update(payload)
+          .eq("id", input.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("pos_calendar_events").insert(payload);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pos_calendar_events", locationId] });
+    },
+  });
+}
+
+export function useDeletePosCalendarEvent(locationId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("pos_calendar_events").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pos_calendar_events", locationId] });
+    },
+  });
+}
