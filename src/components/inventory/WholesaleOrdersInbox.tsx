@@ -16,7 +16,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Inbox, Package, Truck, Paintbrush, Factory, Calendar, User as UserIcon, ShoppingBag, Search, X, RotateCcw } from "lucide-react";
+import { Inbox, Package, Truck, Paintbrush, Factory, Calendar, User as UserIcon, ShoppingBag, Search, X, RotateCcw, PackageCheck } from "lucide-react";
 
 import { useInventory } from "@/hooks/useInventory";
 import { useAuth } from "@/contexts/AuthContext";
@@ -42,12 +42,13 @@ const ACTIVE_STATUSES = [
   "dosificacion", "sellado", "recorte", "empaque", "listo",
 ];
 
-type Target = "estampacion" | "produccion" | "logistica";
+type Target = "estampacion" | "produccion" | "logistica" | "terminado";
 
 const TARGET_LABEL: Record<Target, string> = {
   estampacion: "Estampación",
   produccion: "Producción",
   logistica: "Logística",
+  terminado: "Logística (producto terminado)",
 };
 
 type BandejaTab = "mayor" | "detal" | "entregados";
