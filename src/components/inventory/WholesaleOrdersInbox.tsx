@@ -316,6 +316,35 @@ const WholesaleOrdersInbox = () => {
     return { ...primary, available: totalAvailable };
   };
 
+  // Sweatspot: encuentra el ítem SIN LOGO que coincide con color + tamaño del pedido
+  const findSweatspotMarkableStock = (o: MayorOrder) => {
+    if (o.brand !== "sweatspot") return undefined;
+    const orderColor = normalizeColor((o as any).silicone_color);
+    const sizeMatch = o.product.match(/(\d{2,4})\s*ml/i);
+    const size = sizeMatch ? sizeMatch[1] : null;
+    const isJugueton = /juguet/i.test(o.product);
+    const candidates = stockItems.filter((s: any) => {
+      if (s.brand !== "sweatspot") return false;
+      if (s.category !== "producto_terminado") return false;
+      const logo = (s.logo || "").toString().toLowerCase().trim();
+      const isSinLogo = !logo || logo === "sin logo" || logo === "null";
+      if (!isSinLogo) return false;
+      if (orderColor && normalizeColor(s.color) !== orderColor) return false;
+      if (size) {
+        const name = (s.name || "").toLowerCase();
+        if (!name.includes(size)) return false;
+        if (isJugueton !== /juguet/i.test(name)) return false;
+      }
+      return true;
+    });
+    if (candidates.length === 0) return undefined;
+    const totalAvailable = candidates.reduce((sum: number, s: any) => sum + (Number(s.available) || 0), 0);
+    const primary = candidates.reduce((a: any, b: any) =>
+      (Number(b.available) || 0) > (Number(a.available) || 0) ? b : a
+    );
+    return { ...primary, available: totalAvailable };
+  };
+
   const pending = useMemo(
     () => orders.filter((o) => !deliveredIds.has(o.id) && !archivedIds.has(o.id) && !inProductionIds.has(o.id)),
     [orders, deliveredIds, archivedIds, inProductionIds]
