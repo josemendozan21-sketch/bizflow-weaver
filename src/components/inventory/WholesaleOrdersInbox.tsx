@@ -422,16 +422,20 @@ const WholesaleOrdersInbox = () => {
       toast.success(`Entregado a Logística (${lineRows.length} ${lineRows.length === 1 ? "ítem" : "ítems"}).`);
     } else {
       const cat = target === "estampacion" ? "cuerpos_referencias" : "producto_terminado";
+      const area = target === "terminado" ? "logistica" : target;
       const item = findStockItem(order, cat);
+      const reasonPrefix = target === "terminado"
+        ? `Entrega producto terminado — Pedido de ${order.client_name}`
+        : `Pedido al por mayor de ${order.client_name}`;
       const { error } = await supabase.from("inventory_movements").insert({
         stock_item_id: item?.id ?? null,
-        item_name: order.product,
+        item_name: item?.name ?? order.product,
         brand: order.brand,
         category: cat,
         quantity,
         direction: "entrega",
-        area: target,
-        reason: `Pedido al por mayor de ${order.client_name}` + (obs ? ` — ${obs}` : ""),
+        area,
+        reason: reasonPrefix + (obs ? ` — ${obs}` : ""),
         order_id: order.id,
         recorded_by: user.id,
         recorded_by_name: user.email || "Inventarios",
