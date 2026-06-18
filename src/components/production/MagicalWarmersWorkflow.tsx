@@ -43,6 +43,7 @@ import { BodyRequirementsPanel } from "./BodyRequirementsPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { OperatorPromptDialog } from "./OperatorPromptDialog";
 import { StageLogsList } from "./StageLogsList";
+import { baseRefName } from "@/lib/canonicalBodyRef";
 
 type MagicalStage = "produccion_cuerpos" | "estampacion" | "dosificacion" | "sellado" | "descristalizacion" | "recorte" | "empaque" | "listo";
 
@@ -599,22 +600,26 @@ export const MagicalWarmersWorkflow = () => {
                   return;
                 }
                 // Ensure a stock_items row exists (trigger requires it), but don't add stock yet.
-                let { data: stockRow } = await supabase
+                // Cuerpos are stored in stock_items as base name + product_type, while movements use the visible suffix.
+                const { data: stockRows } = await supabase
                   .from("stock_items")
-                  .select("id")
+                  .select("id, name, product_type")
                   .eq("brand", "magical")
-                  .eq("category", "cuerpos_referencias")
-                  .ilike("name", canonicalRef)
-                  .maybeSingle();
+                  .eq("category", "cuerpos_referencias");
+                const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+                let stockRow = (stockRows || []).find(
+                  (row: any) => norm(baseRefName(row.name)) === norm(baseRef) && (!row.product_type || row.product_type === tipoLabel)
+                ) as { id: string } | undefined;
                 if (!stockRow) {
                   const { data: created } = await supabase.from("stock_items").insert({
-                    name: canonicalRef,
+                    name: baseRef,
                     brand: "magical",
                     category: "cuerpos_referencias",
                     available: 0,
                     in_process: 0,
                     unit: "unidades",
                     min_stock: 0,
+                    product_type: tipoLabel,
                   } as any).select("id").single();
                   stockRow = created;
                 }
@@ -622,7 +627,7 @@ export const MagicalWarmersWorkflow = () => {
                 // Stock will be added to body_stock + stock_items only when Inventarios
                 // confirms reception from the Historial de movimientos.
                 const { data: { user: authUser } } = await supabase.auth.getUser();
-                await supabase.from("inventory_movements").insert({
+                const { error: movErr } = await supabase.from("inventory_movements").insert({
                   stock_item_id: stockRow?.id ?? null,
                   item_name: canonicalRef,
                   brand: "magical",
@@ -638,6 +643,10 @@ export const MagicalWarmersWorkflow = () => {
                   recorded_by_name: authUser?.email ?? "Producción",
                   reception_confirmed: false,
                 } as any);
+                if (movErr) {
+                  toast.error(`La producción quedó finalizada, pero no llegó a Inventarios: ${movErr.message}. Avisa al administrador.`);
+                  return;
+                }
                 // Notify inventarios so they can confirm reception
                 await supabase.from("notifications").insert({
                   target_role: "inventarios",
