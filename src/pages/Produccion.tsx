@@ -8,6 +8,7 @@ import { MagicalWarmersWorkflow } from "@/components/production/MagicalWarmersWo
 import { SweatspotWorkflow } from "@/components/production/SweatspotWorkflow";
 import { EstampacionProductionView } from "@/components/production/EstampacionProductionView";
 import { RollCutsView } from "@/components/production/RollCutsView";
+import ProductionMovementHistory from "@/components/production/ProductionMovementHistory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProductionAlerts } from "@/hooks/useProductionAlerts";
 
@@ -16,7 +17,7 @@ const Produccion = () => {
   const isReadOnly = role === "asesor_comercial" || role === "usuario_visual";
   const isEstampacion = role === "estampacion";
   const [selectedBrand, setSelectedBrand] = useState<ProductionBrand | null>(null);
-  const [topTab, setTopTab] = useState<"marcas" | "rollos">("marcas");
+  const [topTab, setTopTab] = useState<"marcas" | "rollos" | "historial">("marcas");
 
   // Show toast popups when new production orders arrive
   useProductionAlerts();
@@ -70,12 +71,16 @@ const Produccion = () => {
           <TabsList>
             <TabsTrigger value="marcas">Marcas</TabsTrigger>
             <TabsTrigger value="rollos">Corte de Rollos</TabsTrigger>
+            <TabsTrigger value="historial">Historial</TabsTrigger>
           </TabsList>
           <TabsContent value="marcas" className="mt-4">
             <ProductionBrandSelector selectedBrand={selectedBrand} onSelectBrand={setSelectedBrand} />
           </TabsContent>
           <TabsContent value="rollos" className="mt-4">
             <RollCutsView />
+          </TabsContent>
+          <TabsContent value="historial" className="mt-4">
+            <ProductionMovementHistory />
           </TabsContent>
         </Tabs>
       )}
