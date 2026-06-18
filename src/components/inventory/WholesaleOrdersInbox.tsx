@@ -756,6 +756,8 @@ const WholesaleOrdersInbox = () => {
                 ? "Entregar Kit a Estampación"
                 : delivering?.target === "produccion"
                 ? "Solicitar producción de cuerpos"
+                : delivering?.target === "terminado"
+                ? "Entregar producto terminado"
                 : `Entregar a ${delivering ? TARGET_LABEL[delivering.target] : ""}`}
             </DialogTitle>
             <DialogDescription>
