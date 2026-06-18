@@ -658,11 +658,13 @@ const WholesaleOrdersInbox = () => {
                   title={enough ? "Cuerpos disponibles para estampar" : "No hay cuerpos suficientes"}>
                   <Paintbrush className="h-3.5 w-3.5" /> Personalizar — Estampar
                 </Button>
-                <Button size="sm" variant={enough ? "outline" : "default"} className="flex-1 min-w-[150px] gap-1.5"
-                  onClick={() => openDeliver(o, "produccion")}
-                  title="Enviar a producción para fabricar cuerpos">
-                  <Factory className="h-3.5 w-3.5" /> Mandar a producir cuerpos
-                </Button>
+                {!enough && (
+                  <Button size="sm" variant="default" className="flex-1 min-w-[150px] gap-1.5"
+                    onClick={() => openDeliver(o, "produccion")}
+                    title="Enviar a producción para fabricar cuerpos">
+                    <Factory className="h-3.5 w-3.5" /> Mandar a producir cuerpos
+                  </Button>
+                )}
                 <Button size="sm" variant="outline" className="gap-1.5"
                   title="Quitar de la bandeja"
                   onClick={() => setConfirmArchive({ id: o.id, clientName: o.client_name })}>
