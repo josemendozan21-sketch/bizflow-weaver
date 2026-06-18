@@ -70,6 +70,57 @@ const normalizeSize = (product: string): string | null => {
 
 const capitalize = (s: string) => s ? s[0].toUpperCase() + s.slice(1).toLowerCase() : s;
 
+// ---------- Sweatspot color swatch ----------
+const COLOR_SWATCH: Record<string, string> = {
+  rosado: "#f9a8d4",
+  rosa: "#f9a8d4",
+  salmon: "#fda4af",
+  rojo: "#dc2626",
+  azul: "#2563eb",
+  morado: "#7c3aed",
+  negro: "#111827",
+  blanco: "#f9fafb",
+  amarillo: "#facc15",
+  "verde militar": "#4d5d3a",
+  "verde biche": "#84cc16",
+  verde: "#22c55e",
+  transparente: "transparent",
+  naranja: "#fb923c",
+  gris: "#9ca3af",
+};
+
+const normalizeColor = (s?: string | null) =>
+  (s || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+const swatchFor = (color?: string | null): string | null => {
+  const c = normalizeColor(color);
+  if (!c) return null;
+  return COLOR_SWATCH[c] ?? null;
+};
+
+const ColorChip = ({ color }: { color?: string | null }) => {
+  if (!color) return null;
+  const hex = swatchFor(color);
+  const isTransparent = normalizeColor(color) === "transparente";
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium">
+      <span
+        className="inline-block h-2.5 w-2.5 rounded-full border"
+        style={{
+          background: isTransparent
+            ? "repeating-linear-gradient(45deg,#fff,#fff 2px,#cbd5e1 2px,#cbd5e1 4px)"
+            : hex ?? "#e5e7eb",
+        }}
+      />
+      {color}
+    </span>
+  );
+};
+
 const buildSweatspotKit = (order: MayorOrder): KitComponent[] => {
   const qty = order.quantity;
   const color = capitalize((order as any).silicone_color || "");
@@ -265,6 +316,35 @@ const WholesaleOrdersInbox = () => {
     return { ...primary, available: totalAvailable };
   };
 
+  // Sweatspot: encuentra el ítem SIN LOGO que coincide con color + tamaño del pedido
+  const findSweatspotMarkableStock = (o: MayorOrder) => {
+    if (o.brand !== "sweatspot") return undefined;
+    const orderColor = normalizeColor((o as any).silicone_color);
+    const sizeMatch = o.product.match(/(\d{2,4})\s*ml/i);
+    const size = sizeMatch ? sizeMatch[1] : null;
+    const isJugueton = /juguet/i.test(o.product);
+    const candidates = stockItems.filter((s: any) => {
+      if (s.brand !== "sweatspot") return false;
+      if (s.category !== "producto_terminado") return false;
+      const logo = (s.logo || "").toString().toLowerCase().trim();
+      const isSinLogo = !logo || logo === "sin logo" || logo === "null";
+      if (!isSinLogo) return false;
+      if (orderColor && normalizeColor(s.color) !== orderColor) return false;
+      if (size) {
+        const name = (s.name || "").toLowerCase();
+        if (!name.includes(size)) return false;
+        if (isJugueton !== /juguet/i.test(name)) return false;
+      }
+      return true;
+    });
+    if (candidates.length === 0) return undefined;
+    const totalAvailable = candidates.reduce((sum: number, s: any) => sum + (Number(s.available) || 0), 0);
+    const primary = candidates.reduce((a: any, b: any) =>
+      (Number(b.available) || 0) > (Number(a.available) || 0) ? b : a
+    );
+    return { ...primary, available: totalAvailable };
+  };
+
   const pending = useMemo(
     () => orders.filter((o) => !deliveredIds.has(o.id) && !archivedIds.has(o.id) && !inProductionIds.has(o.id)),
     [orders, deliveredIds, archivedIds, inProductionIds]
@@ -422,9 +502,21 @@ const WholesaleOrdersInbox = () => {
       toast.success(`Entregado a Logística (${lineRows.length} ${lineRows.length === 1 ? "ítem" : "ítems"}).`);
     } else {
       const cat = target === "estampacion" ? "cuerpos_referencias" : "producto_terminado";
-      const area = target === "terminado" ? "logistica" : target;
-      const item = findStockItem(order, cat);
-      const reasonPrefix = target === "terminado"
+      const isSweatspotMarkable = target === "terminado" && order.brand === "sweatspot";
+      const area = target === "terminado"
+        ? (isSweatspotMarkable ? "estampacion" : "logistica")
+        : target;
+      const item = isSweatspotMarkable
+        ? findSweatspotMarkableStock(order)
+        : findStockItem(order, cat);
+      if (isSweatspotMarkable && !item) {
+        setBusy(false);
+        toast.error("No hay termos SIN LOGO que coincidan con color y tamaño. Usa Salir kit.");
+        return;
+      }
+      const reasonPrefix = isSweatspotMarkable
+        ? `Entrega termos SIN LOGO para marcación — Pedido de ${order.client_name}`
+        : target === "terminado"
         ? `Entrega producto terminado — Pedido de ${order.client_name}`
         : `Pedido al por mayor de ${order.client_name}`;
       const { error } = await supabase.from("inventory_movements").insert({
@@ -461,8 +553,16 @@ const WholesaleOrdersInbox = () => {
     const finishedEnough = finishedStock >= o.quantity;
     const producedReady = kind === "mayor" && producedIds.has(o.id);
     const enough = producedReady || (stock !== null && stock >= o.quantity);
+    const markable = isSweatspotMayor ? findSweatspotMarkableStock(o) : undefined;
+    const markableStock = markable ? Number(markable.available) : 0;
+    const markableEnough = markableStock >= o.quantity;
+    const siliconeColor = (o as any).silicone_color as string | undefined;
     const stockBadge = isSweatspotMayor
-      ? <Badge className="bg-blue-600 hover:bg-blue-700 text-white">Entrega por kit</Badge>
+      ? (markableEnough
+          ? <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">SIN LOGO: {markableStock}</Badge>
+          : markableStock > 0
+            ? <Badge className="bg-amber-500 hover:bg-amber-600 text-white">SIN LOGO parcial: {markableStock} / {o.quantity}</Badge>
+            : <Badge variant="destructive">Sin termos SIN LOGO</Badge>)
       : stock === null
       ? (producedReady
           ? <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">Cuerpos producidos</Badge>
@@ -491,6 +591,9 @@ const WholesaleOrdersInbox = () => {
               <p className="text-sm text-muted-foreground">
                 {o.quantity.toLocaleString("es-CO")} × {o.product}
               </p>
+              {isSweatspotMayor && siliconeColor && (
+                <div className="mt-1.5"><ColorChip color={siliconeColor} /></div>
+              )}
             </div>
             <div className="text-right shrink-0">{stockBadge}</div>
           </div>
@@ -530,15 +633,16 @@ const WholesaleOrdersInbox = () => {
             ) : isSweatspotMayor ? (
               <div className="pt-1 space-y-2">
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant={finishedEnough ? "default" : "outline"} className="flex-1 min-w-[150px] gap-1.5"
+                  <Button size="sm" variant={markableEnough ? "default" : "outline"} className="flex-1 min-w-[150px] gap-1.5"
                     onClick={() => openDeliver(o, "terminado")}
-                    title={`Producto terminado disponible: ${finishedStock}`}>
+                    disabled={!markable}
+                    title={markable ? `Termos SIN LOGO disponibles: ${markableStock}` : "Sin termos SIN LOGO que coincidan con color y tamaño"}>
                     <PackageCheck className="h-3.5 w-3.5" />
-                    Entregar terminado {finishedItem ? `(${finishedStock})` : "(sin stock)"}
+                    Entregar termos (marcar) {markable ? `(${markableStock})` : "(sin stock)"}
                   </Button>
-                  <Button size="sm" variant={finishedEnough ? "outline" : "default"} className="flex-1 min-w-[150px] gap-1.5"
+                  <Button size="sm" variant={markableEnough ? "outline" : "default"} className="flex-1 min-w-[150px] gap-1.5"
                     onClick={() => openDeliver(o, "estampacion")}>
-                    <Paintbrush className="h-3.5 w-3.5" /> Personalizar (Kit)
+                    <Paintbrush className="h-3.5 w-3.5" /> Salir kit
                   </Button>
                   <Button size="sm" variant="outline" className="gap-1.5"
                     title="Quitar de la bandeja"
@@ -757,7 +861,9 @@ const WholesaleOrdersInbox = () => {
                 : delivering?.target === "produccion"
                 ? "Solicitar producción de cuerpos"
                 : delivering?.target === "terminado"
-                ? "Entregar producto terminado"
+                ? (delivering?.order.brand === "sweatspot"
+                    ? "Entregar termos SIN LOGO (para marcar)"
+                    : "Entregar producto terminado")
                 : `Entregar a ${delivering ? TARGET_LABEL[delivering.target] : ""}`}
             </DialogTitle>
             <DialogDescription>
@@ -765,6 +871,27 @@ const WholesaleOrdersInbox = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
+            {delivering?.target === "terminado" && delivering?.order.brand === "sweatspot" && (() => {
+              const markable = findSweatspotMarkableStock(delivering.order);
+              const color = (delivering.order as any).silicone_color as string | undefined;
+              return (
+                <div className="rounded-md border bg-muted/40 p-2 text-xs space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">Color del termo:</span>
+                    {color ? <ColorChip color={color} /> : <span className="text-muted-foreground">sin color en el pedido</span>}
+                  </div>
+                  {markable ? (
+                    <div>
+                      Se descontará de: <span className="font-medium">{markable.name}</span>
+                      {markable.color ? ` · ${markable.color}` : ""} · <Badge variant="outline" className="ml-1">SIN LOGO</Badge>
+                      <span className="ml-2 text-muted-foreground">Disp. {markable.available}</span>
+                    </div>
+                  ) : (
+                    <p className="text-destructive">No hay termos SIN LOGO que coincidan con color y tamaño. Usa “Salir kit”.</p>
+                  )}
+                </div>
+              );
+            })()}
             {isSweatspotKit ? (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">
