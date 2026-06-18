@@ -571,7 +571,7 @@ export const MagicalWarmersWorkflow = () => {
                   .replace(/\s*\((Frío|Frio|Calor|Térmico|Termico)\)\s*$/i, "")
                   .trim();
                 const canonicalRef = `${baseRef} (${tipoLabel})`;
-                const { error: updErr } = await supabase
+                const { data: updRows, error: updErr } = await supabase
                   .from("body_production_tasks")
                   .update({
                     status: "finalizado",
@@ -580,8 +580,16 @@ export const MagicalWarmersWorkflow = () => {
                     completed_at: new Date().toISOString(),
                     referencia: canonicalRef,
                   })
-                  .eq("id", finalizeTask.id);
+                  .eq("id", finalizeTask.id)
+                  .select("id");
                 if (updErr) { toast.error(`Error al finalizar: ${updErr.message}`); return; }
+                if (!updRows || updRows.length === 0) {
+                  toast.error(
+                    "No se pudo finalizar la tarea: la base de datos rechazó la actualización. " +
+                    "Tu usuario podría no tener el rol de Producción asignado. Avisa al administrador.",
+                  );
+                  return;
+                }
                 // Ensure a stock_items row exists (trigger requires it), but don't add stock yet.
                 let { data: stockRow } = await supabase
                   .from("stock_items")
