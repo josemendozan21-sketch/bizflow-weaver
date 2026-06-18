@@ -82,7 +82,7 @@ const PLASTICO_OPTIONS = [
   { value: "calor", label: "Calor", icon: Thermometer },
 ];
 
-/** Canonical product references for body production */
+/** Canonical product references used for suggestions in body production */
 const CANONICAL_REFERENCES = [
   "Lumbar", "Shoulder", "Cervical", "Multiusos", "Pocket", "Handy",
   "Muela", "Labios", "Círculo 8 cm", "Círculo 12 cm", "Círculo Ojo",
@@ -93,23 +93,6 @@ const CANONICAL_REFERENCES = [
   "Gorro quimioterapia", "Gorro Quimioterapia", "Gorro",
   "Tornillo 3D",
 ];
-
-/** Sweatspot references that are actually produced in-house (termos).
- *  Anything else from Sweatspot is imported or bought from third parties
- *  and must not appear in producción. */
-const SWEATSPOT_PRODUCED_KEYWORDS = ["150", "250", "500", "jugueton", "juguetón"];
-
-/** Returns true if a reference should be shown in producción de cuerpos. */
-function isProducibleReference(referencia: string): boolean {
-  const ref = referencia.trim().toLowerCase();
-  if (!ref) return false;
-  // Magical canonical references (match by substring, case-insensitive)
-  if (CANONICAL_REFERENCES.some((r) => ref.includes(r.toLowerCase()))) return true;
-  // Sweatspot termos producidos en casa
-  const isTermo = ref.includes("termo");
-  if (isTermo && SWEATSPOT_PRODUCED_KEYWORDS.some((k) => ref.includes(k))) return true;
-  return false;
-}
 
 export const MagicalWarmersWorkflow = () => {
   const { orders, bodyTasks, stageLogs, isLoading, updateStageStatus, advanceStage, addBodyTask, updateBodyTaskStatus, forceCompleteOrder } = useProductionOrders("magical");
@@ -163,7 +146,7 @@ export const MagicalWarmersWorkflow = () => {
     const el = stageRefs.current[stage];
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
-  const producibleTasks = bodyTasks.filter((t) => isProducibleReference(t.referencia));
+  const producibleTasks = bodyTasks;
   const completedBodyTasks = producibleTasks.filter((t) => t.status === "finalizado");
   const inProgressBodyTasks = producibleTasks.filter((t) => t.status !== "finalizado");
 
