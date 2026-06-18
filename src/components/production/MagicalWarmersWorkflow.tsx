@@ -33,6 +33,7 @@ import {
   Snowflake,
   ShieldCheck,
   Search,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useProductionOrders, type ProductionOrder, type BodyTask, type ProductionStageLog } from "@/hooks/useProductionOrders";
@@ -341,7 +342,31 @@ export const MagicalWarmersWorkflow = () => {
                         Estimado: {task.unidades} uds · creado {new Date(task.created_at).toLocaleDateString()}
                       </p>
                     </div>
-                    <Badge variant="default" className="shrink-0">En proceso</Badge>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Badge variant="default">En proceso</Badge>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        title="Eliminar esta tarea (ya no se va a tomar)"
+                        onClick={async () => {
+                          if (!confirm(`¿Eliminar la tarea "${task.referencia}" (${task.unidades} uds)? Esta acción no se puede deshacer.`)) return;
+                          const { data: delRows, error } = await supabase
+                            .from("body_production_tasks")
+                            .delete()
+                            .eq("id", task.id)
+                            .select("id");
+                          if (error) { toast.error(`Error al eliminar: ${error.message}`); return; }
+                          if (!delRows || delRows.length === 0) {
+                            toast.error("No se pudo eliminar: tu usuario no tiene permisos. Avisa al administrador.");
+                            return;
+                          }
+                          toast.success("Tarea eliminada.");
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                   <Button
                     size="sm"
