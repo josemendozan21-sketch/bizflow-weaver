@@ -16,9 +16,6 @@ import { CustomerLookupBar } from "@/components/clientes/CustomerLookupBar";
 type Props = { locationId: string; products: PosProduct[] };
 const NUTRITION_BRAND = "Sweatspot Nutrición";
 const DISCOUNT_OPTIONS = [0, 5, 10, 15, 20] as const;
-const LINE_DISCOUNT_OPTIONS = [0, 5, 10, 15, 20, 25, 30] as const;
-
-type CartLine = CartItem & { discountPct?: number };
 
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "")
@@ -32,7 +29,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
   const [search, setSearch] = useState("");
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
   const [selectedSupplier, setSelectedSupplier] = useState<string | null>(null);
-  const [cart, setCart] = useState<CartLine[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState("efectivo");
   const [clientName, setClientName] = useState("");
   const [clientDoc, setClientDoc] = useState("");
@@ -159,13 +156,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
     return map;
   }, [products]);
 
-  const lineUnit = (c: CartLine) =>
-    Number(c.product.sale_price) * (1 - Math.min(100, Math.max(0, c.discountPct ?? 0)) / 100);
-  const lineDiscountSum = cart.reduce(
-    (a, b) => a + Number(b.product.sale_price) * b.quantity * ((b.discountPct ?? 0) / 100),
-    0
-  );
-  const total = cart.reduce((a, b) => a + lineUnit(b) * b.quantity, 0);
+  const total = cart.reduce((a, b) => a + Number(b.product.sale_price) * b.quantity, 0);
   const totalUnits = cart.reduce((a, b) => a + b.quantity, 0);
   const discountAmount = Math.round((total * discountPct) / 100);
   const totalAfter = Math.max(0, total - discountAmount);
@@ -284,22 +275,10 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
         client_address: clientAddress || undefined,
         client_city: clientCity || undefined,
         customer_id: customer?.id ?? null,
-        notes: (() => {
-          const parts: string[] = [];
-          if (discountPct > 0) parts.push(`[Descuento global ${discountPct}%]`);
-          const perLine = cart
-            .filter((c) => (c.discountPct ?? 0) > 0)
-            .map((c) => `${c.product.name} ${c.discountPct}%`);
-          if (perLine.length) parts.push(`[Desc x producto: ${perLine.join(", ")}]`);
-          if (notes) parts.push(notes);
-          return parts.length ? parts.join(" ").trim() : undefined;
-        })(),
-        discount: Math.round(lineDiscountSum + discountAmount),
-        override_unit_prices: Object.fromEntries(
-          cart
-            .filter((c) => (c.discountPct ?? 0) > 0)
-            .map((c) => [c.product.id, Math.round(lineUnit(c))])
-        ),
+        notes: discountPct > 0
+          ? `[Descuento ${discountPct}%] ${notes}`.trim()
+          : (notes || undefined),
+        discount: discountAmount,
         payment_proof_url,
         merchandise_photo_url,
       });
@@ -567,39 +546,14 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
           ) : (
             <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
               {cart.map((c) => {
-                const original = Number(c.product.sale_price) * c.quantity;
-                const lineTotal = lineUnit(c) * c.quantity;
-                const pct = c.discountPct ?? 0;
+                const lineTotal = Number(c.product.sale_price) * c.quantity;
                 return (
                   <div key={c.product.id} className="flex items-center gap-2 p-2 rounded-md border bg-card">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{c.product.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {fmt(Number(c.product.sale_price))} c/u
-                        {pct > 0 ? (
-                          <> · <span className="line-through">{fmt(original)}</span> → <span className="text-destructive font-medium">{fmt(lineTotal)}</span></>
-                        ) : (
-                          <> · Subtotal {fmt(lineTotal)}</>
-                        )}
+                        {fmt(Number(c.product.sale_price))} c/u · Subtotal {fmt(lineTotal)}
                       </p>
-                      <div className="flex flex-wrap gap-1 mt-1.5">
-                        {LINE_DISCOUNT_OPTIONS.map((p) => (
-                          <button
-                            key={p}
-                            type="button"
-                            onClick={() =>
-                              setCart((prev) =>
-                                prev.map((x) => (x.product.id === c.product.id ? { ...x, discountPct: p } : x))
-                              )
-                            }
-                            className={`text-[10px] px-1.5 py-0.5 rounded border ${
-                              pct === p ? "bg-primary text-primary-foreground border-primary" : "hover:bg-accent"
-                            }`}
-                          >
-                            {p === 0 ? "Sin" : `${p}%`}
-                          </button>
-                        ))}
-                      </div>
                     </div>
                     <div className="flex items-center gap-1">
                       <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => updateQty(c.product.id, -1)}>
@@ -638,14 +592,8 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
             )}
             {!isCourtesy && (
             <div className="pt-1.5 border-t space-y-1.5">
-              {lineDiscountSum > 0 && (
-                <div className="flex justify-between text-xs text-destructive">
-                  <span>Descuentos por producto aplicados</span>
-                  <span>− {fmt(lineDiscountSum)}</span>
-                </div>
-              )}
               <div>
-                <Label className="text-xs text-muted-foreground">Descuento global (adicional)</Label>
+                <Label className="text-xs text-muted-foreground">Descuento</Label>
                 <div className="flex gap-1 mt-1">
                   {DISCOUNT_OPTIONS.map((pct) => (
                     <Button
