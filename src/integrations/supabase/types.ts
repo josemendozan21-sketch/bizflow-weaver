@@ -1840,6 +1840,62 @@ export type Database = {
         }
         Relationships: []
       }
+      pos_calendar_events: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          end_time: string | null
+          event_date: string
+          event_type: string
+          id: string
+          location_id: string
+          notes: string | null
+          start_time: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          end_time?: string | null
+          event_date: string
+          event_type: string
+          id?: string
+          location_id: string
+          notes?: string | null
+          start_time?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          end_time?: string | null
+          event_date?: string
+          event_type?: string
+          id?: string
+          location_id?: string
+          notes?: string | null
+          start_time?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_calendar_events_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "pos_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pos_cash_withdrawals: {
         Row: {
           amount: number
