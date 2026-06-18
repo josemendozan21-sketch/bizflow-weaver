@@ -452,6 +452,9 @@ const WholesaleOrdersInbox = () => {
     const isSweatspotMayor = kind === "mayor" && o.brand === "sweatspot";
     const item = findStockItem(o, kind === "mayor" ? "cuerpos_referencias" : "producto_terminado");
     const stock = item ? Number(item.available) : null;
+    const finishedItem = kind === "mayor" ? findStockItem(o, "producto_terminado") : null;
+    const finishedStock = finishedItem ? Number(finishedItem.available) : 0;
+    const finishedEnough = finishedStock >= o.quantity;
     const producedReady = kind === "mayor" && producedIds.has(o.id);
     const enough = producedReady || (stock !== null && stock >= o.quantity);
     const stockBadge = isSweatspotMayor
@@ -521,45 +524,48 @@ const WholesaleOrdersInbox = () => {
                 </Button>
               </div>
             ) : isSweatspotMayor ? (
-              <div className="pt-1 flex gap-2">
-                <Button size="sm" variant="default" className="w-full gap-1.5"
-                  onClick={() => openDeliver(o, "estampacion")}>
-                  <Paintbrush className="h-3.5 w-3.5" /> Entregar Kit a Estampación
-                </Button>
-                <Button size="sm" variant="outline" className="gap-1.5"
-                  title="Quitar de la bandeja"
-                  onClick={() => setConfirmArchive({ id: o.id, clientName: o.client_name })}>
-                  <X className="h-3.5 w-3.5" />
-                </Button>
+              <div className="pt-1 space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant={finishedEnough ? "default" : "outline"} className="flex-1 min-w-[150px] gap-1.5"
+                    onClick={() => openDeliver(o, "terminado")}
+                    title={`Producto terminado disponible: ${finishedStock}`}>
+                    <PackageCheck className="h-3.5 w-3.5" />
+                    Entregar terminado {finishedItem ? `(${finishedStock})` : "(sin stock)"}
+                  </Button>
+                  <Button size="sm" variant={finishedEnough ? "outline" : "default"} className="flex-1 min-w-[150px] gap-1.5"
+                    onClick={() => openDeliver(o, "estampacion")}>
+                    <Paintbrush className="h-3.5 w-3.5" /> Personalizar (Kit)
+                  </Button>
+                  <Button size="sm" variant="outline" className="gap-1.5"
+                    title="Quitar de la bandeja"
+                    onClick={() => setConfirmArchive({ id: o.id, clientName: o.client_name })}>
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="flex flex-wrap gap-2 pt-1">
+                <Button size="sm" variant={finishedEnough ? "default" : "outline"} className="flex-1 min-w-[150px] gap-1.5"
+                  onClick={() => openDeliver(o, "terminado")}
+                  title={`Producto terminado disponible: ${finishedStock}`}>
+                  <PackageCheck className="h-3.5 w-3.5" />
+                  Entregar terminado {finishedItem ? `(${finishedStock})` : "(sin stock)"}
+                </Button>
                 {producedReady ? (
-                  <Button size="sm" variant="default" className="flex-1 min-w-[140px] gap-1.5"
+                  <Button size="sm" variant={finishedEnough ? "outline" : "default"} className="flex-1 min-w-[150px] gap-1.5"
                     onClick={() => openDeliver(o, "estampacion")}>
-                    <Paintbrush className="h-3.5 w-3.5" /> Entregar a Estampación
-                  </Button>
-                ) : (stock === null || stock === 0) ? (
-                  <Button size="sm" variant="default" className="flex-1 min-w-[140px] gap-1.5"
-                    onClick={() => openDeliver(o, "produccion")}>
-                    <Factory className="h-3.5 w-3.5" /> Producir cuerpos
+                    <Paintbrush className="h-3.5 w-3.5" /> Personalizar — Estampar
                   </Button>
                 ) : enough ? (
-                  <Button size="sm" variant="default" className="flex-1 min-w-[140px] gap-1.5"
+                  <Button size="sm" variant={finishedEnough ? "outline" : "default"} className="flex-1 min-w-[150px] gap-1.5"
                     onClick={() => openDeliver(o, "estampacion")}>
-                    <Paintbrush className="h-3.5 w-3.5" /> Entregar a Estampación
+                    <Paintbrush className="h-3.5 w-3.5" /> Personalizar — Estampar
                   </Button>
                 ) : (
-                  <>
-                    <Button size="sm" variant="outline" className="flex-1 min-w-[140px] gap-1.5"
-                      onClick={() => openDeliver(o, "estampacion")}>
-                      <Paintbrush className="h-3.5 w-3.5" /> Entregar a Estampación
-                    </Button>
-                    <Button size="sm" variant="default" className="flex-1 min-w-[140px] gap-1.5"
-                      onClick={() => openDeliver(o, "produccion")}>
-                      <Factory className="h-3.5 w-3.5" /> Producir cuerpos
-                    </Button>
-                  </>
+                  <Button size="sm" variant={finishedEnough ? "outline" : "default"} className="flex-1 min-w-[150px] gap-1.5"
+                    onClick={() => openDeliver(o, "produccion")}>
+                    <Factory className="h-3.5 w-3.5" /> Personalizar desde cero
+                  </Button>
                 )}
                 <Button size="sm" variant="outline" className="gap-1.5"
                   title="Quitar de la bandeja"
