@@ -541,8 +541,16 @@ const WholesaleOrdersInbox = () => {
     const finishedEnough = finishedStock >= o.quantity;
     const producedReady = kind === "mayor" && producedIds.has(o.id);
     const enough = producedReady || (stock !== null && stock >= o.quantity);
+    const markable = isSweatspotMayor ? findSweatspotMarkableStock(o) : undefined;
+    const markableStock = markable ? Number(markable.available) : 0;
+    const markableEnough = markableStock >= o.quantity;
+    const siliconeColor = (o as any).silicone_color as string | undefined;
     const stockBadge = isSweatspotMayor
-      ? <Badge className="bg-blue-600 hover:bg-blue-700 text-white">Entrega por kit</Badge>
+      ? (markableEnough
+          ? <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">SIN LOGO: {markableStock}</Badge>
+          : markableStock > 0
+            ? <Badge className="bg-amber-500 hover:bg-amber-600 text-white">SIN LOGO parcial: {markableStock} / {o.quantity}</Badge>
+            : <Badge variant="destructive">Sin termos SIN LOGO</Badge>)
       : stock === null
       ? (producedReady
           ? <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">Cuerpos producidos</Badge>
@@ -571,6 +579,9 @@ const WholesaleOrdersInbox = () => {
               <p className="text-sm text-muted-foreground">
                 {o.quantity.toLocaleString("es-CO")} × {o.product}
               </p>
+              {isSweatspotMayor && siliconeColor && (
+                <div className="mt-1.5"><ColorChip color={siliconeColor} /></div>
+              )}
             </div>
             <div className="text-right shrink-0">{stockBadge}</div>
           </div>
@@ -610,15 +621,16 @@ const WholesaleOrdersInbox = () => {
             ) : isSweatspotMayor ? (
               <div className="pt-1 space-y-2">
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant={finishedEnough ? "default" : "outline"} className="flex-1 min-w-[150px] gap-1.5"
+                  <Button size="sm" variant={markableEnough ? "default" : "outline"} className="flex-1 min-w-[150px] gap-1.5"
                     onClick={() => openDeliver(o, "terminado")}
-                    title={`Producto terminado disponible: ${finishedStock}`}>
+                    disabled={!markable}
+                    title={markable ? `Termos SIN LOGO disponibles: ${markableStock}` : "Sin termos SIN LOGO que coincidan con color y tamaño"}>
                     <PackageCheck className="h-3.5 w-3.5" />
-                    Entregar terminado {finishedItem ? `(${finishedStock})` : "(sin stock)"}
+                    Entregar termos (marcar) {markable ? `(${markableStock})` : "(sin stock)"}
                   </Button>
-                  <Button size="sm" variant={finishedEnough ? "outline" : "default"} className="flex-1 min-w-[150px] gap-1.5"
+                  <Button size="sm" variant={markableEnough ? "outline" : "default"} className="flex-1 min-w-[150px] gap-1.5"
                     onClick={() => openDeliver(o, "estampacion")}>
-                    <Paintbrush className="h-3.5 w-3.5" /> Personalizar (Kit)
+                    <Paintbrush className="h-3.5 w-3.5" /> Salir kit
                   </Button>
                   <Button size="sm" variant="outline" className="gap-1.5"
                     title="Quitar de la bandeja"
