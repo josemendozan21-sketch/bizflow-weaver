@@ -1,80 +1,49 @@
 ## Objetivo
 
-Dejar el inventario de Sweatspot exactamente como está en el archivo `Inventario_Sweatspot.xlsx` (≈68 referencias) y permitir que los asesores que venden al por mayor distingan claramente las unidades **CON LOGO** (no marcables sin sobre-estampado) de las unidades **SIN LOGO** (marcables).
+Simplificar el flujo de la bandeja de **Sweatspot al por mayor** en `WholesaleOrdersInbox.tsx`: solo dos acciones por pedido — **Entregar termos (para marcar)** o **Salir kit** — y mostrar siempre el color del termo para que el descuento de stock sea el correcto.
 
----
+## Cambios
 
-## 1. Reemplazar inventario Sweatspot
+### 1. Tarjeta de pedido Sweatspot mayor (`renderCard`)
 
-Migración que en una sola transacción:
+- Quitar el botón `Entregar terminado` para la rama `isSweatspotMayor`.
+- Dejar solo dos botones:
+  - **Entregar termos (para marcar)** → abre el diálogo con `target: "terminado"` pero buscando en `producto_terminado` **SIN LOGO** (logo IS NULL) filtrando por `silicone_color` y tamaño del producto. Variante `default` si hay stock suficiente, `outline` si no.
+  - **Salir kit** → `target: "estampacion"` (flujo actual de kit, sin cambios).
+- Badge de color del termo (silicona) visible al lado del nombre del producto, con un swatch de color cuando el color sea reconocible (rosado, transparente, blanco, negro, etc.). Mostrar también el badge `SIN LOGO` para el stock encontrado.
+- Reemplazar el badge "Entrega por kit" por uno que resuma el stock SIN LOGO disponible vs cantidad pedida (verde si alcanza, ámbar si parcial, rojo si cero).
 
-1. Borra todas las filas de `stock_items` donde `brand = 'sweatspot'` y `category = 'producto_terminado'`.
-2. Inserta una fila por cada línea del Excel con:
-   - `name`: producto completo (ej. `TERMO 250 ROSADO CORREA`)
-   - `color`: del Excel
-   - `logo`: `'Sweatspot'` si la columna dice `LOGO`, `NULL` si dice `SIN LOGO`
-   - `product_type`: `IMPORTADO` / `NACIONAL` (lo guardamos aquí para filtrar origen)
-   - `sweatspot_category`: derivado de `Referencia`:
-     - `150` → `termos_150`
-     - `250` → `termos_250`
-     - `500` → `termos_500`
-     - `Canguro` → `canguros`
-     - `Chaleco` → `chalecos`
-     - `Imanes`, `MANGAS` → nueva categoría `accesorios`
-   - `available`: del Excel
-   - `min_stock`: 0 (el Excel no trae mínimos)
-   - `unit`: `Unidades`
+### 2. Búsqueda de stock por color/tamaño/logo
 
-Cada variante (normal, **CORREA**, **JUGUETÓN**) queda como ítem independiente porque ya viene diferenciada en el `name` del Excel.
+- Nueva helper `findSweatspotMarkableStock(order)` que filtra `stockItems` donde:
+  - `brand === "sweatspot"`
+  - `category === "producto_terminado"`
+  - `logo` es null/vacío (marcables)
+  - `color` coincide con `order.silicone_color` (case-insensitive, ignorando tildes)
+  - el nombre contiene el tamaño del producto (150 / 250 / 500 ml) cuando aplique
+- Devolver el ítem candidato + total disponible. Usar este helper para el badge y para el movimiento de inventario.
 
-## 2. Ajustar normalizador / índice único
+### 3. Diálogo de entrega (`Entregar termos`)
 
-El trigger `normalize_stock_item_name` y el índice `stock_items_canonical_uniq` actuales colapsan filas que tengan el mismo `(brand, category, lower(name), product_type)`. Como ahora dos filas pueden compartir nombre y diferenciarse solo por `logo`, ampliamos:
+- Cuando `delivering.target === "terminado"` y la marca es `sweatspot`:
+  - Mostrar el color del termo (swatch + nombre) y el ítem SIN LOGO al que se va a descontar.
+  - Si no se encuentra ítem SIN LOGO que coincida, bloquear el botón "Confirmar" con mensaje claro ("No hay termos SIN LOGO de color X en stock — usa Salir kit").
+  - Al confirmar, el `inventory_movements` se inserta con `stock_item_id` del ítem SIN LOGO y `area: "estampacion"` (no logística — porque solo van a marcarse), con `reason: "Entrega termos SIN LOGO para marcación — Pedido de <cliente>"`.
 
-- Cambiar el índice único a `(brand, category, lower(name), coalesce(product_type,''), coalesce(logo,''), coalesce(color,''))`.
-- Mantener el trigger que limpia sufijos `(Frío)/(Térmico)` — no aplica a Sweatspot.
+### 4. Rama no-Sweatspot mayor
 
-## 3. Añadir categoría `accesorios` al filtro
+- No tocar. Se queda con su flujo actual (`Entregar terminado` + `Personalizar — Estampar` / `desde cero`).
 
-`SweatspotFinishedProducts.tsx` y `stores/inventoryStore.ts`:
+## Detalles técnicos
 
-- Extender `SweatspotProductCategory` con `'accesorios'`.
-- Agregar chip `Accesorios` en `FILTER_OPTIONS`.
+Archivos:
 
-## 4. Vista para asesores mayoristas (CON / SIN LOGO)
+- `src/components/inventory/WholesaleOrdersInbox.tsx` — única edición.
 
-En `SweatspotFinishedProducts.tsx` (y en la vista paralela del asesor `AsesorInventoryView.tsx`):
+Sin migraciones ni cambios de schema. Sin cambios en POS, ventas ni logística.
 
-- **Agrupar por producto base** (mismo `name` sin variar logo). Por cada grupo mostrar dos columnas:
-  - `SIN LOGO` (marcable) — destacado
-  - `CON LOGO Sweatspot`
-- Mantener edición inline en cada fila por separado.
-- **Toggle "Solo SIN LOGO (mayoristas con marcación)"** arriba del listado: cuando está activo oculta las filas con logo y suma totales solo de la columna SIN LOGO.
-- Indicador visual claro (badge azul "MARCABLE" en SIN LOGO; badge gris "YA MARCADO" en CON LOGO).
+## Verificación
 
-## 5. Detalles técnicos
-
-```text
-Archivo -> tabla stock_items
-  Producto       -> name
-  Color          -> color
-  LOGO/SIN LOGO  -> logo ('Sweatspot' | NULL)
-  IMPORTADO/NAC. -> product_type
-  Referencia     -> sweatspot_category (mapeado)
-  Disponible     -> available
-```
-
-Archivos a tocar:
-
-- `supabase/migrations/<nueva>.sql` (delete + 68 inserts + nuevo índice único)
-- `src/stores/inventoryStore.ts` (agregar `'accesorios'` al type)
-- `src/components/inventory/SweatspotFinishedProducts.tsx` (chip Accesorios, agrupación CON/SIN LOGO, toggle mayorista)
-- `src/components/inventory/AsesorInventoryView.tsx` (mismo toggle y vista de dos columnas para Sweatspot)
-
-No se cambia ninguna lógica de descuento de stock, ni el flujo de pedidos, ni POS.
-
-## 6. Verificación
-
-- Conteo posterior a la migración: `SELECT count(*)` = nº de filas del Excel.
-- Spot check: `TERMO 250 ROSADO JUGUETON SIN LOGO` = 149, `TERMO 250 TRANSPARENTE SIN LOGO` = 263.
-- Pantalla `Inventarios → Sweatspot → Termos 250`: aparecen ambas columnas por color y el toggle mayorista funciona.
+1. Pedido Sweatspot mayor con `silicone_color = "Rosado"` y producto `TERMO 250 ML`: la tarjeta muestra badge rosado + cantidad disponible SIN LOGO; "Entregar termos" descuenta de `TERMO 250 ROSADO SIN LOGO`.
+2. Pedido Sweatspot mayor sin stock SIN LOGO del color: badge rojo, botón "Entregar termos" deshabilitado o en `outline` y "Salir kit" como acción principal.
+3. Pedido no-Sweatspot al por mayor: la tarjeta mantiene sus 3 acciones actuales (sin regresión).
