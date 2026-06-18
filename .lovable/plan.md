@@ -1,49 +1,28 @@
-## Objetivo
+## Cambio en bandeja de pedidos al por mayor
 
-Simplificar el flujo de la bandeja de **Sweatspot al por mayor** en `WholesaleOrdersInbox.tsx`: solo dos acciones por pedido — **Entregar termos (para marcar)** o **Salir kit** — y mostrar siempre el color del termo para que el descuento de stock sea el correcto.
+**Objetivo:** Que los pedidos al por mayor de marcas distintas a Sweatspot (Magical Warmers, etc.) muestren solo 2 botones: **Mandar a producir cuerpos** y **Personalizar — Estampar**. Sweatspot sigue como está (Entregar termos + Salir kit).
 
-## Cambios
+### Archivo a editar
+`src/components/inventory/WholesaleOrdersInbox.tsx` — rama `else` del `renderCard` (líneas ~654–684).
 
-### 1. Tarjeta de pedido Sweatspot mayor (`renderCard`)
+### Detalle de los botones para Magical mayor
 
-- Quitar el botón `Entregar terminado` para la rama `isSweatspotMayor`.
-- Dejar solo dos botones:
-  - **Entregar termos (para marcar)** → abre el diálogo con `target: "terminado"` pero buscando en `producto_terminado` **SIN LOGO** (logo IS NULL) filtrando por `silicone_color` y tamaño del producto. Variante `default` si hay stock suficiente, `outline` si no.
-  - **Salir kit** → `target: "estampacion"` (flujo actual de kit, sin cambios).
-- Badge de color del termo (silicona) visible al lado del nombre del producto, con un swatch de color cuando el color sea reconocible (rosado, transparente, blanco, negro, etc.). Mostrar también el badge `SIN LOGO` para el stock encontrado.
-- Reemplazar el badge "Entrega por kit" por uno que resuma el stock SIN LOGO disponible vs cantidad pedida (verde si alcanza, ámbar si parcial, rojo si cero).
+1. **Mandar a producir cuerpos** → abre `openDeliver(o, "produccion")`. Ícono `Factory`. Es el botón primario cuando NO hay cuerpos suficientes; secundario si ya hay.
+2. **Personalizar — Estampar** → abre `openDeliver(o, "estampacion")`. Ícono `Paintbrush`. Es el botón primario cuando hay cuerpos disponibles (`enough`) o cuando ya fue marcado como `producedReady`; secundario en caso contrario.
+3. Se elimina por completo el botón **Entregar terminado** (y el badge/stock asociado a producto terminado en la tarjeta para no-Sweatspot).
+4. Se conserva el botón `X` para archivar.
 
-### 2. Búsqueda de stock por color/tamaño/logo
+### Lógica de "primario vs secundario"
 
-- Nueva helper `findSweatspotMarkableStock(order)` que filtra `stockItems` donde:
-  - `brand === "sweatspot"`
-  - `category === "producto_terminado"`
-  - `logo` es null/vacío (marcables)
-  - `color` coincide con `order.silicone_color` (case-insensitive, ignorando tildes)
-  - el nombre contiene el tamaño del producto (150 / 250 / 500 ml) cuando aplique
-- Devolver el ítem candidato + total disponible. Usar este helper para el badge y para el movimiento de inventario.
+- Si `producedReady || enough` (hay cuerpos listos en stock): "Personalizar" es `variant="default"`, "Mandar a producir" es `variant="outline"`.
+- Si no hay cuerpos suficientes: "Mandar a producir" es `variant="default"`, "Personalizar" es `variant="outline"`.
 
-### 3. Diálogo de entrega (`Entregar termos`)
+### Badge de stock en la tarjeta (no-Sweatspot)
 
-- Cuando `delivering.target === "terminado"` y la marca es `sweatspot`:
-  - Mostrar el color del termo (swatch + nombre) y el ítem SIN LOGO al que se va a descontar.
-  - Si no se encuentra ítem SIN LOGO que coincida, bloquear el botón "Confirmar" con mensaje claro ("No hay termos SIN LOGO de color X en stock — usa Salir kit").
-  - Al confirmar, el `inventory_movements` se inserta con `stock_item_id` del ítem SIN LOGO y `area: "estampacion"` (no logística — porque solo van a marcarse), con `reason: "Entrega termos SIN LOGO para marcación — Pedido de <cliente>"`.
+Cambiar el `stockBadge` para no-Sweatspot: mostrar disponibilidad de **cuerpos/referencias** (lo que mide `enough`) en lugar de producto terminado. Verde si alcanza, ámbar si parcial, rojo si nada.
 
-### 4. Rama no-Sweatspot mayor
+### No tocar
 
-- No tocar. Se queda con su flujo actual (`Entregar terminado` + `Personalizar — Estampar` / `desde cero`).
-
-## Detalles técnicos
-
-Archivos:
-
-- `src/components/inventory/WholesaleOrdersInbox.tsx` — única edición.
-
-Sin migraciones ni cambios de schema. Sin cambios en POS, ventas ni logística.
-
-## Verificación
-
-1. Pedido Sweatspot mayor con `silicone_color = "Rosado"` y producto `TERMO 250 ML`: la tarjeta muestra badge rosado + cantidad disponible SIN LOGO; "Entregar termos" descuenta de `TERMO 250 ROSADO SIN LOGO`.
-2. Pedido Sweatspot mayor sin stock SIN LOGO del color: badge rojo, botón "Entregar termos" deshabilitado o en `outline` y "Salir kit" como acción principal.
-3. Pedido no-Sweatspot al por mayor: la tarjeta mantiene sus 3 acciones actuales (sin regresión).
+- Rama `kind === "detal"`.
+- Rama `isSweatspotMayor` (Sweatspot intacto).
+- `confirmDeliver`, `findSweatspotMarkableStock`, kit Sweatspot, diálogo, migraciones.
