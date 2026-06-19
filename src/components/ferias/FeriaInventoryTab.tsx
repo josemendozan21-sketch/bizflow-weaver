@@ -160,38 +160,28 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
               </SelectContent>
             </Select>
           </div>
-          {brand === "otros" ? (
-            <>
-              <div>
-                <Label>Categoría / Referencia</Label>
-                <Input
-                  placeholder="Ej: Camiseta, Gorra…"
-                  value={otrosCategoria}
-                  onChange={(e) => setOtrosCategoria(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>Referencia del producto</Label>
-                <Input
-                  placeholder="Ej: Logo X talla M"
-                  value={otrosReferencia}
-                  onChange={(e) => setOtrosReferencia(e.target.value)}
-                />
-              </div>
-            </>
-          ) : (
-          <>
           <div>
             <Label>Producto</Label>
-            <Select value={productName} onValueChange={(v) => { setProductName(v); setColor(""); }} disabled={!brand}>
+            <Select value={productName} onValueChange={(v) => { setProductName(v); setColor(""); setOtroProductoTexto(""); }} disabled={!brand}>
               <SelectTrigger><SelectValue placeholder={brand ? "Producto..." : "Marca primero"} /></SelectTrigger>
               <SelectContent className="max-h-80">
                 {currentProducts.map((n) => (
                   <SelectItem key={n} value={n}>{n}</SelectItem>
                 ))}
+                <SelectItem value="__OTRO__">Otro (escribir)</SelectItem>
               </SelectContent>
             </Select>
           </div>
+          {productName === "__OTRO__" ? (
+            <div>
+              <Label>Descripción del producto</Label>
+              <Input
+                placeholder="Ej: Camiseta logo X talla M"
+                value={otroProductoTexto}
+                onChange={(e) => setOtroProductoTexto(e.target.value)}
+              />
+            </div>
+          ) : (
           <div>
             <Label>{brand === "magical" ? "Variante" : "Color"}</Label>
             <Select value={color} onValueChange={setColor} disabled={!productName}>
@@ -222,7 +212,6 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
               </label>
             )}
           </div>
-          </>
           )}
           <div><Label>Cantidad</Label><Input type="number" value={form.quantity_assigned} onChange={(e) => setForm({ ...form, quantity_assigned: e.target.value })} /></div>
           <div><Label>Costo unitario</Label><Input type="number" value={form.unit_cost} onChange={(e) => setForm({ ...form, unit_cost: e.target.value })} /></div>
