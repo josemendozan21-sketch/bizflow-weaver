@@ -1,12 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
 import { KPICards } from "@/components/dashboard/KPICards";
 import { type KanbanOrder } from "@/components/dashboard/KanbanBoard";
-import { AlertsPanel, type DashboardAlert } from "@/components/dashboard/AlertsPanel";
-import { TopProductsPanel } from "@/components/dashboard/TopProductsPanel";
 import {
   InventoryQuickView,
   type InventoryItem,
 } from "@/components/dashboard/InventoryQuickView";
+import { AdminFocusPanels } from "@/components/dashboard/AdminFocusPanels";
 import {
   DashboardFilters,
   type DashboardFilterValues,
@@ -140,36 +139,6 @@ const Index = () => {
     };
   }, [kanbanOrders, salesKpis]);
 
-  /* Alerts from real data */
-  const alerts: DashboardAlert[] = useMemo(() => {
-    const result: DashboardAlert[] = [];
-
-    // Low inventory alerts
-    stockItems
-      .filter((item) => item.category === "producto_terminado" && getStockStatus(item) !== "ok")
-      .forEach((item) => {
-        result.push({
-          id: `inv-${item.id}`,
-          type: "inventario",
-          message: `${item.name} (${item.brand === "magical" ? "Magical" : "Sweatspot"}): solo ${item.available} unidades disponibles.`,
-        });
-      });
-
-    // Delayed orders (5+ days without finishing)
-    productionOrders
-      .filter((po) => po.current_stage !== "listo" && differenceInDays(new Date(), new Date(po.created_at)) >= 5)
-      .forEach((po) => {
-        const days = differenceInDays(new Date(), new Date(po.created_at));
-        result.push({
-          id: `delay-${po.id}`,
-          type: "atrasado",
-          message: `Pedido de ${po.client_name} lleva ${days} días en ${po.current_stage.replace(/_/g, " ")}.`,
-        });
-      });
-
-    return result;
-  }, [stockItems, productionOrders]);
-
   /* Inventory quick view — finished product totals + critical items */
   const inventoryItems: InventoryItem[] = useMemo(() => {
     return stockItems
@@ -196,14 +165,11 @@ const Index = () => {
 
       {role === "admin" && <AdminTodayDashboard />}
 
+      {role === "admin" && <AdminFocusPanels />}
+
       <KPICards kpis={kpis} />
 
-      <TopProductsPanel />
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <AlertsPanel alerts={alerts} />
-        <InventoryQuickView items={inventoryItems} />
-      </div>
+      <InventoryQuickView items={inventoryItems} />
     </div>
   );
 };
