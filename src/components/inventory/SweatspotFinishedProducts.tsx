@@ -41,6 +41,7 @@ const SweatspotFinishedProducts = ({ originFilter = "todos" }: SweatspotFinished
   const { stockItems, updateStockItem } = useInventory();
   const [activeFilter, setActiveFilter] = useState<SweatCat | "todos">("todos");
   const [onlySinLogo, setOnlySinLogo] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ available: "", minStock: "" });
 
@@ -62,10 +63,21 @@ const SweatspotFinishedProducts = ({ originFilter = "todos" }: SweatspotFinished
     [itemsByOrigin, activeFilter]
   );
 
+  const searchedItems = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return filteredItems;
+    return filteredItems.filter(
+      (i) =>
+        i.name.toLowerCase().includes(q) ||
+        (i.color || "").toLowerCase().includes(q) ||
+        (i.product_type || "").toLowerCase().includes(q)
+    );
+  }, [filteredItems, searchQuery]);
+
   // Group by base name + color + product_type — yields one row per producto base with SIN/CON logo cells.
   const groups: Group[] = useMemo(() => {
     const map = new Map<string, Group>();
-    for (const it of filteredItems) {
+    for (const it of searchedItems) {
       const key = `${it.name.trim().toLowerCase()}|${(it.color || "").trim().toLowerCase()}|${it.product_type || ""}`;
       let g = map.get(key);
       if (!g) {
@@ -84,7 +96,7 @@ const SweatspotFinishedProducts = ({ originFilter = "todos" }: SweatspotFinished
     let arr = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, "es"));
     if (onlySinLogo) arr = arr.filter((g) => g.sinLogo && g.sinLogo.available > 0);
     return arr;
-  }, [filteredItems, onlySinLogo]);
+  }, [searchedItems, onlySinLogo]);
 
   const totals = useMemo(() => {
     let sin = 0, con = 0;
@@ -186,6 +198,14 @@ const SweatspotFinishedProducts = ({ originFilter = "todos" }: SweatspotFinished
               </Button>
             );
           })}
+        </div>
+        <div className="pt-2">
+          <Input
+            placeholder="Buscar por nombre, color u origen..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-8 text-sm max-w-md"
+          />
         </div>
         <div className="flex gap-4 pt-2 text-xs text-muted-foreground">
           <span>
