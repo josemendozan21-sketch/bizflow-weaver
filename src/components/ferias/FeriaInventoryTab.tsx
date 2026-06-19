@@ -77,9 +77,9 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   const handleAdd = async () => {
     if (!brand || !form.quantity_assigned) return;
     let label = "";
-    if (brand === "otros") {
-      if (!otrosCategoria.trim() && !otrosReferencia.trim()) return;
-      label = [otrosCategoria.trim(), otrosReferencia.trim()].filter(Boolean).join(" - ");
+    if (productName === "__OTRO__") {
+      if (!otroProductoTexto.trim()) return;
+      label = otroProductoTexto.trim();
     } else {
       if (!productName) return;
       const colorLabel = brand === "sweatspot" && edicionEspecial
@@ -103,8 +103,7 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
     setProductName("");
     setColor("");
     setEdicionEspecial(false);
-    setOtrosCategoria("");
-    setOtrosReferencia("");
+    setOtroProductoTexto("");
     setForm({ quantity_assigned: "", unit_price: "", unit_cost: "", notes: "" });
   };
 
