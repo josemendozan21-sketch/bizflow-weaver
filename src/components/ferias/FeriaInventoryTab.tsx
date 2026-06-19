@@ -27,12 +27,11 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   const { stockItems } = useInventory();
 
   // Independent brand + product + color selectors so admin can plan any combination
-  const [brand, setBrand] = useState<"magical" | "sweatspot" | "otros" | "">("");
+  const [brand, setBrand] = useState<"magical" | "sweatspot" | "">("");
   const [productName, setProductName] = useState("");
   const [color, setColor] = useState("");
   const [edicionEspecial, setEdicionEspecial] = useState(false);
-  const [otrosCategoria, setOtrosCategoria] = useState("");
-  const [otrosReferencia, setOtrosReferencia] = useState("");
+  const [otroProductoTexto, setOtroProductoTexto] = useState("");
   const [form, setForm] = useState({ quantity_assigned: "", unit_price: "", unit_cost: "", notes: "" });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ quantity_assigned: "", unit_price: "", unit_cost: "" });
