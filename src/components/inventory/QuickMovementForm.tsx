@@ -54,6 +54,8 @@ export default function QuickMovementForm() {
   const [purpose, setPurpose] = useState("");
   const [supplier, setSupplier] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [magicalTipo, setMagicalTipo] = useState<"" | "frio" | "calor">("");
+  const [sweatLogo, setSweatLogo] = useState<"" | "con" | "sin">("");
 
   const brands = useMemo(
     () => Array.from(new Set(stockItems.map((s) => s.brand))).sort(),
@@ -67,16 +69,31 @@ export default function QuickMovementForm() {
           if (category && s.category !== category) return false;
           // Solicitudes a producción solo aplican a cuerpos o producto terminado
           if (kind === "solicitud" && !["cuerpos_referencias", "producto_terminado"].includes(s.category)) return false;
+          if (brand === "magical" && magicalTipo) {
+            const pt = (s.product_type || "").toLowerCase();
+            if (magicalTipo === "frio" && !/fr[ií]o/.test(pt)) return false;
+            if (magicalTipo === "calor" && !/(calor|t[eé]rmico)/.test(pt)) return false;
+          }
+          if (brand === "sweatspot" && sweatLogo) {
+            const hasLogo = !!s.logo && String(s.logo).trim() !== "";
+            if (sweatLogo === "con" && !hasLogo) return false;
+            if (sweatLogo === "sin" && hasLogo) return false;
+          }
           return true;
         })
         .sort((a, b) => a.name.localeCompare(b.name)),
-    [stockItems, brand, category, kind],
+    [stockItems, brand, category, kind, magicalTipo, sweatLogo],
   );
   const selected = stockItems.find((s) => s.id === stockItemId);
 
   useEffect(() => {
     setStockItemId("");
-  }, [brand, category]);
+  }, [brand, category, magicalTipo, sweatLogo]);
+
+  useEffect(() => {
+    if (brand !== "magical") setMagicalTipo("");
+    if (brand !== "sweatspot") setSweatLogo("");
+  }, [brand]);
 
   const reset = () => {
     setStockItemId("");
@@ -208,6 +225,34 @@ export default function QuickMovementForm() {
 
         <div>
           <Label>Ítem</Label>
+          {(brand === "magical" || brand === "sweatspot") && (
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              {brand === "magical" && (
+                <div>
+                  <Label className="text-xs text-muted-foreground">Tipo</Label>
+                  <Select value={magicalTipo} onValueChange={(v) => setMagicalTipo(v as any)}>
+                    <SelectTrigger><SelectValue placeholder="Frío o Calor" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="frio">Frío</SelectItem>
+                      <SelectItem value="calor">Calor / Térmico</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {brand === "sweatspot" && (
+                <div>
+                  <Label className="text-xs text-muted-foreground">Logo</Label>
+                  <Select value={sweatLogo} onValueChange={(v) => setSweatLogo(v as any)}>
+                    <SelectTrigger><SelectValue placeholder="Con o sin logo" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="con">Con logo</SelectItem>
+                      <SelectItem value="sin">Sin logo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          )}
           <Select value={stockItemId} onValueChange={setStockItemId} disabled={!brand || !category}>
             <SelectTrigger>
               <SelectValue placeholder={brand && category ? "Selecciona ítem" : "Primero marca y categoría"} />
@@ -215,7 +260,15 @@ export default function QuickMovementForm() {
             <SelectContent>
               {items.map((it) => (
                 <SelectItem key={it.id} value={it.id}>
-                  {it.name} · disp. {it.available}
+                  {it.name}
+                  {it.brand === "magical" && it.product_type
+                    ? ` · ${/calor/i.test(it.product_type) ? "Calor" : it.product_type}`
+                    : ""}
+                  {it.brand === "sweatspot"
+                    ? ` · ${it.logo ? `Con logo${typeof it.logo === "string" && it.logo.toLowerCase() !== "sweatspot" ? ` (${it.logo})` : ""}` : "Sin logo"}`
+                    : ""}
+                  {it.color ? ` · ${it.color}` : ""}
+                  {" · disp. "}{it.available}
                   {Number((it as any).in_process || 0) > 0 ? ` · en proceso ${(it as any).in_process}` : ""}
                 </SelectItem>
               ))}
