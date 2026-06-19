@@ -15,7 +15,7 @@ const ROLE_ROUTES: Record<AppRole, string[]> = {
   feria_pos: ["/feria-pos"],
   inventarios: ["/inventarios"],
   pos_punto: ["/puntos-venta", "/clientes"],
-  community_manager: ["/redes"],
+  community_manager: ["/redes", "/eventos"],
 };
 
 // Sections where the role can edit (create, update, delete)
