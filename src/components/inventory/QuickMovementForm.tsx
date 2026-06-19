@@ -225,6 +225,34 @@ export default function QuickMovementForm() {
 
         <div>
           <Label>Ítem</Label>
+          {(brand === "magical" || brand === "sweatspot") && (
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              {brand === "magical" && (
+                <div>
+                  <Label className="text-xs text-muted-foreground">Tipo</Label>
+                  <Select value={magicalTipo} onValueChange={(v) => setMagicalTipo(v as any)}>
+                    <SelectTrigger><SelectValue placeholder="Frío o Calor" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="frio">Frío</SelectItem>
+                      <SelectItem value="calor">Calor / Térmico</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {brand === "sweatspot" && (
+                <div>
+                  <Label className="text-xs text-muted-foreground">Logo</Label>
+                  <Select value={sweatLogo} onValueChange={(v) => setSweatLogo(v as any)}>
+                    <SelectTrigger><SelectValue placeholder="Con o sin logo" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="con">Con logo</SelectItem>
+                      <SelectItem value="sin">Sin logo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          )}
           <Select value={stockItemId} onValueChange={setStockItemId} disabled={!brand || !category}>
             <SelectTrigger>
               <SelectValue placeholder={brand && category ? "Selecciona ítem" : "Primero marca y categoría"} />
