@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { KPICards } from "@/components/dashboard/KPICards";
-import { KanbanBoard, type KanbanOrder } from "@/components/dashboard/KanbanBoard";
+import { type KanbanOrder } from "@/components/dashboard/KanbanBoard";
 import { AlertsPanel, type DashboardAlert } from "@/components/dashboard/AlertsPanel";
 import { TopProductsPanel } from "@/components/dashboard/TopProductsPanel";
 import {
@@ -197,8 +197,6 @@ const Index = () => {
       {role === "admin" && <AdminTodayDashboard />}
 
       <KPICards kpis={kpis} />
-
-      <KanbanBoard orders={filteredOrders} />
 
       <TopProductsPanel />
 
