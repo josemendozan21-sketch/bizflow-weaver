@@ -152,12 +152,11 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
         <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
           <div>
             <Label>Marca</Label>
-            <Select value={brand} onValueChange={(v) => { setBrand(v as any); setProductName(""); setColor(""); }}>
+            <Select value={brand} onValueChange={(v) => { setBrand(v as any); setProductName(""); setColor(""); setOtroProductoTexto(""); }}>
               <SelectTrigger><SelectValue placeholder="Marca..." /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="magical">Magical Warmers</SelectItem>
                 <SelectItem value="sweatspot">Sweatspot</SelectItem>
-                <SelectItem value="otros">Otros (terceros)</SelectItem>
               </SelectContent>
             </Select>
           </div>
