@@ -716,7 +716,7 @@ const WholesaleOrdersInbox = () => {
         </TabsList>
 
         <TabsContent value="mayor" className="mt-4 space-y-4">
-          <SearchBar />
+          {searchBar}
 
           <Card>
             <CardHeader className="pb-3">
@@ -763,7 +763,7 @@ const WholesaleOrdersInbox = () => {
         </TabsContent>
 
         <TabsContent value="detal" className="mt-4 space-y-4">
-          <SearchBar />
+          {searchBar}
 
           <Card>
             <CardHeader className="pb-3">
@@ -793,7 +793,7 @@ const WholesaleOrdersInbox = () => {
         </TabsContent>
 
         <TabsContent value="entregados" className="mt-4 space-y-4">
-          <SearchBar />
+          {searchBar}
 
           {filterOrders(delivered).length > 0 && (
             <Card>
