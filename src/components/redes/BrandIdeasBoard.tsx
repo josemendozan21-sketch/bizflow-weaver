@@ -59,6 +59,7 @@ export function BrandIdeasBoard({ brand }: { brand: string }) {
   const { toast } = useToast();
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
+  const showEvents = brand !== "bionovations";
 
   const [ideaOpen, setIdeaOpen] = useState(false);
   const [ideaForm, setIdeaForm] = useState({ title: "", description: "", status: "idea" });
@@ -73,20 +74,27 @@ export function BrandIdeasBoard({ brand }: { brand: string }) {
   });
 
   const load = async () => {
-    const [{ data: i }, { data: e }] = await Promise.all([
-      supabase
-        .from("social_ideas" as any)
-        .select("*")
-        .eq("brand", brand)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("social_events" as any)
-        .select("*")
-        .eq("brand", brand)
-        .order("start_date", { ascending: true }),
-    ]);
-    setIdeas((i ?? []) as any);
-    setEvents((e ?? []) as any);
+    const ideasReq = supabase
+      .from("social_ideas" as any)
+      .select("*")
+      .eq("brand", brand)
+      .order("created_at", { ascending: false });
+    if (showEvents) {
+      const [{ data: i }, { data: e }] = await Promise.all([
+        ideasReq,
+        supabase
+          .from("social_events" as any)
+          .select("*")
+          .eq("brand", brand)
+          .order("start_date", { ascending: true }),
+      ]);
+      setIdeas((i ?? []) as any);
+      setEvents((e ?? []) as any);
+    } else {
+      const { data: i } = await ideasReq;
+      setIdeas((i ?? []) as any);
+      setEvents([]);
+    }
   };
 
   useEffect(() => {
@@ -158,6 +166,7 @@ export function BrandIdeasBoard({ brand }: { brand: string }) {
   return (
     <div className="space-y-6">
       {/* EVENTS */}
+      {showEvents && (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle className="text-base flex items-center gap-2">
@@ -263,6 +272,7 @@ export function BrandIdeasBoard({ brand }: { brand: string }) {
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* IDEAS BOARD */}
       <Card>
