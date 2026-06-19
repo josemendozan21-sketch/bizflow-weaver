@@ -2853,6 +2853,60 @@ export type Database = {
           },
         ]
       }
+      social_posts: {
+        Row: {
+          asset_path: string | null
+          asset_url: string | null
+          brand: string
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          description: string | null
+          hashtags: string | null
+          id: string
+          is_special_date: boolean
+          networks: string[]
+          scheduled_date: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          asset_path?: string | null
+          asset_url?: string | null
+          brand: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          description?: string | null
+          hashtags?: string | null
+          id?: string
+          is_special_date?: boolean
+          networks?: string[]
+          scheduled_date: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          asset_path?: string | null
+          asset_url?: string | null
+          brand?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          description?: string | null
+          hashtags?: string | null
+          id?: string
+          is_special_date?: boolean
+          networks?: string[]
+          scheduled_date?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       staff_attendance: {
         Row: {
           check_in_at: string | null
@@ -3101,6 +3155,7 @@ export type Database = {
         | "feria_pos"
         | "inventarios"
         | "pos_punto"
+        | "community_manager"
       event_type: "feria" | "carrera" | "activacion"
       logo_request_status:
         | "pendiente_diseno"
@@ -3249,6 +3304,7 @@ export const Constants = {
         "feria_pos",
         "inventarios",
         "pos_punto",
+        "community_manager",
       ],
       event_type: ["feria", "carrera", "activacion"],
       logo_request_status: [

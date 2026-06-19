@@ -1,38 +1,99 @@
-## Hallazgos sobre "Pie" de Luz
 
-Revisé la base de datos y NO existe un registro de finalización de cuerpos "Pie" hecho desde el flujo de Producción:
+## Resumen
 
-- **`body_production_tasks`** no tiene ningún task de "Pie" finalizado. Lo único activo es "Pie Separado" 300 uds, todavía **en_proceso**.
-- El único movimiento reciente de "Pie" es una **entrada manual de 20 uds** registrada el 18/06 17:50 directamente por `inventarios1@bionovationsas.com` (sin marcador `AUTO_REQ`, sin `purpose`, sin pasar por el botón "Finalizar y enviar a inventario"). Dos minutos después salieron 305 uds para Cesar Marín / Laboratorios Remo.
-- `body_stock` de Pie quedó en **15 uds**.
+Crear una nueva sección **Redes Bionovations** en el menú lateral, con 3 sub-pestañas por marca (Bionovations SAS, Sweatspot, Magical Warmers). Cada pestaña muestra un calendario mensual donde se programan publicaciones y fechas especiales.
 
-Conclusión: Luz no finalizó la producción usando el botón "Finalizar y enviar a inventario" del workflow Magical. Por eso no apareció una notificación de "Cuerpos finalizados — confirmar recepción" para Inventarios, y la entrada que sí existe la tuvo que digitar Inventarios a mano. Con la nueva pestaña de Historial en Producción esto será evidente de inmediato (Luz verá que su finalización no quedó registrada y podrá repetirla por el flujo correcto).
+## Acceso
 
-## Plan: Pestaña "Historial" en Producción
+- Admin
+- Diseñador
+- Nuevo rol **Community Manager** (`community_manager`)
 
-**Archivo:** `src/pages/Produccion.tsx`
+El Community Manager solo verá esta pestaña (similar a cómo `feria_pos` solo ve Feria POS).
 
-Agregar una tercera pestaña al `Tabs` existente (`marcas` / `rollos` / **`historial`**), visible para todos los usuarios que ya ven la página de Producción.
+## Estructura visual
 
-**Componente nuevo:** `src/components/production/ProductionMovementHistory.tsx`
+- Nueva entrada en el sidebar: **Redes Bionovations** (icono Megaphone), ruta `/redes`.
+- Página `Redes.tsx` con tabs:
+  - Bionovations SAS
+  - Sweatspot
+  - Magical Warmers
+- Cada tab renderiza el mismo componente `BrandSocialCalendar` filtrado por marca.
 
-- Reutiliza el hook `useInventoryMovements`.
-- Filtra estrictamente por `area === "produccion"` (entradas y salidas que pasaron por el área, sin importar marca).
-- Reusa la misma tabla/visual de `MovementHistoryTable` (columnas: fecha, ítem, marca, categoría, tipo de movimiento, cantidad, motivo, registrado por, estado de recepción).
-- Mantiene filtros de búsqueda, marca, categoría y tipo de movimiento.
-- **Modo solo lectura**: no se muestra el botón "Confirmar recepción" (esa acción sigue siendo exclusiva de Inventarios desde su propio Historial).
-- Muestra un badge claro cuando `reception_confirmed === false` para que Producción sepa qué finalizaciones aún están pendientes de que Inventarios las acepte.
+## Calendario
 
-No se toca la lógica de inventario, el workflow Magical, ni el Historial de Inventarios.
-
-### Notas técnicas
+Vista mensual con navegación mes anterior / mes siguiente. Cada día muestra los chips de las publicaciones/fechas especiales programadas. Click en un día abre un diálogo con la lista del día y botón "Agregar publicación". Click en un chip abre el detalle para editar/eliminar.
 
 ```text
-Produccion.tsx
-└─ Tabs
-   ├─ Marcas        (existente)
-   ├─ Corte de Rollos (existente)
-   └─ Historial     (NUEVO) → <ProductionMovementHistory />
+┌─────────────────────────────────────────┐
+│  ‹  Junio 2026  ›       [+ Nueva]       │
+├──┬──┬──┬──┬──┬──┬──┤
+│Lu│Ma│Mi│Ju│Vi│Sá│Do│
+├──┼──┼──┼──┼──┼──┼──┤
+│ 1│ 2│●3│ 4│★5│ 6│ 7│  ● post  ★ fecha especial
+└──┴──┴──┴──┴──┴──┴──┘
 ```
 
-`ProductionMovementHistory` = copia adelgazada de `MovementHistoryTable` sin `confirmReception`, con `movements.filter(m => m.area === "produccion")` aplicado antes de los filtros de UI.
+## Formulario de publicación
+
+Campos:
+- Título
+- Fecha (date picker)
+- Red social: Instagram, Facebook, TikTok, WhatsApp, Otra (multi-select)
+- Estado: Idea / Programado / Publicado
+- Descripción/copy (textarea larga)
+- Hashtags (textarea)
+- Imagen o archivo adjunto (upload a Storage)
+- Checkbox **"Fecha especial"** (efeméride, lanzamiento, etc.) — cuando está marcado se muestra con estilo distinto (estrella dorada) en el calendario
+
+## Detalles técnicos
+
+### Base de datos
+
+Nuevo enum `app_role` valor `community_manager`.
+
+Nueva tabla `public.social_posts`:
+
+| columna | tipo | notas |
+|---|---|---|
+| id | uuid PK | |
+| brand | text | 'bionovations' \| 'sweatspot' \| 'magical' |
+| scheduled_date | date | NOT NULL |
+| title | text | NOT NULL |
+| description | text | copy del post |
+| hashtags | text | |
+| networks | text[] | ig, fb, tiktok, wsp, otra |
+| status | text | idea/programado/publicado, default 'programado' |
+| is_special_date | boolean | default false |
+| asset_url | text | URL pública del archivo |
+| asset_path | text | path en storage |
+| created_by | uuid | auth.uid() |
+| created_by_name | text | |
+| created_at / updated_at | timestamptz | |
+
+GRANT + RLS:
+- SELECT/INSERT/UPDATE/DELETE para `admin`, `disenador`, `community_manager` (via `has_role`).
+- Trigger `update_updated_at_column` existente.
+
+Nuevo bucket público **`social-media-assets`** para imágenes/videos del calendario.
+
+### Frontend
+
+Archivos nuevos:
+- `src/pages/Redes.tsx`
+- `src/components/redes/BrandSocialCalendar.tsx` (grid de mes con días)
+- `src/components/redes/SocialPostDialog.tsx` (crear/editar)
+- `src/components/redes/SocialPostChip.tsx` (chip dentro de la celda del día)
+- `src/hooks/useSocialPosts.ts` (fetch + realtime + mutations)
+
+Archivos modificados:
+- `src/App.tsx` — ruta `/redes`
+- `src/components/AppSidebar.tsx` — item "Redes Bionovations" (icono Megaphone)
+- `src/lib/rolePermissions.ts` — agregar `community_manager`, dar acceso `/redes` a admin/disenador/community_manager, edit en mismas; el community_manager solo ve `/redes`
+- `src/integrations/supabase/types.ts` se regenera automáticamente
+
+### Notas
+
+- No tocaremos otros módulos.
+- El nuevo rol se podrá asignar desde Admin → Usuarios igual que los demás.
+- Los archivos se suben al bucket `social-media-assets` con path `{brand}/{post_id}/{filename}`.
