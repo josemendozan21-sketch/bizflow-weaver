@@ -27,10 +27,12 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   const { stockItems } = useInventory();
 
   // Independent brand + product + color selectors so admin can plan any combination
-  const [brand, setBrand] = useState<"magical" | "sweatspot" | "">("");
+  const [brand, setBrand] = useState<"magical" | "sweatspot" | "otros" | "">("");
   const [productName, setProductName] = useState("");
   const [color, setColor] = useState("");
   const [edicionEspecial, setEdicionEspecial] = useState(false);
+  const [otrosCategoria, setOtrosCategoria] = useState("");
+  const [otrosReferencia, setOtrosReferencia] = useState("");
   const [form, setForm] = useState({ quantity_assigned: "", unit_price: "", unit_cost: "", notes: "" });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ quantity_assigned: "", unit_price: "", unit_cost: "" });
@@ -74,11 +76,18 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   }, {});
 
   const handleAdd = async () => {
-    if (!brand || !productName || !form.quantity_assigned) return;
-    const colorLabel = brand === "sweatspot" && edicionEspecial
-      ? (color ? `${color} (Edición Especial)` : "Edición Especial")
-      : color;
-    const label = colorLabel ? `${productName}${brand === "magical" ? ` (${colorLabel})` : ` - ${colorLabel}`}` : productName;
+    if (!brand || !form.quantity_assigned) return;
+    let label = "";
+    if (brand === "otros") {
+      if (!otrosCategoria.trim() && !otrosReferencia.trim()) return;
+      label = [otrosCategoria.trim(), otrosReferencia.trim()].filter(Boolean).join(" - ");
+    } else {
+      if (!productName) return;
+      const colorLabel = brand === "sweatspot" && edicionEspecial
+        ? (color ? `${color} (Edición Especial)` : "Edición Especial")
+        : color;
+      label = colorLabel ? `${productName}${brand === "magical" ? ` (${colorLabel})` : ` - ${colorLabel}`}` : productName;
+    }
     await add.mutateAsync({
       feria_id: feriaId,
       brand,
@@ -95,6 +104,8 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
     setProductName("");
     setColor("");
     setEdicionEspecial(false);
+    setOtrosCategoria("");
+    setOtrosReferencia("");
     setForm({ quantity_assigned: "", unit_price: "", unit_cost: "", notes: "" });
   };
 
@@ -148,9 +159,31 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
               <SelectContent>
                 <SelectItem value="magical">Magical Warmers</SelectItem>
                 <SelectItem value="sweatspot">Sweatspot</SelectItem>
+                <SelectItem value="otros">Otros (terceros)</SelectItem>
               </SelectContent>
             </Select>
           </div>
+          {brand === "otros" ? (
+            <>
+              <div>
+                <Label>Categoría / Referencia</Label>
+                <Input
+                  placeholder="Ej: Camiseta, Gorra…"
+                  value={otrosCategoria}
+                  onChange={(e) => setOtrosCategoria(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Referencia del producto</Label>
+                <Input
+                  placeholder="Ej: Logo X talla M"
+                  value={otrosReferencia}
+                  onChange={(e) => setOtrosReferencia(e.target.value)}
+                />
+              </div>
+            </>
+          ) : (
+          <>
           <div>
             <Label>Producto</Label>
             <Select value={productName} onValueChange={(v) => { setProductName(v); setColor(""); }} disabled={!brand}>
@@ -192,11 +225,13 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
               </label>
             )}
           </div>
+          </>
+          )}
           <div><Label>Cantidad</Label><Input type="number" value={form.quantity_assigned} onChange={(e) => setForm({ ...form, quantity_assigned: e.target.value })} /></div>
           <div><Label>Costo unitario</Label><Input type="number" value={form.unit_cost} onChange={(e) => setForm({ ...form, unit_cost: e.target.value })} /></div>
           <div><Label>Precio venta</Label><Input type="number" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} /></div>
           <div className="md:col-span-6 flex justify-end">
-            <Button onClick={handleAdd} disabled={!brand || !productName || !form.quantity_assigned}>
+            <Button onClick={handleAdd} disabled={!brand || !form.quantity_assigned || (brand === "otros" ? (!otrosCategoria.trim() && !otrosReferencia.trim()) : !productName)}>
               <Plus className="mr-2 h-4 w-4" />Agregar referencia
             </Button>
           </div>
