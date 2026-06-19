@@ -217,7 +217,7 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
           <div><Label>Costo unitario</Label><Input type="number" value={form.unit_cost} onChange={(e) => setForm({ ...form, unit_cost: e.target.value })} /></div>
           <div><Label>Precio venta</Label><Input type="number" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} /></div>
           <div className="md:col-span-6 flex justify-end">
-            <Button onClick={handleAdd} disabled={!brand || !form.quantity_assigned || (brand === "otros" ? (!otrosCategoria.trim() && !otrosReferencia.trim()) : !productName)}>
+            <Button onClick={handleAdd} disabled={!brand || !form.quantity_assigned || (productName === "__OTRO__" ? !otroProductoTexto.trim() : !productName)}>
               <Plus className="mr-2 h-4 w-4" />Agregar referencia
             </Button>
           </div>
