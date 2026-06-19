@@ -2853,6 +2853,84 @@ export type Database = {
           },
         ]
       }
+      social_events: {
+        Row: {
+          brand: string
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          location: string | null
+          start_date: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          brand: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          location?: string | null
+          start_date: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          brand?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          location?: string | null
+          start_date?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      social_ideas: {
+        Row: {
+          brand: string
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          description: string | null
+          id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          brand: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          description?: string | null
+          id?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          brand?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          description?: string | null
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       social_posts: {
         Row: {
           asset_path: string | null
