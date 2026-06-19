@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, Star } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Plus, Star, CalendarRange } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
 import { useSocialPosts, type SocialBrand, type SocialPost } from "@/hooks/useSocialPosts";
 import { SocialPostDialog } from "./SocialPostDialog";
 
@@ -18,6 +19,14 @@ interface Props {
   brand: SocialBrand;
 }
 
+interface SocialEvent {
+  id: string;
+  title: string;
+  start_date: string;
+  end_date: string | null;
+  location: string | null;
+}
+
 export function BrandSocialCalendar({ brand }: Props) {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
@@ -27,6 +36,46 @@ export function BrandSocialCalendar({ brand }: Props) {
   const [initialDate, setInitialDate] = useState<string | undefined>(undefined);
 
   const { posts, loading } = useSocialPosts(brand);
+  const [events, setEvents] = useState<SocialEvent[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      const { data } = await supabase
+        .from("social_events" as any)
+        .select("id,title,start_date,end_date,location")
+        .eq("brand", brand);
+      if (active) setEvents(((data ?? []) as any) as SocialEvent[]);
+    };
+    load();
+    const ch = supabase
+      .channel(`social_events_${brand}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "social_events", filter: `brand=eq.${brand}` },
+        () => load(),
+      )
+      .subscribe();
+    return () => {
+      active = false;
+      supabase.removeChannel(ch);
+    };
+  }, [brand]);
+
+  const eventsByDate = useMemo(() => {
+    const map: Record<string, SocialEvent[]> = {};
+    for (const ev of events) {
+      const start = ev.start_date;
+      const end = ev.end_date ?? ev.start_date;
+      const s = new Date(start + "T00:00:00");
+      const e = new Date(end + "T00:00:00");
+      for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        (map[key] ??= []).push(ev);
+      }
+    }
+    return map;
+  }, [events]);
 
   const postsByDate = useMemo(() => {
     const map: Record<string, SocialPost[]> = {};
@@ -100,6 +149,16 @@ export function BrandSocialCalendar({ brand }: Props) {
               >
                 <div className="text-xs font-medium text-muted-foreground">{cell.day}</div>
                 <div className="flex flex-col gap-1 overflow-hidden">
+                  {(eventsByDate[cell.date] ?? []).map((ev) => (
+                    <div
+                      key={ev.id}
+                      className="text-[10px] leading-tight rounded px-1 py-0.5 truncate flex items-center gap-1 bg-purple-500/15 text-purple-700 dark:text-purple-300"
+                      title={`${ev.title}${ev.location ? " — " + ev.location : ""}`}
+                    >
+                      <CalendarRange className="h-2.5 w-2.5 shrink-0" />
+                      <span className="truncate">{ev.title}</span>
+                    </div>
+                  ))}
                   {dayPosts.slice(0, 3).map((p) => (
                     <button
                       key={p.id}
