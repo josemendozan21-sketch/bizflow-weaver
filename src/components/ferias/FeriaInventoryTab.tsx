@@ -27,12 +27,11 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   const { stockItems } = useInventory();
 
   // Independent brand + product + color selectors so admin can plan any combination
-  const [brand, setBrand] = useState<"magical" | "sweatspot" | "otros" | "">("");
+  const [brand, setBrand] = useState<"magical" | "sweatspot" | "">("");
   const [productName, setProductName] = useState("");
   const [color, setColor] = useState("");
   const [edicionEspecial, setEdicionEspecial] = useState(false);
-  const [otrosCategoria, setOtrosCategoria] = useState("");
-  const [otrosReferencia, setOtrosReferencia] = useState("");
+  const [otroProductoTexto, setOtroProductoTexto] = useState("");
   const [form, setForm] = useState({ quantity_assigned: "", unit_price: "", unit_cost: "", notes: "" });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ quantity_assigned: "", unit_price: "", unit_cost: "" });
@@ -78,9 +77,9 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   const handleAdd = async () => {
     if (!brand || !form.quantity_assigned) return;
     let label = "";
-    if (brand === "otros") {
-      if (!otrosCategoria.trim() && !otrosReferencia.trim()) return;
-      label = [otrosCategoria.trim(), otrosReferencia.trim()].filter(Boolean).join(" - ");
+    if (productName === "__OTRO__") {
+      if (!otroProductoTexto.trim()) return;
+      label = otroProductoTexto.trim();
     } else {
       if (!productName) return;
       const colorLabel = brand === "sweatspot" && edicionEspecial
@@ -104,8 +103,7 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
     setProductName("");
     setColor("");
     setEdicionEspecial(false);
-    setOtrosCategoria("");
-    setOtrosReferencia("");
+    setOtroProductoTexto("");
     setForm({ quantity_assigned: "", unit_price: "", unit_cost: "", notes: "" });
   };
 
@@ -154,47 +152,36 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
         <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
           <div>
             <Label>Marca</Label>
-            <Select value={brand} onValueChange={(v) => { setBrand(v as any); setProductName(""); setColor(""); }}>
+            <Select value={brand} onValueChange={(v) => { setBrand(v as any); setProductName(""); setColor(""); setOtroProductoTexto(""); }}>
               <SelectTrigger><SelectValue placeholder="Marca..." /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="magical">Magical Warmers</SelectItem>
                 <SelectItem value="sweatspot">Sweatspot</SelectItem>
-                <SelectItem value="otros">Otros (terceros)</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          {brand === "otros" ? (
-            <>
-              <div>
-                <Label>Categoría / Referencia</Label>
-                <Input
-                  placeholder="Ej: Camiseta, Gorra…"
-                  value={otrosCategoria}
-                  onChange={(e) => setOtrosCategoria(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>Referencia del producto</Label>
-                <Input
-                  placeholder="Ej: Logo X talla M"
-                  value={otrosReferencia}
-                  onChange={(e) => setOtrosReferencia(e.target.value)}
-                />
-              </div>
-            </>
-          ) : (
-          <>
           <div>
             <Label>Producto</Label>
-            <Select value={productName} onValueChange={(v) => { setProductName(v); setColor(""); }} disabled={!brand}>
+            <Select value={productName} onValueChange={(v) => { setProductName(v); setColor(""); setOtroProductoTexto(""); }} disabled={!brand}>
               <SelectTrigger><SelectValue placeholder={brand ? "Producto..." : "Marca primero"} /></SelectTrigger>
               <SelectContent className="max-h-80">
                 {currentProducts.map((n) => (
                   <SelectItem key={n} value={n}>{n}</SelectItem>
                 ))}
+                <SelectItem value="__OTRO__">Otro (escribir)</SelectItem>
               </SelectContent>
             </Select>
           </div>
+          {productName === "__OTRO__" ? (
+            <div>
+              <Label>Descripción del producto</Label>
+              <Input
+                placeholder="Ej: Camiseta logo X talla M"
+                value={otroProductoTexto}
+                onChange={(e) => setOtroProductoTexto(e.target.value)}
+              />
+            </div>
+          ) : (
           <div>
             <Label>{brand === "magical" ? "Variante" : "Color"}</Label>
             <Select value={color} onValueChange={setColor} disabled={!productName}>
@@ -225,13 +212,12 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
               </label>
             )}
           </div>
-          </>
           )}
           <div><Label>Cantidad</Label><Input type="number" value={form.quantity_assigned} onChange={(e) => setForm({ ...form, quantity_assigned: e.target.value })} /></div>
           <div><Label>Costo unitario</Label><Input type="number" value={form.unit_cost} onChange={(e) => setForm({ ...form, unit_cost: e.target.value })} /></div>
           <div><Label>Precio venta</Label><Input type="number" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} /></div>
           <div className="md:col-span-6 flex justify-end">
-            <Button onClick={handleAdd} disabled={!brand || !form.quantity_assigned || (brand === "otros" ? (!otrosCategoria.trim() && !otrosReferencia.trim()) : !productName)}>
+            <Button onClick={handleAdd} disabled={!brand || !form.quantity_assigned || (productName === "__OTRO__" ? !otroProductoTexto.trim() : !productName)}>
               <Plus className="mr-2 h-4 w-4" />Agregar referencia
             </Button>
           </div>
