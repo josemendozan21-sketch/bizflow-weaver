@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import DebouncedSearchInput from "@/components/inventory/DebouncedSearchInput";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
@@ -687,16 +688,13 @@ const WholesaleOrdersInbox = () => {
     );
   };
 
-  const SearchBar = () => (
-    <div className="relative">
-      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-      <Input
-        placeholder="Buscar referencia, cliente, producto o asesor…"
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        className="pl-9"
-      />
-    </div>
+  const searchBar = (
+    <DebouncedSearchInput
+      value={searchQuery}
+      onChange={setSearchQuery}
+      placeholder="Buscar referencia, cliente, producto o asesor…"
+      className="pl-9"
+    />
   );
 
   return (
