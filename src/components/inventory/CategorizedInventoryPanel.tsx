@@ -24,6 +24,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { baseRefName } from "@/lib/canonicalBodyRef";
+import DebouncedSearchInput from "./DebouncedSearchInput";
 
 type StockStatus = "ok" | "bajo" | "critico";
 
@@ -592,15 +593,11 @@ const CategorizedInventoryPanel = ({
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-wrap items-center gap-2 mb-4">
-                      <div className="relative flex-1 min-w-[180px]">
-                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder="Buscar producto..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-8 h-9"
-                        />
-                      </div>
+                      <DebouncedSearchInput
+                        value={searchTerm}
+                        onChange={setSearchTerm}
+                        placeholder="Buscar producto..."
+                      />
                       <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}>
                         <SelectTrigger className="h-9 w-[140px]">
                           <SelectValue />
