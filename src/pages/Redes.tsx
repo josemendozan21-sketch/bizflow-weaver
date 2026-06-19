@@ -1,8 +1,9 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BrandSocialCalendar } from "@/components/redes/BrandSocialCalendar";
 import { BrandIdeasBoard } from "@/components/redes/BrandIdeasBoard";
+import type { SocialBrand } from "@/hooks/useSocialPosts";
 
-function BrandSection({ brand }: { brand: string }) {
+function BrandSection({ brand }: { brand: SocialBrand }) {
   return (
     <Tabs defaultValue="ideas" className="mt-4">
       <TabsList>
