@@ -1,4 +1,4 @@
-import { Home, ShoppingCart, Factory, Truck, Calculator, Package, Palette, Shield, DollarSign, CalendarDays, Tent, Images, Store, PiggyBank, Building2, Users, FileText, Contact } from "lucide-react";
+import { Home, ShoppingCart, Factory, Truck, Calculator, Package, Palette, Shield, DollarSign, CalendarDays, Tent, Images, Store, PiggyBank, Building2, Users, FileText, Contact, Megaphone } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -39,6 +39,7 @@ const items = [
   { title: "Personal", url: "/personal", icon: Users },
   { title: "Galería", url: "/galeria", icon: Images },
   { title: "Documentos", url: "/documentos", icon: FileText },
+  { title: "Redes Bionovations", url: "/redes", icon: Megaphone },
   { title: "Usuarios", url: "/admin-usuarios", icon: Shield },
 ];
 

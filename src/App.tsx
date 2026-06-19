@@ -26,6 +26,7 @@ import NutricionProveedores from "./pages/NutricionProveedores";
 import Personal from "./pages/Personal";
 import Documentos from "./pages/Documentos";
 import Clientes from "./pages/Clientes";
+import Redes from "./pages/Redes";
 import NotFound from "./pages/NotFound";
 import Install from "./pages/Install";
 import { ReactNode } from "react";
@@ -159,6 +160,7 @@ const App = () => (
                 <Route path="/personal" element={<ProtectedRoute path="/personal"><Personal /></ProtectedRoute>} />
                 <Route path="/documentos" element={<ProtectedRoute path="/documentos"><Documentos /></ProtectedRoute>} />
                 <Route path="/clientes" element={<ProtectedRoute path="/clientes"><Clientes /></ProtectedRoute>} />
+                <Route path="/redes" element={<ProtectedRoute path="/redes"><Redes /></ProtectedRoute>} />
                   </Route>
                   <Route path="*" element={<NotFound />} />
                 </Routes>
