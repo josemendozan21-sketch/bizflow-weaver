@@ -1,12 +1,33 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { getOrderBalance, getOrderPaidAmount, isOrderFullyPaid, useOrders } from "@/hooks/useOrders";
-import { Loader2, DollarSign, CreditCard, Truck, Clock } from "lucide-react";
+import { Loader2, DollarSign, CreditCard, Truck, Clock, Wallet } from "lucide-react";
 import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { es } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
 
 export function AdvisorSummary() {
   const { data: orders = [], isLoading } = useOrders();
+  const [recaudosDia, setRecaudosDia] = useState(0);
+
+  useEffect(() => {
+    (async () => {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
+      const todayStr = `${yyyy}-${mm}-${dd}`;
+      const { data } = await supabase
+        .from("order_payments")
+        .select("amount")
+        .eq("payment_date", todayStr);
+      const total = (data ?? []).reduce(
+        (s: number, r: any) => s + Number(r.amount || 0),
+        0,
+      );
+      setRecaudosDia(total);
+    })();
+  }, []);
 
   const metrics = useMemo(() => {
     const now = new Date();
@@ -61,6 +82,14 @@ export function AdvisorSummary() {
       bg: "bg-green-50",
     },
     {
+      title: "Recaudos del día",
+      value: `$${recaudosDia.toLocaleString("es-CO")}`,
+      subtitle: "Dinero efectivamente ingresado hoy (abonos y pagos completos)",
+      icon: Wallet,
+      color: "text-emerald-700",
+      bg: "bg-emerald-100",
+    },
+    {
       title: "Pedidos por pagar",
       value: String(metrics.pedidosPorPagar),
       subtitle: "Pedidos al por mayor pendientes de pago completo",
@@ -88,7 +117,7 @@ export function AdvisorSummary() {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {cards.map((card) => (
           <Card key={card.title}>
             <CardContent className="p-4">

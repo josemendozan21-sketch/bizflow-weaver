@@ -13,6 +13,7 @@ import {
   Target,
   Calendar as CalendarIcon,
   Instagram,
+  HandCoins,
 } from "lucide-react";
 
 const LOCATION_92 = "73050f3b-1c8e-44f1-9d0d-94772216c100";
@@ -24,6 +25,7 @@ function fmt(n: number) {
 interface Kpis {
   ventasAsesoresDia: number;
   ventasPosDia: number;
+  recaudosDia: number;
   cajaEmpresa: number;
   cuentasPorCobrar: number;
   ventasMesTotal: number;
@@ -50,6 +52,7 @@ export function AdminTodayDashboard() {
   const [kpis, setKpis] = useState<Kpis>({
     ventasAsesoresDia: 0,
     ventasPosDia: 0,
+    recaudosDia: 0,
     cajaEmpresa: 0,
     cuentasPorCobrar: 0,
     ventasMesTotal: 0,
@@ -66,6 +69,10 @@ export function AdminTodayDashboard() {
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const in14 = new Date(now);
       in14.setDate(in14.getDate() + 14);
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+      const dd = String(now.getDate()).padStart(2, "0");
+      const todayStr = `${yyyy}-${mm}-${dd}`;
 
       const [
         { data: ordersDay },
@@ -76,6 +83,7 @@ export function AdminTodayDashboard() {
         { data: banks },
         { data: budget },
         { data: nextPosts },
+        { data: paymentsDay },
       ] = await Promise.all([
         supabase
           .from("orders")
@@ -114,6 +122,10 @@ export function AdminTodayDashboard() {
           .lte("scheduled_date", in14.toISOString().slice(0, 10))
           .order("scheduled_date", { ascending: true })
           .limit(20),
+        supabase
+          .from("order_payments")
+          .select("amount")
+          .eq("payment_date", todayStr),
       ]);
 
       const ventasAsesoresDia = (ordersDay ?? []).reduce(
@@ -135,6 +147,11 @@ export function AdminTodayDashboard() {
       const cajaEmpresa = (banks ?? [])
         .filter((b: any) => b.active !== false)
         .reduce((s, b: any) => s + Number(b.current_balance || 0), 0);
+      const recaudosOrdenes = (paymentsDay ?? []).reduce(
+        (s, r: any) => s + Number(r.amount || 0),
+        0,
+      );
+      const recaudosDia = recaudosOrdenes + ventasPosDia;
 
       let presupuestoProyectado = 0;
       let presupuestoEjecutado = 0;
@@ -161,6 +178,7 @@ export function AdminTodayDashboard() {
       setKpis({
         ventasAsesoresDia,
         ventasPosDia,
+        recaudosDia,
         cajaEmpresa,
         cuentasPorCobrar,
         ventasMesTotal,
@@ -188,6 +206,13 @@ export function AdminTodayDashboard() {
       value: fmt(kpis.ventasPosDia),
       icon: Store,
       color: "text-emerald-600 bg-emerald-500/10",
+    },
+    {
+      title: "Recaudos del día",
+      value: fmt(kpis.recaudosDia),
+      subtitle: "Abonos a pedidos + ventas POS de hoy",
+      icon: HandCoins,
+      color: "text-green-700 bg-green-500/15",
     },
     {
       title: "Caja empresa (bancos)",
