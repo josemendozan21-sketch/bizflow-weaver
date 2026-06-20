@@ -94,6 +94,7 @@ const CANONICAL_REFERENCES = [
   "Mariposas", "Mariposa",
   "Gorro quimioterapia", "Gorro Quimioterapia", "Gorro",
   "Tornillo 3D",
+  "Tapaojos con Velcro",
 ];
 
 export const MagicalWarmersWorkflow = () => {
