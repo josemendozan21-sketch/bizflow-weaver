@@ -182,14 +182,30 @@ export function useInventory() {
       const normalizedRef = normalize(referencia);
       const normalizedBrand = normalize(brand);
 
-      const item = stockToSearch.find(
-        (b) =>
-          normalize(b.brand) === normalizedBrand && (
-            normalize(b.referencia) === normalizedRef ||
-            normalize(b.referencia).includes(normalizedRef) ||
-            normalizedRef.includes(normalize(b.referencia))
-          )
+      // Detect product_type suffix in referencia (e.g. "Multiusos (Térmico)")
+      const typeMatch = referencia.match(/\(([^)]+)\)\s*$/);
+      const refType = typeMatch ? normalize(typeMatch[1]) : "";
+      const isTermico = /(termico|calor)/.test(refType);
+      const isFrio = /frio/.test(refType);
+
+      const brandPool = stockToSearch.filter(
+        (b) => normalize(b.brand) === normalizedBrand,
       );
+
+      // 1) Exact match first
+      let item = brandPool.find((b) => normalize(b.referencia) === normalizedRef);
+      // 2) Then fuzzy, but respecting product_type when present
+      if (!item) {
+        item = brandPool.find((b) => {
+          const bn = normalize(b.referencia);
+          const bIsTermico = /(termico|calor)/.test(bn);
+          const bIsFrio = /frio/.test(bn);
+          if (isTermico && !bIsTermico) return false;
+          if (isFrio && !bIsFrio) return false;
+          if (!isTermico && !isFrio && (bIsTermico || bIsFrio)) return false;
+          return bn.includes(normalizedRef) || normalizedRef.includes(bn);
+        });
+      }
 
       if (!item) {
         if (options?.requestedBy) {
@@ -240,11 +256,22 @@ export function useInventory() {
         .eq("category", "cuerpos_referencias");
 
       if (stockItemsForBrand) {
-        const matchingStockItem = (stockItemsForBrand as unknown as SupabaseStockItem[]).find(
-          (si) => normalize(si.name) === normalizedRefBase ||
-                  normalize(si.name).includes(normalizedRefBase) ||
-                  normalizedRefBase.includes(normalize(si.name))
-        );
+        const pool = stockItemsForBrand as unknown as SupabaseStockItem[];
+        // Filter by product_type when the referencia carried a type marker
+        const typed = pool.filter((si) => {
+          const pt = normalize(si.product_type || "");
+          if (isTermico) return /(termico|calor)/.test(pt);
+          if (isFrio) return /frio/.test(pt);
+          return true;
+        });
+        const candidates = typed.length > 0 ? typed : pool;
+        const matchingStockItem =
+          candidates.find((si) => normalize(si.name) === normalizedRefBase) ||
+          candidates.find(
+            (si) =>
+              normalize(si.name).includes(normalizedRefBase) ||
+              normalizedRefBase.includes(normalize(si.name)),
+          );
         if (matchingStockItem) {
           await supabase
             .from("stock_items")
