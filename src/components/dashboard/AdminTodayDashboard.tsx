@@ -147,11 +147,10 @@ export function AdminTodayDashboard() {
       const cajaEmpresa = (banks ?? [])
         .filter((b: any) => b.active !== false)
         .reduce((s, b: any) => s + Number(b.current_balance || 0), 0);
-      const recaudosOrdenes = (paymentsDay ?? []).reduce(
+      const recaudosDia = (paymentsDay ?? []).reduce(
         (s, r: any) => s + Number(r.amount || 0),
         0,
       );
-      const recaudosDia = recaudosOrdenes + ventasPosDia;
 
       let presupuestoProyectado = 0;
       let presupuestoEjecutado = 0;
@@ -210,7 +209,7 @@ export function AdminTodayDashboard() {
     {
       title: "Recaudos del día",
       value: fmt(kpis.recaudosDia),
-      subtitle: "Abonos a pedidos + ventas POS de hoy",
+      subtitle: "Abonos a pedidos pendientes (banco)",
       icon: HandCoins,
       color: "text-green-700 bg-green-500/15",
     },
