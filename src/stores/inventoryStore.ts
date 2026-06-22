@@ -133,6 +133,8 @@ const INITIAL_CONFIGS: MaterialConfig[] = [
   { id: "41b", productName: "Tornillo 3D", productType: "Térmico", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
   { id: "42", productName: "Tapaojos con Velcro", productType: "Frío", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
   { id: "42b", productName: "Tapaojos con Velcro", productType: "Térmico", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "43", productName: "Mordedores", productType: "Frío", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
+  { id: "43b", productName: "Mordedores", productType: "Térmico", gramsPerUnit: 0, finishedUnits: 0, bodyUnits: 0, minBodyUnits: 0, minFinishedUnits: 0 },
 ];
 
 const INITIAL_GEL_STOCK: GelStock[] = [

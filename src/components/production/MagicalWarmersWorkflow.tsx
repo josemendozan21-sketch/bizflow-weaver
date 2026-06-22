@@ -95,6 +95,7 @@ const CANONICAL_REFERENCES = [
   "Gorro quimioterapia", "Gorro Quimioterapia", "Gorro",
   "Tornillo 3D",
   "Tapaojos con Velcro",
+  "Mordedores",
 ];
 
 export const MagicalWarmersWorkflow = () => {

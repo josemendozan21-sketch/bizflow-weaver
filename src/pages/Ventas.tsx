@@ -582,7 +582,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       .map((s) => s.name);
     // Hardcoded fallback to guarantee key references always show up
     // even if the database fetch hasn't completed or is filtered out.
-    const fallback = ["Tiroides", "Herbology", "Tapaojos con Velcro"];
+    const fallback = ["Tiroides", "Herbology", "Tapaojos con Velcro", "Mordedores"];
     const names = [...new Set([...fromConfig, ...fromDB, ...fallback])];
     return names.sort((a, b) => a.localeCompare(b, "es"));
   }, [materialConfigs, inventoryStockItems]);
