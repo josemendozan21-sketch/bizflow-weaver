@@ -14,6 +14,7 @@ import {
   Calendar as CalendarIcon,
   Instagram,
   HandCoins,
+  Banknote,
 } from "lucide-react";
 
 const LOCATION_92 = "73050f3b-1c8e-44f1-9d0d-94772216c100";
