@@ -14,6 +14,7 @@ import {
   Calendar as CalendarIcon,
   Instagram,
   HandCoins,
+  Banknote,
 } from "lucide-react";
 
 const LOCATION_92 = "73050f3b-1c8e-44f1-9d0d-94772216c100";
@@ -207,11 +208,18 @@ export function AdminTodayDashboard() {
       color: "text-emerald-600 bg-emerald-500/10",
     },
     {
-      title: "Recaudos del día",
+      title: "Recaudos de pedidos",
       value: fmt(kpis.recaudosDia),
       subtitle: "Abonos a pedidos pendientes (banco)",
       icon: HandCoins,
       color: "text-green-700 bg-green-500/15",
+    },
+    {
+      title: "Recaudos del punto",
+      value: fmt(kpis.ventasPosDia),
+      subtitle: "Dinero recaudado en Punto 92 hoy",
+      icon: Banknote,
+      color: "text-pink-600 bg-pink-500/15",
     },
     {
       title: "Caja empresa (bancos)",
