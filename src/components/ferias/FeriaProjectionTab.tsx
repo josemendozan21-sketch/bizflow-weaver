@@ -229,19 +229,28 @@ export function FeriaProjectionTab({ feria }: { feria: Feria }) {
 
       {/* Break-even */}
       <Card className="p-4">
-        <h3 className="font-semibold mb-3">Punto de equilibrio</h3>
+        <h3 className="font-semibold mb-1">Punto de equilibrio</h3>
+        <p className="text-xs text-muted-foreground mb-3 flex items-start gap-1">
+          <Info className="h-3 w-3 mt-0.5 shrink-0" />
+          Calculado con margen de contribución: <b className="mx-1">unidades de equilibrio = (costos fijos + margen objetivo) ÷ (precio sin IVA − costo por unidad)</b>. La mercancía es variable y crece con las ventas.
+        </p>
         {be.costsUsed === 0 ? (
           <p className="text-sm text-muted-foreground">Define costos (reales o presupuestados) para calcular el equilibrio.</p>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
             <div className="border rounded p-3">
-              <div className="text-xs text-muted-foreground">Costos {be.costsSource}</div>
-              <div className="font-bold">{fmt(be.costsUsed)}</div>
+              <div className="text-xs text-muted-foreground">Costos fijos ({be.costsSource})</div>
+              <div className="font-bold">{fmt(be.fixedCosts)}</div>
+              <div className="text-[10px] text-muted-foreground">+{be.targetMarginPct}% margen = {fmt(be.fixedWithMargin)}</div>
             </div>
             <div className="border rounded p-3 bg-primary/5">
+              <div className="text-xs text-muted-foreground">Unidades equilibrio</div>
+              <div className="font-bold">{Math.ceil(be.breakEvenUnits).toLocaleString()}</div>
+              <div className="text-[10px] text-muted-foreground">de {inventarioUnidades.toLocaleString()} en inventario</div>
+            </div>
+            <div className="border rounded p-3">
               <div className="text-xs text-muted-foreground">Equilibrio (con IVA)</div>
               <div className="font-bold">{fmt(be.breakEvenWithIva)}</div>
-              <div className="text-[10px] text-muted-foreground">+{be.targetMarginPct}% margen</div>
             </div>
             <div className="border rounded p-3">
               <div className="text-xs text-muted-foreground">Equilibrio (sin IVA)</div>
@@ -262,13 +271,13 @@ export function FeriaProjectionTab({ feria }: { feria: Feria }) {
       <Card className="p-4">
         <h3 className="font-semibold mb-3">Escenarios de ventas</h3>
 
-        {/* Desglose de costos fijos */}
+        {/* Desglose de costos fijos (mercancía se muestra aparte porque es variable) */}
         <div className="border rounded-lg p-3 mb-4 bg-muted/30">
           <div className="flex items-center justify-between mb-2">
-            <div className="text-xs font-semibold">Costos fijos de la feria</div>
+            <div className="text-xs font-semibold">Costos fijos de la feria <span className="text-[10px] text-muted-foreground font-normal">(no incluye mercancía — esa es variable)</span></div>
             <div className="text-xs">
               <span className="text-muted-foreground">Total: </span>
-              <span className="font-bold">{fmt(be.costsUsed)}</span>
+              <span className="font-bold">{fmt(be.fixedCosts)}</span>
               <span className="text-[10px] text-muted-foreground ml-1">({be.costsSource})</span>
             </div>
           </div>
@@ -294,7 +303,7 @@ export function FeriaProjectionTab({ feria }: { feria: Feria }) {
         <div className="grid md:grid-cols-3 gap-3">
           {(Object.keys(SCENARIO_LABEL) as Array<keyof Feria["scenarios"]>).map((key) => {
             const sc = settings.scenarios[key];
-            const res = calcScenario(sc, draftFeria, be, inventarioConIva, inventarioUnidades);
+            const res = calcScenario(sc, draftFeria, be, inventarioConIva, inventarioUnidades, inventarioCosto);
             return (
               <div key={key} className={`border rounded-lg p-3 ${SCENARIO_COLOR[key]}`}>
                 <div className="flex items-center justify-between mb-2">
@@ -321,16 +330,25 @@ export function FeriaProjectionTab({ feria }: { feria: Feria }) {
                   <div className="flex justify-between"><span>Unidades</span><span className="font-medium">{Math.round(res.unidades).toLocaleString()}</span></div>
                   <div className="flex justify-between"><span>Ingreso con IVA</span><span className="font-medium">{fmt(res.ingresoConIva)}</span></div>
                   <div className="flex justify-between"><span>Ingreso sin IVA</span><span className="font-medium">{fmt(res.ingresoSinIva)}</span></div>
+                  <div className="flex justify-between text-muted-foreground"><span>− Costos fijos</span><span>{fmt(res.costosFijos)}</span></div>
+                  <div className="flex justify-between text-muted-foreground"><span>− Costo mercancía ({sc.pct_inventario}%)</span><span>{fmt(res.costoMercancia)}</span></div>
                   <div className="flex justify-between"><span>Excedente sobre BE</span><span className="font-medium">{fmt(res.excedente)}</span></div>
                   <div className="flex justify-between"><span>Utilidad bruta</span><span className={`font-semibold ${res.utilidad >= 0 ? "text-emerald-600" : "text-destructive"}`}>{fmt(res.utilidad)}</span></div>
                   <div className="flex justify-between"><span>Comisión ({sc.pct_comision}%)</span><span className="font-medium">{fmt(res.comisionTotal)}</span></div>
                   <div className="flex justify-between"><span>Utilidad neta</span><span className={`font-semibold ${res.utilidadNeta >= 0 ? "text-emerald-600" : "text-destructive"}`}>{fmt(res.utilidadNeta)}</span></div>
-                  <div className="flex justify-between"><span>% vs equilibrio</span><span className="font-medium">{Math.round(res.pctVsEquilibrio)}%</span></div>
+                  <div className="flex justify-between" title="Unidades del escenario ÷ unidades necesarias para llegar al equilibrio. 100% = justo en equilibrio.">
+                    <span>% vs equilibrio</span>
+                    <span className="font-medium">{Math.round(res.pctVsEquilibrio)}%</span>
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
+        <p className="text-[11px] text-muted-foreground mt-2 flex items-start gap-1">
+          <Info className="h-3 w-3 mt-0.5 shrink-0" />
+          <span><b>% vs equilibrio</b>: unidades del escenario ÷ unidades necesarias para cubrir costos fijos + margen objetivo. 100% es el punto de equilibrio exacto; por encima la feria gana, por debajo pierde.</span>
+        </p>
         {inventarioConIva === 0 && (
           <p className="text-xs text-muted-foreground mt-3">
             Carga el inventario asignado a la feria para que los escenarios proyecten ingresos.
