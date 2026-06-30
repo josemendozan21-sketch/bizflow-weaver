@@ -164,6 +164,7 @@ const AdminUsuarios = () => {
                           <SelectItem value="usuario_visual">Usuario Visual</SelectItem>
                           <SelectItem value="feria_pos">Feria Punto de Venta</SelectItem>
                           <SelectItem value="pos_punto">Asesor Punto de Venta</SelectItem>
+                          <SelectItem value="visualizador">Visualizador (solo lectura)</SelectItem>
                         </SelectContent>
                       </Select>
                       {u.role === "feria_pos" && (
