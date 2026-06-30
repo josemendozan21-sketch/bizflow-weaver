@@ -7,7 +7,7 @@ const corsHeaders = {
 
 const ALLOWED_ROLES = new Set([
   "admin","asesor_comercial","produccion","contabilidad","estampacion",
-  "usuario_visual","disenador","logistica","feria_pos","inventarios","pos_punto",
+  "usuario_visual","disenador","logistica","feria_pos","inventarios","pos_punto","visualizador",
 ]);
 
 Deno.serve(async (req) => {
