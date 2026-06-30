@@ -2,7 +2,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BrandSocialCalendar } from "@/components/redes/BrandSocialCalendar";
 import { BrandIdeasBoard } from "@/components/redes/BrandIdeasBoard";
 import type { SocialBrand } from "@/hooks/useSocialPosts";
-import { useAuth } from "@/contexts/AuthContext";
 
 function BrandSection({ brand }: { brand: SocialBrand }) {
   return (
