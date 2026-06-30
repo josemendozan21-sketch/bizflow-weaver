@@ -22,8 +22,6 @@ function BrandSection({ brand }: { brand: SocialBrand }) {
 }
 
 export default function Redes() {
-  const { role } = useAuth();
-  const onlyBionovations = role === "community_manager";
   return (
     <div className="space-y-6">
       <div>
@@ -35,22 +33,18 @@ export default function Redes() {
       <Tabs defaultValue="bionovations">
         <TabsList>
           <TabsTrigger value="bionovations">Bionovations SAS</TabsTrigger>
-          {!onlyBionovations && <TabsTrigger value="sweatspot">Sweatspot</TabsTrigger>}
-          {!onlyBionovations && <TabsTrigger value="magical">Magical Warmers</TabsTrigger>}
+          <TabsTrigger value="sweatspot">Sweatspot</TabsTrigger>
+          <TabsTrigger value="magical">Magical Warmers</TabsTrigger>
         </TabsList>
         <TabsContent value="bionovations">
           <BrandSection brand="bionovations" />
         </TabsContent>
-        {!onlyBionovations && (
-          <TabsContent value="sweatspot">
-            <BrandSection brand="sweatspot" />
-          </TabsContent>
-        )}
-        {!onlyBionovations && (
-          <TabsContent value="magical">
-            <BrandSection brand="magical" />
-          </TabsContent>
-        )}
+        <TabsContent value="sweatspot">
+          <BrandSection brand="sweatspot" />
+        </TabsContent>
+        <TabsContent value="magical">
+          <BrandSection brand="magical" />
+        </TabsContent>
       </Tabs>
     </div>
   );
