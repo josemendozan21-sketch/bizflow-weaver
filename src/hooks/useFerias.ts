@@ -253,6 +253,65 @@ export function useDeleteFeria() {
   });
 }
 
+export function useDuplicateFeria() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      // 1. Load original feria
+      const { data: original, error: gErr } = await supabase
+        .from("ferias")
+        .select("*")
+        .eq("id", id)
+        .single();
+      if (gErr) throw gErr;
+
+      // Strip non-copyable fields
+      const { id: _id, created_at, updated_at, created_by, ...copy } = original as any;
+      copy.name = `${original.name} (copia)`;
+      copy.status = "planificada";
+      copy.created_by = user?.id;
+
+      const { data: newFeria, error: insErr } = await supabase
+        .from("ferias")
+        .insert(copy)
+        .select()
+        .single();
+      if (insErr) throw insErr;
+
+      // 2. Copy inventory lines (reset dispatch tracking)
+      const { data: inv, error: invErr } = await supabase
+        .from("feria_inventory")
+        .select("*")
+        .eq("feria_id", id);
+      if (invErr) throw invErr;
+
+      if (inv && inv.length > 0) {
+        const rows = inv.map((r: any) => {
+          const { id: _i, created_at: _c, updated_at: _u, ...rest } = r;
+          return {
+            ...rest,
+            feria_id: newFeria.id,
+            quantity_dispatched: 0,
+            quantity_returned: 0,
+            dispatch_status: "pendiente",
+          };
+        });
+        const { error: insInvErr } = await supabase.from("feria_inventory").insert(rows);
+        if (insInvErr) throw insInvErr;
+      }
+
+      return newFeria;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ferias"] });
+      qc.invalidateQueries({ queryKey: ["feria_inventory"] });
+      toast.success("Feria duplicada — ajusta los costos");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+}
+
 export function useAddFeriaInventory() {
   const qc = useQueryClient();
   return useMutation({

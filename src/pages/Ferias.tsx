@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Calendar, Trash2, Hammer } from "lucide-react";
-import { useFerias, useDeleteFeria, type Feria } from "@/hooks/useFerias";
+import { MapPin, Calendar, Trash2, Hammer, Copy } from "lucide-react";
+import { useFerias, useDeleteFeria, useDuplicateFeria, type Feria } from "@/hooks/useFerias";
 import { CreateFeriaDialog } from "@/components/ferias/CreateFeriaDialog";
 import { FeriaDetail } from "@/components/ferias/FeriaDetail";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,6 +20,7 @@ const STATUS_COLOR: Record<string, string> = {
 export default function Ferias() {
   const { data: ferias = [], isLoading } = useFerias();
   const del = useDeleteFeria();
+  const dup = useDuplicateFeria();
   const { role } = useAuth();
   const [selected, setSelected] = useState<Feria | null>(null);
 
@@ -64,8 +65,17 @@ export default function Ferias() {
                 </p>
               )}
               {canManage && (
-                <div className="flex justify-end mt-3">
-                  <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); if (confirm(`¿Eliminar feria "${f.name}"?`)) del.mutate(f.id); }}>
+                <div className="flex justify-end gap-1 mt-3">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Duplicar feria"
+                    disabled={dup.isPending}
+                    onClick={(e) => { e.stopPropagation(); if (confirm(`¿Duplicar feria "${f.name}"? Se copiarán costos e inventario.`)) dup.mutate(f.id); }}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" title="Eliminar feria" onClick={(e) => { e.stopPropagation(); if (confirm(`¿Eliminar feria "${f.name}"?`)) del.mutate(f.id); }}>
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
