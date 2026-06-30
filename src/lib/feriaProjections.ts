@@ -4,28 +4,75 @@ import { calcFeriaTotalCost, calcFeriaTotalBudget } from "@/hooks/useFerias";
 export interface BreakEvenResult {
   costsUsed: number;
   costsSource: "real" | "presupuestado";
+  fixedCosts: number;          // costos fijos (todo menos mercancía)
+  merchandiseCost: number;     // costo de mercancía (real o ppto, informativo)
+  fixedWithMargin: number;     // costos fijos + utilidad objetivo
   targetMarginPct: number;
   ivaPct: number;
   breakEvenWithIva: number;
   breakEvenWithoutIva: number;
+  breakEvenUnits: number;      // unidades necesarias para cubrir fijos + margen
+  avgPriceConIva: number;
+  varCostPerUnit: number;
+  contributionPerUnitSinIva: number;
 }
 
-export function calcBreakEven(feria: Feria): BreakEvenResult {
+export function calcBreakEven(
+  feria: Feria,
+  inventarioConIva = 0,
+  inventarioUnidades = 0,
+  inventarioCosto = 0,
+): BreakEvenResult {
   const real = calcFeriaTotalCost(feria);
   const budget = calcFeriaTotalBudget(feria);
-  const costsUsed = real > 0 ? real : budget;
-  const costsSource: "real" | "presupuestado" = real > 0 ? "real" : "presupuestado";
+  const useReal = real > 0;
+  const costsUsed = useReal ? real : budget;
+  const costsSource: "real" | "presupuestado" = useReal ? "real" : "presupuestado";
+  const merchandiseCost = useReal
+    ? (feria.merchandise_cost || 0)
+    : (feria.budget_merchandise_cost || 0);
+  // Mercancía es variable (proporcional a ventas), no debe entrar en costos fijos
+  const fixedCosts = Math.max(0, costsUsed - merchandiseCost);
   const margin = (feria.target_margin_pct || 0) / 100;
   const iva = (feria.iva_pct || 0) / 100;
-  const breakEvenWithIva = costsUsed * (1 + margin);
-  const breakEvenWithoutIva = breakEvenWithIva / (1 + iva);
-  return { costsUsed, costsSource, targetMarginPct: feria.target_margin_pct, ivaPct: feria.iva_pct, breakEvenWithIva, breakEvenWithoutIva };
+  const fixedWithMargin = fixedCosts * (1 + margin);
+
+  // Punto de equilibrio real con margen de contribución
+  const avgPriceConIva = inventarioUnidades > 0 ? inventarioConIva / inventarioUnidades : 0;
+  const avgPriceSinIva = avgPriceConIva / (1 + iva);
+  const varCostPerUnit = inventarioUnidades > 0 ? inventarioCosto / inventarioUnidades : 0;
+  const contributionPerUnitSinIva = Math.max(0, avgPriceSinIva - varCostPerUnit);
+
+  const breakEvenUnits = contributionPerUnitSinIva > 0
+    ? fixedWithMargin / contributionPerUnitSinIva
+    : 0;
+  const breakEvenWithIva = breakEvenUnits * avgPriceConIva;
+  const breakEvenWithoutIva = breakEvenUnits * avgPriceSinIva;
+
+  return {
+    costsUsed,
+    costsSource,
+    fixedCosts,
+    merchandiseCost,
+    fixedWithMargin,
+    targetMarginPct: feria.target_margin_pct,
+    ivaPct: feria.iva_pct,
+    breakEvenWithIva,
+    breakEvenWithoutIva,
+    breakEvenUnits,
+    avgPriceConIva,
+    varCostPerUnit,
+    contributionPerUnitSinIva,
+  };
 }
 
 export interface ScenarioResult {
   unidades: number;
   ingresoConIva: number;
   ingresoSinIva: number;
+  costoMercancia: number;
+  costosFijos: number;
+  costoTotal: number;
   utilidad: number;
   comisionTotal: number;
   utilidadNeta: number;
@@ -39,20 +86,29 @@ export function calcScenario(
   feria: Feria,
   be: BreakEvenResult,
   inventarioConIva: number,
-  inventarioUnidades: number
+  inventarioUnidades: number,
+  inventarioCosto = 0,
 ): ScenarioResult {
   const pctInv = (s.pct_inventario || 0) / 100;
   const pctCom = (s.pct_comision || 0) / 100;
   const ingresoConIva = inventarioConIva * pctInv;
   const ingresoSinIva = ingresoConIva / (1 + (feria.iva_pct || 0) / 100);
   const unidades = inventarioUnidades * pctInv;
-  const utilidad = ingresoConIva - be.costsUsed;
+  // Costo de mercancía proporcional a las unidades vendidas
+  const costoMercancia = inventarioCosto * pctInv;
+  const costosFijos = be.fixedCosts;
+  const costoTotal = costosFijos + costoMercancia;
+  const utilidad = ingresoConIva - costoTotal;
   const excedente = Math.max(0, ingresoSinIva - be.breakEvenWithoutIva);
   const comisionTotal = excedente * pctCom;
   const utilidadNeta = utilidad - comisionTotal;
-  const superaEquilibrio = ingresoConIva >= be.breakEvenWithIva;
-  const pctVsEquilibrio = be.breakEvenWithIva > 0 ? (ingresoConIva / be.breakEvenWithIva) * 100 : 0;
-  return { unidades, ingresoConIva, ingresoSinIva, utilidad, comisionTotal, utilidadNeta, excedente, superaEquilibrio, pctVsEquilibrio };
+  const superaEquilibrio = be.breakEvenUnits > 0
+    ? unidades >= be.breakEvenUnits
+    : ingresoConIva >= be.breakEvenWithIva;
+  const pctVsEquilibrio = be.breakEvenUnits > 0
+    ? (unidades / be.breakEvenUnits) * 100
+    : (be.breakEvenWithIva > 0 ? (ingresoConIva / be.breakEvenWithIva) * 100 : 0);
+  return { unidades, ingresoConIva, ingresoSinIva, costoMercancia, costosFijos, costoTotal, utilidad, comisionTotal, utilidadNeta, excedente, superaEquilibrio, pctVsEquilibrio };
 }
 
 export interface CommissionProposal {
