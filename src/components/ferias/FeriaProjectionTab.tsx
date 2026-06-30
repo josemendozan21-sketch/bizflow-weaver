@@ -84,6 +84,25 @@ export function FeriaProjectionTab({ feria }: { feria: Feria }) {
   const draftFeria: Feria = { ...feria, ...settings };
 
   const be = useMemo(() => calcBreakEven(draftFeria), [draftFeria]);
+
+  // Desglose de costos fijos (usa reales si existen, si no presupuestados)
+  const costBreakdown = useMemo(() => {
+    const pick = (real: number, budget: number): { value: number; source: "real" | "presupuestado" } =>
+      (real || 0) > 0 ? { value: real || 0, source: "real" } : { value: budget || 0, source: "presupuestado" };
+    return [
+      { label: "Stand / Feria", ...pick(feria.stand_cost, feria.budget_stand_cost) },
+      { label: "Empleados", ...pick(feria.employees_cost, feria.budget_employees_cost) },
+      { label: "Costo mercancía", ...pick(feria.merchandise_cost, feria.budget_merchandise_cost) },
+      { label: "Envío mercancía", ...pick(feria.shipping_cost, feria.budget_shipping_cost) },
+      { label: "Tiquetes", ...pick(feria.tickets_cost, feria.budget_tickets_cost) },
+      { label: "Publicidad", ...pick(feria.advertising_cost, feria.budget_advertising_cost) },
+      { label: "Hospedaje", ...pick(feria.lodging_cost, feria.budget_lodging_cost) },
+      { label: "Transporte", ...pick(feria.transport_cost, feria.budget_transport_cost) },
+      { label: "Alimentación", ...pick(feria.food_cost, feria.budget_food_cost) },
+      { label: "Otros", ...pick(feria.other_costs, feria.budget_other_costs) },
+    ].filter((r) => r.value > 0);
+  }, [feria]);
+
   const inventarioConIva = useMemo(
     () => inventory.reduce((a, i) => a + (Number(i.quantity_assigned) || 0) * (Number(i.unit_price) || 0), 0),
     [inventory]
@@ -238,6 +257,36 @@ export function FeriaProjectionTab({ feria }: { feria: Feria }) {
       {/* Scenarios */}
       <Card className="p-4">
         <h3 className="font-semibold mb-3">Escenarios de ventas</h3>
+
+        {/* Desglose de costos fijos */}
+        <div className="border rounded-lg p-3 mb-4 bg-muted/30">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs font-semibold">Costos fijos de la feria</div>
+            <div className="text-xs">
+              <span className="text-muted-foreground">Total: </span>
+              <span className="font-bold">{fmt(be.costsUsed)}</span>
+              <span className="text-[10px] text-muted-foreground ml-1">({be.costsSource})</span>
+            </div>
+          </div>
+          {costBreakdown.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Aún no hay costos registrados ni presupuestados.</p>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 text-xs">
+              {costBreakdown.map((c) => (
+                <div key={c.label} className="border rounded p-2 bg-background">
+                  <div className="text-[10px] text-muted-foreground flex items-center justify-between">
+                    <span>{c.label}</span>
+                    {c.source === "presupuestado" && (
+                      <span className="text-[9px] uppercase opacity-60">ppto</span>
+                    )}
+                  </div>
+                  <div className="font-semibold">{fmt(c.value)}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="grid md:grid-cols-3 gap-3">
           {(Object.keys(SCENARIO_LABEL) as Array<keyof Feria["scenarios"]>).map((key) => {
             const sc = settings.scenarios[key];
