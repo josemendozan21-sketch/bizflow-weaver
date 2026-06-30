@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Save, CheckCircle2, XCircle, Sparkles } from "lucide-react";
+import { Save, CheckCircle2, XCircle, Sparkles, Info } from "lucide-react";
 import { useFeriaSales, useUpdateFeria, useFeriaInventory, type Feria, type ScenarioInput } from "@/hooks/useFerias";
 import { calcBreakEven, calcScenario, proposeCommissions, type CommissionProposal } from "@/lib/feriaProjections";
 import { supabase } from "@/integrations/supabase/client";
@@ -83,26 +83,7 @@ export function FeriaProjectionTab({ feria }: { feria: Feria }) {
   // Project-derived feria for in-memory calcs
   const draftFeria: Feria = { ...feria, ...settings };
 
-  const be = useMemo(() => calcBreakEven(draftFeria), [draftFeria]);
-
-  // Desglose de costos fijos (usa reales si existen, si no presupuestados)
-  const costBreakdown = useMemo(() => {
-    const pick = (real: number, budget: number): { value: number; source: "real" | "presupuestado" } =>
-      (real || 0) > 0 ? { value: real || 0, source: "real" } : { value: budget || 0, source: "presupuestado" };
-    return [
-      { label: "Stand / Feria", ...pick(feria.stand_cost, feria.budget_stand_cost) },
-      { label: "Empleados", ...pick(feria.employees_cost, feria.budget_employees_cost) },
-      { label: "Costo mercancía", ...pick(feria.merchandise_cost, feria.budget_merchandise_cost) },
-      { label: "Envío mercancía", ...pick(feria.shipping_cost, feria.budget_shipping_cost) },
-      { label: "Tiquetes", ...pick(feria.tickets_cost, feria.budget_tickets_cost) },
-      { label: "Publicidad", ...pick(feria.advertising_cost, feria.budget_advertising_cost) },
-      { label: "Hospedaje", ...pick(feria.lodging_cost, feria.budget_lodging_cost) },
-      { label: "Transporte", ...pick(feria.transport_cost, feria.budget_transport_cost) },
-      { label: "Alimentación", ...pick(feria.food_cost, feria.budget_food_cost) },
-      { label: "Otros", ...pick(feria.other_costs, feria.budget_other_costs) },
-    ].filter((r) => r.value > 0);
-  }, [feria]);
-
+  // Inventory totals (needed for proper break-even with contribution margin)
   const inventarioConIva = useMemo(
     () => inventory.reduce((a, i) => a + (Number(i.quantity_assigned) || 0) * (Number(i.unit_price) || 0), 0),
     [inventory]
@@ -115,6 +96,29 @@ export function FeriaProjectionTab({ feria }: { feria: Feria }) {
     () => inventory.reduce((a, i) => a + (Number(i.quantity_assigned) || 0) * (Number(i.unit_cost) || 0), 0),
     [inventory]
   );
+
+  const be = useMemo(
+    () => calcBreakEven(draftFeria, inventarioConIva, inventarioUnidades, inventarioCosto),
+    [draftFeria, inventarioConIva, inventarioUnidades, inventarioCosto]
+  );
+
+  // Desglose de costos fijos (usa reales si existen, si no presupuestados)
+  const costBreakdown = useMemo(() => {
+    const pick = (real: number, budget: number): { value: number; source: "real" | "presupuestado" } =>
+      (real || 0) > 0 ? { value: real || 0, source: "real" } : { value: budget || 0, source: "presupuestado" };
+    return [
+      { label: "Stand / Feria", ...pick(feria.stand_cost, feria.budget_stand_cost) },
+      { label: "Empleados", ...pick(feria.employees_cost, feria.budget_employees_cost) },
+      { label: "Envío mercancía", ...pick(feria.shipping_cost, feria.budget_shipping_cost) },
+      { label: "Tiquetes", ...pick(feria.tickets_cost, feria.budget_tickets_cost) },
+      { label: "Publicidad", ...pick(feria.advertising_cost, feria.budget_advertising_cost) },
+      { label: "Hospedaje", ...pick(feria.lodging_cost, feria.budget_lodging_cost) },
+      { label: "Transporte", ...pick(feria.transport_cost, feria.budget_transport_cost) },
+      { label: "Alimentación", ...pick(feria.food_cost, feria.budget_food_cost) },
+      { label: "Otros", ...pick(feria.other_costs, feria.budget_other_costs) },
+    ].filter((r) => r.value > 0);
+  }, [feria]);
+
   const ventasActualesIva = useMemo(() => sales.reduce((a, s) => a + Number(s.total_amount), 0), [sales]);
   const ventasActualesSinIva = ventasActualesIva / (1 + (feria.iva_pct || 0) / 100);
   const gapIva = be.breakEvenWithIva - ventasActualesIva;
