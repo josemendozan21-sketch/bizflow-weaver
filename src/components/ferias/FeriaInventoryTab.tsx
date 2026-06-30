@@ -20,6 +20,7 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   const { role } = useAuth();
   const canSend = role === "admin" || role === "asesor_comercial";
   const canManage = role === "admin" || role === "asesor_comercial";
+  const canEditQuantity = canManage || role === "logistica";
   const canSeeFinancials = role === "admin" || role === "asesor_comercial" || role === "contabilidad";
   const add = useAddFeriaInventory();
   const del = useDeleteFeriaInventory();
@@ -253,7 +254,7 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
               <TableHead className="text-right">Restante</TableHead>
               {canSeeFinancials && <TableHead className="text-right">Costo</TableHead>}
               {canSeeFinancials && <TableHead className="text-right">Precio</TableHead>}
-              {canManage && <TableHead></TableHead>}
+              {canEditQuantity && <TableHead></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -297,15 +298,15 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
                         onChange={(e) => setEditForm({ ...editForm, unit_price: e.target.value })} />
                     ) : `$${it.unit_price.toLocaleString()}`}
                   </TableCell>}
-                  {canManage && <TableCell className="text-right space-x-1 whitespace-nowrap">
+                  {canEditQuantity && <TableCell className="text-right space-x-1 whitespace-nowrap">
                     {isEditing ? (
                       <>
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={async () => {
                           await upd.mutateAsync({
                             id: it.id, feria_id: feriaId,
                             quantity_assigned: parseInt(editForm.quantity_assigned, 10) || 0,
-                            unit_price: parseFloat(editForm.unit_price) || 0,
-                            unit_cost: parseFloat(editForm.unit_cost) || 0,
+                            unit_price: canSeeFinancials ? (parseFloat(editForm.unit_price) || 0) : (it.unit_price || 0),
+                            unit_cost: canSeeFinancials ? (parseFloat(editForm.unit_cost) || 0) : (it.unit_cost || 0),
                           });
                           setEditingId(null);
                         }}><Check className="h-4 w-4 text-primary" /></Button>
@@ -323,9 +324,11 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
                             unit_cost: String(it.unit_cost || 0),
                           });
                         }}><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => del.mutate({ id: it.id, feria_id: feriaId })}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {canManage && (
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => del.mutate({ id: it.id, feria_id: feriaId })}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </>
                     )}
                   </TableCell>}
