@@ -6,7 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus } from "lucide-react";
 import type { FeriaInventory, FeriaSale } from "@/hooks/useFerias";
-import { useAddFeriaSale } from "@/hooks/useFerias";
+import { useFeriaOfflineStore } from "@/stores/feriaOfflineStore";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 export function DetailedSaleForm({
   feriaId,
@@ -17,7 +19,8 @@ export function DetailedSaleForm({
   inventory: FeriaInventory[];
   sales: FeriaSale[];
 }) {
-  const add = useAddFeriaSale();
+  const enqueue = useFeriaOfflineStore((s) => s.enqueue);
+  const { user } = useAuth();
   const [form, setForm] = useState({
     inventory_id: "",
     quantity: "1",
@@ -80,7 +83,7 @@ export function DetailedSaleForm({
       const qty2 = Math.max(1, Math.round((qty * amount2Num) / total));
       const qty1 = Math.max(0, qty - qty2);
       if (qty1 > 0) {
-        await add.mutateAsync({
+        enqueue({
           feria_id: feriaId,
           brand: selected.brand,
           product_name: selected.product_name,
@@ -90,9 +93,10 @@ export function DetailedSaleForm({
           payment_method: form.payment_method,
           client_name: form.client_name || null,
           notes: baseNote,
+          recorded_by: user?.id || null,
         });
       }
-      await add.mutateAsync({
+      enqueue({
         feria_id: feriaId,
         brand: selected.brand,
         product_name: selected.product_name,
@@ -102,9 +106,10 @@ export function DetailedSaleForm({
         payment_method: payment2,
         client_name: form.client_name || null,
         notes: baseNote,
+        recorded_by: user?.id || null,
       });
     } else {
-      await add.mutateAsync({
+      enqueue({
         feria_id: feriaId,
         brand: selected.brand,
         product_name: selected.product_name,
@@ -114,8 +119,10 @@ export function DetailedSaleForm({
         payment_method: form.payment_method,
         client_name: form.client_name || null,
         notes: baseNote,
+        recorded_by: user?.id || null,
       });
     }
+    toast.success(navigator.onLine ? "Venta registrada" : "Venta guardada offline — se subirá cuando vuelva internet");
     setForm({ ...form, inventory_id: "", quantity: "1", unit_price: "", client_name: "", client_email: "", client_doc: "", discount: "", notes: "" });
     setSplitEnabled(false);
     setAmount2("");
@@ -131,8 +138,8 @@ export function DetailedSaleForm({
             <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
             <SelectContent>
               {inventory.map((it) => (
-                <SelectItem key={it.id} value={it.id} disabled={remainingMap[it.id] <= 0}>
-                  {it.product_name} ({it.brand}) — {remainingMap[it.id]} disp.
+               <SelectItem key={it.id} value={it.id}>
+                  {it.product_name} ({it.brand}) — {remainingMap[it.id]} disp.{remainingMap[it.id] <= 0 ? " (sobreventa)" : ""}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -245,7 +252,7 @@ export function DetailedSaleForm({
         )}
       </div>
       <div className="mt-4 flex justify-end">
-        <Button onClick={handleSubmit} disabled={!form.inventory_id || add.isPending}>
+        <Button onClick={handleSubmit} disabled={!form.inventory_id}>
           <Plus className="mr-2 h-4 w-4" /> Registrar venta
         </Button>
       </div>
