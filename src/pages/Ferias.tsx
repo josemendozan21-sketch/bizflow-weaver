@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Calendar, Trash2, Hammer, Copy } from "lucide-react";
+import { MapPin, Calendar, Trash2, Hammer, Copy, Phone } from "lucide-react";
 import { useFerias, useDeleteFeria, useDuplicateFeria, type Feria } from "@/hooks/useFerias";
 import { CreateFeriaDialog } from "@/components/ferias/CreateFeriaDialog";
 import { FeriaDetail } from "@/components/ferias/FeriaDetail";
@@ -99,6 +99,11 @@ export default function Ferias() {
               {f.setup_date && (
                 <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                   <Hammer className="h-3 w-3" /> Montaje: {format(new Date(f.setup_date), "dd MMM", { locale: es })}
+                </p>
+              )}
+              {f.contact_phone && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                  <Phone className="h-3 w-3" /> {f.contact_phone}
                 </p>
               )}
               {canManage && (

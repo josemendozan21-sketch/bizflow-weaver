@@ -57,6 +57,7 @@ export interface Feria {
   };
   brand: string | null;
   estimated_athletes: number | null;
+  contact_phone: string | null;
 }
 
 export interface ScenarioInput {

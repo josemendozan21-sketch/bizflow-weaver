@@ -1081,6 +1081,7 @@ export type Database = {
           commission_tier_2_pct: number
           commission_tier_2_to_pct: number
           commission_tier_3_pct: number
+          contact_phone: string | null
           created_at: string
           created_by: string | null
           employees_cost: number | null
@@ -1129,6 +1130,7 @@ export type Database = {
           commission_tier_2_pct?: number
           commission_tier_2_to_pct?: number
           commission_tier_3_pct?: number
+          contact_phone?: string | null
           created_at?: string
           created_by?: string | null
           employees_cost?: number | null
@@ -1177,6 +1179,7 @@ export type Database = {
           commission_tier_2_pct?: number
           commission_tier_2_to_pct?: number
           commission_tier_3_pct?: number
+          contact_phone?: string | null
           created_at?: string
           created_by?: string | null
           employees_cost?: number | null

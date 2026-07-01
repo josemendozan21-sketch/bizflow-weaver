@@ -42,6 +42,7 @@ export function EditFeriaDialog({ feria }: { feria: Feria }) {
         stand_number: feria.stand_number || "", stand_size: feria.stand_size || "",
         brand: feria.brand || "",
         estimated_athletes: feria.estimated_athletes != null ? String(feria.estimated_athletes) : "",
+        contact_phone: feria.contact_phone || "",
         stand_cost: String(feria.stand_cost || 0),
         shipping_cost: String(feria.shipping_cost || 0),
         tickets_cost: String(feria.tickets_cost || 0),
@@ -97,6 +98,7 @@ export function EditFeriaDialog({ feria }: { feria: Feria }) {
       stand_number: form.stand_number || null, stand_size: form.stand_size || null,
       brand: form.brand || null,
       estimated_athletes: form.estimated_athletes ? parseInt(form.estimated_athletes) : null,
+      contact_phone: form.contact_phone || null,
       stand_cost: parseFloat(form.stand_cost) || 0,
       shipping_cost: parseFloat(form.shipping_cost) || 0,
       tickets_cost: parseFloat(form.tickets_cost) || 0,
@@ -160,7 +162,7 @@ export function EditFeriaDialog({ feria }: { feria: Feria }) {
             <div><Label>N° Stand</Label><Input value={form.stand_number} onChange={(e) => setForm({ ...form, stand_number: e.target.value })} /></div>
             <div><Label>Tamaño stand</Label><Input value={form.stand_size} onChange={(e) => setForm({ ...form, stand_size: e.target.value })} /></div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <Label>Marca principal</Label>
               <Select value={form.brand || "none"} onValueChange={(v) => setForm({ ...form, brand: v === "none" ? "" : v })}>
@@ -176,6 +178,10 @@ export function EditFeriaDialog({ feria }: { feria: Feria }) {
             <div>
               <Label>Atletas estimados</Label>
               <Input type="number" min={0} value={form.estimated_athletes} onChange={(e) => setForm({ ...form, estimated_athletes: e.target.value })} placeholder="Ej. 3000" />
+            </div>
+            <div>
+              <Label>Teléfono contacto feria</Label>
+              <Input value={form.contact_phone} onChange={(e) => setForm({ ...form, contact_phone: e.target.value })} placeholder="Ej. 311 234 5678" />
             </div>
           </div>
 

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, MapPin, Calendar, Package, Hammer, Users, Pencil, Check, X, Plus } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Package, Hammer, Users, Pencil, Check, X, Plus, Phone } from "lucide-react";
 import { type Feria, useFeriaSales, calcFeriaTotalCost, calcFeriaTotalBudget, useUpdateFeria, useFerias } from "@/hooks/useFerias";
 import { FeriaInventoryTab } from "./FeriaInventoryTab";
 import { FeriaSalesTab } from "./FeriaSalesTab";
@@ -129,6 +129,11 @@ export function FeriaDetail({ feria: feriaProp, onBack }: { feria: Feria; onBack
           <p className="text-sm text-muted-foreground flex items-center gap-1">
             <MapPin className="h-3 w-3" /> {feria.city}{feria.venue ? ` · ${feria.venue}` : ""}
           </p>
+          {feria.contact_phone && (
+            <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
+              <Phone className="h-3 w-3" /> {feria.contact_phone}
+            </p>
+          )}
         </div>
         {canEdit && <EditFeriaDialog feria={feria} />}
       </div>
