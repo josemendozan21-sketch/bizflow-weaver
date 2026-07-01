@@ -3,11 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Receipt, History, Tent, Package, DollarSign, CreditCard, Smartphone, Banknote } from "lucide-react";
+import { ShoppingCart, History, Tent, Package, DollarSign, CreditCard, Smartphone, Banknote } from "lucide-react";
 import { useFerias, useFeriaInventory, useFeriaSales, useMyPosAssignment } from "@/hooks/useFerias";
 import { useAuth } from "@/contexts/AuthContext";
 import { QuickSaleGrid } from "@/components/feria-pos/QuickSaleGrid";
-import { DetailedSaleForm } from "@/components/feria-pos/DetailedSaleForm";
 import { MySalesTab } from "@/components/feria-pos/MySalesTab";
 import { FeriaInventoryStatus } from "@/components/feria-pos/FeriaInventoryStatus";
 import { OfflineIndicator } from "@/components/feria-pos/OfflineIndicator";
@@ -161,7 +160,6 @@ export default function FeriaPOS() {
       <Tabs defaultValue="quick">
         <TabsList>
           <TabsTrigger value="quick"><ShoppingCart className="mr-2 h-4 w-4" />Vender rápido</TabsTrigger>
-          <TabsTrigger value="detailed"><Receipt className="mr-2 h-4 w-4" />Venta con detalle</TabsTrigger>
           <TabsTrigger value="inventory"><Package className="mr-2 h-4 w-4" />Inventario</TabsTrigger>
           <TabsTrigger value="mine"><History className="mr-2 h-4 w-4" />Mis ventas</TabsTrigger>
         </TabsList>
@@ -169,12 +167,6 @@ export default function FeriaPOS() {
         <TabsContent value="quick">
           {feriaId && (
             <QuickSaleGrid feriaId={feriaId} inventory={dispatchedInventory} sales={salesWithPending} />
-          )}
-        </TabsContent>
-
-        <TabsContent value="detailed">
-          {feriaId && (
-            <DetailedSaleForm feriaId={feriaId} inventory={dispatchedInventory} sales={salesWithPending} />
           )}
         </TabsContent>
 
