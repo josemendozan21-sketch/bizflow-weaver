@@ -266,15 +266,22 @@ export function FeriaSalesTab({ feriaId }: { feriaId: string }) {
             <h3 className="font-semibold">Carrito ({cart.length})</h3>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Input
-              placeholder="Cliente (opcional)"
-              value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
-            />
-            <Button variant="outline" size="sm" onClick={setConsumidorFinal} title="Cliente de mostrador">
-              <UserCheck className="h-4 w-4" />
-            </Button>
+          <div className="space-y-2 rounded-md border p-2 bg-muted/30">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-semibold">Datos del cliente</Label>
+              <Button variant="outline" size="sm" onClick={setConsumidorFinal} title="Consumidor Final" className="h-7">
+                <UserCheck className="h-3.5 w-3.5 mr-1" />
+                Consumidor Final
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Input placeholder="Nombre / Razón social" value={clientName} onChange={(e) => setClientName(e.target.value)} className="h-8 text-xs" />
+              <Input placeholder="Cédula / NIT" value={clientDoc} onChange={(e) => setClientDoc(e.target.value)} className="h-8 text-xs" />
+              <Input placeholder="Celular" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} className="h-8 text-xs" />
+              <Input placeholder="Email" type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className="h-8 text-xs" />
+              <Input placeholder="Dirección" value={clientAddress} onChange={(e) => setClientAddress(e.target.value)} className="h-8 text-xs" />
+              <Input placeholder="Ciudad" value={clientCity} onChange={(e) => setClientCity(e.target.value)} className="h-8 text-xs" />
+            </div>
           </div>
 
           <div className="space-y-2 max-h-[340px] overflow-auto pr-1">
