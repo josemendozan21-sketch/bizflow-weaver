@@ -1,7 +1,9 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -39,8 +41,16 @@ const queryClient = new QueryClient({
       // que reemplazaban los props del card y al diseñador se le perdía el
       // archivo recién seleccionado. Lo desactivamos globalmente.
       refetchOnWindowFocus: false,
+      // Keep data around long enough to serve as offline snapshot.
+      gcTime: 1000 * 60 * 60 * 24, // 24h
     },
   },
+});
+
+const persister = createSyncStoragePersister({
+  storage: typeof window !== "undefined" ? window.localStorage : undefined as any,
+  key: "bionovations-rq-cache-v1",
+  throttleTime: 1000,
 });
 
 function getDefaultRoute(role: Parameters<typeof getAllowedRoutes>[0]): string {
@@ -129,7 +139,26 @@ function AuthGate({ children }: { children: ReactNode }) {
 }
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
+  <PersistQueryClientProvider
+    client={queryClient}
+    persistOptions={{
+      persister,
+      maxAge: 1000 * 60 * 60 * 24, // 24h
+      // Only persist queries safe to reuse offline (feria + inventory + assignment).
+      dehydrateOptions: {
+        shouldDehydrateQuery: (query) => {
+          const key = String(query.queryKey?.[0] ?? "");
+          return (
+            key === "ferias" ||
+            key === "feria_inventory" ||
+            key === "feria_sales" ||
+            key === "my_feria_sales" ||
+            key === "my_pos_assignment"
+          );
+        },
+      },
+    }}
+  >
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -170,7 +199,7 @@ const App = () => (
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
-  </QueryClientProvider>
+  </PersistQueryClientProvider>
 );
 
 export default App;
