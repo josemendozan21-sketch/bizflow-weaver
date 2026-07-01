@@ -11,23 +11,25 @@ import { useQuery } from "@tanstack/react-query";
 import { useFeriaOfflineStore, pendingSalesForFeria } from "@/stores/feriaOfflineStore";
 
 export function MySalesTab({ feriaId, sales }: { feriaId: string; sales: FeriaSale[] }) {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const isAdmin = role === "admin";
   const pendingAll = useFeriaOfflineStore((s) => s.pendingSales);
   const myPending = pendingSalesForFeria(feriaId, pendingAll).filter(
-    (p) => (p.recorded_by || null) === (user?.id || null)
+    (p) => isAdmin || (p.recorded_by || null) === (user?.id || null)
   );
 
   // Need recorded_by to filter; sales hook returns all so we re-fetch with filter
   const { data: mySales = [] } = useQuery({
-    queryKey: ["my_feria_sales", feriaId, user?.id],
+    queryKey: ["my_feria_sales", feriaId, user?.id, isAdmin],
     queryFn: async () => {
       if (!user?.id) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("feria_sales")
         .select("*")
         .eq("feria_id", feriaId)
-        .eq("recorded_by", user.id)
         .order("sale_date", { ascending: false });
+      if (!isAdmin) query = query.eq("recorded_by", user.id);
+      const { data, error } = await query;
       if (error) throw error;
       return data as FeriaSale[];
     },
