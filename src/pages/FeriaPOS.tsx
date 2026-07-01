@@ -75,7 +75,7 @@ export default function FeriaPOS() {
       efectivo: sumBy("efectivo"),
       tarjeta: sumBy("tarjeta") + sumBy("datafono"),
       nequi: sumBy("nequi"),
-      otros: sumBy("transferencia") + sumBy("otro"),
+      otros: sumBy("transferencia") + sumBy("bancolombia") + sumBy("otro"),
     };
   }, [salesWithPending]);
 
