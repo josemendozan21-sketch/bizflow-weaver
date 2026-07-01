@@ -5,11 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Minus, Trash2, ShoppingCart, Check } from "lucide-react";
+import { Plus, Minus, Trash2, ShoppingCart, Check, UserCheck } from "lucide-react";
 import type { FeriaInventory, FeriaSale } from "@/hooks/useFerias";
 import { useFeriaOfflineStore } from "@/stores/feriaOfflineStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import DebouncedSearchInput from "@/components/inventory/DebouncedSearchInput";
 
 interface CartLine {
   inventory_id: string;
@@ -33,6 +34,8 @@ export function QuickSaleGrid({
   const [cart, setCart] = useState<CartLine[]>([]);
   const [paymentMethod, setPaymentMethod] = useState("efectivo");
   const [discount, setDiscount] = useState("");
+  const [discountPct, setDiscountPct] = useState<number>(0);
+  const [search, setSearch] = useState("");
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [clientDoc, setClientDoc] = useState("");
@@ -49,8 +52,26 @@ export function QuickSaleGrid({
   }, [inventory, sales]);
 
   const cartTotal = cart.reduce((s, l) => s + l.unit_price * l.quantity, 0);
-  const discountValue = Math.max(0, parseFloat(discount) || 0);
+  const manualDiscount = Math.max(0, parseFloat(discount) || 0);
+  const pctDiscount = Math.round((cartTotal * discountPct) / 100);
+  const discountValue = Math.max(0, manualDiscount + pctDiscount);
   const finalTotal = Math.max(0, cartTotal - discountValue);
+
+  const filteredInventory = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return inventory;
+    return inventory.filter(
+      (it) =>
+        it.product_name.toLowerCase().includes(q) ||
+        it.brand.toLowerCase().includes(q),
+    );
+  }, [inventory, search]);
+
+  const fillConsumidorFinal = () => {
+    setClientName("Consumidor Final");
+    setClientDoc("222222222222");
+    setClientEmail("");
+  };
 
   const addToCart = (it: FeriaInventory) => {
     // Allow oversell — will be flagged on sync
@@ -103,6 +124,7 @@ export function QuickSaleGrid({
     toast.success(navigator.onLine ? "Venta registrada" : "Venta guardada offline — se subirá cuando vuelva internet");
     setCart([]);
     setDiscount("");
+    setDiscountPct(0);
     setClientName("");
     setClientEmail("");
     setClientDoc("");
@@ -118,8 +140,17 @@ export function QuickSaleGrid({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {inventory.map((it) => {
+      <div className="lg:col-span-2 space-y-3">
+        <DebouncedSearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Buscar producto o marca..."
+        />
+        {filteredInventory.length === 0 && (
+          <p className="text-sm text-muted-foreground py-4 text-center">Sin resultados.</p>
+        )}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {filteredInventory.map((it) => {
           const remaining = remainingMap[it.id];
           const disabled = remaining <= 0;
           return (
@@ -139,6 +170,7 @@ export function QuickSaleGrid({
             </button>
           );
         })}
+        </div>
       </div>
 
       <Card className="p-4 lg:sticky lg:top-4 self-start">
@@ -171,6 +203,28 @@ export function QuickSaleGrid({
                 <span>${cartTotal.toLocaleString()}</span>
               </div>
               <div>
+                <Label className="text-xs">Descuento rápido</Label>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {[0, 5, 10, 15, 20, 50].map((p) => (
+                    <Button
+                      key={p}
+                      type="button"
+                      size="sm"
+                      variant={discountPct === p ? "default" : "outline"}
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setDiscountPct(p)}
+                    >
+                      {p === 0 ? "Sin desc." : `${p}%`}
+                    </Button>
+                  ))}
+                </div>
+                {discountPct > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    -${pctDiscount.toLocaleString()} ({discountPct}%)
+                  </p>
+                )}
+              </div>
+              <div>
                 <Label className="text-xs">Descuento ($)</Label>
                 <Input type="number" min={0} value={discount} placeholder="0"
                   onChange={(e) => setDiscount(e.target.value)} className="h-8" />
@@ -179,6 +233,9 @@ export function QuickSaleGrid({
                 <span>Total</span>
                 <span>${finalTotal.toLocaleString()}</span>
               </div>
+              <Button type="button" variant="secondary" size="sm" className="w-full" onClick={fillConsumidorFinal}>
+                <UserCheck className="mr-2 h-3 w-3" /> Consumidor Final
+              </Button>
               <div>
                 <Label className="text-xs">Nombre cliente</Label>
                 <Input value={clientName} onChange={(e) => setClientName(e.target.value)} className="h-8" />
