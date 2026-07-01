@@ -15,6 +15,7 @@ import {
   Instagram,
   HandCoins,
   Banknote,
+  Tent,
 } from "lucide-react";
 
 const LOCATION_92 = "73050f3b-1c8e-44f1-9d0d-94772216c100";
@@ -32,6 +33,7 @@ interface Kpis {
   ventasMesTotal: number;
   presupuestoProyectado: number;
   presupuestoEjecutado: number;
+  ventasFeriaDia: number;
 }
 
 interface SocialPostLite {
@@ -41,6 +43,14 @@ interface SocialPostLite {
   scheduled_date: string;
   status: string;
   networks: string[] | null;
+}
+
+interface FeriaSalesToday {
+  feria_id: string;
+  feria_name: string;
+  total: number;
+  units: number;
+  count: number;
 }
 
 const brandColor: Record<string, string> = {
@@ -59,8 +69,10 @@ export function AdminTodayDashboard() {
     ventasMesTotal: 0,
     presupuestoProyectado: 0,
     presupuestoEjecutado: 0,
+    ventasFeriaDia: 0,
   });
   const [posts, setPosts] = useState<SocialPostLite[]>([]);
+  const [feriasHoy, setFeriasHoy] = useState<FeriaSalesToday[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -85,6 +97,7 @@ export function AdminTodayDashboard() {
         { data: budget },
         { data: nextPosts },
         { data: paymentsDay },
+        { data: feriaSalesDay },
       ] = await Promise.all([
         supabase
           .from("orders")
@@ -127,6 +140,10 @@ export function AdminTodayDashboard() {
           .from("order_payments")
           .select("amount")
           .eq("payment_date", todayStr),
+        supabase
+          .from("feria_sales")
+          .select("feria_id, total_amount, quantity, ferias(name)")
+          .gte("sale_date", startOfDay.toISOString()),
       ]);
 
       const ventasAsesoresDia = (ordersDay ?? []).reduce(
@@ -152,6 +169,25 @@ export function AdminTodayDashboard() {
         (s, r: any) => s + Number(r.amount || 0),
         0,
       );
+
+      const feriaMap = new Map<string, FeriaSalesToday>();
+      let ventasFeriaDia = 0;
+      for (const r of (feriaSalesDay ?? []) as any[]) {
+        const fid = r.feria_id as string;
+        const name = r.ferias?.name || "Feria";
+        const total = Number(r.total_amount || 0);
+        const qty = Number(r.quantity || 0);
+        ventasFeriaDia += total;
+        const existing = feriaMap.get(fid);
+        if (existing) {
+          existing.total += total;
+          existing.units += qty;
+          existing.count += 1;
+        } else {
+          feriaMap.set(fid, { feria_id: fid, feria_name: name, total, units: qty, count: 1 });
+        }
+      }
+      const feriasArr = Array.from(feriaMap.values()).sort((a, b) => b.total - a.total);
 
       let presupuestoProyectado = 0;
       let presupuestoEjecutado = 0;
@@ -184,8 +220,10 @@ export function AdminTodayDashboard() {
         ventasMesTotal,
         presupuestoProyectado,
         presupuestoEjecutado,
+        ventasFeriaDia,
       });
       setPosts((nextPosts ?? []) as SocialPostLite[]);
+      setFeriasHoy(feriasArr);
     })();
   }, []);
 
@@ -207,6 +245,15 @@ export function AdminTodayDashboard() {
       icon: Store,
       color: "text-emerald-600 bg-emerald-500/10",
     },
+    ...(kpis.ventasFeriaDia > 0
+      ? [{
+          title: "Ventas del día — Ferias",
+          value: fmt(kpis.ventasFeriaDia),
+          subtitle: feriasHoy.map((f) => f.feria_name).join(" · "),
+          icon: Tent,
+          color: "text-cyan-600 bg-cyan-500/10",
+        }]
+      : []),
     {
       title: "Recaudos de pedidos",
       value: fmt(kpis.recaudosDia),
@@ -276,6 +323,32 @@ export function AdminTodayDashboard() {
           );
         })}
       </div>
+
+      {feriasHoy.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Tent className="h-4 w-4" />
+              Ventas de ferias hoy
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="divide-y">
+              {feriasHoy.map((f) => (
+                <li key={f.feria_id} className="py-2.5 flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{f.feria_name}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {f.count} venta{f.count === 1 ? "" : "s"} · {f.units} uds
+                    </p>
+                  </div>
+                  <span className="text-sm font-bold whitespace-nowrap">{fmt(f.total)}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="pb-3">
