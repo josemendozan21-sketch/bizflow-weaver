@@ -1,99 +1,59 @@
 
-## Resumen
+## Objetivo
+Que los vendedores de feria puedan seguir trabajando **sin internet**: ver inventario, registrar ventas y consultar sus ventas del día. Cuando vuelva la red, todo se sube automáticamente. Si dos vendedores venden el mismo producto y no alcanza, la venta **igual se registra** y queda marcada como **sobreventa** para revisar.
 
-Crear una nueva sección **Redes Bionovations** en el menú lateral, con 3 sub-pestañas por marca (Bionovations SAS, Sweatspot, Magical Warmers). Cada pestaña muestra un calendario mensual donde se programan publicaciones y fechas especiales.
+## Qué va a ver el usuario
 
-## Acceso
+1. **Indicador de conexión** arriba a la derecha del POS: verde "En línea" / naranja "Sin conexión — N ventas pendientes".
+2. Cuando esté offline puede:
+   - Abrir la app (queda instalada como PWA)
+   - Ver los productos despachados y sus precios
+   - Registrar ventas por método de pago
+   - Consultar "Mis ventas" del día
+3. Al recuperar internet: se suben las ventas en segundo plano, aparece un toast "Se sincronizaron N ventas" y las que causaron sobreinventario quedan con una etiqueta **⚠ Sobreventa** en la lista.
 
-- Admin
-- Diseñador
-- Nuevo rol **Community Manager** (`community_manager`)
+## Cómo se implementa (técnico)
 
-El Community Manager solo verá esta pestaña (similar a cómo `feria_pos` solo ve Feria POS).
+### 1. Instalable + offline shell (PWA)
+- Instalar `vite-plugin-pwa` con `generateSW`, `registerType: "autoUpdate"`, `injectRegister: null`.
+- `NetworkFirst` para navegaciones, `CacheFirst` sólo para assets hasheados. Excluir `/~oauth`.
+- Manifest con nombre "Bionovations POS", ícono, `display: standalone`.
+- **Registro guardado** en `src/pwa/register.ts`: nunca en preview/dev/iframe/`?sw=off`, sólo en producción.
+- Aprovechar los `public/sw.js` y `public/service-worker.js` existentes como kill-switch previo (ya están) → el plugin los reemplaza al build.
 
-## Estructura visual
+### 2. Cache de datos de la feria (para leer offline)
+- Nuevo hook `useOfflineFeriaCache(feriaId)` que:
+  - Guarda en `localStorage` (clave `feria_cache_<id>`) el snapshot de `ferias`, `feria_inventory`, `feria_sales` del usuario cada vez que llegan datos frescos.
+  - `useFerias`, `useFeriaInventory`, `useFeriaSales` leen del cache como `initialData` cuando no hay respuesta del servidor.
 
-- Nueva entrada en el sidebar: **Redes Bionovations** (icono Megaphone), ruta `/redes`.
-- Página `Redes.tsx` con tabs:
-  - Bionovations SAS
-  - Sweatspot
-  - Magical Warmers
-- Cada tab renderiza el mismo componente `BrandSocialCalendar` filtrado por marca.
+### 3. Cola local de ventas (outbox)
+- Nuevo store `src/stores/feriaOfflineStore.ts` (zustand + `persist` en localStorage):
+  - `pendingSales: PendingSale[]` con `{ localId, feria_id, brand, product_name, quantity, unit_price, total_amount, payment_method, client_name, notes, sale_date, recorded_by, status: 'pending'|'syncing'|'synced'|'error', synced_id?, oversold? }`.
+  - Acciones: `enqueue`, `markSynced`, `markOversold`, `remove`.
+- Al registrar venta:
+  1. Si `navigator.onLine` → intento normal Supabase. Si falla → encola.
+  2. Si offline → encola directo, aplica descuento **optimista** en el cache local de `feria_inventory` (`quantity_dispatched - quantity_sold`), muestra en "Mis ventas" con badge "Pendiente".
+- Nuevo componente `OfflineSalesBadge` en `FeriaPOS.tsx` con el estado y contador.
 
-## Calendario
+### 4. Sincronizador
+- Nuevo `src/hooks/useOfflineSalesSync.ts` montado en `FeriaPOS.tsx`:
+  - Escucha `online`/`offline` y corre cada 15 s cuando hay pendientes.
+  - Envía cada venta a `feria_sales.insert`. Si el insert respondió OK → `markSynced` con el id retornado.
+  - Detecta **sobreventa**: después del insert, si `quantity_dispatched - SUM(quantity_sold) < 0` para ese producto → marca `oversold=true` y añade `notes: "[SOBREVENTA] " + notes`. Además dispara una notificación (`notifications` con `target_role='logistica'`).
+  - Toast con el resumen al terminar cada tanda.
 
-Vista mensual con navegación mes anterior / mes siguiente. Cada día muestra los chips de las publicaciones/fechas especiales programadas. Click en un día abre un diálogo con la lista del día y botón "Agregar publicación". Click en un chip abre el detalle para editar/eliminar.
+### 5. Ajustes de UI
+- `QuickSaleGrid` y `DetailedSaleForm`: usar `enqueueSale` en vez de `useAddFeriaSale` directo; deshabilitar bloqueos que exijan stock > 0 cuando estamos offline (se permite sobreventa).
+- `MySalesTab` y `FeriaInventoryStatus`: mezclar `sales` remotas con `pendingSales` locales; badge de estado por fila.
 
-```text
-┌─────────────────────────────────────────┐
-│  ‹  Junio 2026  ›       [+ Nueva]       │
-├──┬──┬──┬──┬──┬──┬──┤
-│Lu│Ma│Mi│Ju│Vi│Sá│Do│
-├──┼──┼──┼──┼──┼──┼──┤
-│ 1│ 2│●3│ 4│★5│ 6│ 7│  ● post  ★ fecha especial
-└──┴──┴──┴──┴──┴──┴──┘
-```
+### 6. Notas y límites
+- Solo aplica a `/feria-pos` (los vendedores). Las demás vistas siguen requiriendo red.
+- Datos sensibles (payment methods, precios) quedan en localStorage del dispositivo — aceptable porque ya son datos del vendedor y del cliente puntual.
+- Offline funciona sólo en la **app publicada** (no en el preview de Lovable). Se avisará al vendedor la primera vez.
+- Sobreventa: se acepta y se marca. Contabilidad/logística verá la etiqueta y notificación para reponer.
 
-## Formulario de publicación
+## Archivos que voy a tocar/crear
+**Crear:** `vite.config.ts` (añadir plugin), `src/pwa/register.ts`, `public/manifest.webmanifest`, `src/stores/feriaOfflineStore.ts`, `src/hooks/useOfflineFeriaCache.ts`, `src/hooks/useOfflineSalesSync.ts`, `src/components/feria-pos/OfflineIndicator.tsx`.
+**Modificar:** `src/main.tsx` (importar wrapper), `index.html` (manifest + theme-color), `src/pages/FeriaPOS.tsx`, `src/components/feria-pos/QuickSaleGrid.tsx`, `src/components/feria-pos/DetailedSaleForm.tsx`, `src/components/feria-pos/MySalesTab.tsx`, `src/components/feria-pos/FeriaInventoryStatus.tsx`, `src/hooks/useFerias.ts` (initialData del cache).
 
-Campos:
-- Título
-- Fecha (date picker)
-- Red social: Instagram, Facebook, TikTok, WhatsApp, Otra (multi-select)
-- Estado: Idea / Programado / Publicado
-- Descripción/copy (textarea larga)
-- Hashtags (textarea)
-- Imagen o archivo adjunto (upload a Storage)
-- Checkbox **"Fecha especial"** (efeméride, lanzamiento, etc.) — cuando está marcado se muestra con estilo distinto (estrella dorada) en el calendario
-
-## Detalles técnicos
-
-### Base de datos
-
-Nuevo enum `app_role` valor `community_manager`.
-
-Nueva tabla `public.social_posts`:
-
-| columna | tipo | notas |
-|---|---|---|
-| id | uuid PK | |
-| brand | text | 'bionovations' \| 'sweatspot' \| 'magical' |
-| scheduled_date | date | NOT NULL |
-| title | text | NOT NULL |
-| description | text | copy del post |
-| hashtags | text | |
-| networks | text[] | ig, fb, tiktok, wsp, otra |
-| status | text | idea/programado/publicado, default 'programado' |
-| is_special_date | boolean | default false |
-| asset_url | text | URL pública del archivo |
-| asset_path | text | path en storage |
-| created_by | uuid | auth.uid() |
-| created_by_name | text | |
-| created_at / updated_at | timestamptz | |
-
-GRANT + RLS:
-- SELECT/INSERT/UPDATE/DELETE para `admin`, `disenador`, `community_manager` (via `has_role`).
-- Trigger `update_updated_at_column` existente.
-
-Nuevo bucket público **`social-media-assets`** para imágenes/videos del calendario.
-
-### Frontend
-
-Archivos nuevos:
-- `src/pages/Redes.tsx`
-- `src/components/redes/BrandSocialCalendar.tsx` (grid de mes con días)
-- `src/components/redes/SocialPostDialog.tsx` (crear/editar)
-- `src/components/redes/SocialPostChip.tsx` (chip dentro de la celda del día)
-- `src/hooks/useSocialPosts.ts` (fetch + realtime + mutations)
-
-Archivos modificados:
-- `src/App.tsx` — ruta `/redes`
-- `src/components/AppSidebar.tsx` — item "Redes Bionovations" (icono Megaphone)
-- `src/lib/rolePermissions.ts` — agregar `community_manager`, dar acceso `/redes` a admin/disenador/community_manager, edit en mismas; el community_manager solo ve `/redes`
-- `src/integrations/supabase/types.ts` se regenera automáticamente
-
-### Notas
-
-- No tocaremos otros módulos.
-- El nuevo rol se podrá asignar desde Admin → Usuarios igual que los demás.
-- Los archivos se suben al bucket `social-media-assets` con path `{brand}/{post_id}/{filename}`.
+¿Le doy con esto?
