@@ -7,7 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Users, Tent, Store } from "lucide-react";
+import { Shield, Users, Tent, Store, UserPlus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Navigate } from "react-router-dom";
 import type { Database } from "@/integrations/supabase/types";
@@ -29,6 +32,9 @@ const AdminUsuarios = () => {
   const { role } = useAuth();
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newUser, setNewUser] = useState({ email: "", password: "", displayName: "", role: "feria_pos" as AppRole });
   const { data: ferias = [] } = useFerias();
   const { data: posAssignments = [] } = useAllPosAssignments();
   const assignPos = useAssignPosUser();
@@ -80,6 +86,34 @@ const AdminUsuarios = () => {
 
   if (role !== "admin") return <Navigate to="/" replace />;
 
+  const handleCreateUser = async () => {
+    if (!newUser.email || !newUser.password || !newUser.role) {
+      toast.error("Completa correo, contraseña y rol");
+      return;
+    }
+    setCreating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-real-user", {
+        body: {
+          email: newUser.email.trim().toLowerCase(),
+          password: newUser.password,
+          displayName: newUser.displayName || newUser.email,
+          role: newUser.role,
+        },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success("Usuario creado correctamente");
+      setCreateOpen(false);
+      setNewUser({ email: "", password: "", displayName: "", role: "feria_pos" });
+      fetchUsers();
+    } catch (e: any) {
+      toast.error(e.message ?? "Error al crear usuario");
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const handleRoleChange = async (userId: string, newRole: string) => {
     const roleValue = newRole === "none" ? null : (newRole as AppRole);
 
@@ -117,10 +151,46 @@ const AdminUsuarios = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Usuarios registrados ({users.length})
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Usuarios registrados ({users.length})
+            </CardTitle>
+            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm"><UserPlus className="h-4 w-4 mr-1" /> Crear usuario</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Crear nuevo usuario</DialogTitle></DialogHeader>
+                <div className="space-y-3">
+                  <div><Label>Correo</Label><Input type="email" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} placeholder="usuario@bionovations.com" /></div>
+                  <div><Label>Contraseña</Label><Input type="text" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} placeholder="Mínimo 6 caracteres" /></div>
+                  <div><Label>Nombre</Label><Input value={newUser.displayName} onChange={(e) => setNewUser({ ...newUser, displayName: e.target.value })} placeholder="Nombre a mostrar" /></div>
+                  <div>
+                    <Label>Rol</Label>
+                    <Select value={newUser.role} onValueChange={(v) => setNewUser({ ...newUser, role: v as AppRole })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">Administrador</SelectItem>
+                        <SelectItem value="asesor_comercial">Asesor Comercial</SelectItem>
+                        <SelectItem value="produccion">Producción</SelectItem>
+                        <SelectItem value="contabilidad">Contabilidad</SelectItem>
+                        <SelectItem value="estampacion">Estampación</SelectItem>
+                        <SelectItem value="usuario_visual">Usuario Visual</SelectItem>
+                        <SelectItem value="feria_pos">Feria Punto de Venta</SelectItem>
+                        <SelectItem value="pos_punto">Asesor Punto de Venta</SelectItem>
+                        <SelectItem value="visualizador">Visualizador (solo lectura)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
+                  <Button onClick={handleCreateUser} disabled={creating}>{creating ? "Creando..." : "Crear"}</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
