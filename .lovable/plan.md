@@ -1,59 +1,26 @@
-
 ## Objetivo
-Que los vendedores de feria puedan seguir trabajando **sin internet**: ver inventario, registrar ventas y consultar sus ventas del día. Cuando vuelva la red, todo se sube automáticamente. Si dos vendedores venden el mismo producto y no alcanza, la venta **igual se registra** y queda marcada como **sobreventa** para revisar.
+Dejar la feria **Vassar** en cero de ventas, entregarte un Excel con los productos despachados a esa feria y, con esa base, crear los "kits" que armen en el punto para que aparezcan como productos vendibles en el POS de ferias.
 
-## Qué va a ver el usuario
+## Pasos
 
-1. **Indicador de conexión** arriba a la derecha del POS: verde "En línea" / naranja "Sin conexión — N ventas pendientes".
-2. Cuando esté offline puede:
-   - Abrir la app (queda instalada como PWA)
-   - Ver los productos despachados y sus precios
-   - Registrar ventas por método de pago
-   - Consultar "Mis ventas" del día
-3. Al recuperar internet: se suben las ventas en segundo plano, aparece un toast "Se sincronizaron N ventas" y las que causaron sobreinventario quedan con una etiqueta **⚠ Sobreventa** en la lista.
+1. **Borrar ventas de Vassar**
+   - Eliminar los 6 registros de `feria_sales` asociados a la feria Vassar (`6b06a134-…`).
+   - No se tocan `feria_inventory`, despachos ni asignaciones de personal.
 
-## Cómo se implementa (técnico)
+2. **Excel de productos enviados a Vassar** → `/mnt/documents/vassar_productos_enviados.xlsx`
+   - Columnas: Marca, Producto, Cant. asignada, Cant. despachada, Cant. devuelta, Precio de venta, Costo unitario, Notas.
+   - Se incluye una segunda hoja **"Kits (llenar)"** con columnas vacías: Nombre del kit, Precio de venta, Producto 1, Cant 1, Producto 2, Cant 2, Producto 3, Cant 3, Notas — para que la llenes o me digas por chat.
 
-### 1. Instalable + offline shell (PWA)
-- Instalar `vite-plugin-pwa` con `generateSW`, `registerType: "autoUpdate"`, `injectRegister: null`.
-- `NetworkFirst` para navegaciones, `CacheFirst` sólo para assets hasheados. Excluir `/~oauth`.
-- Manifest con nombre "Bionovations POS", ícono, `display: standalone`.
-- **Registro guardado** en `src/pwa/register.ts`: nunca en preview/dev/iframe/`?sw=off`, sólo en producción.
-- Aprovechar los `public/sw.js` y `public/service-worker.js` existentes como kill-switch previo (ya están) → el plugin los reemplaza al build.
+3. **Esperar tus datos de kits**
+   - Me pasas nombre, precio y contenido de cada kit.
+   - Confirmo si los kits deben:
+     - (a) crearse como un **producto suelto** en `feria_inventory` de Vassar con su precio (más simple, no descuenta stock de los componentes), o
+     - (b) crearse como producto y además, al venderse, descontar automáticamente el stock de cada componente del kit (requiere una tabla nueva `feria_kit_components` y ajustar la lógica de venta).
 
-### 2. Cache de datos de la feria (para leer offline)
-- Nuevo hook `useOfflineFeriaCache(feriaId)` que:
-  - Guarda en `localStorage` (clave `feria_cache_<id>`) el snapshot de `ferias`, `feria_inventory`, `feria_sales` del usuario cada vez que llegan datos frescos.
-  - `useFerias`, `useFeriaInventory`, `useFeriaSales` leen del cache como `initialData` cuando no hay respuesta del servidor.
+4. **Alta de los kits** (una vez confirmado el modo)
+   - Insertar cada kit en el inventario de Vassar con su precio.
+   - Quedan disponibles en el buscador del POS de ferias (Venta rápida) igual que cualquier otro producto.
 
-### 3. Cola local de ventas (outbox)
-- Nuevo store `src/stores/feriaOfflineStore.ts` (zustand + `persist` en localStorage):
-  - `pendingSales: PendingSale[]` con `{ localId, feria_id, brand, product_name, quantity, unit_price, total_amount, payment_method, client_name, notes, sale_date, recorded_by, status: 'pending'|'syncing'|'synced'|'error', synced_id?, oversold? }`.
-  - Acciones: `enqueue`, `markSynced`, `markOversold`, `remove`.
-- Al registrar venta:
-  1. Si `navigator.onLine` → intento normal Supabase. Si falla → encola.
-  2. Si offline → encola directo, aplica descuento **optimista** en el cache local de `feria_inventory` (`quantity_dispatched - quantity_sold`), muestra en "Mis ventas" con badge "Pendiente".
-- Nuevo componente `OfflineSalesBadge` en `FeriaPOS.tsx` con el estado y contador.
-
-### 4. Sincronizador
-- Nuevo `src/hooks/useOfflineSalesSync.ts` montado en `FeriaPOS.tsx`:
-  - Escucha `online`/`offline` y corre cada 15 s cuando hay pendientes.
-  - Envía cada venta a `feria_sales.insert`. Si el insert respondió OK → `markSynced` con el id retornado.
-  - Detecta **sobreventa**: después del insert, si `quantity_dispatched - SUM(quantity_sold) < 0` para ese producto → marca `oversold=true` y añade `notes: "[SOBREVENTA] " + notes`. Además dispara una notificación (`notifications` con `target_role='logistica'`).
-  - Toast con el resumen al terminar cada tanda.
-
-### 5. Ajustes de UI
-- `QuickSaleGrid` y `DetailedSaleForm`: usar `enqueueSale` en vez de `useAddFeriaSale` directo; deshabilitar bloqueos que exijan stock > 0 cuando estamos offline (se permite sobreventa).
-- `MySalesTab` y `FeriaInventoryStatus`: mezclar `sales` remotas con `pendingSales` locales; badge de estado por fila.
-
-### 6. Notas y límites
-- Solo aplica a `/feria-pos` (los vendedores). Las demás vistas siguen requiriendo red.
-- Datos sensibles (payment methods, precios) quedan en localStorage del dispositivo — aceptable porque ya son datos del vendedor y del cliente puntual.
-- Offline funciona sólo en la **app publicada** (no en el preview de Lovable). Se avisará al vendedor la primera vez.
-- Sobreventa: se acepta y se marca. Contabilidad/logística verá la etiqueta y notificación para reponer.
-
-## Archivos que voy a tocar/crear
-**Crear:** `vite.config.ts` (añadir plugin), `src/pwa/register.ts`, `public/manifest.webmanifest`, `src/stores/feriaOfflineStore.ts`, `src/hooks/useOfflineFeriaCache.ts`, `src/hooks/useOfflineSalesSync.ts`, `src/components/feria-pos/OfflineIndicator.tsx`.
-**Modificar:** `src/main.tsx` (importar wrapper), `index.html` (manifest + theme-color), `src/pages/FeriaPOS.tsx`, `src/components/feria-pos/QuickSaleGrid.tsx`, `src/components/feria-pos/DetailedSaleForm.tsx`, `src/components/feria-pos/MySalesTab.tsx`, `src/components/feria-pos/FeriaInventoryStatus.tsx`, `src/hooks/useFerias.ts` (initialData del cache).
-
-¿Le doy con esto?
+## Nota técnica
+- Los pasos 1 y 2 se hacen en el mismo turno de build.
+- El paso 4 se hace en un turno posterior cuando me pases los datos y elijas (a) o (b).
