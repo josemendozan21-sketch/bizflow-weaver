@@ -41,6 +41,8 @@ export function QuickSaleGrid({
   const [clientDoc, setClientDoc] = useState("");
   const [clientPhone, setClientPhone] = useState("");
   const [clientAddress, setClientAddress] = useState("");
+  const [gift, setGift] = useState<string>("");
+  const giftOptions = ["Gafas", "Pocket térmico", "Handy", "Pocket frío"];
 
   const remainingMap = useMemo(() => {
     const map: Record<string, number> = {};
@@ -107,6 +109,7 @@ export function QuickSaleGrid({
     if (clientDoc) noteParts.push(`Doc: ${clientDoc}`);
     if (clientPhone) noteParts.push(`Cel: ${clientPhone}`);
     if (clientAddress) noteParts.push(`Dir: ${clientAddress}`);
+    if (gift) noteParts.push(`Obsequio: ${gift}`);
     if (discountValue > 0) noteParts.push(`Desc total: $${discountValue.toLocaleString()}`);
     const baseNote = noteParts.join(" | ") || null;
     for (const line of cart) {
@@ -136,6 +139,7 @@ export function QuickSaleGrid({
     setClientDoc("");
     setClientPhone("");
     setClientAddress("");
+    setGift("");
   };
 
   if (inventory.length === 0) {
@@ -263,6 +267,32 @@ export function QuickSaleGrid({
               <div>
                 <Label className="text-xs">Dirección</Label>
                 <Input value={clientAddress} onChange={(e) => setClientAddress(e.target.value)} className="h-8" />
+              </div>
+              <div>
+                <Label className="text-xs">Obsequio</Label>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={gift === "" ? "default" : "outline"}
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setGift("")}
+                  >
+                    Sin obsequio
+                  </Button>
+                  {giftOptions.map((g) => (
+                    <Button
+                      key={g}
+                      type="button"
+                      size="sm"
+                      variant={gift === g ? "default" : "outline"}
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setGift(g)}
+                    >
+                      {g}
+                    </Button>
+                  ))}
+                </div>
               </div>
               <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
