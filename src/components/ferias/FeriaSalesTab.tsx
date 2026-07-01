@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Plus, Minus, DollarSign, ShoppingBag, Package, Search, ShoppingCart, UserCheck } from "lucide-react";
-import { useFeriaSales, useAddFeriaSale, useDeleteFeriaSale, useFeriaInventory, type FeriaInventoryItem } from "@/hooks/useFerias";
+import { useFeriaSales, useAddFeriaSale, useDeleteFeriaSale, useFeriaInventory, type FeriaInventory } from "@/hooks/useFerias";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -63,7 +63,7 @@ export function FeriaSalesTab({ feriaId }: { feriaId: string }) {
     });
   }, [inventory, search, brandFilter]);
 
-  const addToCart = (p: FeriaInventoryItem) => {
+  const addToCart = (p: FeriaInventory) => {
     setCart((prev) => {
       const key = `${p.brand}::${p.product_name}`;
       const existing = prev.find((c) => c.key === key);
