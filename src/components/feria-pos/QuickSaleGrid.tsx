@@ -278,7 +278,7 @@ export function QuickSaleGrid({
                     size="sm"
                     variant={gift === "" ? "default" : "outline"}
                     className="h-7 px-2 text-xs"
-                    onClick={() => setGift("")}
+                    onClick={() => { setGift(""); setGiftQty(1); }}
                   >
                     Sin obsequio
                   </Button>
@@ -295,6 +295,16 @@ export function QuickSaleGrid({
                     </Button>
                   ))}
                 </div>
+                {gift && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <Label className="text-xs whitespace-nowrap">Unidades:</Label>
+                    <div className="flex items-center gap-1">
+                      <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => setGiftQty((q) => Math.max(1, q - 1))}><Minus className="h-3 w-3" /></Button>
+                      <span className="w-6 text-center text-sm font-medium">{giftQty}</span>
+                      <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => setGiftQty((q) => q + 1)}><Plus className="h-3 w-3" /></Button>
+                    </div>
+                  </div>
+                )}
               </div>
               <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
