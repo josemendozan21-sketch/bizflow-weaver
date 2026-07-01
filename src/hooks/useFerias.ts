@@ -98,6 +98,11 @@ export interface FeriaSale {
   total_amount: number;
   payment_method: string | null;
   client_name: string | null;
+  client_document: string | null;
+  client_email: string | null;
+  client_phone: string | null;
+  client_address: string | null;
+  client_city: string | null;
   sale_date: string;
   notes: string | null;
 }

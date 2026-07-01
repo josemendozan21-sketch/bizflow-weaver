@@ -22,6 +22,14 @@ type CartLine = {
 
 const DISCOUNT_OPTIONS = [0, 5, 10, 15, 20, 50] as const;
 const CLIENTE_MOSTRADOR = "Cliente de mostrador";
+const CONSUMIDOR_FINAL = {
+  name: "Consumidor Final",
+  document: "222222222222",
+  email: "",
+  phone: "",
+  address: "",
+  city: "Bogotá",
+};
 
 const fmt = (n: number) => `$${Math.round(n).toLocaleString("es-CO")}`;
 const clampPct = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
@@ -37,6 +45,11 @@ export function FeriaSalesTab({ feriaId }: { feriaId: string }) {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [paymentMethod, setPaymentMethod] = useState("efectivo");
   const [clientName, setClientName] = useState("");
+  const [clientDoc, setClientDoc] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [clientPhone, setClientPhone] = useState("");
+  const [clientAddress, setClientAddress] = useState("");
+  const [clientCity, setClientCity] = useState("");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -122,8 +135,22 @@ export function FeriaSalesTab({ feriaId }: { feriaId: string }) {
   }, [cart]);
 
   const setConsumidorFinal = () => {
-    setClientName(CLIENTE_MOSTRADOR);
-    toast.success("Cliente de mostrador");
+    setClientName(CONSUMIDOR_FINAL.name);
+    setClientDoc(CONSUMIDOR_FINAL.document);
+    setClientEmail(CONSUMIDOR_FINAL.email);
+    setClientPhone(CONSUMIDOR_FINAL.phone);
+    setClientAddress(CONSUMIDOR_FINAL.address);
+    setClientCity(CONSUMIDOR_FINAL.city);
+    toast.success("Datos de Consumidor Final cargados");
+  };
+
+  const clearClient = () => {
+    setClientName("");
+    setClientDoc("");
+    setClientEmail("");
+    setClientPhone("");
+    setClientAddress("");
+    setClientCity("");
   };
 
   const handleConfirm = async () => {
@@ -144,12 +171,17 @@ export function FeriaSalesTab({ feriaId }: { feriaId: string }) {
           total_amount: unit * c.quantity,
           payment_method: paymentMethod || null,
           client_name: clientName || CLIENTE_MOSTRADOR,
+          client_document: clientDoc || null,
+          client_email: clientEmail || null,
+          client_phone: clientPhone || null,
+          client_address: clientAddress || null,
+          client_city: clientCity || null,
           notes: c.discountPct > 0 ? `[Desc ${c.discountPct}%] ${notes}`.trim() : (notes || null),
         });
       }
       toast.success(`Venta registrada por ${fmt(totals.neto)}`);
       setCart([]);
-      setClientName("");
+      clearClient();
       setNotes("");
     } catch (e: any) {
       toast.error(e.message ?? "Error al registrar venta");
@@ -234,15 +266,22 @@ export function FeriaSalesTab({ feriaId }: { feriaId: string }) {
             <h3 className="font-semibold">Carrito ({cart.length})</h3>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Input
-              placeholder="Cliente (opcional)"
-              value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
-            />
-            <Button variant="outline" size="sm" onClick={setConsumidorFinal} title="Cliente de mostrador">
-              <UserCheck className="h-4 w-4" />
-            </Button>
+          <div className="space-y-2 rounded-md border p-2 bg-muted/30">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-semibold">Datos del cliente</Label>
+              <Button variant="outline" size="sm" onClick={setConsumidorFinal} title="Consumidor Final" className="h-7">
+                <UserCheck className="h-3.5 w-3.5 mr-1" />
+                Consumidor Final
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Input placeholder="Nombre / Razón social" value={clientName} onChange={(e) => setClientName(e.target.value)} className="h-8 text-xs" />
+              <Input placeholder="Cédula / NIT" value={clientDoc} onChange={(e) => setClientDoc(e.target.value)} className="h-8 text-xs" />
+              <Input placeholder="Celular" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} className="h-8 text-xs" />
+              <Input placeholder="Email" type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className="h-8 text-xs" />
+              <Input placeholder="Dirección" value={clientAddress} onChange={(e) => setClientAddress(e.target.value)} className="h-8 text-xs" />
+              <Input placeholder="Ciudad" value={clientCity} onChange={(e) => setClientCity(e.target.value)} className="h-8 text-xs" />
+            </div>
           </div>
 
           <div className="space-y-2 max-h-[340px] overflow-auto pr-1">
