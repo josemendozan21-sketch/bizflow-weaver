@@ -39,6 +39,8 @@ export function QuickSaleGrid({
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [clientDoc, setClientDoc] = useState("");
+  const [clientPhone, setClientPhone] = useState("");
+  const [clientAddress, setClientAddress] = useState("");
 
   const remainingMap = useMemo(() => {
     const map: Record<string, number> = {};
@@ -70,7 +72,9 @@ export function QuickSaleGrid({
   const fillConsumidorFinal = () => {
     setClientName("Consumidor Final");
     setClientDoc("222222222222");
-    setClientEmail("");
+    setClientEmail("consumidorfinal@gmail.com");
+    setClientPhone("3111111111");
+    setClientAddress("Calle 168 #21-63");
   };
 
   const addToCart = (it: FeriaInventory) => {
@@ -101,6 +105,8 @@ export function QuickSaleGrid({
     const noteParts: string[] = [];
     if (clientEmail) noteParts.push(`Email: ${clientEmail}`);
     if (clientDoc) noteParts.push(`Doc: ${clientDoc}`);
+    if (clientPhone) noteParts.push(`Cel: ${clientPhone}`);
+    if (clientAddress) noteParts.push(`Dir: ${clientAddress}`);
     if (discountValue > 0) noteParts.push(`Desc total: $${discountValue.toLocaleString()}`);
     const baseNote = noteParts.join(" | ") || null;
     for (const line of cart) {
@@ -128,6 +134,8 @@ export function QuickSaleGrid({
     setClientName("");
     setClientEmail("");
     setClientDoc("");
+    setClientPhone("");
+    setClientAddress("");
   };
 
   if (inventory.length === 0) {
@@ -247,6 +255,14 @@ export function QuickSaleGrid({
               <div>
                 <Label className="text-xs">Cédula / NIT</Label>
                 <Input value={clientDoc} onChange={(e) => setClientDoc(e.target.value)} className="h-8" />
+              </div>
+              <div>
+                <Label className="text-xs">Celular</Label>
+                <Input value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} className="h-8" />
+              </div>
+              <div>
+                <Label className="text-xs">Dirección</Label>
+                <Input value={clientAddress} onChange={(e) => setClientAddress(e.target.value)} className="h-8" />
               </div>
               <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
