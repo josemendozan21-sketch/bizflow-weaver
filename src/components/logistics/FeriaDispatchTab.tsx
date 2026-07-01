@@ -37,9 +37,23 @@ export function FeriaDispatchTab() {
     );
   }
 
+  // Ordenar por fecha de montaje (fallback fecha inicio) ascendente,
+  // pendientes primero para atacar las próximas ferias.
+  const sorted = [...requests].sort((a, b) => {
+    const fa = ferias.find((f) => f.id === a.feria_id);
+    const fb = ferias.find((f) => f.id === b.feria_id);
+    if (!fa || !fb) return 0;
+    const aPend = a.status !== "despachado";
+    const bPend = b.status !== "despachado";
+    if (aPend !== bPend) return aPend ? -1 : 1;
+    const aKey = fa.setup_date || fa.start_date;
+    const bKey = fb.setup_date || fb.start_date;
+    return aKey.localeCompare(bKey);
+  });
+
   return (
     <div className="space-y-3">
-      {requests.map((req) => {
+      {sorted.map((req) => {
         const feria = ferias.find((f) => f.id === req.feria_id);
         if (!feria) return null;
         return <FeriaDispatchCard key={req.id} feria={feria} request={req} />;
