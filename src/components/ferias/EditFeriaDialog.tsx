@@ -98,6 +98,7 @@ export function EditFeriaDialog({ feria }: { feria: Feria }) {
       stand_number: form.stand_number || null, stand_size: form.stand_size || null,
       brand: form.brand || null,
       estimated_athletes: form.estimated_athletes ? parseInt(form.estimated_athletes) : null,
+      contact_phone: form.contact_phone || null,
       stand_cost: parseFloat(form.stand_cost) || 0,
       shipping_cost: parseFloat(form.shipping_cost) || 0,
       tickets_cost: parseFloat(form.tickets_cost) || 0,
