@@ -110,9 +110,13 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
 
   // Projection summary
   const projection = useMemo(() => {
-    const totalUnits = inventory.reduce((a, b) => a + (b.quantity_assigned || 0), 0);
-    const expectedRevenue = inventory.reduce((a, b) => a + (b.quantity_assigned || 0) * (b.unit_price || 0), 0);
-    const expectedCost = inventory.reduce((a, b) => a + (b.quantity_assigned || 0) * (b.unit_cost || 0), 0);
+    // Los kits se arman con la mercancía ya enviada, así que no suman al ingreso
+    // esperado ni al costo (evita duplicar la proyección).
+    const isKit = (b: any) => (b.product_name || "").trim().toLowerCase().startsWith("kit ");
+    const realInventory = inventory.filter((b) => !isKit(b));
+    const totalUnits = realInventory.reduce((a, b) => a + (b.quantity_assigned || 0), 0);
+    const expectedRevenue = realInventory.reduce((a, b) => a + (b.quantity_assigned || 0) * (b.unit_price || 0), 0);
+    const expectedCost = realInventory.reduce((a, b) => a + (b.quantity_assigned || 0) * (b.unit_cost || 0), 0);
     const expectedMargin = expectedRevenue - expectedCost;
     const soldUnits = sales.reduce((a, s) => a + (s.quantity || 0), 0);
     const progress = totalUnits > 0 ? Math.round((soldUnits / totalUnits) * 100) : 0;
