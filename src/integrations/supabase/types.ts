@@ -1064,6 +1064,7 @@ export type Database = {
         Row: {
           advertising_cost: number | null
           assigned_staff: string[] | null
+          brand: string | null
           budget_advertising_cost: number | null
           budget_employees_cost: number | null
           budget_food_cost: number | null
@@ -1084,6 +1085,7 @@ export type Database = {
           created_by: string | null
           employees_cost: number | null
           end_date: string
+          estimated_athletes: number | null
           food_cost: number | null
           id: string
           iva_pct: number
@@ -1110,6 +1112,7 @@ export type Database = {
         Insert: {
           advertising_cost?: number | null
           assigned_staff?: string[] | null
+          brand?: string | null
           budget_advertising_cost?: number | null
           budget_employees_cost?: number | null
           budget_food_cost?: number | null
@@ -1130,6 +1133,7 @@ export type Database = {
           created_by?: string | null
           employees_cost?: number | null
           end_date: string
+          estimated_athletes?: number | null
           food_cost?: number | null
           id?: string
           iva_pct?: number
@@ -1156,6 +1160,7 @@ export type Database = {
         Update: {
           advertising_cost?: number | null
           assigned_staff?: string[] | null
+          brand?: string | null
           budget_advertising_cost?: number | null
           budget_employees_cost?: number | null
           budget_food_cost?: number | null
@@ -1176,6 +1181,7 @@ export type Database = {
           created_by?: string | null
           employees_cost?: number | null
           end_date?: string
+          estimated_athletes?: number | null
           food_cost?: number | null
           id?: string
           iva_pct?: number

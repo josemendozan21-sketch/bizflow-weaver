@@ -17,6 +17,21 @@ const STATUS_COLOR: Record<string, string> = {
   cancelada: "bg-destructive/15 text-destructive border-destructive/30",
 };
 
+function brandCardClass(brand: string | null): string {
+  const b = (brand || "").toLowerCase();
+  if (b === "sweatspot") return "bg-sky-50 border-sky-200 dark:bg-sky-950/30 dark:border-sky-900";
+  if (b === "magical") return "bg-pink-50 border-pink-200 dark:bg-pink-950/30 dark:border-pink-900";
+  return "";
+}
+
+function brandLabel(brand: string | null): string | null {
+  const b = (brand || "").toLowerCase();
+  if (b === "sweatspot") return "Sweatspot";
+  if (b === "magical") return "Magical";
+  if (b === "mixta") return "Mixta";
+  return null;
+}
+
 export default function Ferias() {
   const { data: feriasRaw = [], isLoading } = useFerias();
   // Ordenar por fecha de montaje (fallback fecha de inicio) ascendente;
@@ -60,11 +75,23 @@ export default function Ferias() {
       ) : (
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {ferias.map((f) => (
-            <Card key={f.id} className="p-4 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelected(f)}>
+            <Card key={f.id} className={`p-4 hover:shadow-md transition-shadow cursor-pointer ${brandCardClass(f.brand)}`} onClick={() => setSelected(f)}>
               <div className="flex items-start justify-between gap-2 mb-2">
                 <h3 className="font-semibold">{f.name}</h3>
                 <Badge variant="outline" className={STATUS_COLOR[f.status]}>{f.status.replace("_", " ")}</Badge>
               </div>
+              {(brandLabel(f.brand) || f.estimated_athletes) && (
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  {brandLabel(f.brand) && (
+                    <Badge variant="outline" className="text-[10px]">{brandLabel(f.brand)}</Badge>
+                  )}
+                  {f.estimated_athletes ? (
+                    <span className="text-xs text-muted-foreground">
+                      🏃 {f.estimated_athletes.toLocaleString()} atletas est.
+                    </span>
+                  ) : null}
+                </div>
+              )}
               <p className="text-sm text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{f.city}</p>
               <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1"><Calendar className="h-3 w-3" />
                 {format(new Date(f.start_date), "dd MMM", { locale: es })} – {format(new Date(f.end_date), "dd MMM yyyy", { locale: es })}

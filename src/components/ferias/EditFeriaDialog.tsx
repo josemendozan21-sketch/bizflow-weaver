@@ -40,6 +40,8 @@ export function EditFeriaDialog({ feria }: { feria: Feria }) {
         name: feria.name, city: feria.city, venue: feria.venue || "",
         start_date: feria.start_date, end_date: feria.end_date, setup_date: feria.setup_date || "",
         stand_number: feria.stand_number || "", stand_size: feria.stand_size || "",
+        brand: feria.brand || "",
+        estimated_athletes: feria.estimated_athletes != null ? String(feria.estimated_athletes) : "",
         stand_cost: String(feria.stand_cost || 0),
         shipping_cost: String(feria.shipping_cost || 0),
         tickets_cost: String(feria.tickets_cost || 0),
@@ -93,6 +95,8 @@ export function EditFeriaDialog({ feria }: { feria: Feria }) {
       start_date: form.start_date, end_date: form.end_date,
       setup_date: form.setup_date || null,
       stand_number: form.stand_number || null, stand_size: form.stand_size || null,
+      brand: form.brand || null,
+      estimated_athletes: form.estimated_athletes ? parseInt(form.estimated_athletes) : null,
       stand_cost: parseFloat(form.stand_cost) || 0,
       shipping_cost: parseFloat(form.shipping_cost) || 0,
       tickets_cost: parseFloat(form.tickets_cost) || 0,
@@ -155,6 +159,24 @@ export function EditFeriaDialog({ feria }: { feria: Feria }) {
           <div className="grid grid-cols-2 gap-3">
             <div><Label>N° Stand</Label><Input value={form.stand_number} onChange={(e) => setForm({ ...form, stand_number: e.target.value })} /></div>
             <div><Label>Tamaño stand</Label><Input value={form.stand_size} onChange={(e) => setForm({ ...form, stand_size: e.target.value })} /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Marca principal</Label>
+              <Select value={form.brand || "none"} onValueChange={(v) => setForm({ ...form, brand: v === "none" ? "" : v })}>
+                <SelectTrigger><SelectValue placeholder="Sin definir" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin definir</SelectItem>
+                  <SelectItem value="sweatspot">Sweatspot</SelectItem>
+                  <SelectItem value="magical">Magical</SelectItem>
+                  <SelectItem value="mixta">Mixta (ambas)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Atletas estimados</Label>
+              <Input type="number" min={0} value={form.estimated_athletes} onChange={(e) => setForm({ ...form, estimated_athletes: e.target.value })} placeholder="Ej. 3000" />
+            </div>
           </div>
 
           <div className="border rounded-lg p-3 bg-muted/30">

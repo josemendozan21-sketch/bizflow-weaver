@@ -1,0 +1,1 @@
+ALTER TABLE public.ferias ADD COLUMN IF NOT EXISTS brand text, ADD COLUMN IF NOT EXISTS estimated_athletes integer;

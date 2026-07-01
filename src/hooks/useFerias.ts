@@ -55,6 +55,8 @@ export interface Feria {
     realista: ScenarioInput;
     optimista: ScenarioInput;
   };
+  brand: string | null;
+  estimated_athletes: number | null;
 }
 
 export interface ScenarioInput {
