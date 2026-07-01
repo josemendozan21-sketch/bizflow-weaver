@@ -42,6 +42,7 @@ export function QuickSaleGrid({
   const [clientPhone, setClientPhone] = useState("");
   const [clientAddress, setClientAddress] = useState("");
   const [gift, setGift] = useState<string>("");
+  const [giftQty, setGiftQty] = useState<number>(1);
   const giftOptions = ["Gafas", "Pocket térmico", "Handy", "Pocket frío"];
 
   const remainingMap = useMemo(() => {
@@ -109,7 +110,7 @@ export function QuickSaleGrid({
     if (clientDoc) noteParts.push(`Doc: ${clientDoc}`);
     if (clientPhone) noteParts.push(`Cel: ${clientPhone}`);
     if (clientAddress) noteParts.push(`Dir: ${clientAddress}`);
-    if (gift) noteParts.push(`Obsequio: ${gift}`);
+    if (gift) noteParts.push(`Obsequio: ${gift}${giftQty > 1 ? ` x${giftQty}` : ""}`);
     if (discountValue > 0) noteParts.push(`Desc total: $${discountValue.toLocaleString()}`);
     const baseNote = noteParts.join(" | ") || null;
     for (const line of cart) {
@@ -140,6 +141,7 @@ export function QuickSaleGrid({
     setClientPhone("");
     setClientAddress("");
     setGift("");
+    setGiftQty(1);
   };
 
   if (inventory.length === 0) {
