@@ -6,16 +6,39 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, DollarSign, ShoppingBag, Package } from "lucide-react";
-import { useFeriaSales, useAddFeriaSale, useDeleteFeriaSale, useFeriaInventory } from "@/hooks/useFerias";
+import { Trash2, Plus, Minus, DollarSign, ShoppingBag, Package, Search, ShoppingCart, UserCheck } from "lucide-react";
+import { useFeriaSales, useAddFeriaSale, useDeleteFeriaSale, useFeriaInventory, type FeriaInventoryItem } from "@/hooks/useFerias";
 import { format } from "date-fns";
+import { toast } from "sonner";
+
+type CartLine = {
+  key: string;
+  brand: string;
+  product_name: string;
+  unit_price: number;
+  quantity: number;
+  discountPct: number;
+};
+
+const DISCOUNT_OPTIONS = [0, 5, 10, 15, 20, 50] as const;
+const CLIENTE_MOSTRADOR = "Cliente de mostrador";
+
+const fmt = (n: number) => `$${Math.round(n).toLocaleString("es-CO")}`;
+const clampPct = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
 
 export function FeriaSalesTab({ feriaId }: { feriaId: string }) {
   const { data: sales = [] } = useFeriaSales(feriaId);
   const { data: inventory = [] } = useFeriaInventory(feriaId);
   const add = useAddFeriaSale();
   const del = useDeleteFeriaSale();
-  const [form, setForm] = useState({ brand: "magical", product_name: "", quantity: "1", unit_price: "", payment_method: "efectivo", client_name: "", notes: "" });
+
+  const [search, setSearch] = useState("");
+  const [brandFilter, setBrandFilter] = useState<string>("all");
+  const [cart, setCart] = useState<CartLine[]>([]);
+  const [paymentMethod, setPaymentMethod] = useState("efectivo");
+  const [clientName, setClientName] = useState("");
+  const [notes, setNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const stats = useMemo(() => {
     const total = sales.reduce((s, x) => s + Number(x.total_amount), 0);
@@ -28,85 +51,297 @@ export function FeriaSalesTab({ feriaId }: { feriaId: string }) {
     return { total, units, count: sales.length, top };
   }, [sales]);
 
-  const productOptions = inventory.filter((i) => i.brand === form.brand);
-
-  const handleAdd = async () => {
-    if (!form.product_name || !form.quantity) return;
-    const qty = parseInt(form.quantity, 10);
-    const price = parseFloat(form.unit_price) || 0;
-    await add.mutateAsync({
-      feria_id: feriaId,
-      brand: form.brand,
-      product_name: form.product_name,
-      quantity: qty,
-      unit_price: price,
-      total_amount: qty * price,
-      payment_method: form.payment_method || null,
-      client_name: form.client_name || null,
-      notes: form.notes || null,
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return inventory.filter((p) => {
+      if (brandFilter !== "all" && p.brand !== brandFilter) return false;
+      if (!q) return true;
+      return (
+        p.product_name.toLowerCase().includes(q) ||
+        (p.brand ?? "").toLowerCase().includes(q)
+      );
     });
-    setForm({ ...form, product_name: "", quantity: "1", unit_price: "", client_name: "", notes: "" });
+  }, [inventory, search, brandFilter]);
+
+  const addToCart = (p: FeriaInventoryItem) => {
+    setCart((prev) => {
+      const key = `${p.brand}::${p.product_name}`;
+      const existing = prev.find((c) => c.key === key);
+      if (existing) {
+        return prev.map((c) => (c.key === key ? { ...c, quantity: c.quantity + 1 } : c));
+      }
+      return [
+        ...prev,
+        {
+          key,
+          brand: p.brand,
+          product_name: p.product_name,
+          unit_price: Number(p.unit_price) || 0,
+          quantity: 1,
+          discountPct: 0,
+        },
+      ];
+    });
   };
 
-  const onSelectProduct = (name: string) => {
-    const p = productOptions.find((i) => i.product_name === name);
-    setForm({ ...form, product_name: name, unit_price: p ? String(p.unit_price) : form.unit_price });
+  const addCustomToCart = () => {
+    const q = search.trim();
+    if (!q) return;
+    const key = `custom::${q}`;
+    setCart((prev) => {
+      if (prev.find((c) => c.key === key)) return prev;
+      return [
+        ...prev,
+        { key, brand: brandFilter === "all" ? "otro" : brandFilter, product_name: q, unit_price: 0, quantity: 1, discountPct: 0 },
+      ];
+    });
+    setSearch("");
+  };
+
+  const updateQty = (key: string, delta: number) =>
+    setCart((prev) =>
+      prev.flatMap((c) => {
+        if (c.key !== key) return [c];
+        const q = c.quantity + delta;
+        return q <= 0 ? [] : [{ ...c, quantity: q }];
+      })
+    );
+
+  const updatePrice = (key: string, price: number) =>
+    setCart((prev) => prev.map((c) => (c.key === key ? { ...c, unit_price: Math.max(0, price) } : c)));
+
+  const setLineDiscount = (key: string, pct: number) =>
+    setCart((prev) => prev.map((c) => (c.key === key ? { ...c, discountPct: clampPct(pct) } : c)));
+
+  const removeLine = (key: string) => setCart((prev) => prev.filter((c) => c.key !== key));
+
+  const totals = useMemo(() => {
+    const bruto = cart.reduce((a, c) => a + c.unit_price * c.quantity, 0);
+    const neto = cart.reduce((a, c) => a + Math.round(c.unit_price * (1 - c.discountPct / 100)) * c.quantity, 0);
+    return { bruto, neto, descuento: Math.max(0, bruto - neto), units: cart.reduce((a, c) => a + c.quantity, 0) };
+  }, [cart]);
+
+  const setConsumidorFinal = () => {
+    setClientName(CLIENTE_MOSTRADOR);
+    toast.success("Cliente de mostrador");
+  };
+
+  const handleConfirm = async () => {
+    if (cart.length === 0) {
+      toast.error("Agrega productos al carrito");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      for (const c of cart) {
+        const unit = Math.round(c.unit_price * (1 - c.discountPct / 100));
+        await add.mutateAsync({
+          feria_id: feriaId,
+          brand: c.brand,
+          product_name: c.product_name,
+          quantity: c.quantity,
+          unit_price: unit,
+          total_amount: unit * c.quantity,
+          payment_method: paymentMethod || null,
+          client_name: clientName || CLIENTE_MOSTRADOR,
+          notes: c.discountPct > 0 ? `[Desc ${c.discountPct}%] ${notes}`.trim() : (notes || null),
+        });
+      }
+      toast.success(`Venta registrada por ${fmt(totals.neto)}`);
+      setCart([]);
+      setClientName("");
+      setNotes("");
+    } catch (e: any) {
+      toast.error(e.message ?? "Error al registrar venta");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="p-4"><div className="flex items-center gap-3"><DollarSign className="h-5 w-5 text-emerald-600" /><div><p className="text-xs text-muted-foreground">Ingresos</p><p className="text-lg font-semibold">${stats.total.toLocaleString()}</p></div></div></Card>
+        <Card className="p-4"><div className="flex items-center gap-3"><DollarSign className="h-5 w-5 text-emerald-600" /><div><p className="text-xs text-muted-foreground">Ingresos</p><p className="text-lg font-semibold">{fmt(stats.total)}</p></div></div></Card>
         <Card className="p-4"><div className="flex items-center gap-3"><ShoppingBag className="h-5 w-5 text-blue-600" /><div><p className="text-xs text-muted-foreground">Ventas</p><p className="text-lg font-semibold">{stats.count}</p></div></div></Card>
         <Card className="p-4"><div className="flex items-center gap-3"><Package className="h-5 w-5 text-purple-600" /><div><p className="text-xs text-muted-foreground">Unidades</p><p className="text-lg font-semibold">{stats.units}</p></div></div></Card>
-        <Card className="p-4"><div className="flex items-center gap-3"><div><p className="text-xs text-muted-foreground">Más vendido</p><p className="text-sm font-semibold truncate">{stats.top ? `${stats.top[0]} (${stats.top[1]})` : "—"}</p></div></div></Card>
+        <Card className="p-4"><div><p className="text-xs text-muted-foreground">Más vendido</p><p className="text-sm font-semibold truncate">{stats.top ? `${stats.top[0]} (${stats.top[1]})` : "—"}</p></div></Card>
       </div>
 
-      <Card className="p-4">
-        <h3 className="font-semibold mb-3">Registrar venta</h3>
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-          <div>
-            <Label>Marca</Label>
-            <Select value={form.brand} onValueChange={(v) => setForm({ ...form, brand: v, product_name: "" })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        {/* PRODUCTOS */}
+        <Card className="p-4 lg:col-span-3 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-semibold">Productos disponibles</h3>
+            <Select value={brandFilter} onValueChange={setBrandFilter}>
+              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">Todas las marcas</SelectItem>
                 <SelectItem value="magical">Magical</SelectItem>
                 <SelectItem value="sweatspot">Sweatspot</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <Label>Producto</Label>
-            {productOptions.length > 0 ? (
-              <Select value={form.product_name} onValueChange={onSelectProduct}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                <SelectContent>{productOptions.map((p) => <SelectItem key={p.id} value={p.product_name}>{p.product_name}</SelectItem>)}</SelectContent>
-              </Select>
-            ) : (
-              <Input value={form.product_name} onChange={(e) => setForm({ ...form, product_name: e.target.value })} />
+
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar producto por nombre…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && filtered.length === 1) {
+                  addToCart(filtered[0]);
+                  setSearch("");
+                }
+              }}
+              className="pl-9"
+            />
+          </div>
+
+          {search.trim() && filtered.length === 0 && (
+            <Button variant="outline" size="sm" onClick={addCustomToCart}>
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              Agregar "{search.trim()}" como producto libre
+            </Button>
+          )}
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[440px] overflow-auto pr-1">
+            {filtered.length === 0 ? (
+              <p className="col-span-full text-sm text-muted-foreground text-center py-8">
+                No hay productos. Escribe uno y agrégalo como libre.
+              </p>
+            ) : filtered.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => addToCart(p)}
+                className="text-left p-2 rounded-md border hover:border-primary hover:bg-accent transition"
+              >
+                <p className="text-sm font-medium leading-tight break-words">{p.product_name}</p>
+                <div className="flex items-center justify-between mt-1.5">
+                  <Badge variant="outline" className="text-[10px] capitalize">{p.brand}</Badge>
+                  <span className="text-xs font-bold">{fmt(Number(p.unit_price))}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </Card>
+
+        {/* CARRITO */}
+        <Card className="p-4 lg:col-span-2 space-y-3">
+          <div className="flex items-center gap-2">
+            <ShoppingCart className="h-5 w-5 text-primary" />
+            <h3 className="font-semibold">Carrito ({cart.length})</h3>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="Cliente (opcional)"
+              value={clientName}
+              onChange={(e) => setClientName(e.target.value)}
+            />
+            <Button variant="outline" size="sm" onClick={setConsumidorFinal} title="Cliente de mostrador">
+              <UserCheck className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="space-y-2 max-h-[340px] overflow-auto pr-1">
+            {cart.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Sin items</p>
+            ) : cart.map((c) => {
+              const lineNet = Math.round(c.unit_price * (1 - c.discountPct / 100)) * c.quantity;
+              return (
+                <div key={c.key} className="rounded-md border p-2 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium leading-tight break-words">{c.product_name}</p>
+                      <p className="text-[10px] text-muted-foreground capitalize">{c.brand}</p>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => removeLine(c.key)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQty(c.key, -1)}>
+                        <Minus className="h-3 w-3" />
+                      </Button>
+                      <span className="w-6 text-center text-sm font-medium">{c.quantity}</span>
+                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQty(c.key, 1)}>
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    <Input
+                      type="number"
+                      value={c.unit_price || ""}
+                      onChange={(e) => updatePrice(c.key, parseFloat(e.target.value) || 0)}
+                      placeholder="Precio"
+                      className="h-8 text-xs"
+                    />
+                    <span className="text-sm font-semibold whitespace-nowrap">{fmt(lineNet)}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1">
+                    <span className="text-[10px] text-muted-foreground mr-1">Desc:</span>
+                    {DISCOUNT_OPTIONS.map((d) => (
+                      <Button
+                        key={d}
+                        size="sm"
+                        variant={c.discountPct === d ? "default" : "outline"}
+                        className="h-6 px-2 text-[10px]"
+                        onClick={() => setLineDiscount(c.key, d)}
+                      >
+                        {d}%
+                      </Button>
+                    ))}
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={c.discountPct || ""}
+                      onChange={(e) => setLineDiscount(c.key, parseFloat(e.target.value) || 0)}
+                      className="h-6 w-14 text-[10px]"
+                      placeholder="%"
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="space-y-1 border-t pt-3 text-sm">
+            <div className="flex justify-between"><span className="text-muted-foreground">Items</span><span>{totals.units}</span></div>
+            {totals.descuento > 0 && (
+              <div className="flex justify-between text-emerald-600">
+                <span>Descuento</span><span>-{fmt(totals.descuento)}</span>
+              </div>
             )}
+            <div className="flex justify-between text-lg font-bold pt-1"><span>Total</span><span>{fmt(totals.neto)}</span></div>
           </div>
-          <div><Label>Cantidad</Label><Input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} /></div>
-          <div><Label>Precio</Label><Input type="number" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} /></div>
-          <div>
-            <Label>Pago</Label>
-            <Select value={form.payment_method} onValueChange={(v) => setForm({ ...form, payment_method: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="efectivo">Efectivo</SelectItem>
-                <SelectItem value="transferencia">Transferencia</SelectItem>
-                <SelectItem value="datafono">Datáfono</SelectItem>
-                <SelectItem value="otro">Otro</SelectItem>
-              </SelectContent>
-            </Select>
+
+          <div className="space-y-2">
+            <div>
+              <Label className="text-xs">Pago</Label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="efectivo">Efectivo</SelectItem>
+                  <SelectItem value="transferencia">Transferencia</SelectItem>
+                  <SelectItem value="datafono">Datáfono</SelectItem>
+                  <SelectItem value="otro">Otro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Notas</Label>
+              <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
+            </div>
+            <Button className="w-full" size="lg" disabled={submitting || cart.length === 0} onClick={handleConfirm}>
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              Registrar venta {totals.neto > 0 ? fmt(totals.neto) : ""}
+            </Button>
           </div>
-          <div className="flex items-end"><Button className="w-full" onClick={handleAdd}><Plus className="mr-2 h-4 w-4" />Registrar</Button></div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-          <div><Label>Cliente (opcional)</Label><Input value={form.client_name} onChange={(e) => setForm({ ...form, client_name: e.target.value })} /></div>
-          <div><Label>Notas</Label><Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
-        </div>
-      </Card>
+        </Card>
+      </div>
 
       <Card>
         <Table>
@@ -131,7 +366,7 @@ export function FeriaSalesTab({ feriaId }: { feriaId: string }) {
                 <TableCell><Badge variant="outline" className="capitalize">{s.brand}</Badge></TableCell>
                 <TableCell>{s.product_name}</TableCell>
                 <TableCell className="text-right">{s.quantity}</TableCell>
-                <TableCell className="text-right font-medium">${Number(s.total_amount).toLocaleString()}</TableCell>
+                <TableCell className="text-right font-medium">{fmt(Number(s.total_amount))}</TableCell>
                 <TableCell className="capitalize">{s.payment_method || "—"}</TableCell>
                 <TableCell>{s.client_name || "—"}</TableCell>
                 <TableCell>
