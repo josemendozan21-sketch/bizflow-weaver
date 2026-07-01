@@ -162,7 +162,7 @@ export function EditFeriaDialog({ feria }: { feria: Feria }) {
             <div><Label>N° Stand</Label><Input value={form.stand_number} onChange={(e) => setForm({ ...form, stand_number: e.target.value })} /></div>
             <div><Label>Tamaño stand</Label><Input value={form.stand_size} onChange={(e) => setForm({ ...form, stand_size: e.target.value })} /></div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <Label>Marca principal</Label>
               <Select value={form.brand || "none"} onValueChange={(v) => setForm({ ...form, brand: v === "none" ? "" : v })}>
@@ -178,6 +178,10 @@ export function EditFeriaDialog({ feria }: { feria: Feria }) {
             <div>
               <Label>Atletas estimados</Label>
               <Input type="number" min={0} value={form.estimated_athletes} onChange={(e) => setForm({ ...form, estimated_athletes: e.target.value })} placeholder="Ej. 3000" />
+            </div>
+            <div>
+              <Label>Teléfono contacto feria</Label>
+              <Input value={form.contact_phone} onChange={(e) => setForm({ ...form, contact_phone: e.target.value })} placeholder="Ej. 311 234 5678" />
             </div>
           </div>
 
