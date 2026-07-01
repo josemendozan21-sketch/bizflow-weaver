@@ -42,6 +42,7 @@ export function EditFeriaDialog({ feria }: { feria: Feria }) {
         stand_number: feria.stand_number || "", stand_size: feria.stand_size || "",
         brand: feria.brand || "",
         estimated_athletes: feria.estimated_athletes != null ? String(feria.estimated_athletes) : "",
+        contact_phone: feria.contact_phone || "",
         stand_cost: String(feria.stand_cost || 0),
         shipping_cost: String(feria.shipping_cost || 0),
         tickets_cost: String(feria.tickets_cost || 0),
