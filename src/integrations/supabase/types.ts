@@ -936,7 +936,12 @@ export type Database = {
       feria_sales: {
         Row: {
           brand: string
+          client_address: string | null
+          client_city: string | null
+          client_document: string | null
+          client_email: string | null
           client_name: string | null
+          client_phone: string | null
           created_at: string
           feria_id: string
           id: string
@@ -951,7 +956,12 @@ export type Database = {
         }
         Insert: {
           brand: string
+          client_address?: string | null
+          client_city?: string | null
+          client_document?: string | null
+          client_email?: string | null
           client_name?: string | null
+          client_phone?: string | null
           created_at?: string
           feria_id: string
           id?: string
@@ -966,7 +976,12 @@ export type Database = {
         }
         Update: {
           brand?: string
+          client_address?: string | null
+          client_city?: string | null
+          client_document?: string | null
+          client_email?: string | null
           client_name?: string | null
+          client_phone?: string | null
           created_at?: string
           feria_id?: string
           id?: string
