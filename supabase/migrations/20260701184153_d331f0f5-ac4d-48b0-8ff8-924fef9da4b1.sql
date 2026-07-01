@@ -1,0 +1,1 @@
+ALTER TABLE public.ferias ADD COLUMN IF NOT EXISTS contact_phone TEXT;
