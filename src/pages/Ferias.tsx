@@ -18,7 +18,17 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export default function Ferias() {
-  const { data: ferias = [], isLoading } = useFerias();
+  const { data: feriasRaw = [], isLoading } = useFerias();
+  // Ordenar por fecha de montaje (fallback fecha de inicio) ascendente;
+  // finalizadas/canceladas al final para ver primero las próximas.
+  const ferias = [...feriasRaw].sort((a, b) => {
+    const aDone = a.status === "finalizada" || a.status === "cancelada";
+    const bDone = b.status === "finalizada" || b.status === "cancelada";
+    if (aDone !== bDone) return aDone ? 1 : -1;
+    const aKey = a.setup_date || a.start_date;
+    const bKey = b.setup_date || b.start_date;
+    return aKey.localeCompare(bKey);
+  });
   const del = useDeleteFeria();
   const dup = useDuplicateFeria();
   const { role } = useAuth();
