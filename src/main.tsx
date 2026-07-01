@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { registerPWA } from "./pwa/register";
 
 // Workaround for known React 18 + Radix portal bug:
 // "Failed to execute 'removeChild' on 'Node': The node to be removed is not a child of this node"
@@ -30,19 +31,6 @@ if (typeof Node !== "undefined") {
   } as typeof Node.prototype.insertBefore;
 }
 
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.getRegistrations().then(async (registrations) => {
-    await Promise.all(registrations.map((registration) => registration.unregister()));
-    if ("caches" in window) {
-      const cacheNames = await caches.keys();
-      await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
-    }
-
-    if (navigator.serviceWorker.controller && !sessionStorage.getItem("bionovations-sw-cleaned")) {
-      sessionStorage.setItem("bionovations-sw-cleaned", "true");
-      window.location.reload();
-    }
-  });
-}
+registerPWA();
 
 createRoot(document.getElementById("root")!).render(<App />);

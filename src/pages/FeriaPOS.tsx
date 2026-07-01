@@ -10,11 +10,16 @@ import { QuickSaleGrid } from "@/components/feria-pos/QuickSaleGrid";
 import { DetailedSaleForm } from "@/components/feria-pos/DetailedSaleForm";
 import { MySalesTab } from "@/components/feria-pos/MySalesTab";
 import { FeriaInventoryStatus } from "@/components/feria-pos/FeriaInventoryStatus";
+import { OfflineIndicator } from "@/components/feria-pos/OfflineIndicator";
+import { useOfflineSalesSync } from "@/hooks/useOfflineSalesSync";
+import { useFeriaOfflineStore, pendingSalesForFeria } from "@/stores/feriaOfflineStore";
 
 export default function FeriaPOS() {
   const { role } = useAuth();
   const { data: ferias = [] } = useFerias();
   const { data: assignment } = useMyPosAssignment();
+  useOfflineSalesSync();
+  const pendingAll = useFeriaOfflineStore((s) => s.pendingSales);
 
   // For pos users, force their assigned feria; for admin, allow choosing
   const allowSelect = role === "admin";
@@ -39,19 +44,41 @@ export default function FeriaPOS() {
   // Only show items that have been actually dispatched
   const dispatchedInventory = inventory.filter((it) => it.dispatch_status === "despachado" && it.quantity_dispatched > 0);
 
+  // Merge in offline pending sales for this feria so the UI (totals, remaining stock, etc.)
+  // reflects reality even when offline.
+  const offlinePendingForFeria = feriaId
+    ? pendingSalesForFeria(feriaId, pendingAll).filter((p) => p.status !== "synced")
+    : [];
+  const salesWithPending = useMemo(() => {
+    const asSales = offlinePendingForFeria.map((p) => ({
+      id: p.localId,
+      feria_id: p.feria_id,
+      brand: p.brand,
+      product_name: p.product_name,
+      quantity: p.quantity,
+      unit_price: p.unit_price,
+      total_amount: p.total_amount,
+      payment_method: p.payment_method,
+      client_name: p.client_name,
+      sale_date: p.sale_date,
+      notes: p.notes,
+    })) as typeof sales;
+    return [...asSales, ...sales];
+  }, [sales, offlinePendingForFeria]);
+
   const totals = useMemo(() => {
     const sumBy = (m: string) =>
-      sales.filter((s) => (s.payment_method || "").toLowerCase() === m)
+      salesWithPending.filter((s) => (s.payment_method || "").toLowerCase() === m)
         .reduce((a, b) => a + Number(b.total_amount), 0);
     return {
-      total: sales.reduce((a, b) => a + Number(b.total_amount), 0),
-      units: sales.reduce((a, b) => a + b.quantity, 0),
+      total: salesWithPending.reduce((a, b) => a + Number(b.total_amount), 0),
+      units: salesWithPending.reduce((a, b) => a + b.quantity, 0),
       efectivo: sumBy("efectivo"),
       tarjeta: sumBy("tarjeta") + sumBy("datafono"),
       nequi: sumBy("nequi"),
       otros: sumBy("transferencia") + sumBy("otro"),
     };
-  }, [sales]);
+  }, [salesWithPending]);
 
   if (eligibleFerias.length === 0) {
     return (
@@ -73,7 +100,9 @@ export default function FeriaPOS() {
           <h1 className="text-2xl font-bold">Feria Punto de Venta</h1>
           <p className="text-sm text-muted-foreground">Vende en tiempo real durante el evento</p>
         </div>
-        {allowSelect && eligibleFerias.length > 1 && (
+        <div className="flex items-center gap-2">
+          <OfflineIndicator />
+          {allowSelect && eligibleFerias.length > 1 && (
           <Select value={feriaId} onValueChange={setFeriaId}>
             <SelectTrigger className="w-[280px]"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -82,7 +111,8 @@ export default function FeriaPOS() {
               ))}
             </SelectContent>
           </Select>
-        )}
+          )}
+        </div>
       </div>
 
       {feria && (
@@ -138,18 +168,18 @@ export default function FeriaPOS() {
 
         <TabsContent value="quick">
           {feriaId && (
-            <QuickSaleGrid feriaId={feriaId} inventory={dispatchedInventory} sales={sales} />
+            <QuickSaleGrid feriaId={feriaId} inventory={dispatchedInventory} sales={salesWithPending} />
           )}
         </TabsContent>
 
         <TabsContent value="detailed">
           {feriaId && (
-            <DetailedSaleForm feriaId={feriaId} inventory={dispatchedInventory} sales={sales} />
+            <DetailedSaleForm feriaId={feriaId} inventory={dispatchedInventory} sales={salesWithPending} />
           )}
         </TabsContent>
 
         <TabsContent value="inventory">
-          {feriaId && <FeriaInventoryStatus inventory={dispatchedInventory} sales={sales} />}
+          {feriaId && <FeriaInventoryStatus inventory={dispatchedInventory} sales={salesWithPending} />}
         </TabsContent>
 
         <TabsContent value="mine">

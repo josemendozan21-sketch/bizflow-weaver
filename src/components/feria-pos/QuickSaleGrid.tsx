@@ -7,7 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Minus, Trash2, ShoppingCart, Check } from "lucide-react";
 import type { FeriaInventory, FeriaSale } from "@/hooks/useFerias";
-import { useAddFeriaSale } from "@/hooks/useFerias";
+import { useFeriaOfflineStore } from "@/stores/feriaOfflineStore";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 interface CartLine {
   inventory_id: string;
@@ -26,7 +28,8 @@ export function QuickSaleGrid({
   inventory: FeriaInventory[];
   sales: FeriaSale[];
 }) {
-  const add = useAddFeriaSale();
+  const enqueue = useFeriaOfflineStore((s) => s.enqueue);
+  const { user } = useAuth();
   const [cart, setCart] = useState<CartLine[]>([]);
   const [paymentMethod, setPaymentMethod] = useState("efectivo");
   const [discount, setDiscount] = useState("");
@@ -50,8 +53,7 @@ export function QuickSaleGrid({
   const finalTotal = Math.max(0, cartTotal - discountValue);
 
   const addToCart = (it: FeriaInventory) => {
-    const inCart = cart.find((c) => c.inventory_id === it.id)?.quantity || 0;
-    if (inCart >= remainingMap[it.id]) return;
+    // Allow oversell — will be flagged on sync
     setCart((prev) => {
       const idx = prev.findIndex((c) => c.inventory_id === it.id);
       if (idx >= 0) {
@@ -75,7 +77,6 @@ export function QuickSaleGrid({
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
-    const totalUnits = cart.reduce((s, l) => s + l.quantity, 0);
     const noteParts: string[] = [];
     if (clientEmail) noteParts.push(`Email: ${clientEmail}`);
     if (clientDoc) noteParts.push(`Doc: ${clientDoc}`);
@@ -86,7 +87,7 @@ export function QuickSaleGrid({
       const lineSubtotal = line.unit_price * line.quantity;
       const lineDiscount = cartTotal > 0 ? (discountValue * lineSubtotal) / cartTotal : 0;
       const lineTotal = Math.max(0, lineSubtotal - lineDiscount);
-      await add.mutateAsync({
+      enqueue({
         feria_id: feriaId,
         brand: line.brand,
         product_name: line.product_name,
@@ -96,8 +97,10 @@ export function QuickSaleGrid({
         payment_method: paymentMethod,
         client_name: clientName || null,
         notes: baseNote,
+        recorded_by: user?.id || null,
       });
     }
+    toast.success(navigator.onLine ? "Venta registrada" : "Venta guardada offline — se subirá cuando vuelva internet");
     setCart([]);
     setDiscount("");
     setClientName("");
@@ -122,9 +125,8 @@ export function QuickSaleGrid({
           return (
             <button
               key={it.id}
-              disabled={disabled}
               onClick={() => addToCart(it)}
-              className={`text-left rounded-lg border bg-card p-3 hover:border-primary transition-colors ${disabled ? "opacity-50 cursor-not-allowed" : "active:scale-[0.98]"}`}
+              className={`text-left rounded-lg border bg-card p-3 hover:border-primary transition-colors active:scale-[0.98] ${disabled ? "border-amber-400" : ""}`}
             >
               <div className="flex items-start justify-between gap-1">
                 <p className="font-medium text-sm leading-tight">{it.product_name}</p>
@@ -132,7 +134,7 @@ export function QuickSaleGrid({
               </div>
               <p className="text-lg font-bold mt-2">${it.unit_price.toLocaleString()}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Disponibles: <span className={remaining === 0 ? "text-destructive" : remaining <= 3 ? "text-amber-600" : ""}>{remaining}</span>
+                Disponibles: <span className={remaining <= 0 ? "text-amber-700 font-semibold" : remaining <= 3 ? "text-amber-600" : ""}>{remaining < 0 ? `${remaining} (sobreventa)` : remaining}</span>
               </p>
             </button>
           );
@@ -202,7 +204,7 @@ export function QuickSaleGrid({
                   <SelectItem value="otro">Otro</SelectItem>
                 </SelectContent>
               </Select>
-              <Button className="w-full" onClick={handleCheckout} disabled={add.isPending}>
+              <Button className="w-full" onClick={handleCheckout}>
                 <Check className="mr-2 h-4 w-4" /> Cobrar
               </Button>
             </div>
