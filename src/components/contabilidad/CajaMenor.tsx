@@ -71,6 +71,10 @@ export default function CajaMenor() {
   const activeFund = funds[0] ?? null;
   const historyFunds = funds.slice(1);
 
+  // Global cumulative balance across ALL funds (income) and ALL expenses.
+  // Each "fund" entry is treated as an income deposit into caja menor.
+  const totalIncome = funds.reduce((s, f) => s + Number(f.amount), 0);
+
   // Fetch ALL expenses across funds (for active + history)
   const { data: allExpenses = [] } = useQuery({
     queryKey: ["petty_cash_expenses_all"],
@@ -88,8 +92,8 @@ export default function CajaMenor() {
     ? allExpenses.filter((e) => e.fund_id === activeFund.id)
     : [];
 
-  const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount), 0);
-  const currentBalance = activeFund ? Number(activeFund.amount) - totalExpenses : 0;
+  const totalExpensesAll = allExpenses.reduce((s, e) => s + Number(e.amount), 0);
+  const currentBalance = totalIncome - totalExpensesAll;
 
   return (
     <div className="space-y-6">
@@ -97,10 +101,10 @@ export default function CajaMenor() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Fondo inicial</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total ingresos</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">${activeFund ? Number(activeFund.amount).toLocaleString("es-CO") : "0"}</p>
+            <p className="text-2xl font-bold">${totalIncome.toLocaleString("es-CO")}</p>
           </CardContent>
         </Card>
         <Card>
@@ -108,7 +112,7 @@ export default function CajaMenor() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Total gastado</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-destructive">${totalExpenses.toLocaleString("es-CO")}</p>
+            <p className="text-2xl font-bold text-destructive">${totalExpensesAll.toLocaleString("es-CO")}</p>
           </CardContent>
         </Card>
         <Card>
@@ -126,7 +130,7 @@ export default function CajaMenor() {
       {/* Actions */}
       <div className="flex gap-2 flex-wrap">
         <Button onClick={() => setShowFundDialog(true)}>
-          <Wallet className="h-4 w-4 mr-1" /> {activeFund ? "Ajustar fondo" : "Establecer fondo"}
+          <Wallet className="h-4 w-4 mr-1" /> {activeFund ? "Registrar ingreso" : "Establecer fondo inicial"}
         </Button>
         {activeFund && (
           <Button variant="outline" onClick={() => setShowExpenseDialog(true)}>
