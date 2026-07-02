@@ -1,0 +1,1 @@
+DELETE FROM public.petty_cash_funds WHERE id = '008531ea-7328-4c32-9580-90cc5730a1a9';
