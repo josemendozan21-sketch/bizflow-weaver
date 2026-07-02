@@ -315,7 +315,7 @@ function FundDialog({ open, onClose, currentAmount, userId, onSaved }: {
   userId: string;
   onSaved: () => void;
 }) {
-  const [amount, setAmount] = useState(currentAmount?.toString() || "");
+  const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
