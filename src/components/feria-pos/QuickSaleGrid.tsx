@@ -96,7 +96,7 @@ export function QuickSaleGrid({
         copy[idx] = { ...copy[idx], quantity: copy[idx].quantity + 1 };
         return copy;
       }
-      return [...prev, { inventory_id: it.id, brand: it.brand, product_name: it.product_name, unit_price: it.unit_price, quantity: 1 }];
+      return [...prev, { inventory_id: it.id, brand: it.brand, product_name: it.product_name, unit_price: it.unit_price, quantity: 1, discount_pct: 0 }];
     });
   };
 
