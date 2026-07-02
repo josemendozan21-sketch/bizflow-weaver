@@ -11,6 +11,7 @@ import { useFeriaOfflineStore } from "@/stores/feriaOfflineStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import DebouncedSearchInput from "@/components/inventory/DebouncedSearchInput";
+import { Textarea } from "@/components/ui/textarea";
 
 interface CartLine {
   inventory_id: string;
@@ -18,6 +19,7 @@ interface CartLine {
   product_name: string;
   unit_price: number;
   quantity: number;
+  discount_pct: number;
 }
 
 export function QuickSaleGrid({
@@ -43,6 +45,7 @@ export function QuickSaleGrid({
   const [clientAddress, setClientAddress] = useState("");
   const [gift, setGift] = useState<string>("");
   const [giftQty, setGiftQty] = useState<number>(1);
+  const [comments, setComments] = useState("");
   const giftOptions = ["Gafas", "Pocket térmico", "Handy", "Pocket frío"];
 
   const remainingMap = useMemo(() => {
@@ -56,7 +59,11 @@ export function QuickSaleGrid({
     return map;
   }, [inventory, sales]);
 
-  const cartTotal = cart.reduce((s, l) => s + l.unit_price * l.quantity, 0);
+  const lineSubtotal = (l: CartLine) => l.unit_price * l.quantity;
+  const lineNet = (l: CartLine) => lineSubtotal(l) * (1 - (l.discount_pct || 0) / 100);
+  const cartSubtotal = cart.reduce((s, l) => s + lineSubtotal(l), 0);
+  const cartLineDiscount = cart.reduce((s, l) => s + (lineSubtotal(l) - lineNet(l)), 0);
+  const cartTotal = cart.reduce((s, l) => s + lineNet(l), 0);
   const manualDiscount = Math.max(0, parseFloat(discount) || 0);
   const pctDiscount = Math.round((cartTotal * discountPct) / 100);
   const discountValue = Math.max(0, manualDiscount + pctDiscount);
@@ -89,7 +96,7 @@ export function QuickSaleGrid({
         copy[idx] = { ...copy[idx], quantity: copy[idx].quantity + 1 };
         return copy;
       }
-      return [...prev, { inventory_id: it.id, brand: it.brand, product_name: it.product_name, unit_price: it.unit_price, quantity: 1 }];
+      return [...prev, { inventory_id: it.id, brand: it.brand, product_name: it.product_name, unit_price: it.unit_price, quantity: 1, discount_pct: 0 }];
     });
   };
 
@@ -99,6 +106,10 @@ export function QuickSaleGrid({
         .map((l) => (l.inventory_id === id ? { ...l, quantity: l.quantity + delta } : l))
         .filter((l) => l.quantity > 0)
     );
+  };
+
+  const updateLineDiscount = (id: string, pct: number) => {
+    setCart((prev) => prev.map((l) => (l.inventory_id === id ? { ...l, discount_pct: pct } : l)));
   };
 
   const removeLine = (id: string) => setCart((prev) => prev.filter((l) => l.inventory_id !== id));
@@ -111,13 +122,15 @@ export function QuickSaleGrid({
     if (clientPhone) noteParts.push(`Cel: ${clientPhone}`);
     if (clientAddress) noteParts.push(`Dir: ${clientAddress}`);
     if (gift) noteParts.push(`Obsequio: ${gift}${giftQty > 1 ? ` x${giftQty}` : ""}`);
+    if (cartLineDiscount > 0) noteParts.push(`Desc x producto: $${Math.round(cartLineDiscount).toLocaleString()}`);
     if (discountValue > 0) noteParts.push(`Desc total: $${discountValue.toLocaleString()}`);
+    if (comments.trim()) noteParts.push(`Comentario: ${comments.trim()}`);
     const baseNote = noteParts.join(" | ") || null;
     for (const line of cart) {
-      // Distribuir descuento proporcionalmente a cada línea
-      const lineSubtotal = line.unit_price * line.quantity;
-      const lineDiscount = cartTotal > 0 ? (discountValue * lineSubtotal) / cartTotal : 0;
-      const lineTotal = Math.max(0, lineSubtotal - lineDiscount);
+      // Aplica descuento por producto y distribuye descuento global proporcionalmente
+      const lineNetAmount = lineNet(line);
+      const globalShare = cartTotal > 0 ? (discountValue * lineNetAmount) / cartTotal : 0;
+      const lineTotal = Math.max(0, lineNetAmount - globalShare);
       enqueue({
         feria_id: feriaId,
         brand: line.brand,
@@ -142,6 +155,7 @@ export function QuickSaleGrid({
     setClientAddress("");
     setGift("");
     setGiftQty(1);
+    setComments("");
   };
 
   if (inventory.length === 0) {
@@ -198,26 +212,63 @@ export function QuickSaleGrid({
         ) : (
           <div className="space-y-2">
             {cart.map((l) => (
-              <div key={l.inventory_id} className="flex items-center justify-between gap-2 text-sm">
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{l.product_name}</p>
-                  <p className="text-xs text-muted-foreground">${l.unit_price.toLocaleString()} c/u</p>
+              <div key={l.inventory_id} className="border rounded-md p-2 text-sm space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{l.product_name}</p>
+                    <p className="text-xs text-muted-foreground">${l.unit_price.toLocaleString()} c/u</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => updateQty(l.inventory_id, -1)}><Minus className="h-3 w-3" /></Button>
+                    <span className="w-6 text-center font-medium">{l.quantity}</span>
+                    <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => updateQty(l.inventory_id, 1)}><Plus className="h-3 w-3" /></Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => removeLine(l.inventory_id)}><Trash2 className="h-3 w-3" /></Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => updateQty(l.inventory_id, -1)}><Minus className="h-3 w-3" /></Button>
-                  <span className="w-6 text-center font-medium">{l.quantity}</span>
-                  <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => updateQty(l.inventory_id, 1)}><Plus className="h-3 w-3" /></Button>
-                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => removeLine(l.inventory_id)}><Trash2 className="h-3 w-3" /></Button>
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-[10px] text-muted-foreground mr-1">Desc:</span>
+                  {[0, 5, 10, 15, 20, 50].map((p) => (
+                    <Button
+                      key={p}
+                      type="button"
+                      size="sm"
+                      variant={(l.discount_pct || 0) === p ? "default" : "outline"}
+                      className="h-6 px-1.5 text-[10px]"
+                      onClick={() => updateLineDiscount(l.inventory_id, p)}
+                    >
+                      {p === 0 ? "0" : `${p}%`}
+                    </Button>
+                  ))}
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={l.discount_pct || ""}
+                    placeholder="%"
+                    onChange={(e) => updateLineDiscount(l.inventory_id, Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                    className="h-6 w-14 text-[11px] px-1"
+                  />
+                  {(l.discount_pct || 0) > 0 && (
+                    <span className="text-[10px] text-muted-foreground ml-auto">
+                      = ${Math.round(lineNet(l)).toLocaleString()}
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
             <div className="border-t pt-3 mt-3 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span>${cartTotal.toLocaleString()}</span>
+                <span>${Math.round(cartSubtotal).toLocaleString()}</span>
               </div>
+              {cartLineDiscount > 0 && (
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Descuento por producto</span>
+                  <span>− ${Math.round(cartLineDiscount).toLocaleString()}</span>
+                </div>
+              )}
               <div>
-                <Label className="text-xs">Descuento rápido</Label>
+                <Label className="text-xs">Descuento global rápido</Label>
                 <div className="flex flex-wrap gap-1 mt-1">
                   {[0, 5, 10, 15, 20, 50].map((p) => (
                     <Button
@@ -305,6 +356,15 @@ export function QuickSaleGrid({
                     </div>
                   </div>
                 )}
+              </div>
+              <div>
+                <Label className="text-xs">Comentarios de la factura</Label>
+                <Textarea
+                  value={comments}
+                  onChange={(e) => setComments(e.target.value)}
+                  placeholder="Observaciones para esta venta..."
+                  className="min-h-[60px] text-sm"
+                />
               </div>
               <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
