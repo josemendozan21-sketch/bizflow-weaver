@@ -343,12 +343,12 @@ function FundDialog({ open, onClose, currentAmount, userId, onSaved }: {
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Establecer fondo de caja menor</DialogTitle>
-          <DialogDescription>Define el monto inicial disponible para gastos menores.</DialogDescription>
+          <DialogTitle>Registrar ingreso a caja menor</DialogTitle>
+          <DialogDescription>Este monto se suma al saldo disponible actual.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Monto inicial *</Label>
+            <Label>Monto del ingreso *</Label>
             <Input type="number" min="0" placeholder="Ej: 500000" value={amount} onChange={(e) => setAmount(e.target.value)} />
           </div>
           <div className="space-y-2">
