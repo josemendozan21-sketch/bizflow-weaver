@@ -143,6 +143,7 @@ export function MySalesTab({ feriaId, sales }: { feriaId: string; sales: FeriaSa
       </div>
 
       <Card>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -165,6 +166,11 @@ export function MySalesTab({ feriaId, sales }: { feriaId: string; sales: FeriaSa
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className="capitalize text-[10px]">{s.brand}</Badge>
                     {s.product_name}
+                    {isAdmin && !s._pending && (
+                      <Button size="sm" variant="outline" className="h-6 px-2 gap-1 ml-1" onClick={() => openEdit(s)} title="Editar venta">
+                        <Pencil className="h-3 w-3" /> Editar
+                      </Button>
+                    )}
                     {s._pending === "pending" && (
                       <Badge variant="outline" className="gap-1 text-amber-700 border-amber-300 bg-amber-50 text-[10px]">
                         <CloudOff className="h-3 w-3" /> Pendiente
@@ -204,6 +210,7 @@ export function MySalesTab({ feriaId, sales }: { feriaId: string; sales: FeriaSa
             ))}
           </TableBody>
         </Table>
+        </div>
       </Card>
 
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
