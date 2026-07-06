@@ -1,0 +1,200 @@
+{
+  "version": 1,
+  "sdk_version": "0.20.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://auncgjkpwajfbvcckuny.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "bionovations-mcp",
+      "version": "0.1.0",
+      "title": "Bionovations MCP"
+    },
+    "tools": [
+      {
+        "name": "search_orders",
+        "title": "Buscar pedidos",
+        "description": "Busca pedidos de Bionovations por cliente, producto, estado de producción, marca o asesor. Devuelve datos filtrados por los permisos (RLS) del usuario.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "client": {
+              "type": "string",
+              "description": "Nombre del cliente (búsqueda parcial, sin tildes)"
+            },
+            "product": {
+              "type": "string",
+              "description": "Nombre del producto (búsqueda parcial)"
+            },
+            "production_status": {
+              "type": "string",
+              "enum": [
+                "pendiente",
+                "diseno",
+                "produccion_cuerpos",
+                "estampacion",
+                "dosificacion",
+                "sellado",
+                "recorte",
+                "empaque",
+                "listo",
+                "despachado",
+                "entregado"
+              ]
+            },
+            "brand": {
+              "type": "string",
+              "enum": [
+                "magical_warmers",
+                "sweatspot"
+              ]
+            },
+            "advisor": {
+              "type": "string",
+              "description": "Nombre del asesor"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 30,
+              "default": 15
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_inventory",
+        "title": "Consultar inventario",
+        "description": "Consulta existencias en stock_items por nombre, marca o categoría. Marca opcional bajo mínimo.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Buscar por nombre (parcial)"
+            },
+            "brand": {
+              "type": "string",
+              "enum": [
+                "magical_warmers",
+                "sweatspot"
+              ]
+            },
+            "category": {
+              "type": "string",
+              "description": "p.ej. cuerpos_referencias, producto_terminado, materia_prima"
+            },
+            "low_stock_only": {
+              "type": "boolean",
+              "default": false
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 80,
+              "default": 30
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_production_tasks",
+        "title": "Tareas de producción",
+        "description": "Consulta tareas de producción activas (production_orders).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brand": {
+              "type": "string",
+              "enum": [
+                "magical_warmers",
+                "sweatspot"
+              ]
+            },
+            "current_stage": {
+              "type": "string",
+              "description": "estampacion, dosificacion, sellado, recorte, empaque, listo, etc."
+            },
+            "stage_status": {
+              "type": "string",
+              "enum": [
+                "pendiente",
+                "en_proceso",
+                "completado"
+              ]
+            },
+            "molde": {
+              "type": "string",
+              "description": "Filtro por molde/referencia (parcial)"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 40,
+              "default": 20
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_advisor_summary",
+        "title": "Resumen por asesor",
+        "description": "Resumen de ventas por asesor: pedidos, total vendido, cobrado y pendiente.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "advisor": {
+              "type": "string",
+              "description": "Nombre del asesor (parcial)"
+            },
+            "since": {
+              "type": "string",
+              "description": "Fecha inicio ISO YYYY-MM-DD"
+            },
+            "until": {
+              "type": "string",
+              "description": "Fecha fin ISO YYYY-MM-DD"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
