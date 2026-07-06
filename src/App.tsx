@@ -31,6 +31,7 @@ import Clientes from "./pages/Clientes";
 import Redes from "./pages/Redes";
 import NotFound from "./pages/NotFound";
 import Install from "./pages/Install";
+import OAuthConsent from "./pages/OAuthConsent";
 import { ReactNode } from "react";
 
 const queryClient = new QueryClient({
@@ -166,6 +167,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/install" element={<Install />} />
+            <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
             <Route path="*" element={
               <AuthGate>
                 <Routes>

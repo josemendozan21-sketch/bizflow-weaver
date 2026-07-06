@@ -12,6 +12,19 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
 
+  const applyPostLoginRedirect = () => {
+    const url = new URL(window.location.href);
+    const fromQuery = url.searchParams.get("next");
+    const fromStorage = sessionStorage.getItem("post_login_redirect");
+    const next = fromQuery || fromStorage;
+    if (next && next.startsWith("/") && !next.startsWith("//")) {
+      sessionStorage.removeItem("post_login_redirect");
+      window.location.href = next;
+      return true;
+    }
+    return false;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -25,6 +38,7 @@ const Auth = () => {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("Sesión iniciada correctamente");
+        if (applyPostLoginRedirect()) return;
       }
     } catch (error: any) {
       toast.error(error.message);
