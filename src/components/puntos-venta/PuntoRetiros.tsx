@@ -39,8 +39,13 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
   const [uploading, setUploading] = useState(false);
 
   const today = new Date().toISOString().slice(0, 10);
+  const isCash = (m: string | null | undefined) =>
+    (m ?? "").toLowerCase().split("+").some((p) => p.trim() === "efectivo");
   const cashSalesToday = sales
-    .filter((s) => s.sale_date.slice(0, 10) === today && (s.payment_method ?? "").toLowerCase().split("+").some((p) => p.trim() === "efectivo"))
+    .filter((s) => s.sale_date.slice(0, 10) === today && isCash(s.payment_method))
+    .reduce((a, b) => a + Number(b.total_amount), 0);
+  const cashSalesAll = sales
+    .filter((s) => isCash(s.payment_method))
     .reduce((a, b) => a + Number(b.total_amount), 0);
   const approvedRetiros = withdrawals
     .filter((w) => w.status === "aprobado" && (w.movement_type ?? "retiro") === "retiro")
@@ -48,7 +53,10 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
   const approvedConsignaciones = withdrawals
     .filter((w) => w.status === "aprobado" && w.movement_type === "consignacion")
     .reduce((a, b) => a + Number(b.amount), 0);
-  const cashOnHand = cashBase + cashSalesToday - approvedRetiros - approvedConsignaciones;
+  const pendingRetiros = withdrawals
+    .filter((w) => w.status === "pendiente")
+    .reduce((a, b) => a + Number(b.amount), 0);
+  const cashOnHand = cashBase + cashSalesAll - approvedRetiros - approvedConsignaciones;
 
   const reset = () => {
     setAmount(""); setConcept(""); setNotes(""); setFile(null); setShowForm(false); setMovementType("retiro");
@@ -89,14 +97,21 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
           <div className="rounded-lg border p-3">
             <div className="text-xs text-muted-foreground flex items-center gap-1"><Banknote className="h-3 w-3" /> Efectivo en caja</div>
             <div className="text-lg font-bold">${cashOnHand.toLocaleString()}</div>
+            <div className="text-[10px] text-muted-foreground mt-1">Acumulado (base + todas las ventas − aprobados)</div>
+            {pendingRetiros > 0 && (
+              <div className="text-[10px] text-amber-600 mt-0.5">
+                ${pendingRetiros.toLocaleString()} en movimientos pendientes de aprobación
+              </div>
+            )}
           </div>
           <div className="rounded-lg border p-3">
             <div className="text-xs text-muted-foreground">Base de caja</div>
             <div className="text-lg font-bold">${cashBase.toLocaleString()}</div>
           </div>
           <div className="rounded-lg border p-3">
-            <div className="text-xs text-muted-foreground">Ventas efectivo (hoy)</div>
-            <div className="text-lg font-bold">${cashSalesToday.toLocaleString()}</div>
+            <div className="text-xs text-muted-foreground">Ventas efectivo</div>
+            <div className="text-lg font-bold">${cashSalesAll.toLocaleString()}</div>
+            <div className="text-[10px] text-muted-foreground mt-1">Hoy: ${cashSalesToday.toLocaleString()}</div>
           </div>
           <div className="rounded-lg border p-3">
             <div className="text-xs text-muted-foreground flex items-center gap-1"><ArrowUpCircle className="h-3 w-3" /> Retiros aprobados</div>
