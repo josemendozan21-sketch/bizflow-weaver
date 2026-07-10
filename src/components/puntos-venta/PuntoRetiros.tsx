@@ -54,9 +54,18 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
     .filter((w) => w.status === "aprobado" && w.movement_type === "consignacion")
     .reduce((a, b) => a + Number(b.amount), 0);
   const pendingRetiros = withdrawals
-    .filter((w) => w.status === "pendiente")
+    .filter((w) => w.status === "pendiente" && (w.movement_type ?? "retiro") === "retiro")
     .reduce((a, b) => a + Number(b.amount), 0);
-  const cashOnHand = cashBase + cashSalesAll - approvedRetiros - approvedConsignaciones;
+  const pendingConsignaciones = withdrawals
+    .filter((w) => w.status === "pendiente" && w.movement_type === "consignacion")
+    .reduce((a, b) => a + Number(b.amount), 0);
+  const pendingTotal = pendingRetiros + pendingConsignaciones;
+  // Descontamos también los movimientos pendientes: el dinero ya salió físicamente
+  // de la caja aunque contabilidad no los haya aprobado todavía.
+  const cashOnHand =
+    cashBase + cashSalesAll
+    - approvedRetiros - approvedConsignaciones
+    - pendingRetiros - pendingConsignaciones;
 
   const reset = () => {
     setAmount(""); setConcept(""); setNotes(""); setFile(null); setShowForm(false); setMovementType("retiro");
@@ -97,10 +106,10 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
           <div className="rounded-lg border p-3">
             <div className="text-xs text-muted-foreground flex items-center gap-1"><Banknote className="h-3 w-3" /> Efectivo en caja</div>
             <div className="text-lg font-bold">${cashOnHand.toLocaleString()}</div>
-            <div className="text-[10px] text-muted-foreground mt-1">Acumulado (base + todas las ventas − aprobados)</div>
-            {pendingRetiros > 0 && (
+            <div className="text-[10px] text-muted-foreground mt-1">Base + ventas efectivo − retiros/consignaciones (aprobados y pendientes)</div>
+            {pendingTotal > 0 && (
               <div className="text-[10px] text-amber-600 mt-0.5">
-                ${pendingRetiros.toLocaleString()} en movimientos pendientes de aprobación
+                ${pendingTotal.toLocaleString()} en movimientos pendientes de aprobación (ya descontados)
               </div>
             )}
           </div>
