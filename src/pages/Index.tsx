@@ -60,7 +60,12 @@ const Index = () => {
   const { orders: productionOrders, isLoading: prodLoading } = useProductionOrders();
   const { stockItems, isLoading: invLoading } = useInventory();
 
-  const [salesKpis, setSalesKpis] = useState({
+  const [salesKpis, setSalesKpis] = useState<{
+    ventasDelDia: number;
+    pendienteAbono: number;
+    ventasMes92: number;
+    cajaEmpresa?: number;
+  }>({
     ventasDelDia: 0,
     pendienteAbono: 0,
     ventasMes92: 0,
