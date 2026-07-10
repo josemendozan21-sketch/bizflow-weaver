@@ -56,22 +56,28 @@ export function thumbUrl(publicUrl: string | null | undefined, width = 320): str
 }
 
 export async function uploadPosCashProof(file: File, locationId: string) {
-  const ext = file.name.split(".").pop() || "jpg";
+  const isImage = file.type.startsWith("image/");
+  const body: Blob = isImage ? await compressImage(file, 1400, 0.7) : file;
+  const ext = isImage ? "jpg" : (file.name.split(".").pop() || "bin");
+  const contentType = isImage ? "image/jpeg" : (file.type || "application/octet-stream");
   const path = `${locationId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
   const { error } = await supabase.storage
     .from("pos-cash-proofs")
-    .upload(path, file, { upsert: false, contentType: file.type });
+    .upload(path, body, { upsert: false, contentType });
   if (error) throw error;
   const { data } = supabase.storage.from("pos-cash-proofs").getPublicUrl(path);
   return data.publicUrl;
 }
 
 export async function uploadPosSaleProof(file: File, locationId: string) {
-  const ext = file.name.split(".").pop() || "jpg";
+  const isImage = file.type.startsWith("image/");
+  const body: Blob = isImage ? await compressImage(file, 1400, 0.7) : file;
+  const ext = isImage ? "jpg" : (file.name.split(".").pop() || "bin");
+  const contentType = isImage ? "image/jpeg" : (file.type || "application/octet-stream");
   const path = `${locationId}/sales/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
   const { error } = await supabase.storage
     .from("pos-cash-proofs")
-    .upload(path, file, { upsert: false, contentType: file.type });
+    .upload(path, body, { upsert: false, contentType });
   if (error) throw error;
   const { data } = supabase.storage.from("pos-cash-proofs").getPublicUrl(path);
   return data.publicUrl;

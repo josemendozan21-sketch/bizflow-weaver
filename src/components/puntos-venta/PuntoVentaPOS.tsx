@@ -268,10 +268,15 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
     }
     try {
       let payment_proof_url: string | null = null;
+      let proofFailed = false;
+      let merchFailed = false;
       if (proofFile) {
         setUploadingProof(true);
         try {
           payment_proof_url = await uploadPosSaleProof(proofFile, locationId);
+        } catch (err: any) {
+          proofFailed = true;
+          console.warn("Fallo subir soporte de pago", err);
         } finally {
           setUploadingProof(false);
         }
@@ -281,6 +286,9 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
         setUploadingMerch(true);
         try {
           merchandise_photo_url = await uploadPosSaleProof(merchFile, locationId);
+        } catch (err: any) {
+          merchFailed = true;
+          console.warn("Fallo subir foto de mercancía", err);
         } finally {
           setUploadingMerch(false);
         }
@@ -307,6 +315,11 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
         merchandise_photo_url,
       });
       toast.success(`Venta registrada por ${fmt(totalAfter)}`);
+      if (proofFailed || merchFailed) {
+        toast.warning(
+          `No se pudo subir ${proofFailed && merchFailed ? "el soporte y la foto" : proofFailed ? "el soporte de pago" : "la foto de mercancía"}. La venta quedó guardada; adjúntala luego en "Ventas del día".`
+        );
+      }
       setCart([]);
       setCustomer(null);
       setClientName("");
