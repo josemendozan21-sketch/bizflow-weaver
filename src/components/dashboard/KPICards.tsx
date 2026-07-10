@@ -58,7 +58,7 @@ export function KPICards({ kpis }: KPICardsProps) {
     },
     ...(typeof kpis.cajaEmpresa === "number"
       ? [{
-          title: "Caja empresa (bancos)",
+          title: "Caja menor",
           value: fmtCOP(kpis.cajaEmpresa),
           icon: Wallet,
           color: "text-sky-600",
