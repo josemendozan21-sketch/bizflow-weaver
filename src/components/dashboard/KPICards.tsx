@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { ShoppingCart, DollarSign, Clock, Store } from "lucide-react";
+import { ShoppingCart, DollarSign, Clock, Store, Wallet } from "lucide-react";
 
 const fmtCOP = (n: number) =>
   new Intl.NumberFormat("es-CO", {
@@ -22,6 +22,7 @@ interface KPICardsProps {
     ventasDelDia: number;
     pendienteAbono: number;
     ventasMes92: number;
+    cajaEmpresa?: number;
   };
 }
 
@@ -55,10 +56,19 @@ export function KPICards({ kpis }: KPICardsProps) {
       color: "text-violet-600",
       bgColor: "bg-violet-100",
     },
+    ...(typeof kpis.cajaEmpresa === "number"
+      ? [{
+          title: "Caja empresa (bancos)",
+          value: fmtCOP(kpis.cajaEmpresa),
+          icon: Wallet,
+          color: "text-sky-600",
+          bgColor: "bg-sky-100",
+        }]
+      : []),
   ];
 
   return (
-    <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+    <div className="grid gap-3 grid-cols-2 md:grid-cols-4 lg:grid-cols-5">
       {items.map((item) => (
         <Card key={item.title} className="relative overflow-hidden">
           <CardContent className="p-4">
