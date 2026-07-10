@@ -74,7 +74,8 @@ const Index = () => {
       startOfDay.setHours(0, 0, 0, 0);
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      const [{ data: dayRows }, { data: monthRows }, { data: orderRows }, { data: banks }] =
+      const canSeeCaja = role === "admin" || role === "contabilidad";
+      const [{ data: dayRows }, { data: monthRows }, { data: orderRows }, fundsRes, expensesRes] =
         await Promise.all([
           supabase
             .from("pos_sales")
@@ -90,7 +91,12 @@ const Index = () => {
             .from("orders")
             .select("total_amount, abono")
             .eq("payment_complete", false),
-          supabase.from("bank_accounts" as any).select("current_balance, active"),
+          canSeeCaja
+            ? supabase.from("petty_cash_funds").select("amount")
+            : Promise.resolve({ data: [] as any[] }),
+          canSeeCaja
+            ? supabase.from("petty_cash_expenses").select("amount")
+            : Promise.resolve({ data: [] as any[] }),
         ]);
 
       const ventasDelDia = (dayRows ?? []).reduce(
@@ -106,12 +112,18 @@ const Index = () => {
           s + Math.max(0, Number(r.total_amount || 0) - Number(r.abono || 0)),
         0,
       );
-      const cajaEmpresa = (banks ?? [])
-        .filter((b: any) => b.active !== false)
-        .reduce((s: number, b: any) => s + Number(b.current_balance || 0), 0);
+      const totalFunds = ((fundsRes as any).data ?? []).reduce(
+        (s: number, r: any) => s + Number(r.amount || 0),
+        0,
+      );
+      const totalExpenses = ((expensesRes as any).data ?? []).reduce(
+        (s: number, r: any) => s + Number(r.amount || 0),
+        0,
+      );
+      const cajaEmpresa = canSeeCaja ? totalFunds - totalExpenses : undefined;
       setSalesKpis({ ventasDelDia, pendienteAbono, ventasMes92, cajaEmpresa });
     })();
-  }, []);
+  }, [role]);
 
   /* Map production orders to kanban cards */
   const kanbanOrders: KanbanOrder[] = useMemo(() => {
