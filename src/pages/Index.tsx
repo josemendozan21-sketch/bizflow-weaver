@@ -64,6 +64,7 @@ const Index = () => {
     ventasDelDia: 0,
     pendienteAbono: 0,
     ventasMes92: 0,
+    cajaEmpresa: 0,
   });
 
   useEffect(() => {
@@ -73,7 +74,7 @@ const Index = () => {
       startOfDay.setHours(0, 0, 0, 0);
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      const [{ data: dayRows }, { data: monthRows }, { data: orderRows }] =
+      const [{ data: dayRows }, { data: monthRows }, { data: orderRows }, { data: banks }] =
         await Promise.all([
           supabase
             .from("pos_sales")
@@ -89,6 +90,7 @@ const Index = () => {
             .from("orders")
             .select("total_amount, abono")
             .eq("payment_complete", false),
+          supabase.from("bank_accounts" as any).select("current_balance, active"),
         ]);
 
       const ventasDelDia = (dayRows ?? []).reduce(
@@ -104,7 +106,10 @@ const Index = () => {
           s + Math.max(0, Number(r.total_amount || 0) - Number(r.abono || 0)),
         0,
       );
-      setSalesKpis({ ventasDelDia, pendienteAbono, ventasMes92 });
+      const cajaEmpresa = (banks ?? [])
+        .filter((b: any) => b.active !== false)
+        .reduce((s: number, b: any) => s + Number(b.current_balance || 0), 0);
+      setSalesKpis({ ventasDelDia, pendienteAbono, ventasMes92, cajaEmpresa });
     })();
   }, []);
 
