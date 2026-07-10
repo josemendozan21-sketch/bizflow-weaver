@@ -45,8 +45,11 @@ export function PuntoReportes({ sales, movements, products, locationId, location
       todaySales
         .filter((s) => methodMatches(s.payment_method, m))
         .reduce((a, b) => a + Number(b.total_amount), 0);
-    const withdrawalsToday = withdrawals
-      .filter((w) => w.status === "aprobado" && w.created_at.slice(0, 10) === today)
+    const cashSalesAll = sales
+      .filter((s) => methodMatches(s.payment_method, "efectivo"))
+      .reduce((a, b) => a + Number(b.total_amount), 0);
+    const approvedWithdrawalsAll = withdrawals
+      .filter((w) => w.status === "aprobado")
       .reduce((a, b) => a + Number(b.amount), 0);
     const efectivo = byMethod("efectivo");
     return {
@@ -59,8 +62,9 @@ export function PuntoReportes({ sales, movements, products, locationId, location
       nequi: byMethod("nequi"),
       otros: byMethod("transferencia") + byMethod("otro"),
       countToday: todaySales.length,
-      withdrawalsToday,
-      cashOnHand: cashBase + efectivo - withdrawalsToday,
+      cashSalesAll,
+      approvedWithdrawalsAll,
+      cashOnHand: cashBase + cashSalesAll - approvedWithdrawalsAll,
     };
   }, [sales, products, today, withdrawals, cashBase, todaySales]);
 
@@ -83,9 +87,9 @@ export function PuntoReportes({ sales, movements, products, locationId, location
         <Stat icon={<Package className="h-4 w-4" />} label="Valor inventario" value={`$${totals.inventoryValue.toLocaleString()}`} />
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        <Stat icon={<Banknote className="h-4 w-4" />} label="Efectivo en caja hoy"
+        <Stat icon={<Banknote className="h-4 w-4" />} label="Efectivo en caja"
           value={`$${totals.cashOnHand.toLocaleString()}`}
-          sub={`Base $${cashBase.toLocaleString()} + Ventas $${totals.efectivo.toLocaleString()} − Retiros $${totals.withdrawalsToday.toLocaleString()}`} />
+          sub={`Base $${cashBase.toLocaleString()} + Ventas efectivo $${totals.cashSalesAll.toLocaleString()} − Retiros aprob. $${totals.approvedWithdrawalsAll.toLocaleString()}`} />
         <Stat icon={<DollarSign className="h-4 w-4" />} label="Tarjeta hoy"
           value={`$${totals.tarjeta.toLocaleString()}`} />
         <Stat icon={<DollarSign className="h-4 w-4" />} label="Nequi / Transf hoy"
