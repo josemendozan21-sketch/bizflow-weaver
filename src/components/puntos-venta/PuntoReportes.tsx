@@ -51,6 +51,9 @@ export function PuntoReportes({ sales, movements, products, locationId, location
     const approvedWithdrawalsAll = withdrawals
       .filter((w) => w.status === "aprobado")
       .reduce((a, b) => a + Number(b.amount), 0);
+    const pendingWithdrawalsAll = withdrawals
+      .filter((w) => w.status === "pendiente")
+      .reduce((a, b) => a + Number(b.amount), 0);
     const efectivo = byMethod("efectivo");
     return {
       totalToday,
@@ -64,7 +67,8 @@ export function PuntoReportes({ sales, movements, products, locationId, location
       countToday: todaySales.length,
       cashSalesAll,
       approvedWithdrawalsAll,
-      cashOnHand: cashBase + cashSalesAll - approvedWithdrawalsAll,
+      pendingWithdrawalsAll,
+      cashOnHand: cashBase + cashSalesAll - approvedWithdrawalsAll - pendingWithdrawalsAll,
     };
   }, [sales, products, today, withdrawals, cashBase, todaySales]);
 
@@ -89,7 +93,7 @@ export function PuntoReportes({ sales, movements, products, locationId, location
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <Stat icon={<Banknote className="h-4 w-4" />} label="Efectivo en caja"
           value={`$${totals.cashOnHand.toLocaleString()}`}
-          sub={`Base $${cashBase.toLocaleString()} + Ventas efectivo $${totals.cashSalesAll.toLocaleString()} − Retiros aprob. $${totals.approvedWithdrawalsAll.toLocaleString()}`} />
+          sub={`Base $${cashBase.toLocaleString()} + Ventas efectivo $${totals.cashSalesAll.toLocaleString()} − Retiros $${(totals.approvedWithdrawalsAll + totals.pendingWithdrawalsAll).toLocaleString()}${totals.pendingWithdrawalsAll > 0 ? ` (incl. $${totals.pendingWithdrawalsAll.toLocaleString()} pendientes)` : ""}`} />
         <Stat icon={<DollarSign className="h-4 w-4" />} label="Tarjeta hoy"
           value={`$${totals.tarjeta.toLocaleString()}`} />
         <Stat icon={<DollarSign className="h-4 w-4" />} label="Nequi / Transf hoy"
