@@ -6,6 +6,7 @@ import { MapPin, Calendar, Trash2, Hammer, Copy, Phone } from "lucide-react";
 import { useFerias, useDeleteFeria, useDuplicateFeria, type Feria } from "@/hooks/useFerias";
 import { CreateFeriaDialog } from "@/components/ferias/CreateFeriaDialog";
 import { FeriaDetail } from "@/components/ferias/FeriaDetail";
+import { FeriasSalesExportPanel } from "@/components/ferias/FeriasSalesExportPanel";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -51,6 +52,7 @@ export default function Ferias() {
 
   // Solo admin crea/edita/elimina ferias. Logística y contabilidad solo visualizan.
   const canManage = role === "admin";
+  const canExport = role === "admin" || role === "contabilidad";
 
   if (selected) {
     return <FeriaDetail feria={selected} onBack={() => setSelected(null)} />;
@@ -65,6 +67,8 @@ export default function Ferias() {
         </div>
         {canManage && <CreateFeriaDialog />}
       </div>
+
+      {canExport && <FeriasSalesExportPanel />}
 
       {isLoading ? (
         <p className="text-muted-foreground">Cargando...</p>
