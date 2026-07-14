@@ -458,6 +458,48 @@ export function FeriaSalesTab({ feriaId }: { feriaId: string }) {
         </Card>
       </div>
 
+      {canExport && (
+        <Card className="p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Download className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold">Descargar ventas del día (contabilidad)</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+            <div>
+              <Label className="text-xs">Fecha</Label>
+              <Input type="date" value={exportDate} onChange={(e) => setExportDate(e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">Método de pago</Label>
+              <Select value={exportPayment} onValueChange={setExportPayment}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="efectivo">Efectivo</SelectItem>
+                  <SelectItem value="tarjeta">Tarjeta / Datáfono</SelectItem>
+                  <SelectItem value="bancolombia">Bancolombia / Transferencia</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Tipo de cliente</Label>
+              <Select value={exportClient} onValueChange={setExportClient}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="completos">Con todos los datos</SelectItem>
+                  <SelectItem value="consumidor_final">Consumidor Final</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={downloadCsv} className="gap-2">
+              <Download className="h-4 w-4" />
+              Descargar CSV ({exportRows.length})
+            </Button>
+          </div>
+        </Card>
+      )}
+
       <Card>
         <Table>
           <TableHeader>
