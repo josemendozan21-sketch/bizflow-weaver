@@ -2,13 +2,14 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download } from "lucide-react";
+import { Download, FileSpreadsheet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
+import { useFerias } from "@/hooks/useFerias";
 
 type Row = {
   id: string;
@@ -30,40 +31,30 @@ type Row = {
 };
 
 export function FeriasSalesExportPanel() {
-  const [exportDate, setExportDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const { data: ferias = [] } = useFerias();
+  const [feriaId, setFeriaId] = useState<string>("");
   const [exportPayment, setExportPayment] = useState("all");
   const [exportClient, setExportClient] = useState("all");
 
   const { data: sales = [], isLoading } = useQuery({
-    queryKey: ["ferias_sales_by_day", exportDate],
+    queryKey: ["feria_sales_export", feriaId],
     queryFn: async () => {
-      const start = `${exportDate}T00:00:00`;
-      const end = `${exportDate}T23:59:59`;
+      if (!feriaId) return [] as Row[];
       const { data, error } = await supabase
         .from("feria_sales")
         .select("*")
-        .gte("sale_date", start)
-        .lte("sale_date", end)
+        .eq("feria_id", feriaId)
         .order("sale_date", { ascending: true });
       if (error) throw error;
       return (data || []) as Row[];
     },
+    enabled: !!feriaId,
   });
 
-  const { data: feriasMap = {} } = useQuery({
-    queryKey: ["ferias_names"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("ferias").select("id, name, city");
-      if (error) throw error;
-      const map: Record<string, { name: string; city: string }> = {};
-      for (const f of data || []) map[(f as any).id] = { name: (f as any).name, city: (f as any).city };
-      return map;
-    },
-  });
+  const selectedFeria = ferias.find((f) => f.id === feriaId);
 
   const exportRows = useMemo(() => {
     return sales.filter((s) => {
-      // payment filter
       const pm = (s.payment_method || "").toLowerCase();
       const matchesPayment =
         exportPayment === "all" ||
@@ -82,60 +73,90 @@ export function FeriasSalesExportPanel() {
     });
   }, [sales, exportPayment, exportClient]);
 
-  const downloadCsv = () => {
+  const totalAmount = useMemo(
+    () => exportRows.reduce((a, r) => a + Number(r.total_amount || 0), 0),
+    [exportRows]
+  );
+  const totalUnits = useMemo(
+    () => exportRows.reduce((a, r) => a + Number(r.quantity || 0), 0),
+    [exportRows]
+  );
+
+  const downloadXlsx = () => {
+    if (!feriaId) {
+      toast.warning("Selecciona una feria");
+      return;
+    }
     if (exportRows.length === 0) {
       toast.warning("No hay ventas para los filtros seleccionados");
       return;
     }
-    const headers = [
-      "Fecha", "Feria", "Ciudad", "Marca", "Producto", "Cantidad", "Precio unitario", "Total",
-      "Método de pago", "Cliente", "Documento", "Teléfono", "Email", "Dirección", "Ciudad cliente", "Notas",
+
+    const data = exportRows.map((r) => ({
+      Fecha: format(new Date(r.sale_date), "yyyy-MM-dd HH:mm"),
+      Marca: r.brand,
+      Producto: r.product_name,
+      Cantidad: r.quantity,
+      "Precio unitario": Number(r.unit_price || 0),
+      Total: Number(r.total_amount || 0),
+      "Método de pago": r.payment_method || "",
+      Cliente: r.client_name || "",
+      Documento: r.client_document || "",
+      Teléfono: r.client_phone || "",
+      Email: r.client_email || "",
+      Dirección: r.client_address || "",
+      Ciudad: r.client_city || "",
+      Notas: r.notes || "",
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    ws["!cols"] = [
+      { wch: 18 }, { wch: 12 }, { wch: 30 }, { wch: 8 }, { wch: 14 }, { wch: 14 },
+      { wch: 16 }, { wch: 24 }, { wch: 16 }, { wch: 14 }, { wch: 24 }, { wch: 28 }, { wch: 14 }, { wch: 30 },
     ];
-    const escape = (v: unknown) => {
-      const s = v == null ? "" : String(v);
-      return `"${s.replace(/"/g, '""')}"`;
-    };
-    const lines = [headers.join(",")];
-    for (const r of exportRows) {
-      const f = feriasMap[r.feria_id];
-      lines.push([
-        format(new Date(r.sale_date), "yyyy-MM-dd HH:mm"),
-        f?.name || r.feria_id,
-        f?.city || "",
-        r.brand,
-        r.product_name,
-        r.quantity,
-        r.unit_price,
-        r.total_amount,
-        r.payment_method || "",
-        r.client_name || "",
-        r.client_document || "",
-        r.client_phone || "",
-        r.client_email || "",
-        r.client_address || "",
-        r.client_city || "",
-        r.notes || "",
-      ].map(escape).join(","));
-    }
-    const blob = new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `ventas_ferias_${exportDate}_${exportPayment}_${exportClient}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Ventas");
+
+    const resumen = [
+      ["Feria", selectedFeria?.name || ""],
+      ["Ciudad", selectedFeria?.city || ""],
+      ["Fechas", `${selectedFeria?.start_date || ""} a ${selectedFeria?.end_date || ""}`],
+      ["Filtro método de pago", exportPayment],
+      ["Filtro cliente", exportClient],
+      [],
+      ["Ventas (líneas)", exportRows.length],
+      ["Unidades", totalUnits],
+      ["Total", totalAmount],
+    ];
+    const wsResumen = XLSX.utils.aoa_to_sheet(resumen);
+    wsResumen["!cols"] = [{ wch: 24 }, { wch: 40 }];
+    XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen");
+
+    const safeName = (selectedFeria?.name || "feria").replace(/[^a-z0-9]+/gi, "_").toLowerCase();
+    const suffix = [exportPayment, exportClient].filter((x) => x !== "all").join("_");
+    XLSX.writeFile(wb, `ventas_${safeName}${suffix ? "_" + suffix : ""}.xlsx`);
+    toast.success(`${exportRows.length} venta(s) exportadas`);
   };
 
   return (
     <Card className="p-4 space-y-3">
       <div className="flex items-center gap-2">
-        <Download className="h-4 w-4 text-primary" />
-        <h3 className="font-semibold">Descargar ventas del día — todas las ferias</h3>
+        <FileSpreadsheet className="h-4 w-4 text-primary" />
+        <h3 className="font-semibold">Descargar ventas de una feria (Excel)</h3>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
         <div>
-          <Label className="text-xs">Fecha</Label>
-          <Input type="date" value={exportDate} onChange={(e) => setExportDate(e.target.value)} />
+          <Label className="text-xs">Feria</Label>
+          <Select value={feriaId} onValueChange={setFeriaId}>
+            <SelectTrigger><SelectValue placeholder="Selecciona una feria" /></SelectTrigger>
+            <SelectContent>
+              {ferias.map((f) => (
+                <SelectItem key={f.id} value={f.id}>
+                  {f.name} — {f.city}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <Label className="text-xs">Método de pago</Label>
@@ -160,11 +181,16 @@ export function FeriasSalesExportPanel() {
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={downloadCsv} className="gap-2" disabled={isLoading}>
+        <Button onClick={downloadXlsx} className="gap-2" disabled={isLoading || !feriaId}>
           <Download className="h-4 w-4" />
-          Descargar CSV ({exportRows.length})
+          Descargar Excel ({exportRows.length})
         </Button>
       </div>
+      {feriaId && (
+        <p className="text-xs text-muted-foreground">
+          {exportRows.length} venta(s) · {totalUnits} unidad(es) · Total ${Math.round(totalAmount).toLocaleString("es-CO")}
+        </p>
+      )}
     </Card>
   );
 }
