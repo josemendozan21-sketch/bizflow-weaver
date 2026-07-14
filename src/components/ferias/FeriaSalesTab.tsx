@@ -10,6 +10,8 @@ import { Trash2, Plus, Minus, DollarSign, ShoppingBag, Package, Search, Shopping
 import { useFeriaSales, useAddFeriaSale, useDeleteFeriaSale, useFeriaInventory, type FeriaInventory } from "@/hooks/useFerias";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { Download } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 type CartLine = {
   key: string;
@@ -39,6 +41,11 @@ export function FeriaSalesTab({ feriaId }: { feriaId: string }) {
   const { data: inventory = [] } = useFeriaInventory(feriaId);
   const add = useAddFeriaSale();
   const del = useDeleteFeriaSale();
+  const { role } = useAuth();
+  const canExport = role === "admin" || role === "contabilidad";
+  const [exportDate, setExportDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const [exportPayment, setExportPayment] = useState<string>("all");
+  const [exportClient, setExportClient] = useState<string>("all");
 
   const [search, setSearch] = useState("");
   const [brandFilter, setBrandFilter] = useState<string>("all");
@@ -151,6 +158,75 @@ export function FeriaSalesTab({ feriaId }: { feriaId: string }) {
     setClientPhone("");
     setClientAddress("");
     setClientCity("");
+  };
+
+  const isConsumidorFinal = (s: any) => {
+    const doc = String(s.client_document ?? "").trim();
+    const name = String(s.client_name ?? "").trim().toLowerCase();
+    return doc === CONSUMIDOR_FINAL.document || name === CONSUMIDOR_FINAL.name.toLowerCase();
+  };
+  const hasCompleteData = (s: any) =>
+    !isConsumidorFinal(s) &&
+    !!String(s.client_name ?? "").trim() &&
+    !!String(s.client_document ?? "").trim() &&
+    !!String(s.client_phone ?? "").trim() &&
+    !!String(s.client_email ?? "").trim();
+
+  const matchesPayment = (pm: string | null | undefined) => {
+    if (exportPayment === "all") return true;
+    const p = String(pm ?? "").toLowerCase();
+    if (exportPayment === "tarjeta") return p === "tarjeta" || p === "datafono" || p === "datáfono";
+    if (exportPayment === "bancolombia") return p === "bancolombia" || p === "transferencia";
+    return p === exportPayment;
+  };
+
+  const exportRows = useMemo(() => {
+    return sales.filter((s: any) => {
+      const d = format(new Date(s.sale_date), "yyyy-MM-dd");
+      if (d !== exportDate) return false;
+      if (!matchesPayment(s.payment_method)) return false;
+      if (exportClient === "consumidor_final" && !isConsumidorFinal(s)) return false;
+      if (exportClient === "completos" && !hasCompleteData(s)) return false;
+      return true;
+    });
+  }, [sales, exportDate, exportPayment, exportClient]);
+
+  const downloadCsv = () => {
+    if (exportRows.length === 0) {
+      toast.error("No hay ventas con esos filtros");
+      return;
+    }
+    const headers = [
+      "Fecha","Marca","Producto","Cantidad","Precio unitario","Total",
+      "Método de pago","Cliente","Documento","Teléfono","Email","Dirección","Ciudad","Notas",
+    ];
+    const rows = exportRows.map((s: any) => [
+      format(new Date(s.sale_date), "yyyy-MM-dd HH:mm"),
+      s.brand ?? "",
+      s.product_name ?? "",
+      s.quantity,
+      s.unit_price,
+      s.total_amount,
+      s.payment_method ?? "",
+      s.client_name ?? "",
+      s.client_document ?? "",
+      s.client_phone ?? "",
+      s.client_email ?? "",
+      s.client_address ?? "",
+      s.client_city ?? "",
+      (s.notes ?? "").replace(/\r?\n/g, " "),
+    ]);
+    const esc = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const csv = [headers, ...rows].map((r) => r.map(esc).join(",")).join("\n");
+    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const suffix = [exportPayment, exportClient].filter((x) => x !== "all").join("_");
+    a.download = `ventas_feria_${exportDate}${suffix ? "_" + suffix : ""}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`${exportRows.length} venta(s) exportadas`);
   };
 
   const handleConfirm = async () => {
