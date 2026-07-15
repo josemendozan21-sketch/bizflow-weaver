@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Plus, Send, CheckCircle2, Pencil, Check, X, Target } from "lucide-react";
-import { useFeriaInventory, useAddFeriaInventory, useDeleteFeriaInventory, useUpdateFeriaInventory, useFeriaSales, useFeriaDispatchRequest, useCreateDispatchRequest } from "@/hooks/useFerias";
+import { useFeriaInventory, useAddFeriaInventory, useDeleteFeriaInventory, useUpdateFeriaInventory, useFeriaSales, useFeriaDispatchRequest, useCreateDispatchRequest, useFerias } from "@/hooks/useFerias";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInventory } from "@/hooks/useInventory";
 import { useMemo } from "react";
@@ -16,6 +16,8 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   const { data: inventory = [] } = useFeriaInventory(feriaId);
   const { data: sales = [] } = useFeriaSales(feriaId);
   const { data: dispatchReq } = useFeriaDispatchRequest(feriaId);
+  const { data: ferias = [] } = useFerias();
+  const feria = useMemo(() => ferias.find((f) => f.id === feriaId), [ferias, feriaId]);
   const sendToLogistics = useCreateDispatchRequest();
   const { role } = useAuth();
   const canSend = role === "admin" || role === "asesor_comercial";
@@ -122,6 +124,30 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
     const progress = totalUnits > 0 ? Math.round((soldUnits / totalUnits) * 100) : 0;
     return { totalUnits, expectedRevenue, expectedCost, expectedMargin, soldUnits, progress };
   }, [inventory, sales]);
+
+  // Presupuestos de costos fijos (usa reales si existen, si no presupuestados)
+  const fixedCostBreakdown = useMemo(() => {
+    if (!feria) return [] as Array<{ label: string; value: number; source: "real" | "presupuestado" }>;
+    const pick = (real: number, budget: number): { value: number; source: "real" | "presupuestado" } =>
+      (real || 0) > 0 ? { value: real || 0, source: "real" } : { value: budget || 0, source: "presupuestado" };
+    return [
+      { label: "Stand / Feria", ...pick(feria.stand_cost, feria.budget_stand_cost) },
+      { label: "Personal", ...pick(feria.employees_cost, feria.budget_employees_cost) },
+      { label: "Envío mercancía", ...pick(feria.shipping_cost, feria.budget_shipping_cost) },
+      { label: "Tiquetes", ...pick(feria.tickets_cost, feria.budget_tickets_cost) },
+      { label: "Publicidad", ...pick(feria.advertising_cost, feria.budget_advertising_cost) },
+      { label: "Hospedaje", ...pick(feria.lodging_cost, feria.budget_lodging_cost) },
+      { label: "Transporte", ...pick(feria.transport_cost, feria.budget_transport_cost) },
+      { label: "Alimentación (viáticos)", ...pick(feria.food_cost, feria.budget_food_cost) },
+      { label: "Otros", ...pick(feria.other_costs, feria.budget_other_costs) },
+    ].filter((r) => r.value > 0);
+  }, [feria]);
+  const fixedCostsTotal = useMemo(
+    () => fixedCostBreakdown.reduce((a, r) => a + r.value, 0),
+    [fixedCostBreakdown]
+  );
+  const netExpectedMargin = projection.expectedMargin - fixedCostsTotal;
+  const totalExpectedCost = projection.expectedCost + fixedCostsTotal;
 
   return (
     <div className="space-y-4">
@@ -239,9 +265,60 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
             <div><div className="text-muted-foreground text-xs">Unidades planificadas</div><div className="text-lg font-bold">{projection.totalUnits}</div></div>
             <div><div className="text-muted-foreground text-xs">Ingresos esperados</div><div className="text-lg font-bold">${projection.expectedRevenue.toLocaleString()}</div></div>
-            <div><div className="text-muted-foreground text-xs">Costo esperado</div><div className="text-lg font-bold">${projection.expectedCost.toLocaleString()}</div></div>
-            <div><div className="text-muted-foreground text-xs">Margen esperado</div><div className="text-lg font-bold text-emerald-600">${projection.expectedMargin.toLocaleString()}</div></div>
+            <div><div className="text-muted-foreground text-xs">Costo mercancía</div><div className="text-lg font-bold">${projection.expectedCost.toLocaleString()}</div></div>
+            <div><div className="text-muted-foreground text-xs">Margen mercancía</div><div className="text-lg font-bold text-emerald-600">${projection.expectedMargin.toLocaleString()}</div></div>
             <div><div className="text-muted-foreground text-xs">Avance ventas</div><div className="text-lg font-bold">{projection.soldUnits} / {projection.totalUnits} ({projection.progress}%)</div></div>
+          </div>
+
+          {/* Presupuesto de costos fijos */}
+          <div className="mt-4 border rounded-lg p-3 bg-muted/30">
+            <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+              <div className="text-xs font-semibold">
+                Presupuesto de costos fijos
+                <span className="text-[10px] text-muted-foreground font-normal ml-1">(personal, stand, transporte, viáticos…)</span>
+              </div>
+              <div className="text-xs">
+                <span className="text-muted-foreground">Total: </span>
+                <span className="font-bold">${fixedCostsTotal.toLocaleString()}</span>
+              </div>
+            </div>
+            {fixedCostBreakdown.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Aún no hay costos registrados ni presupuestados. Defínelos al editar la feria.</p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 text-xs">
+                {fixedCostBreakdown.map((c) => (
+                  <div key={c.label} className="border rounded p-2 bg-background">
+                    <div className="text-[10px] text-muted-foreground flex items-center justify-between gap-1">
+                      <span className="truncate">{c.label}</span>
+                      {c.source === "presupuestado" && (
+                        <span className="text-[9px] uppercase opacity-60">ppto</span>
+                      )}
+                    </div>
+                    <div className="font-semibold">${c.value.toLocaleString()}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Resumen total esperado */}
+          <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+            <div className="border rounded p-3">
+              <div className="text-muted-foreground text-xs">Costo total esperado</div>
+              <div className="text-lg font-bold">${totalExpectedCost.toLocaleString()}</div>
+              <div className="text-[10px] text-muted-foreground">mercancía + costos fijos</div>
+            </div>
+            <div className="border rounded p-3">
+              <div className="text-muted-foreground text-xs">Costos fijos</div>
+              <div className="text-lg font-bold">${fixedCostsTotal.toLocaleString()}</div>
+            </div>
+            <div className={`border rounded p-3 ${netExpectedMargin >= 0 ? "bg-emerald-500/10 border-emerald-500/30" : "bg-destructive/10 border-destructive/30"}`}>
+              <div className="text-muted-foreground text-xs">Margen neto esperado</div>
+              <div className={`text-lg font-bold ${netExpectedMargin >= 0 ? "text-emerald-600" : "text-destructive"}`}>
+                ${netExpectedMargin.toLocaleString()}
+              </div>
+              <div className="text-[10px] text-muted-foreground">ingresos − mercancía − costos fijos</div>
+            </div>
           </div>
         </Card>
       )}
