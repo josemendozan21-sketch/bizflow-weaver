@@ -116,8 +116,23 @@ export default function Documentos() {
     const { data, error } = await supabase.storage
       .from("company-documents")
       .createSignedUrl(doc.file_path, 300, { download: doc.file_name });
-    if (error || !data) { toast.error("No se pudo descargar"); return; }
-    window.open(data.signedUrl, "_blank");
+    if (error || !data) { toast.error(error?.message || "No se pudo descargar"); return; }
+    try {
+      const resp = await fetch(data.signedUrl);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = doc.file_name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e: any) {
+      // Fallback: open in new tab (mobile browsers may block download attr)
+      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    }
   };
 
   const handleDelete = async (doc: CompanyDocument) => {
