@@ -34,6 +34,7 @@ interface Kpis {
   presupuestoProyectado: number;
   presupuestoEjecutado: number;
   ventasFeriaDia: number;
+  puntoAcumulado: number;
 }
 
 interface SocialPostLite {
@@ -70,6 +71,7 @@ export function AdminTodayDashboard() {
     presupuestoProyectado: 0,
     presupuestoEjecutado: 0,
     ventasFeriaDia: 0,
+    puntoAcumulado: 0,
   });
   const [posts, setPosts] = useState<SocialPostLite[]>([]);
   const [feriasHoy, setFeriasHoy] = useState<FeriaSalesToday[]>([]);
@@ -98,6 +100,9 @@ export function AdminTodayDashboard() {
         { data: nextPosts },
         { data: paymentsDay },
         { data: feriaSalesDay },
+        { data: pettyFunds },
+        { data: pettyExp },
+        { data: posAll },
       ] = await Promise.all([
         supabase
           .from("orders")
@@ -144,6 +149,12 @@ export function AdminTodayDashboard() {
           .from("feria_sales")
           .select("feria_id, total_amount, quantity, ferias(name)")
           .gte("sale_date", startOfDay.toISOString()),
+        supabase.from("petty_cash_funds").select("amount"),
+        supabase.from("petty_cash_expenses").select("amount"),
+        supabase
+          .from("pos_sales")
+          .select("total_amount")
+          .eq("location_id", LOCATION_92),
       ]);
 
       const ventasAsesoresDia = (ordersDay ?? []).reduce(
@@ -162,9 +173,17 @@ export function AdminTodayDashboard() {
           s + Math.max(0, Number(r.total_amount || 0) - Number(r.abono || 0)),
         0,
       );
-      const cajaEmpresa = (banks ?? [])
+      const bancosBalance = (banks ?? [])
         .filter((b: any) => b.active !== false)
         .reduce((s, b: any) => s + Number(b.current_balance || 0), 0);
+      const cajaMenor =
+        (pettyFunds ?? []).reduce((s, r: any) => s + Number(r.amount || 0), 0) -
+        (pettyExp ?? []).reduce((s, r: any) => s + Number(r.amount || 0), 0);
+      const cajaEmpresa = bancosBalance + cajaMenor;
+      const puntoAcumulado = (posAll ?? []).reduce(
+        (s, r: any) => s + Number(r.total_amount || 0),
+        0,
+      );
       const recaudosDia = (paymentsDay ?? []).reduce(
         (s, r: any) => s + Number(r.amount || 0),
         0,
@@ -221,6 +240,7 @@ export function AdminTodayDashboard() {
         presupuestoProyectado,
         presupuestoEjecutado,
         ventasFeriaDia,
+        puntoAcumulado,
       });
       setPosts((nextPosts ?? []) as SocialPostLite[]);
       setFeriasHoy(feriasArr);
@@ -242,6 +262,7 @@ export function AdminTodayDashboard() {
     {
       title: "Ventas del día — Punto 92",
       value: fmt(kpis.ventasPosDia),
+      subtitle: `Acumulado histórico: ${fmt(kpis.puntoAcumulado)}`,
       icon: Store,
       color: "text-emerald-600 bg-emerald-500/10",
     },
@@ -271,6 +292,7 @@ export function AdminTodayDashboard() {
     {
       title: "Caja empresa (bancos)",
       value: fmt(kpis.cajaEmpresa),
+      subtitle: "Bancos + caja menor",
       icon: Wallet,
       color: "text-amber-600 bg-amber-500/10",
     },
