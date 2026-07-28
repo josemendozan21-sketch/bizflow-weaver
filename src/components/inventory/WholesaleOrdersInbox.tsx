@@ -21,6 +21,7 @@ import { Inbox, Package, Truck, Paintbrush, Factory, Calendar, User as UserIcon,
 
 import { useInventory } from "@/hooks/useInventory";
 import { useAuth } from "@/contexts/AuthContext";
+import { ensureProductionOrder, requestProductionForOrder, reserveStockForOrder, type FlowOrder } from "@/lib/orderFlow";
 import { toast } from "sonner";
 import { formatDistanceToNow, format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -263,16 +264,23 @@ const WholesaleOrdersInbox = () => {
   const { data: orderStates = { deliveredIds: new Set<string>(), producedIds: new Set<string>(), inProductionIds: new Set<string>() } } = useQuery({
     queryKey: ["mayor-orders-delivered"],
     queryFn: async () => {
-      const [mov, tasks] = await Promise.all([
-        supabase.from("inventory_movements").select("order_id")
+      const [mov, tasks, prodOrders] = await Promise.all([
+        supabase.from("inventory_movements").select("order_id,movement_kind")
           .eq("direction", "entrega").not("order_id", "is", null),
         supabase.from("body_production_tasks").select("order_id,status" as any)
+          .not("order_id", "is", null),
+        supabase.from("production_orders").select("order_id,current_stage,completed_at")
           .not("order_id", "is", null),
       ]);
       const deliveredIds = new Set<string>();
       const producedIds = new Set<string>();
       const inProductionIds = new Set<string>();
-      (mov.data || []).forEach((m: any) => m.order_id && deliveredIds.add(m.order_id));
+      (mov.data || []).forEach((m: any) => {
+        if (!m.order_id) return;
+        // Las reservas NO son entregas: el pedido sigue vivo en el flujo
+        if (m.movement_kind === "reserva") return;
+        deliveredIds.add(m.order_id);
+      });
       (tasks.data || []).forEach((t: any) => {
         if (!t.order_id) return;
         if (t.status === "finalizado") {
@@ -280,6 +288,11 @@ const WholesaleOrdersInbox = () => {
         } else {
           inProductionIds.add(t.order_id);
         }
+      });
+      // Todo pedido con orden de producción activa ya salió de la bandeja de revisión
+      (prodOrders.data || []).forEach((p: any) => {
+        if (!p.order_id || p.completed_at) return;
+        inProductionIds.add(p.order_id);
       });
       producedIds.forEach((id) => { if (deliveredIds.has(id)) producedIds.delete(id); });
       inProductionIds.forEach((id) => { if (deliveredIds.has(id)) inProductionIds.delete(id); });
