@@ -448,12 +448,20 @@ const WholesaleOrdersInbox = () => {
         };
       });
       const { error } = await supabase.from("inventory_movements").insert(movements as any);
+      if (error) { setBusy(false); toast.error(error.message); return; }
+      try {
+        await ensureProductionOrder(order as unknown as FlowOrder, { needsCuerpos: true });
+      } catch (e: any) {
+        setBusy(false);
+        toast.error(`Kit entregado pero no se pudo crear la orden de producción: ${e.message}`);
+        return;
+      }
       setBusy(false);
-      if (error) { toast.error(error.message); return; }
       toast.success(`Kit entregado a Estampación (${rows.map(r => `${r.q} ${r.c.key}`).join(", ")}).`);
       setDelivering(null);
       qc.invalidateQueries({ queryKey: ["mayor-orders-inbox"] });
       qc.invalidateQueries({ queryKey: ["mayor-orders-delivered"] });
+      qc.invalidateQueries({ queryKey: ["production_orders"] });
       return;
     }
 
@@ -465,26 +473,22 @@ const WholesaleOrdersInbox = () => {
     setBusy(true);
 
     if (target === "produccion") {
-      const { error } = await supabase.from("body_production_tasks").insert({
-        referencia: order.product,
-        unidades: quantity,
-        tipo_plastico: plastico,
-        status: "pendiente",
-        order_id: order.id,
-      } as any);
-      if (!error) {
-        await supabase.from("notifications").insert({
-          target_role: "produccion",
-          title: "Nueva orden de producción de cuerpos",
-          message: `Inventarios solicita producir ${quantity} uds de "${order.product}" (${plastico}) para pedido de ${order.client_name}.`
-            + (obs ? ` Obs: ${obs}` : ""),
-          type: "info",
-          reference_id: order.id,
+      // El sistema crea la orden automáticamente con la referencia y cantidad del pedido.
+      try {
+        await requestProductionForOrder({
+          order: order as unknown as FlowOrder,
+          tipoPlastico: plastico,
+          note: obs || undefined,
         });
+      } catch (e: any) {
+        setBusy(false);
+        toast.error(e.message);
+        return;
       }
       setBusy(false);
-      if (error) { toast.error(error.message); return; }
-      toast.success(`Orden de producción creada (${quantity} uds). Los cuerpos volverán a inventario al terminar.`);
+      toast.success(
+        `Orden de producción creada automáticamente (${order.quantity} uds de "${order.product}").`
+      );
     } else if (target === "logistica" && lineRows.length > 0) {
       // Pedido al detal (potencialmente multi-ítem desde checkout online)
       const cat = "producto_terminado";
@@ -517,9 +521,6 @@ const WholesaleOrdersInbox = () => {
     } else {
       const cat = target === "estampacion" ? "cuerpos_referencias" : "producto_terminado";
       const isSweatspotMarkable = target === "terminado" && order.brand === "sweatspot";
-      const area = target === "terminado"
-        ? (isSweatspotMarkable ? "estampacion" : "logistica")
-        : target;
       const item = isSweatspotMarkable
         ? findSweatspotMarkableStock(order)
         : findStockItem(order, cat);
@@ -528,33 +529,34 @@ const WholesaleOrdersInbox = () => {
         toast.error("No hay termos SIN LOGO que coincidan con color y tamaño. Usa Salir kit.");
         return;
       }
-      const reasonPrefix = isSweatspotMarkable
-        ? `Entrega termos SIN LOGO para marcación — Pedido de ${order.client_name}`
-        : target === "terminado"
-        ? `Entrega producto terminado — Pedido de ${order.client_name}`
-        : `Pedido al por mayor de ${order.client_name}`;
-      const { error } = await supabase.from("inventory_movements").insert({
-        stock_item_id: item?.id ?? null,
-        item_name: item?.name ?? order.product,
-        brand: order.brand,
-        category: cat,
-        quantity,
-        direction: "entrega",
-        area,
-        reason: reasonPrefix + (obs ? ` — ${obs}` : ""),
-        order_id: order.id,
-        recorded_by: user.id,
-        recorded_by_name: user.email || "Inventarios",
-      } as any);
+      // Reserva: NO se descuenta el inventario, las unidades quedan apartadas
+      // para este pedido y el pedido pasa automáticamente a Estampación.
+      try {
+        await reserveStockForOrder({
+          order: order as unknown as FlowOrder,
+          stockItemId: item?.id ?? null,
+          itemName: item?.name ?? order.product,
+          category: cat,
+          quantity,
+          userId: user.id,
+          userName: user.email,
+          note: obs || undefined,
+        });
+        await ensureProductionOrder(order as unknown as FlowOrder, { needsCuerpos: false });
+      } catch (e: any) {
+        setBusy(false);
+        toast.error(e.message);
+        return;
+      }
       setBusy(false);
-      if (error) { toast.error(error.message); return; }
-      toast.success(`Entregado ${quantity} uds a ${TARGET_LABEL[target]}`);
+      toast.success(`Reservadas ${quantity} uds. Pedido enviado a ${TARGET_LABEL.estampacion}.`);
     }
 
     setDelivering(null);
     qc.invalidateQueries({ queryKey: ["mayor-orders-inbox"] });
     qc.invalidateQueries({ queryKey: ["detal-orders-inbox"] });
     qc.invalidateQueries({ queryKey: ["mayor-orders-delivered"] });
+    qc.invalidateQueries({ queryKey: ["production_orders"] });
   };
 
   const renderCard = (o: MayorOrder, isDelivered: boolean, kind: "mayor" | "detal" = "mayor") => {
