@@ -738,7 +738,7 @@ const WholesaleOrdersInbox = () => {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Inbox className="h-4 w-4" />
-                Pendientes de entrega
+                Pendientes de revisión de inventario
                 <Badge variant="secondary">{filterOrders(pending).length}</Badge>
               </CardTitle>
             </CardHeader>
@@ -749,7 +749,7 @@ const WholesaleOrdersInbox = () => {
                 <div className="text-center py-8 text-muted-foreground">
                   <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">
-                    {searchQuery.trim() ? "Ningún pedido coincide con la búsqueda." : "No hay pedidos al por mayor pendientes de entrega."}
+                    {searchQuery.trim() ? "Ningún pedido coincide con la búsqueda." : "No hay pedidos al por mayor pendientes de revisión."}
                   </p>
                 </div>
               ) : (
