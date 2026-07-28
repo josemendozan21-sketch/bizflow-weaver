@@ -357,7 +357,7 @@ function EstampacionOrderCard({
               <StampApprovalStep
                 orderId={order.id}
                 step="inkgel"
-                label="Paso 2: Aprobación de tinta y gel"
+                label={order.brand === "sweatspot" ? "Paso 2: Aprobación de tinta" : "Paso 2: Aprobación de tinta y gel"}
                 status={inkgelStatus}
                 photoUrl={order.stamp_inkgel_photo_url}
                 needsUpload={needsInkgelUpload || inkgelRejected}
