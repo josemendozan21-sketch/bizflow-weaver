@@ -285,7 +285,11 @@ function EstampacionOrderCard({
           <Row label="Molde / Referencia" value={order.molde || order.thermo_size || "-"} />
           <Row label="Cantidad" value={`${order.quantity} uds`} />
           <Row label="Color de tinta" value={order.ink_color || "-"} />
-          <Row label="Color de gel" value={order.gel_color || "-"} />
+          {order.brand === "sweatspot" ? (
+            <Row label="Color de silicona" value={(order as any).silicone_color || "-"} />
+          ) : (
+            <Row label="Color de gel" value={order.gel_color || "-"} />
+          )}
           {order.logo_file && <Row label="Nombre / Referencia del logo" value={order.logo_file} />}
           {order.observations && <Row label="Observaciones" value={order.observations} />}
         </div>
@@ -353,7 +357,7 @@ function EstampacionOrderCard({
               <StampApprovalStep
                 orderId={order.id}
                 step="inkgel"
-                label="Paso 2: Aprobación de tinta y gel"
+                label={order.brand === "sweatspot" ? "Paso 2: Aprobación de tinta" : "Paso 2: Aprobación de tinta y gel"}
                 status={inkgelStatus}
                 photoUrl={order.stamp_inkgel_photo_url}
                 needsUpload={needsInkgelUpload || inkgelRejected}
