@@ -258,9 +258,9 @@ export const MagicalWarmersWorkflow = () => {
       <Separator />
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-sm font-semibold text-foreground">Cuerpos por producir</h3>
-        <Button size="sm" onClick={() => openBodyForm()} disabled={showBodyForm}>
-          <Plus className="h-4 w-4 mr-1" /> Registrar producción de cuerpos
-        </Button>
+        <p className="text-xs text-muted-foreground">
+          Las órdenes las crea Inventarios a partir del pedido. Producción solo las ejecuta.
+        </p>
       </div>
 
       <BodyRequirementsPanel
@@ -280,8 +280,10 @@ export const MagicalWarmersWorkflow = () => {
         orders={activeOrdersAll}
         bodyStock={bodyStock}
         stockItems={stockItems}
-        onProduce={({ referencia, tipoPlastico, unidadesSugeridas }) =>
-          openBodyForm({ referencia, tipoPlastico, unidades: unidadesSugeridas })
+        onProduce={() =>
+          toast.info(
+            "Las órdenes de producción se crean automáticamente desde Inventarios a partir del pedido."
+          )
         }
       />
 
