@@ -885,7 +885,7 @@ const WholesaleOrdersInbox = () => {
                   </div>
                   {markable ? (
                     <div>
-                      Se descontará de: <span className="font-medium">{markable.name}</span>
+                      Se reservará de: <span className="font-medium">{markable.name}</span>
                       {markable.color ? ` · ${markable.color}` : ""} · <Badge variant="outline" className="ml-1">SIN LOGO</Badge>
                       <span className="ml-2 text-muted-foreground">Disp. {markable.available}</span>
                     </div>
@@ -959,8 +959,19 @@ const WholesaleOrdersInbox = () => {
               </div>
             ) : (
               <div>
-                <Label>{delivering?.target === "produccion" ? "Cantidad a producir" : "Cantidad a entregar"}</Label>
-                <Input type="number" value={qty} onChange={(e) => setQty(e.target.value)} min="1" />
+                <Label>{delivering?.target === "produccion" ? "Cantidad a producir" : "Cantidad a reservar"}</Label>
+                <Input
+                  type="number"
+                  value={qty}
+                  onChange={(e) => setQty(e.target.value)}
+                  min="1"
+                  readOnly={delivering?.target === "produccion"}
+                />
+                {delivering?.target === "produccion" && (
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    La orden se crea automáticamente con la referencia y la cantidad del pedido.
+                  </p>
+                )}
               </div>
             )}
             {delivering?.target === "produccion" && !isSweatspotKit && (
@@ -986,7 +997,7 @@ const WholesaleOrdersInbox = () => {
             <Button onClick={confirmDeliver} disabled={busy}>
               {isSweatspotKit
                 ? "Confirmar entrega del kit"
-                : delivering?.target === "produccion" ? "Crear orden de producción" : "Confirmar entrega"}
+                : delivering?.target === "produccion" ? "Solicitar producción" : "Confirmar reserva"}
             </Button>
           </DialogFooter>
         </DialogContent>
