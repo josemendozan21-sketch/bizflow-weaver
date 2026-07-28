@@ -1065,7 +1065,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       giftCount > 0 ? `${giftCount} obsequio(s)` : "",
     ].filter(Boolean).join(" + ");
     toast.success("Pedido creado", {
-      description: `${clientName} — ${summary}. Enviado a Producción y Contabilidad.`,
+      description: `${clientName} — ${summary}. Enviado a Inventarios y Contabilidad.`,
     });
 
     [
