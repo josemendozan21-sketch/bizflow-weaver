@@ -654,7 +654,7 @@ const WholesaleOrdersInbox = () => {
                     disabled={!markable}
                     title={markable ? `Termos SIN LOGO disponibles: ${markableStock}` : "Sin termos SIN LOGO que coincidan con color y tamaño"}>
                     <PackageCheck className="h-3.5 w-3.5" />
-                    Entregar termos (marcar) {markable ? `(${markableStock})` : "(sin stock)"}
+                    Reservar termos (marcar) {markable ? `(${markableStock})` : "(sin stock)"}
                   </Button>
                   <Button size="sm" variant={markableEnough ? "outline" : "default"} className="flex-1 min-w-[150px] gap-1.5"
                     onClick={() => openDeliver(o, "estampacion")}>
@@ -671,14 +671,15 @@ const WholesaleOrdersInbox = () => {
               <div className="flex flex-wrap gap-2 pt-1">
                 <Button size="sm" variant={enough ? "default" : "outline"} className="flex-1 min-w-[150px] gap-1.5"
                   onClick={() => openDeliver(o, "estampacion")}
-                  title={enough ? "Cuerpos disponibles para estampar" : "No hay cuerpos suficientes"}>
-                  <Paintbrush className="h-3.5 w-3.5" /> Personalizar — Estampar
+                  disabled={!enough}
+                  title={enough ? "Reservar cuerpos y enviar a Estampación" : "No hay inventario suficiente: solicita producción"}>
+                  <Paintbrush className="h-3.5 w-3.5" /> Reservar inventario
                 </Button>
                 {!enough && (
                   <Button size="sm" variant="default" className="flex-1 min-w-[150px] gap-1.5"
                     onClick={() => openDeliver(o, "produccion")}
-                    title="Enviar a producción para fabricar cuerpos">
-                    <Factory className="h-3.5 w-3.5" /> Mandar a producir cuerpos
+                    title="El sistema crea la orden de producción con la referencia y cantidad del pedido">
+                    <Factory className="h-3.5 w-3.5" /> Solicitar Producción
                   </Button>
                 )}
                 <Button size="sm" variant="outline" className="gap-1.5"
@@ -764,7 +765,7 @@ const WholesaleOrdersInbox = () => {
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Factory className="h-4 w-4 text-blue-600" />
-                  Producción de cuerpos
+                  En proceso (producción / estampación)
                   <Badge variant="secondary">{filterOrders(inProduction).length}</Badge>
                 </CardTitle>
               </CardHeader>
