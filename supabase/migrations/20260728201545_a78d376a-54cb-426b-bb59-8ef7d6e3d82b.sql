@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS production_orders_unique_order_id ON public.production_orders (order_id) WHERE order_id IS NOT NULL;

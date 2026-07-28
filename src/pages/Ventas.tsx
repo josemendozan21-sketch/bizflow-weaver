@@ -1039,51 +1039,17 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         return;
       }
 
-      // Reserve body stock
-      const bodyResult = await reserveBodyStockDB("magical", referencia, quantity, {
-        clientName,
-        requestedBy: user?.id || undefined,
-      });
-
-      const needsCuerpos = !bodyResult.available || bodyResult.discounted < quantity;
-      const initialStage = needsCuerpos
-        ? "produccion_cuerpos"
-        : (noLogo ? "dosificacion" : "estampacion");
-
-      await supabase.from("orders").update({ production_status: initialStage }).eq("id", orderData.id);
-
-      try {
-        await supabase.from("production_orders").insert({
-          order_id: orderData.id,
-          brand: "magical",
-          client_name: clientName,
-          quantity,
-          current_stage: initialStage,
-          stage_status: "pendiente",
-          workflow_type: "full",
-          stages: buildMagicalStages(line.type === "Térmico"),
-          gel_color: gelColor,
-          ink_color: inkColor,
-          logo_file: logoNombre || logoFile?.name || null,
-          needs_cuerpos: needsCuerpos,
-          has_stock: bodyResult.available,
-          molde: referencia,
-          observations: observaciones || null,
-          advisor_id: user?.id || null,
-          delivery_date: fechaRequerida || null,
-        });
-      } catch (err: any) {
-        console.error("Error creating production order:", err);
-      }
-
+      // El pedido queda pendiente de revisión de Inventarios.
+      // Ni se reserva stock ni se crea orden de producción desde Ventas:
+      // Inventarios decide (reservar inventario o solicitar producción).
       await createOrderNotifications({
         orderId: orderData.id,
         brand: "magical",
         product: referencia,
         quantity,
         clientName,
-        needsCuerpos,
-        shortage: needsCuerpos ? quantity - bodyResult.discounted : 0,
+        needsCuerpos: false,
+        shortage: 0,
         hasLogo: !!logoFile,
         advisorId: user?.id || "",
       });
@@ -1099,7 +1065,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       giftCount > 0 ? `${giftCount} obsequio(s)` : "",
     ].filter(Boolean).join(" + ");
     toast.success("Pedido creado", {
-      description: `${clientName} — ${summary}. Enviado a Producción y Contabilidad.`,
+      description: `${clientName} — ${summary}. Enviado a Inventarios y Contabilidad.`,
     });
 
     [
@@ -1872,56 +1838,16 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         continue;
       }
 
-      const bodyResult = await reserveBodyStockDB("sweatspot", referencia, quantity, {
-        clientName,
-        requestedBy: user?.id || undefined,
-      });
-      const needsCuerpos = !bodyResult.available || bodyResult.discounted < quantity;
-      const hasStock = bodyResult.available && bodyResult.discounted >= quantity;
-
-      const workflowType = ((ssNoLogo || logoType === "impresion_basica") && hasStock) ? "short" : "full";
-      const ssStages = workflowType === "short" ? ssShortStages : ssFullStages;
-      const initialStage = ssNoLogo
-        ? (workflowType === "short" ? "colocacion_boquilla" : "produccion_tubos")
-        : "estampacion";
-
-      await supabase.from("orders")
-        .update({ production_status: initialStage })
-        .eq("id", orderData.id);
-
-      try {
-        await supabase.from("production_orders").insert({
-          order_id: orderData.id,
-          brand: "sweatspot",
-          client_name: clientName,
-          quantity,
-          current_stage: initialStage,
-          stage_status: "pendiente",
-          workflow_type: workflowType,
-          stages: ssStages,
-          ink_color: inkColor,
-          thermo_size: thermoSize,
-          silicone_color: siliconeColor,
-          logo_type: logoType,
-          logo_file: logoNombre || logoFile?.name || null,
-          has_stock: hasStock,
-          needs_cuerpos: !hasStock,
-          observations: observaciones || null,
-          advisor_id: user?.id || null,
-          delivery_date: fechaRequerida || null,
-        });
-      } catch (err: any) {
-        console.error("Error creating production order:", err);
-      }
-
+      // El pedido queda pendiente de revisión de Inventarios (sin reservar stock
+      // ni crear orden de producción desde Ventas).
       await createOrderNotifications({
         orderId: orderData.id,
         brand: "sweatspot",
         product: referencia,
         quantity,
         clientName,
-        needsCuerpos,
-        shortage: needsCuerpos ? quantity - bodyResult.discounted : 0,
+        needsCuerpos: false,
+        shortage: 0,
         hasLogo: !!logoFile,
         advisorId: user?.id || "",
       });
@@ -1932,7 +1858,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
     const lineCount = ssLines.length;
     toast.success(`${lineCount > 1 ? lineCount + " pedidos creados" : "Pedido al por mayor creado"}`, {
-      description: `${clientName} — ${lineCount > 1 ? lineCount + " líneas" : ssLines[0].units + " uds"}. Enviado a Producción y Contabilidad.`,
+      description: `${clientName} — ${lineCount > 1 ? lineCount + " líneas" : ssLines[0].units + " uds"}. Enviado a Inventarios y Contabilidad.`,
     });
 
     const saldoFinal = ssEstadoPago === "pago_total"

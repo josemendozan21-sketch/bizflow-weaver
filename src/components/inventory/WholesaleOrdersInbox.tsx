@@ -21,6 +21,7 @@ import { Inbox, Package, Truck, Paintbrush, Factory, Calendar, User as UserIcon,
 
 import { useInventory } from "@/hooks/useInventory";
 import { useAuth } from "@/contexts/AuthContext";
+import { ensureProductionOrder, requestProductionForOrder, reserveStockForOrder, type FlowOrder } from "@/lib/orderFlow";
 import { toast } from "sonner";
 import { formatDistanceToNow, format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -263,16 +264,23 @@ const WholesaleOrdersInbox = () => {
   const { data: orderStates = { deliveredIds: new Set<string>(), producedIds: new Set<string>(), inProductionIds: new Set<string>() } } = useQuery({
     queryKey: ["mayor-orders-delivered"],
     queryFn: async () => {
-      const [mov, tasks] = await Promise.all([
-        supabase.from("inventory_movements").select("order_id")
+      const [mov, tasks, prodOrders] = await Promise.all([
+        supabase.from("inventory_movements").select("order_id,movement_kind")
           .eq("direction", "entrega").not("order_id", "is", null),
         supabase.from("body_production_tasks").select("order_id,status" as any)
+          .not("order_id", "is", null),
+        supabase.from("production_orders").select("order_id,current_stage,completed_at")
           .not("order_id", "is", null),
       ]);
       const deliveredIds = new Set<string>();
       const producedIds = new Set<string>();
       const inProductionIds = new Set<string>();
-      (mov.data || []).forEach((m: any) => m.order_id && deliveredIds.add(m.order_id));
+      (mov.data || []).forEach((m: any) => {
+        if (!m.order_id) return;
+        // Las reservas NO son entregas: el pedido sigue vivo en el flujo
+        if (m.movement_kind === "reserva") return;
+        deliveredIds.add(m.order_id);
+      });
       (tasks.data || []).forEach((t: any) => {
         if (!t.order_id) return;
         if (t.status === "finalizado") {
@@ -280,6 +288,11 @@ const WholesaleOrdersInbox = () => {
         } else {
           inProductionIds.add(t.order_id);
         }
+      });
+      // Todo pedido con orden de producción activa ya salió de la bandeja de revisión
+      (prodOrders.data || []).forEach((p: any) => {
+        if (!p.order_id || p.completed_at) return;
+        inProductionIds.add(p.order_id);
       });
       producedIds.forEach((id) => { if (deliveredIds.has(id)) producedIds.delete(id); });
       inProductionIds.forEach((id) => { if (deliveredIds.has(id)) inProductionIds.delete(id); });
@@ -435,12 +448,20 @@ const WholesaleOrdersInbox = () => {
         };
       });
       const { error } = await supabase.from("inventory_movements").insert(movements as any);
+      if (error) { setBusy(false); toast.error(error.message); return; }
+      try {
+        await ensureProductionOrder(order as unknown as FlowOrder, { needsCuerpos: true });
+      } catch (e: any) {
+        setBusy(false);
+        toast.error(`Kit entregado pero no se pudo crear la orden de producción: ${e.message}`);
+        return;
+      }
       setBusy(false);
-      if (error) { toast.error(error.message); return; }
       toast.success(`Kit entregado a Estampación (${rows.map(r => `${r.q} ${r.c.key}`).join(", ")}).`);
       setDelivering(null);
       qc.invalidateQueries({ queryKey: ["mayor-orders-inbox"] });
       qc.invalidateQueries({ queryKey: ["mayor-orders-delivered"] });
+      qc.invalidateQueries({ queryKey: ["production_orders"] });
       return;
     }
 
@@ -452,26 +473,22 @@ const WholesaleOrdersInbox = () => {
     setBusy(true);
 
     if (target === "produccion") {
-      const { error } = await supabase.from("body_production_tasks").insert({
-        referencia: order.product,
-        unidades: quantity,
-        tipo_plastico: plastico,
-        status: "pendiente",
-        order_id: order.id,
-      } as any);
-      if (!error) {
-        await supabase.from("notifications").insert({
-          target_role: "produccion",
-          title: "Nueva orden de producción de cuerpos",
-          message: `Inventarios solicita producir ${quantity} uds de "${order.product}" (${plastico}) para pedido de ${order.client_name}.`
-            + (obs ? ` Obs: ${obs}` : ""),
-          type: "info",
-          reference_id: order.id,
+      // El sistema crea la orden automáticamente con la referencia y cantidad del pedido.
+      try {
+        await requestProductionForOrder({
+          order: order as unknown as FlowOrder,
+          tipoPlastico: plastico,
+          note: obs || undefined,
         });
+      } catch (e: any) {
+        setBusy(false);
+        toast.error(e.message);
+        return;
       }
       setBusy(false);
-      if (error) { toast.error(error.message); return; }
-      toast.success(`Orden de producción creada (${quantity} uds). Los cuerpos volverán a inventario al terminar.`);
+      toast.success(
+        `Orden de producción creada automáticamente (${order.quantity} uds de "${order.product}").`
+      );
     } else if (target === "logistica" && lineRows.length > 0) {
       // Pedido al detal (potencialmente multi-ítem desde checkout online)
       const cat = "producto_terminado";
@@ -504,9 +521,6 @@ const WholesaleOrdersInbox = () => {
     } else {
       const cat = target === "estampacion" ? "cuerpos_referencias" : "producto_terminado";
       const isSweatspotMarkable = target === "terminado" && order.brand === "sweatspot";
-      const area = target === "terminado"
-        ? (isSweatspotMarkable ? "estampacion" : "logistica")
-        : target;
       const item = isSweatspotMarkable
         ? findSweatspotMarkableStock(order)
         : findStockItem(order, cat);
@@ -515,33 +529,34 @@ const WholesaleOrdersInbox = () => {
         toast.error("No hay termos SIN LOGO que coincidan con color y tamaño. Usa Salir kit.");
         return;
       }
-      const reasonPrefix = isSweatspotMarkable
-        ? `Entrega termos SIN LOGO para marcación — Pedido de ${order.client_name}`
-        : target === "terminado"
-        ? `Entrega producto terminado — Pedido de ${order.client_name}`
-        : `Pedido al por mayor de ${order.client_name}`;
-      const { error } = await supabase.from("inventory_movements").insert({
-        stock_item_id: item?.id ?? null,
-        item_name: item?.name ?? order.product,
-        brand: order.brand,
-        category: cat,
-        quantity,
-        direction: "entrega",
-        area,
-        reason: reasonPrefix + (obs ? ` — ${obs}` : ""),
-        order_id: order.id,
-        recorded_by: user.id,
-        recorded_by_name: user.email || "Inventarios",
-      } as any);
+      // Reserva: NO se descuenta el inventario, las unidades quedan apartadas
+      // para este pedido y el pedido pasa automáticamente a Estampación.
+      try {
+        await reserveStockForOrder({
+          order: order as unknown as FlowOrder,
+          stockItemId: item?.id ?? null,
+          itemName: item?.name ?? order.product,
+          category: cat,
+          quantity,
+          userId: user.id,
+          userName: user.email,
+          note: obs || undefined,
+        });
+        await ensureProductionOrder(order as unknown as FlowOrder, { needsCuerpos: false });
+      } catch (e: any) {
+        setBusy(false);
+        toast.error(e.message);
+        return;
+      }
       setBusy(false);
-      if (error) { toast.error(error.message); return; }
-      toast.success(`Entregado ${quantity} uds a ${TARGET_LABEL[target]}`);
+      toast.success(`Reservadas ${quantity} uds. Pedido enviado a ${TARGET_LABEL.estampacion}.`);
     }
 
     setDelivering(null);
     qc.invalidateQueries({ queryKey: ["mayor-orders-inbox"] });
     qc.invalidateQueries({ queryKey: ["detal-orders-inbox"] });
     qc.invalidateQueries({ queryKey: ["mayor-orders-delivered"] });
+    qc.invalidateQueries({ queryKey: ["production_orders"] });
   };
 
   const renderCard = (o: MayorOrder, isDelivered: boolean, kind: "mayor" | "detal" = "mayor") => {
@@ -639,7 +654,7 @@ const WholesaleOrdersInbox = () => {
                     disabled={!markable}
                     title={markable ? `Termos SIN LOGO disponibles: ${markableStock}` : "Sin termos SIN LOGO que coincidan con color y tamaño"}>
                     <PackageCheck className="h-3.5 w-3.5" />
-                    Entregar termos (marcar) {markable ? `(${markableStock})` : "(sin stock)"}
+                    Reservar termos (marcar) {markable ? `(${markableStock})` : "(sin stock)"}
                   </Button>
                   <Button size="sm" variant={markableEnough ? "outline" : "default"} className="flex-1 min-w-[150px] gap-1.5"
                     onClick={() => openDeliver(o, "estampacion")}>
@@ -656,14 +671,15 @@ const WholesaleOrdersInbox = () => {
               <div className="flex flex-wrap gap-2 pt-1">
                 <Button size="sm" variant={enough ? "default" : "outline"} className="flex-1 min-w-[150px] gap-1.5"
                   onClick={() => openDeliver(o, "estampacion")}
-                  title={enough ? "Cuerpos disponibles para estampar" : "No hay cuerpos suficientes"}>
-                  <Paintbrush className="h-3.5 w-3.5" /> Personalizar — Estampar
+                  disabled={!enough}
+                  title={enough ? "Reservar cuerpos y enviar a Estampación" : "No hay inventario suficiente: solicita producción"}>
+                  <Paintbrush className="h-3.5 w-3.5" /> Reservar inventario
                 </Button>
                 {!enough && (
                   <Button size="sm" variant="default" className="flex-1 min-w-[150px] gap-1.5"
                     onClick={() => openDeliver(o, "produccion")}
-                    title="Enviar a producción para fabricar cuerpos">
-                    <Factory className="h-3.5 w-3.5" /> Mandar a producir cuerpos
+                    title="El sistema crea la orden de producción con la referencia y cantidad del pedido">
+                    <Factory className="h-3.5 w-3.5" /> Solicitar Producción
                   </Button>
                 )}
                 <Button size="sm" variant="outline" className="gap-1.5"
@@ -722,7 +738,7 @@ const WholesaleOrdersInbox = () => {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Inbox className="h-4 w-4" />
-                Pendientes de entrega
+                Pendientes de revisión de inventario
                 <Badge variant="secondary">{filterOrders(pending).length}</Badge>
               </CardTitle>
             </CardHeader>
@@ -733,7 +749,7 @@ const WholesaleOrdersInbox = () => {
                 <div className="text-center py-8 text-muted-foreground">
                   <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">
-                    {searchQuery.trim() ? "Ningún pedido coincide con la búsqueda." : "No hay pedidos al por mayor pendientes de entrega."}
+                    {searchQuery.trim() ? "Ningún pedido coincide con la búsqueda." : "No hay pedidos al por mayor pendientes de revisión."}
                   </p>
                 </div>
               ) : (
@@ -749,7 +765,7 @@ const WholesaleOrdersInbox = () => {
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Factory className="h-4 w-4 text-blue-600" />
-                  Producción de cuerpos
+                  En proceso (producción / estampación)
                   <Badge variant="secondary">{filterOrders(inProduction).length}</Badge>
                 </CardTitle>
               </CardHeader>
@@ -870,7 +886,7 @@ const WholesaleOrdersInbox = () => {
                   </div>
                   {markable ? (
                     <div>
-                      Se descontará de: <span className="font-medium">{markable.name}</span>
+                      Se reservará de: <span className="font-medium">{markable.name}</span>
                       {markable.color ? ` · ${markable.color}` : ""} · <Badge variant="outline" className="ml-1">SIN LOGO</Badge>
                       <span className="ml-2 text-muted-foreground">Disp. {markable.available}</span>
                     </div>
@@ -944,8 +960,19 @@ const WholesaleOrdersInbox = () => {
               </div>
             ) : (
               <div>
-                <Label>{delivering?.target === "produccion" ? "Cantidad a producir" : "Cantidad a entregar"}</Label>
-                <Input type="number" value={qty} onChange={(e) => setQty(e.target.value)} min="1" />
+                <Label>{delivering?.target === "produccion" ? "Cantidad a producir" : "Cantidad a reservar"}</Label>
+                <Input
+                  type="number"
+                  value={qty}
+                  onChange={(e) => setQty(e.target.value)}
+                  min="1"
+                  readOnly={delivering?.target === "produccion"}
+                />
+                {delivering?.target === "produccion" && (
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    La orden se crea automáticamente con la referencia y la cantidad del pedido.
+                  </p>
+                )}
               </div>
             )}
             {delivering?.target === "produccion" && !isSweatspotKit && (
@@ -971,7 +998,7 @@ const WholesaleOrdersInbox = () => {
             <Button onClick={confirmDeliver} disabled={busy}>
               {isSweatspotKit
                 ? "Confirmar entrega del kit"
-                : delivering?.target === "produccion" ? "Crear orden de producción" : "Confirmar entrega"}
+                : delivering?.target === "produccion" ? "Solicitar producción" : "Confirmar reserva"}
             </Button>
           </DialogFooter>
         </DialogContent>

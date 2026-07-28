@@ -111,10 +111,10 @@ export async function createOrderNotifications(data: OrderNotificationData) {
   const brandLabel = data.brand === "magical" ? "Magical Warmers" : "Sweatspot";
   const shortDesc = `${data.quantity} uds de ${data.product} — ${brandLabel} para ${data.clientName}`;
 
-  // Producción: siempre
+  // Inventarios: todo pedido nace en Ventas y pasa primero por revisión de inventario
   notifications.push({
-    target_role: "produccion",
-    title: "Nuevo pedido en producción",
+    target_role: "inventarios",
+    title: "Nuevo pedido — revisar inventario",
     message: `Nuevo pedido: ${shortDesc}`,
     type: "nuevo_pedido",
     reference_id: data.orderId,

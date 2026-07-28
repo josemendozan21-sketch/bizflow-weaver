@@ -258,9 +258,9 @@ export const MagicalWarmersWorkflow = () => {
       <Separator />
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-sm font-semibold text-foreground">Cuerpos por producir</h3>
-        <Button size="sm" onClick={() => openBodyForm()} disabled={showBodyForm}>
-          <Plus className="h-4 w-4 mr-1" /> Registrar producción de cuerpos
-        </Button>
+        <p className="text-xs text-muted-foreground">
+          Las órdenes las crea Inventarios a partir del pedido. Producción solo las ejecuta.
+        </p>
       </div>
 
       <BodyRequirementsPanel
@@ -280,53 +280,13 @@ export const MagicalWarmersWorkflow = () => {
         orders={activeOrdersAll}
         bodyStock={bodyStock}
         stockItems={stockItems}
-        onProduce={({ referencia, tipoPlastico, unidadesSugeridas }) =>
-          openBodyForm({ referencia, tipoPlastico, unidades: unidadesSugeridas })
+        onProduce={() =>
+          toast.info(
+            "Las órdenes de producción se crean automáticamente desde Inventarios a partir del pedido."
+          )
         }
       />
 
-      {showBodyForm && (
-        <BodyProductionForm
-          onClose={() => { setShowBodyForm(false); setBodyFormPrefill(null); }}
-          initial={bodyFormPrefill}
-          onSubmit={async (data) => {
-            // Create as in-progress; does NOT enter inventory until finalized with real units
-            const { error: taskErr } = await supabase.from("body_production_tasks").insert({
-              tipo_plastico: data.tipoPlastico,
-              referencia: data.referencia,
-              unidades: data.unidades,
-              status: "en_proceso",
-            });
-            if (taskErr) {
-              toast.error(`Error al crear producción: ${taskErr.message}`);
-              return;
-            }
-            // Reflect "en proceso" in inventarios so they can see what's being fabricated
-            const { data: matchingStock } = await supabase
-              .from("stock_items")
-              .select("id, in_process")
-              .eq("brand", "magical")
-              .eq("category", "cuerpos_referencias")
-              .ilike("name", data.referencia)
-              .maybeSingle();
-            if (matchingStock) {
-              await supabase
-                .from("stock_items")
-                .update({ in_process: Number(matchingStock.in_process || 0) + data.unidades } as any)
-                .eq("id", matchingStock.id);
-            }
-            await supabase.from("notifications").insert({
-              target_role: "inventarios",
-              title: "Producción de cuerpos iniciada",
-              message: `Producción iniciada: ${data.unidades} uds de "${data.referencia}" (Magical Warmers).`,
-              type: "info",
-            } as any);
-            toast.success(`Producción de ${data.unidades} uds de "${data.referencia}" iniciada. Finalízala con las unidades reales para enviar a inventario.`);
-            setShowBodyForm(false);
-            setBodyFormPrefill(null);
-          }}
-        />
-      )}
 
       {inProgressBodyTasks.length > 0 && (
         <div className="space-y-2">
