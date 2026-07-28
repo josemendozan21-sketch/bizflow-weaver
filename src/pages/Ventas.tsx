@@ -1039,51 +1039,17 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         return;
       }
 
-      // Reserve body stock
-      const bodyResult = await reserveBodyStockDB("magical", referencia, quantity, {
-        clientName,
-        requestedBy: user?.id || undefined,
-      });
-
-      const needsCuerpos = !bodyResult.available || bodyResult.discounted < quantity;
-      const initialStage = needsCuerpos
-        ? "produccion_cuerpos"
-        : (noLogo ? "dosificacion" : "estampacion");
-
-      await supabase.from("orders").update({ production_status: initialStage }).eq("id", orderData.id);
-
-      try {
-        await supabase.from("production_orders").insert({
-          order_id: orderData.id,
-          brand: "magical",
-          client_name: clientName,
-          quantity,
-          current_stage: initialStage,
-          stage_status: "pendiente",
-          workflow_type: "full",
-          stages: buildMagicalStages(line.type === "Térmico"),
-          gel_color: gelColor,
-          ink_color: inkColor,
-          logo_file: logoNombre || logoFile?.name || null,
-          needs_cuerpos: needsCuerpos,
-          has_stock: bodyResult.available,
-          molde: referencia,
-          observations: observaciones || null,
-          advisor_id: user?.id || null,
-          delivery_date: fechaRequerida || null,
-        });
-      } catch (err: any) {
-        console.error("Error creating production order:", err);
-      }
-
+      // El pedido queda pendiente de revisión de Inventarios.
+      // Ni se reserva stock ni se crea orden de producción desde Ventas:
+      // Inventarios decide (reservar inventario o solicitar producción).
       await createOrderNotifications({
         orderId: orderData.id,
         brand: "magical",
         product: referencia,
         quantity,
         clientName,
-        needsCuerpos,
-        shortage: needsCuerpos ? quantity - bodyResult.discounted : 0,
+        needsCuerpos: false,
+        shortage: 0,
         hasLogo: !!logoFile,
         advisorId: user?.id || "",
       });
