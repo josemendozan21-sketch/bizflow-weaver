@@ -889,6 +889,16 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
   const [extraCost, setExtraCost] = useState<number>(initialExtras.extraCost);
   const [extraDesc, setExtraDesc] = useState(initialExtras.extraDesc);
   const [deliveryDate, setDeliveryDate] = useState(order.delivery_date || "");
+  const [quantity, setQuantity] = useState<number>(Number(order.quantity) || 1);
+  const initialUnitPrice =
+    Number(order.unit_price) ||
+    (Number(order.quantity) > 0
+      ? Math.round(((Number(order.total_amount) || 0) - (initialExtras.extraCost || 0)) / Number(order.quantity))
+      : 0);
+  const [unitPrice, setUnitPrice] = useState<number>(initialUnitPrice);
+
+  const newBaseTotal = (Number(unitPrice) || 0) * (Number(quantity) || 0);
+  const newTotalPreview = newBaseTotal + (Number(extraCost) || 0);
 
   const handleSave = async () => {
     setSaving(true);
@@ -900,14 +910,10 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
         finalObs = finalObs ? `${tag} ${finalObs}` : tag;
       }
 
-      // Recalculate total: preserve original total for retail (menor) — only add extras.
-      // For wholesale (mayor) recompute from unit_price * quantity + extras.
-      const currentTotal = Number(order.total_amount) || 0;
-      const baseTotal =
-        order.sale_type === "mayor"
-          ? (Number(order.unit_price) || 0) * (Number(order.quantity) || 0)
-          : currentTotal - (Number(initialExtras.extraCost) || 0);
-      const newTotal = baseTotal + (Number(extraCost) || 0);
+      // El asesor puede ajustar unidades y valor unitario: el total se recalcula siempre.
+      const qty = Math.max(Number(quantity) || 0, 1);
+      const price = Number(unitPrice) || 0;
+      const newTotal = price * qty + (Number(extraCost) || 0);
 
       // Only update production-spec fields for wholesale orders (they go through producción).
       // Retail orders are sold from finished stock and shouldn't overwrite these specs.
@@ -915,6 +921,8 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
       const { error } = await supabase
         .from("orders")
         .update({
+          quantity: qty,
+          unit_price: price || null,
           personalization: personalization || null,
           observations: finalObs || null,
           delivery_date: deliveryDate || null,
@@ -932,6 +940,7 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
         const { error: prodErr } = await supabase
           .from("production_orders")
           .update({
+            quantity: qty,
             ink_color: inkColor || null,
             observations: finalObs || null,
             ...(order.brand === "magical" ? { gel_color: gelColor || null } : {}),
@@ -939,13 +948,21 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
           })
           .eq("order_id", order.id);
         if (prodErr) console.warn("No se pudo sincronizar con producción:", prodErr.message);
+
+        // Sincronizar unidades de la tarea de cuerpos si existe y aún no se ha completado
+        const { error: bodyErr } = await supabase
+          .from("body_production_tasks")
+          .update({ unidades: qty })
+          .eq("order_id", order.id)
+          .neq("status", "finalizado");
+        if (bodyErr) console.warn("No se pudo sincronizar cuerpos:", bodyErr.message);
       }
 
       // Notify production so they see the updated specs
       await supabase.from("notifications").insert({
         target_role: "produccion",
         title: "Pedido actualizado por asesor",
-        message: `${order.advisor_name} modificó las especificaciones del pedido de ${order.client_name} (${order.product}). Revisa los nuevos colores/observaciones antes de continuar.`,
+        message: `${order.advisor_name} modificó el pedido de ${order.client_name} (${order.product}): ${qty} uds · $${newTotal.toLocaleString("es-CO")}. Revisa cantidades, colores y observaciones antes de continuar.`,
         type: "info",
         reference_id: order.id,
       });
@@ -992,6 +1009,28 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
           )}
 
           <fieldset disabled={isLocked || saving} className="space-y-4 disabled:opacity-60">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Unidades</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={quantity || ""}
+                  onChange={(e) => setQuantity(Number(e.target.value) || 0)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Valor unitario ($)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={unitPrice || ""}
+                  onChange={(e) => setUnitPrice(Number(e.target.value) || 0)}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
             {order.sale_type === "mayor" && (
               <>
                 <div className="grid grid-cols-2 gap-3">
@@ -1056,17 +1095,11 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
                 />
               </div>
             </div>
-            {extraCost > 0 && (
-              <p className="text-xs text-muted-foreground">
-                Nuevo total: $
-                {(
-                  (order.sale_type === "mayor"
-                    ? (Number(order.unit_price) || 0) * (Number(order.quantity) || 0)
-                    : (Number(order.total_amount) || 0) - (Number(initialExtras.extraCost) || 0)
-                  ) + extraCost
-                ).toLocaleString("es-CO")}
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground">
+              Nuevo total: ${newTotalPreview.toLocaleString("es-CO")}
+              {" "}({quantity || 0} uds × ${(unitPrice || 0).toLocaleString("es-CO")}
+              {extraCost > 0 ? ` + $${extraCost.toLocaleString("es-CO")}` : ""})
+            </p>
 
             <div className="space-y-1.5">
               <Label>Fecha de entrega</Label>
