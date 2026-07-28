@@ -1009,6 +1009,28 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
           )}
 
           <fieldset disabled={isLocked || saving} className="space-y-4 disabled:opacity-60">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Unidades</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={quantity || ""}
+                  onChange={(e) => setQuantity(Number(e.target.value) || 0)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Valor unitario ($)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={unitPrice || ""}
+                  onChange={(e) => setUnitPrice(Number(e.target.value) || 0)}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
             {order.sale_type === "mayor" && (
               <>
                 <div className="grid grid-cols-2 gap-3">
@@ -1073,17 +1095,11 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
                 />
               </div>
             </div>
-            {extraCost > 0 && (
-              <p className="text-xs text-muted-foreground">
-                Nuevo total: $
-                {(
-                  (order.sale_type === "mayor"
-                    ? (Number(order.unit_price) || 0) * (Number(order.quantity) || 0)
-                    : (Number(order.total_amount) || 0) - (Number(initialExtras.extraCost) || 0)
-                  ) + extraCost
-                ).toLocaleString("es-CO")}
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground">
+              Nuevo total: ${newTotalPreview.toLocaleString("es-CO")}
+              {" "}({quantity || 0} uds × ${(unitPrice || 0).toLocaleString("es-CO")}
+              {extraCost > 0 ? ` + $${extraCost.toLocaleString("es-CO")}` : ""})
+            </p>
 
             <div className="space-y-1.5">
               <Label>Fecha de entrega</Label>
