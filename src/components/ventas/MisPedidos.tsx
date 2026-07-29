@@ -1018,6 +1018,35 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
                   value={quantity || ""}
                   onChange={(e) => setQuantity(Number(e.target.value) || 0)}
                 />
+                <div className="flex flex-wrap gap-1 pt-1">
+                  {[1, 5, 10, 25].map((n) => (
+                    <Button
+                      key={n}
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setQuantity((q) => (Number(q) || 0) + n)}
+                    >
+                      +{n}
+                    </Button>
+                  ))}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setQuantity(Number(order.quantity) || 1)}
+                  >
+                    Reiniciar
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Original: {order.quantity} uds
+                  {quantity !== Number(order.quantity) && (
+                    <> · {quantity > Number(order.quantity) ? "+" : ""}{quantity - Number(order.quantity)}</>
+                  )}
+                </p>
               </div>
               <div className="space-y-1.5">
                 <Label>Valor unitario ($)</Label>
@@ -1077,7 +1106,7 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Costo adicional ($)</Label>
+                <Label>Costo adicional / incremento ($)</Label>
                 <Input
                   type="number"
                   min={0}
@@ -1085,6 +1114,29 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
                   onChange={(e) => setExtraCost(Number(e.target.value) || 0)}
                   placeholder="0"
                 />
+                <div className="flex flex-wrap gap-1 pt-1">
+                  {[10000, 20000, 50000, 100000].map((n) => (
+                    <Button
+                      key={n}
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setExtraCost((v) => (Number(v) || 0) + n)}
+                    >
+                      +${(n / 1000).toLocaleString("es-CO")}k
+                    </Button>
+                  ))}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setExtraCost(0)}
+                  >
+                    Limpiar
+                  </Button>
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label>Concepto del costo</Label>
@@ -1095,11 +1147,22 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
                 />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Nuevo total: ${newTotalPreview.toLocaleString("es-CO")}
-              {" "}({quantity || 0} uds × ${(unitPrice || 0).toLocaleString("es-CO")}
-              {extraCost > 0 ? ` + $${extraCost.toLocaleString("es-CO")}` : ""})
-            </p>
+            <div className="rounded-lg border bg-muted/40 p-3 text-xs space-y-1">
+              <p className="text-muted-foreground">
+                Total anterior: ${(Number(order.total_amount) || 0).toLocaleString("es-CO")}
+              </p>
+              <p className="font-semibold text-sm">
+                Nuevo total: ${newTotalPreview.toLocaleString("es-CO")}
+              </p>
+              <p className="text-muted-foreground">
+                {quantity || 0} uds × ${(unitPrice || 0).toLocaleString("es-CO")}
+                {extraCost > 0 ? ` + $${extraCost.toLocaleString("es-CO")}` : ""}
+                {newTotalPreview !== (Number(order.total_amount) || 0) && (
+                  <> · Diferencia: {newTotalPreview > (Number(order.total_amount) || 0) ? "+" : "-"}$
+                    {Math.abs(newTotalPreview - (Number(order.total_amount) || 0)).toLocaleString("es-CO")}</>
+                )}
+              </p>
+            </div>
 
             <div className="space-y-1.5">
               <Label>Fecha de entrega</Label>
