@@ -6,6 +6,8 @@ import WholesaleOrdersInbox from "@/components/inventory/WholesaleOrdersInbox";
 import QuickMovementForm from "@/components/inventory/QuickMovementForm";
 import MovementHistoryTable from "@/components/inventory/MovementHistoryTable";
 import WeeklyInventoryExport from "@/components/inventory/WeeklyInventoryExport";
+import InventoryDashboardSummary from "@/components/inventory/InventoryDashboardSummary";
+
 
 const InventariosRoleView = () => {
   return (
@@ -14,6 +16,8 @@ const InventariosRoleView = () => {
         <h1 className="text-2xl font-bold text-foreground">Inventarios</h1>
         <p className="text-muted-foreground">Gestiona stock, recibe pedidos de producción y registra movimientos.</p>
       </div>
+
+      <InventoryDashboardSummary />
 
       <Tabs defaultValue="bandeja" className="w-full">
         <TabsList>
