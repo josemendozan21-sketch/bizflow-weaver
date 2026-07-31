@@ -16,6 +16,8 @@ const FullInventoryView = () => {
         <p className="text-muted-foreground">Gestión y control de inventarios por marca</p>
       </div>
 
+      <InventoryKPIs />
+
       <Tabs defaultValue="materia_prima" className="w-full">
         <TabsList>
           <TabsTrigger value="materia_prima" className="gap-1.5">
