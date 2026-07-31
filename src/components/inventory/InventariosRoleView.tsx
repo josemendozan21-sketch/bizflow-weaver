@@ -17,6 +17,8 @@ const InventariosRoleView = () => {
         <p className="text-muted-foreground">Gestiona stock, recibe pedidos de producción y registra movimientos.</p>
       </div>
 
+      <InventoryKPIs />
+
       <Tabs defaultValue="bandeja" className="w-full">
         <TabsList>
           <TabsTrigger value="bandeja" className="gap-1.5">
