@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Wallet, Plus, DollarSign, FileText, Upload, Loader2, Camera, User } from "lucide-react";
+import { Wallet, Plus, DollarSign, FileText, Upload, Loader2, Camera, User, Trash2, Pencil } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -54,6 +54,31 @@ export default function CajaMenor() {
   const queryClient = useQueryClient();
   const [showFundDialog, setShowFundDialog] = useState(false);
   const [showExpenseDialog, setShowExpenseDialog] = useState(false);
+  const [editingFund, setEditingFund] = useState<PettyCashFund | null>(null);
+  const canManage = role === "admin" || role === "contabilidad";
+
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["petty_cash_funds"] });
+    queryClient.invalidateQueries({ queryKey: ["petty_cash_expenses_all"] });
+  };
+
+  const deleteFund = async (fund: PettyCashFund) => {
+    if (!window.confirm(`¿Eliminar el ingreso de $${Number(fund.amount).toLocaleString("es-CO")}? También se eliminarán sus gastos asociados.`)) return;
+    const { error: eErr } = await supabase.from("petty_cash_expenses").delete().eq("fund_id", fund.id);
+    if (eErr) { toast.error("Error: " + eErr.message); return; }
+    const { error } = await supabase.from("petty_cash_funds").delete().eq("id", fund.id);
+    if (error) { toast.error("Error: " + error.message); return; }
+    toast.success("Ingreso eliminado");
+    refresh();
+  };
+
+  const deleteExpense = async (expense: PettyCashExpense) => {
+    if (!window.confirm(`¿Eliminar el gasto de $${Number(expense.amount).toLocaleString("es-CO")}?`)) return;
+    const { error } = await supabase.from("petty_cash_expenses").delete().eq("id", expense.id);
+    if (error) { toast.error("Error: " + error.message); return; }
+    toast.success("Gasto eliminado");
+    refresh();
+  };
 
   // Fetch all funds (history)
   const { data: funds = [] } = useQuery({
@@ -129,13 +154,23 @@ export default function CajaMenor() {
 
       {/* Actions */}
       <div className="flex gap-2 flex-wrap">
-        <Button onClick={() => setShowFundDialog(true)}>
+        <Button onClick={() => setShowFundDialog(true)} disabled={!canManage}>
           <Wallet className="h-4 w-4 mr-1" /> {activeFund ? "Registrar ingreso" : "Establecer fondo inicial"}
         </Button>
         {activeFund && (
-          <Button variant="outline" onClick={() => setShowExpenseDialog(true)}>
+          <Button variant="outline" onClick={() => setShowExpenseDialog(true)} disabled={!canManage}>
             <Plus className="h-4 w-4 mr-1" /> Registrar gasto
           </Button>
+        )}
+        {activeFund && canManage && (
+          <>
+            <Button variant="outline" onClick={() => setEditingFund(activeFund)}>
+              <Pencil className="h-4 w-4 mr-1" /> Editar último ingreso
+            </Button>
+            <Button variant="ghost" className="text-destructive" onClick={() => deleteFund(activeFund)}>
+              <Trash2 className="h-4 w-4 mr-1" /> Eliminar último ingreso
+            </Button>
+          </>
         )}
       </div>
 
@@ -180,6 +215,12 @@ export default function CajaMenor() {
                           <FileText className="h-4 w-4 mr-1" /> Soporte
                         </Button>
                       )}
+                      {canManage && (
+                        <Button size="sm" variant="ghost" className="shrink-0 text-destructive"
+                          onClick={() => deleteExpense(expense)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -216,6 +257,13 @@ export default function CajaMenor() {
           }}
         />
       )}
+
+      {/* Edit fund Dialog */}
+      <EditFundDialog
+        fund={editingFund}
+        onClose={() => setEditingFund(null)}
+        onSaved={() => { setEditingFund(null); refresh(); }}
+      />
 
       {/* History of previous funds */}
       {historyFunds.length > 0 && (
@@ -293,8 +341,24 @@ export default function CajaMenor() {
                                 <FileText className="h-3 w-3 mr-1" /> Soporte
                               </Button>
                             )}
+                            {canManage && (
+                              <Button size="sm" variant="ghost" className="shrink-0 h-7 text-destructive"
+                                onClick={() => deleteExpense(expense)}>
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            )}
                           </div>
                         ))}
+                      </div>
+                    )}
+                    {canManage && (
+                      <div className="flex gap-2 pt-2">
+                        <Button size="sm" variant="outline" className="h-7" onClick={() => setEditingFund(fund)}>
+                          <Pencil className="h-3 w-3 mr-1" /> Editar
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 text-destructive" onClick={() => deleteFund(fund)}>
+                          <Trash2 className="h-3 w-3 mr-1" /> Eliminar
+                        </Button>
                       </div>
                     )}
                   </AccordionContent>
