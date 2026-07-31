@@ -441,6 +441,83 @@ function ExpenseDialog({ open, onClose, fundId, currentBalance, userId, userName
   userName: string;
   onSaved: () => void;
 }) {
+  return <ExpenseDialogInner open={open} onClose={onClose} fundId={fundId} currentBalance={currentBalance} userId={userId} userName={userName} onSaved={onSaved} />;
+}
+
+function EditFundDialog({ fund, onClose, onSaved }: {
+  fund: PettyCashFund | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [amount, setAmount] = useState("");
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [loadedId, setLoadedId] = useState<string | null>(null);
+
+  if (fund && loadedId !== fund.id) {
+    setLoadedId(fund.id);
+    setAmount(String(fund.amount));
+    setNotes(fund.notes ?? "");
+  }
+
+  const handleSave = async () => {
+    if (!fund) return;
+    const val = parseFloat(amount);
+    if (!val || val <= 0) { toast.error("Ingrese un monto válido"); return; }
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("petty_cash_funds")
+        .update({ amount: val, notes: notes.trim() || null } as any)
+        .eq("id", fund.id);
+      if (error) throw error;
+      toast.success("Ingreso actualizado");
+      onSaved();
+    } catch (err: any) {
+      toast.error("Error: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!fund} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Editar ingreso de caja menor</DialogTitle>
+          <DialogDescription>Corrige el monto o las notas de este ingreso.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Monto *</Label>
+            <Input type="number" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Notas</Label>
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Pencil className="h-4 w-4 mr-1" />}
+            Guardar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ExpenseDialogInner({ open, onClose, fundId, currentBalance, userId, userName, onSaved }: {
+  open: boolean;
+  onClose: () => void;
+  fundId: string;
+  currentBalance: number;
+  userId: string;
+  userName: string;
+  onSaved: () => void;
+}) {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [requestedBy, setRequestedBy] = useState("");
