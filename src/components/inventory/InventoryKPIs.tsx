@@ -38,28 +38,18 @@ const ICON_STYLES: Record<KPICardProps["variant"], string> = {
 function KPICard({ label, value, icon: Icon, variant, loading }: KPICardProps) {
   return (
     <Card className={cn("border shadow-none", VARIANT_STYLES[variant])}>
-      <CardContent className="p-4 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center", ICON_STYLES[variant])}>
-            <Icon className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground leading-tight">{label}</p>
-            {loading ? (
-              <Skeleton className="h-7 w-16 mt-1" />
-            ) : (
-              <p className="text-2xl font-bold text-foreground">{value.toLocaleString("es-CO")}</p>
-            )}
-          </div>
+      <CardContent className="p-3 flex items-center gap-3">
+        <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center shrink-0", ICON_STYLES[variant])}>
+          <Icon className="h-4 w-4" />
         </div>
-        {!loading && value > 0 && (
-          <Badge
-            variant={variant === "danger" ? "destructive" : "secondary"}
-            className="text-xs"
-          >
-            {value}
-          </Badge>
-        )}
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground leading-tight truncate">{label}</p>
+          {loading ? (
+            <Skeleton className="h-6 w-14 mt-1" />
+          ) : (
+            <p className="text-xl font-bold text-foreground">{value.toLocaleString("es-CO")}</p>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
