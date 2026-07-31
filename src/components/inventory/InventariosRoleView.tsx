@@ -12,16 +12,16 @@ import InventoryDashboardSummary from "@/components/inventory/InventoryDashboard
 import Punto92WarehousePanel from "@/components/inventory/Punto92WarehousePanel";
 import FeriasWarehousePanel from "@/components/inventory/FeriasWarehousePanel";
 
-type Warehouse = "principal" | "punto92" | "ferias";
+type WarehouseKey = "principal" | "punto92" | "ferias";
 
-const WAREHOUSES: { key: Warehouse; label: string; icon: typeof Boxes }[] = [
+const WAREHOUSES: { key: WarehouseKey; label: string; icon: typeof Boxes }[] = [
   { key: "principal", label: "Bodega principal", icon: Warehouse },
   { key: "punto92", label: "Punto de la 92", icon: Store },
   { key: "ferias", label: "Ferias", icon: Tent },
 ];
 
 const InventariosRoleView = () => {
-  const [warehouse, setWarehouse] = useState<Warehouse>("principal");
+  const [warehouse, setWarehouse] = useState<WarehouseKey>("principal");
 
   return (
     <div className="space-y-6">
