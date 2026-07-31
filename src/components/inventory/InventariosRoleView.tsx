@@ -6,6 +6,8 @@ import WholesaleOrdersInbox from "@/components/inventory/WholesaleOrdersInbox";
 import QuickMovementForm from "@/components/inventory/QuickMovementForm";
 import MovementHistoryTable from "@/components/inventory/MovementHistoryTable";
 import WeeklyInventoryExport from "@/components/inventory/WeeklyInventoryExport";
+import { InventoryKPIs } from "@/components/inventory/InventoryKPIs";
+
 
 const InventariosRoleView = () => {
   return (
