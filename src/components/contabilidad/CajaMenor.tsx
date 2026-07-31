@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Wallet, Plus, DollarSign, FileText, Upload, Loader2, Camera, User } from "lucide-react";
+import { Wallet, Plus, DollarSign, FileText, Upload, Loader2, Camera, User, Trash2, Pencil } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -54,6 +54,31 @@ export default function CajaMenor() {
   const queryClient = useQueryClient();
   const [showFundDialog, setShowFundDialog] = useState(false);
   const [showExpenseDialog, setShowExpenseDialog] = useState(false);
+  const [editingFund, setEditingFund] = useState<PettyCashFund | null>(null);
+  const canManage = role === "admin" || role === "contabilidad";
+
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["petty_cash_funds"] });
+    queryClient.invalidateQueries({ queryKey: ["petty_cash_expenses_all"] });
+  };
+
+  const deleteFund = async (fund: PettyCashFund) => {
+    if (!window.confirm(`¿Eliminar el ingreso de $${Number(fund.amount).toLocaleString("es-CO")}? También se eliminarán sus gastos asociados.`)) return;
+    const { error: eErr } = await supabase.from("petty_cash_expenses").delete().eq("fund_id", fund.id);
+    if (eErr) { toast.error("Error: " + eErr.message); return; }
+    const { error } = await supabase.from("petty_cash_funds").delete().eq("id", fund.id);
+    if (error) { toast.error("Error: " + error.message); return; }
+    toast.success("Ingreso eliminado");
+    refresh();
+  };
+
+  const deleteExpense = async (expense: PettyCashExpense) => {
+    if (!window.confirm(`¿Eliminar el gasto de $${Number(expense.amount).toLocaleString("es-CO")}?`)) return;
+    const { error } = await supabase.from("petty_cash_expenses").delete().eq("id", expense.id);
+    if (error) { toast.error("Error: " + error.message); return; }
+    toast.success("Gasto eliminado");
+    refresh();
+  };
 
   // Fetch all funds (history)
   const { data: funds = [] } = useQuery({
@@ -129,13 +154,23 @@ export default function CajaMenor() {
 
       {/* Actions */}
       <div className="flex gap-2 flex-wrap">
-        <Button onClick={() => setShowFundDialog(true)}>
+        <Button onClick={() => setShowFundDialog(true)} disabled={!canManage}>
           <Wallet className="h-4 w-4 mr-1" /> {activeFund ? "Registrar ingreso" : "Establecer fondo inicial"}
         </Button>
         {activeFund && (
-          <Button variant="outline" onClick={() => setShowExpenseDialog(true)}>
+          <Button variant="outline" onClick={() => setShowExpenseDialog(true)} disabled={!canManage}>
             <Plus className="h-4 w-4 mr-1" /> Registrar gasto
           </Button>
+        )}
+        {activeFund && canManage && (
+          <>
+            <Button variant="outline" onClick={() => setEditingFund(activeFund)}>
+              <Pencil className="h-4 w-4 mr-1" /> Editar último ingreso
+            </Button>
+            <Button variant="ghost" className="text-destructive" onClick={() => deleteFund(activeFund)}>
+              <Trash2 className="h-4 w-4 mr-1" /> Eliminar último ingreso
+            </Button>
+          </>
         )}
       </div>
 
@@ -180,6 +215,12 @@ export default function CajaMenor() {
                           <FileText className="h-4 w-4 mr-1" /> Soporte
                         </Button>
                       )}
+                      {canManage && (
+                        <Button size="sm" variant="ghost" className="shrink-0 text-destructive"
+                          onClick={() => deleteExpense(expense)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -216,6 +257,13 @@ export default function CajaMenor() {
           }}
         />
       )}
+
+      {/* Edit fund Dialog */}
+      <EditFundDialog
+        fund={editingFund}
+        onClose={() => setEditingFund(null)}
+        onSaved={() => { setEditingFund(null); refresh(); }}
+      />
 
       {/* History of previous funds */}
       {historyFunds.length > 0 && (
@@ -293,8 +341,24 @@ export default function CajaMenor() {
                                 <FileText className="h-3 w-3 mr-1" /> Soporte
                               </Button>
                             )}
+                            {canManage && (
+                              <Button size="sm" variant="ghost" className="shrink-0 h-7 text-destructive"
+                                onClick={() => deleteExpense(expense)}>
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            )}
                           </div>
                         ))}
+                      </div>
+                    )}
+                    {canManage && (
+                      <div className="flex gap-2 pt-2">
+                        <Button size="sm" variant="outline" className="h-7" onClick={() => setEditingFund(fund)}>
+                          <Pencil className="h-3 w-3 mr-1" /> Editar
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 text-destructive" onClick={() => deleteFund(fund)}>
+                          <Trash2 className="h-3 w-3 mr-1" /> Eliminar
+                        </Button>
                       </div>
                     )}
                   </AccordionContent>
@@ -369,6 +433,83 @@ function FundDialog({ open, onClose, currentAmount, userId, onSaved }: {
 }
 
 function ExpenseDialog({ open, onClose, fundId, currentBalance, userId, userName, onSaved }: {
+  open: boolean;
+  onClose: () => void;
+  fundId: string;
+  currentBalance: number;
+  userId: string;
+  userName: string;
+  onSaved: () => void;
+}) {
+  return <ExpenseDialogInner open={open} onClose={onClose} fundId={fundId} currentBalance={currentBalance} userId={userId} userName={userName} onSaved={onSaved} />;
+}
+
+function EditFundDialog({ fund, onClose, onSaved }: {
+  fund: PettyCashFund | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [amount, setAmount] = useState("");
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [loadedId, setLoadedId] = useState<string | null>(null);
+
+  if (fund && loadedId !== fund.id) {
+    setLoadedId(fund.id);
+    setAmount(String(fund.amount));
+    setNotes(fund.notes ?? "");
+  }
+
+  const handleSave = async () => {
+    if (!fund) return;
+    const val = parseFloat(amount);
+    if (!val || val <= 0) { toast.error("Ingrese un monto válido"); return; }
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("petty_cash_funds")
+        .update({ amount: val, notes: notes.trim() || null } as any)
+        .eq("id", fund.id);
+      if (error) throw error;
+      toast.success("Ingreso actualizado");
+      onSaved();
+    } catch (err: any) {
+      toast.error("Error: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!fund} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Editar ingreso de caja menor</DialogTitle>
+          <DialogDescription>Corrige el monto o las notas de este ingreso.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Monto *</Label>
+            <Input type="number" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Notas</Label>
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Pencil className="h-4 w-4 mr-1" />}
+            Guardar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ExpenseDialogInner({ open, onClose, fundId, currentBalance, userId, userName, onSaved }: {
   open: boolean;
   onClose: () => void;
   fundId: string;
