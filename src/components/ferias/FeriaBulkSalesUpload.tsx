@@ -61,7 +61,7 @@ const parseDate = (v: string): string => {
   const n = Number(v);
   if (!isNaN(n) && n > 20000 && n < 60000) {
     // Excel serial date
-    return new Date(Date.UTC(1899, 11, 30) .getTime() + n * 86400000).toISOString();
+    return new Date(Date.UTC(1899, 11, 30) + n * 86400000).toISOString();
   }
   const m = v.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
   if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), 12).toISOString();
