@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { Download } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { FeriaBulkSalesUpload } from "./FeriaBulkSalesUpload";
 
 type CartLine = {
   key: string;
@@ -274,6 +275,8 @@ export function FeriaSalesTab({ feriaId }: { feriaId: string }) {
         <Card className="p-4"><div className="flex items-center gap-3"><Package className="h-5 w-5 text-purple-600" /><div><p className="text-xs text-muted-foreground">Unidades</p><p className="text-lg font-semibold">{stats.units}</p></div></div></Card>
         <Card className="p-4"><div><p className="text-xs text-muted-foreground">Más vendido</p><p className="text-sm font-semibold truncate">{stats.top ? `${stats.top[0]} (${stats.top[1]})` : "—"}</p></div></Card>
       </div>
+
+      {canExport && <FeriaBulkSalesUpload feriaId={feriaId} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         {/* PRODUCTOS */}
