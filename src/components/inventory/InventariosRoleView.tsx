@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Boxes, ShoppingBag, History, Beaker, Sparkles } from "lucide-react";
+import { Boxes, ShoppingBag, History, Beaker, Sparkles, Warehouse, Store, Tent } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
 import MateriaPrimaPanel from "@/components/inventory/MateriaPrimaPanel";
 import WholesaleOrdersInbox from "@/components/inventory/WholesaleOrdersInbox";
@@ -7,9 +9,20 @@ import QuickMovementForm from "@/components/inventory/QuickMovementForm";
 import MovementHistoryTable from "@/components/inventory/MovementHistoryTable";
 import WeeklyInventoryExport from "@/components/inventory/WeeklyInventoryExport";
 import InventoryDashboardSummary from "@/components/inventory/InventoryDashboardSummary";
+import Punto92WarehousePanel from "@/components/inventory/Punto92WarehousePanel";
+import FeriasWarehousePanel from "@/components/inventory/FeriasWarehousePanel";
 
+type Warehouse = "principal" | "punto92" | "ferias";
+
+const WAREHOUSES: { key: Warehouse; label: string; icon: typeof Boxes }[] = [
+  { key: "principal", label: "Bodega principal", icon: Warehouse },
+  { key: "punto92", label: "Punto de la 92", icon: Store },
+  { key: "ferias", label: "Ferias", icon: Tent },
+];
 
 const InventariosRoleView = () => {
+  const [warehouse, setWarehouse] = useState<Warehouse>("principal");
+
   return (
     <div className="space-y-6">
       <div>
@@ -17,6 +30,27 @@ const InventariosRoleView = () => {
         <p className="text-muted-foreground">Gestiona stock, recibe pedidos de producción y registra movimientos.</p>
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        {WAREHOUSES.map((w) => {
+          const Icon = w.icon;
+          return (
+            <Button
+              key={w.key}
+              variant={warehouse === w.key ? "default" : "outline"}
+              size="sm"
+              onClick={() => setWarehouse(w.key)}
+            >
+              <Icon className="h-4 w-4 mr-1" /> {w.label}
+            </Button>
+          );
+        })}
+      </div>
+
+      {warehouse === "punto92" && <Punto92WarehousePanel />}
+      {warehouse === "ferias" && <FeriasWarehousePanel />}
+
+      {warehouse === "principal" && (
+      <>
       <InventoryDashboardSummary />
 
       <Tabs defaultValue="bandeja" className="w-full">
@@ -68,6 +102,8 @@ const InventariosRoleView = () => {
           <CategorizedInventoryPanel initialBrand="sweatspot" initialCategory="cuerpos_referencias" />
         </TabsContent>
       </Tabs>
+      </>
+      )}
     </div>
   );
 };
