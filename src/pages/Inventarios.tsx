@@ -4,9 +4,7 @@ import CategorizedInventoryPanel from "@/components/inventory/CategorizedInvento
 import MateriaPrimaPanel from "@/components/inventory/MateriaPrimaPanel";
 import AsesorInventoryView from "@/components/inventory/AsesorInventoryView";
 import InventariosRoleView from "@/components/inventory/InventariosRoleView";
-import { InventoryKPIs } from "@/components/inventory/InventoryKPIs";
 import { useAuth } from "@/contexts/AuthContext";
-
 
 const FullInventoryView = () => {
   return (
@@ -15,8 +13,6 @@ const FullInventoryView = () => {
         <h1 className="text-2xl font-bold text-foreground">Inventarios</h1>
         <p className="text-muted-foreground">Gestión y control de inventarios por marca</p>
       </div>
-
-      <InventoryKPIs />
 
       <Tabs defaultValue="materia_prima" className="w-full">
         <TabsList>
