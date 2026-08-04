@@ -21,6 +21,7 @@ import { StampingApprovals } from "./StampingApprovals";
 import { useAuth } from "@/contexts/AuthContext";
 import { PaymentsList } from "./PaymentsList";
 import { AddPaymentDialog } from "./AddPaymentDialog";
+import { PendingProofPanel } from "./PendingProofPanel";
 
 const STAGE_ORDER = [
   "pendiente",
