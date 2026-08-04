@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Boxes, ShoppingBag, History, Beaker, Sparkles, Warehouse, Store, Tent } from "lucide-react";
+import { Boxes, ShoppingBag, History, Beaker, Sparkles, Warehouse, Store, Tent, BookmarkCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
 import MateriaPrimaPanel from "@/components/inventory/MateriaPrimaPanel";
@@ -11,6 +11,7 @@ import WeeklyInventoryExport from "@/components/inventory/WeeklyInventoryExport"
 import InventoryDashboardSummary from "@/components/inventory/InventoryDashboardSummary";
 import Punto92WarehousePanel from "@/components/inventory/Punto92WarehousePanel";
 import FeriasWarehousePanel from "@/components/inventory/FeriasWarehousePanel";
+import ReservationsPanel from "@/components/inventory/ReservationsPanel";
 
 type WarehouseKey = "principal" | "punto92" | "ferias";
 
@@ -58,6 +59,9 @@ const InventariosRoleView = () => {
           <TabsTrigger value="bandeja" className="gap-1.5">
             <ShoppingBag className="h-4 w-4" /> Bandeja de pedidos
           </TabsTrigger>
+          <TabsTrigger value="reservas" className="gap-1.5">
+            <BookmarkCheck className="h-4 w-4" /> Reservas
+          </TabsTrigger>
           <TabsTrigger value="movimientos" className="gap-1.5">
             <Boxes className="h-4 w-4" /> Entradas y Salidas
           </TabsTrigger>
@@ -77,6 +81,10 @@ const InventariosRoleView = () => {
 
         <TabsContent value="bandeja" className="mt-4">
           <WholesaleOrdersInbox />
+        </TabsContent>
+
+        <TabsContent value="reservas" className="mt-4">
+          <ReservationsPanel />
         </TabsContent>
 
         <TabsContent value="movimientos" className="mt-4 space-y-4">
