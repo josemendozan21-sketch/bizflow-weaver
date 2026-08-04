@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Beaker, Warehouse, Store, Tent } from "lucide-react";
+import { Beaker, Warehouse, Store, Tent, BookmarkCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
@@ -8,6 +8,7 @@ import AsesorInventoryView from "@/components/inventory/AsesorInventoryView";
 import InventariosRoleView from "@/components/inventory/InventariosRoleView";
 import Punto92WarehousePanel from "@/components/inventory/Punto92WarehousePanel";
 import FeriasWarehousePanel from "@/components/inventory/FeriasWarehousePanel";
+import ReservationsPanel from "@/components/inventory/ReservationsPanel";
 import { useAuth } from "@/contexts/AuthContext";
 
 type WarehouseKey = "principal" | "punto92" | "ferias";
@@ -53,6 +54,9 @@ const FullInventoryView = () => {
           <TabsTrigger value="materia_prima" className="gap-1.5">
             <Beaker className="h-4 w-4" /> Materia Prima
           </TabsTrigger>
+          <TabsTrigger value="reservas" className="gap-1.5">
+            <BookmarkCheck className="h-4 w-4" /> Reservas
+          </TabsTrigger>
           <TabsTrigger value="magical_warmers" className="gap-1.5">
             Magical Warmers
           </TabsTrigger>
@@ -63,6 +67,10 @@ const FullInventoryView = () => {
 
         <TabsContent value="materia_prima" className="mt-4">
           <MateriaPrimaPanel />
+        </TabsContent>
+
+        <TabsContent value="reservas" className="mt-4">
+          <ReservationsPanel />
         </TabsContent>
 
         <TabsContent value="magical_warmers" className="mt-4 space-y-4">
