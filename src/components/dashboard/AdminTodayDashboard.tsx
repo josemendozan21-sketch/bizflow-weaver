@@ -35,6 +35,8 @@ interface Kpis {
   presupuestoEjecutado: number;
   ventasFeriaDia: number;
   puntoAcumulado: number;
+  bancosBalance: number;
+  cajaMenor: number;
 }
 
 interface SocialPostLite {
@@ -72,6 +74,8 @@ export function AdminTodayDashboard() {
     presupuestoEjecutado: 0,
     ventasFeriaDia: 0,
     puntoAcumulado: 0,
+    bancosBalance: 0,
+    cajaMenor: 0,
   });
   const [posts, setPosts] = useState<SocialPostLite[]>([]);
   const [feriasHoy, setFeriasHoy] = useState<FeriaSalesToday[]>([]);
@@ -241,6 +245,8 @@ export function AdminTodayDashboard() {
         presupuestoEjecutado,
         ventasFeriaDia,
         puntoAcumulado,
+        bancosBalance,
+        cajaMenor,
       });
       setPosts((nextPosts ?? []) as SocialPostLite[]);
       setFeriasHoy(feriasArr);
@@ -292,7 +298,10 @@ export function AdminTodayDashboard() {
     {
       title: "Caja empresa (bancos)",
       value: fmt(kpis.cajaEmpresa),
-      subtitle: "Bancos + caja menor",
+      subtitle:
+        kpis.bancosBalance === 0
+          ? `Caja menor ${fmt(kpis.cajaMenor)} · Bancos sin saldo registrado`
+          : `Bancos ${fmt(kpis.bancosBalance)} · Caja menor ${fmt(kpis.cajaMenor)}`,
       icon: Wallet,
       color: "text-amber-600 bg-amber-500/10",
     },
