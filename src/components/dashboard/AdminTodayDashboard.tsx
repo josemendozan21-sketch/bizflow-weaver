@@ -35,6 +35,7 @@ interface Kpis {
   presupuestoEjecutado: number;
   ventasFeriaDia: number;
   puntoAcumulado: number;
+  puntoMes: number;
   bancosBalance: number;
   cajaMenor: number;
 }
@@ -74,6 +75,7 @@ export function AdminTodayDashboard() {
     presupuestoEjecutado: 0,
     ventasFeriaDia: 0,
     puntoAcumulado: 0,
+    puntoMes: 0,
     bancosBalance: 0,
     cajaMenor: 0,
   });
@@ -188,6 +190,10 @@ export function AdminTodayDashboard() {
         (s, r: any) => s + Number(r.total_amount || 0),
         0,
       );
+      const puntoMes = (posMonth ?? []).reduce(
+        (s, r: any) => s + Number(r.total_amount || 0),
+        0,
+      );
       const recaudosDia = (paymentsDay ?? []).reduce(
         (s, r: any) => s + Number(r.amount || 0),
         0,
@@ -245,6 +251,7 @@ export function AdminTodayDashboard() {
         presupuestoEjecutado,
         ventasFeriaDia,
         puntoAcumulado,
+        puntoMes,
         bancosBalance,
         cajaMenor,
       });
@@ -268,7 +275,7 @@ export function AdminTodayDashboard() {
     {
       title: "Ventas del día — Punto 92",
       value: fmt(kpis.ventasPosDia),
-      subtitle: `Acumulado histórico: ${fmt(kpis.puntoAcumulado)}`,
+      subtitle: `Acumulado del mes: ${fmt(kpis.puntoMes)}`,
       icon: Store,
       color: "text-emerald-600 bg-emerald-500/10",
     },
