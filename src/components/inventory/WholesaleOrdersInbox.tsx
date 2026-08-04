@@ -44,6 +44,11 @@ const ACTIVE_STATUSES = [
   "dosificacion", "sellado", "recorte", "empaque", "listo",
 ];
 
+// Solo estos estados siguen pendientes de revisión por Inventarios.
+// Cualquier otro (ya en alguna etapa de producción, listo, despachado o entregado)
+// no debe aparecer en la bandeja de reserva/despacho.
+const INBOX_PENDING_STATUSES = ["pendiente", "diseno"];
+
 type Target = "estampacion" | "produccion" | "logistica" | "terminado";
 
 const TARGET_LABEL: Record<Target, string> = {
