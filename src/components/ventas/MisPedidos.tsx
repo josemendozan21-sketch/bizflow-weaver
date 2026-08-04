@@ -335,6 +335,7 @@ export function MisPedidos() {
       </div>
 
       <Tabs value={activeTab} onValueChange={(v) => { setHasUserSelectedTab(true); setActiveTab(v as OrderCategory); }}>
+
         <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="action" className="gap-1.5">
             <AlertTriangle className="h-3.5 w-3.5" />
