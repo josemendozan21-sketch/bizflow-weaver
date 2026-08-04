@@ -997,7 +997,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       // Insert order to DB
       let orderData: { id: string } | null = null;
       try {
-        const { data } = await supabase.from("orders").insert({
+        const { data, error } = await supabase.from("orders").insert({
           brand: "magical",
           sale_type: "mayor",
           client_name: clientName,
@@ -1025,10 +1025,21 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           delivery_date: fechaRequerida || null,
           payment_date: paymentDate || new Date().toISOString().slice(0, 10),
         }).select("id").single();
+        if (error) {
+          console.error("Error saving order:", error);
+          const dup = /duplicad|duplicate/i.test(error.message);
+          toast.error("Error al crear el pedido", {
+            description: dup
+              ? "Ya existe un pedido idéntico creado hace menos de 2 minutos. Revisa Mis pedidos antes de reintentar."
+              : error.message,
+          });
+          setIsSubmitting(false);
+          return;
+        }
         orderData = data;
       } catch (err: any) {
         console.error("Error saving order:", err);
-        toast.error("Error al crear el pedido", { description: "No se pudo guardar. Intenta de nuevo." });
+        toast.error("Error al crear el pedido", { description: err?.message || "No se pudo guardar. Intenta de nuevo." });
         setIsSubmitting(false);
         return;
       }
