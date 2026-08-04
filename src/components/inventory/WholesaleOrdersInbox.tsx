@@ -381,24 +381,40 @@ const WholesaleOrdersInbox = () => {
   };
 
   const pending = useMemo(
-    () => orders.filter((o) => !deliveredIds.has(o.id) && !archivedIds.has(o.id) && !inProductionIds.has(o.id)),
+    () => orders.filter((o) =>
+      !deliveredIds.has(o.id) && !archivedIds.has(o.id) && !inProductionIds.has(o.id) &&
+      INBOX_PENDING_STATUSES.includes(o.production_status)
+    ),
     [orders, deliveredIds, archivedIds, inProductionIds]
   );
   const inProduction = useMemo(
-    () => orders.filter((o) => inProductionIds.has(o.id) && !deliveredIds.has(o.id) && !archivedIds.has(o.id)),
+    () => orders.filter((o) =>
+      (inProductionIds.has(o.id) ||
+        (ACTIVE_STATUSES.includes(o.production_status) && !INBOX_PENDING_STATUSES.includes(o.production_status)))
+      && !deliveredIds.has(o.id) && !archivedIds.has(o.id)
+    ),
     [orders, inProductionIds, deliveredIds, archivedIds]
   );
   const delivered = useMemo(
-    () => orders.filter((o) => deliveredIds.has(o.id) || archivedIds.has(o.id)),
+    () => orders.filter((o) =>
+      deliveredIds.has(o.id) || archivedIds.has(o.id) ||
+      (!ACTIVE_STATUSES.includes(o.production_status) && !inProductionIds.has(o.id))
+    ),
     [orders, deliveredIds, archivedIds]
   );
 
   const pendingRetail = useMemo(
-    () => retailOrders.filter((o) => !deliveredIds.has(o.id) && !archivedIds.has(o.id)),
+    () => retailOrders.filter((o) =>
+      !deliveredIds.has(o.id) && !archivedIds.has(o.id) &&
+      INBOX_PENDING_STATUSES.includes(o.production_status)
+    ),
     [retailOrders, deliveredIds, archivedIds]
   );
   const deliveredRetail = useMemo(
-    () => retailOrders.filter((o) => deliveredIds.has(o.id) || archivedIds.has(o.id)),
+    () => retailOrders.filter((o) =>
+      deliveredIds.has(o.id) || archivedIds.has(o.id) ||
+      !INBOX_PENDING_STATUSES.includes(o.production_status)
+    ),
     [retailOrders, deliveredIds, archivedIds]
   );
 
