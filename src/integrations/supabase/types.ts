@@ -1652,6 +1652,8 @@ export type Database = {
           gel_color: string | null
           id: string
           ink_color: string | null
+          inventory_archived_at: string | null
+          inventory_archived_by: string | null
           invoice_amount: number | null
           invoice_date: string | null
           invoice_file_url: string | null
@@ -1706,6 +1708,8 @@ export type Database = {
           gel_color?: string | null
           id?: string
           ink_color?: string | null
+          inventory_archived_at?: string | null
+          inventory_archived_by?: string | null
           invoice_amount?: number | null
           invoice_date?: string | null
           invoice_file_url?: string | null
@@ -1760,6 +1764,8 @@ export type Database = {
           gel_color?: string | null
           id?: string
           ink_color?: string | null
+          inventory_archived_at?: string | null
+          inventory_archived_by?: string | null
           invoice_amount?: number | null
           invoice_date?: string | null
           invoice_file_url?: string | null

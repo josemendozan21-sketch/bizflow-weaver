@@ -167,30 +167,46 @@ const WholesaleOrdersInbox = () => {
   const [kitQuantities, setKitQuantities] = useState<Record<string, string>>({});
   const [lineRows, setLineRows] = useState<Array<{ name: string; qty: string; stockItemId: string }>>([]);
 
-  const ARCHIVE_KEY = "inbox-archived-order-ids";
-  const [archivedIds, setArchivedIds] = useState<Set<string>>(() => {
-    try {
-      const raw = localStorage.getItem(ARCHIVE_KEY);
-      return new Set<string>(raw ? JSON.parse(raw) : []);
-    } catch {
-      return new Set<string>();
-    }
+  // Archivado compartido en el servidor (antes era localStorage y se descuadraba entre equipos)
+  useEffect(() => {
+    try { localStorage.removeItem("inbox-archived-order-ids"); } catch { /* noop */ }
+  }, []);
+
+  const { data: archivedIds = new Set<string>() } = useQuery({
+    queryKey: ["inbox-archived-orders"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("id")
+        .not("inventory_archived_at", "is", null)
+        .gte("created_at", "2026-05-15");
+      if (error) throw error;
+      return new Set<string>((data || []).map((r: { id: string }) => r.id));
+    },
+    refetchInterval: 15_000,
   });
-  const persistArchived = (next: Set<string>) => {
-    setArchivedIds(new Set(next));
-    try { localStorage.setItem(ARCHIVE_KEY, JSON.stringify(Array.from(next))); } catch {}
-  };
 
   const [confirmArchive, setConfirmArchive] = useState<{ id: string; clientName: string } | null>(null);
 
-  const archiveOrder = (id: string, clientName: string) => {
-    const next = new Set(archivedIds); next.add(id); persistArchived(next);
-    toast.success(`Pedido de ${clientName} movido a Entregados recientes.`);
+  const setArchived = async (id: string, archived: boolean, okMsg: string) => {
+    const { error } = await supabase
+      .from("orders")
+      .update({
+        inventory_archived_at: archived ? new Date().toISOString() : null,
+        inventory_archived_by: archived ? user?.id ?? null : null,
+      })
+      .eq("id", id);
+    if (error) {
+      toast.error("No se pudo actualizar: " + error.message);
+      return;
+    }
+    qc.invalidateQueries({ queryKey: ["inbox-archived-orders"] });
+    toast.success(okMsg);
   };
-  const unarchiveOrder = (id: string) => {
-    const next = new Set(archivedIds); next.delete(id); persistArchived(next);
-    toast.success("Pedido restaurado a la bandeja.");
-  };
+
+  const archiveOrder = (id: string, clientName: string) =>
+    setArchived(id, true, `Pedido de ${clientName} movido a Entregados recientes.`);
+  const unarchiveOrder = (id: string) => setArchived(id, false, "Pedido restaurado a la bandeja.");
 
   const isSweatspotKit = delivering?.order.brand === "sweatspot" && delivering?.target === "estampacion";
   const activeKit = useMemo(
