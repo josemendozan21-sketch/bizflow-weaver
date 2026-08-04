@@ -44,6 +44,11 @@ const ACTIVE_STATUSES = [
   "dosificacion", "sellado", "recorte", "empaque", "listo",
 ];
 
+// Solo estos estados siguen pendientes de revisión por Inventarios.
+// Cualquier otro (ya en alguna etapa de producción, listo, despachado o entregado)
+// no debe aparecer en la bandeja de reserva/despacho.
+const INBOX_PENDING_STATUSES = ["pendiente", "diseno"];
+
 type Target = "estampacion" | "produccion" | "logistica" | "terminado";
 
 const TARGET_LABEL: Record<Target, string> = {
@@ -376,24 +381,40 @@ const WholesaleOrdersInbox = () => {
   };
 
   const pending = useMemo(
-    () => orders.filter((o) => !deliveredIds.has(o.id) && !archivedIds.has(o.id) && !inProductionIds.has(o.id)),
+    () => orders.filter((o) =>
+      !deliveredIds.has(o.id) && !archivedIds.has(o.id) && !inProductionIds.has(o.id) &&
+      INBOX_PENDING_STATUSES.includes(o.production_status)
+    ),
     [orders, deliveredIds, archivedIds, inProductionIds]
   );
   const inProduction = useMemo(
-    () => orders.filter((o) => inProductionIds.has(o.id) && !deliveredIds.has(o.id) && !archivedIds.has(o.id)),
+    () => orders.filter((o) =>
+      (inProductionIds.has(o.id) ||
+        (ACTIVE_STATUSES.includes(o.production_status) && !INBOX_PENDING_STATUSES.includes(o.production_status)))
+      && !deliveredIds.has(o.id) && !archivedIds.has(o.id)
+    ),
     [orders, inProductionIds, deliveredIds, archivedIds]
   );
   const delivered = useMemo(
-    () => orders.filter((o) => deliveredIds.has(o.id) || archivedIds.has(o.id)),
+    () => orders.filter((o) =>
+      deliveredIds.has(o.id) || archivedIds.has(o.id) ||
+      (!ACTIVE_STATUSES.includes(o.production_status) && !inProductionIds.has(o.id))
+    ),
     [orders, deliveredIds, archivedIds]
   );
 
   const pendingRetail = useMemo(
-    () => retailOrders.filter((o) => !deliveredIds.has(o.id) && !archivedIds.has(o.id)),
+    () => retailOrders.filter((o) =>
+      !deliveredIds.has(o.id) && !archivedIds.has(o.id) &&
+      INBOX_PENDING_STATUSES.includes(o.production_status)
+    ),
     [retailOrders, deliveredIds, archivedIds]
   );
   const deliveredRetail = useMemo(
-    () => retailOrders.filter((o) => deliveredIds.has(o.id) || archivedIds.has(o.id)),
+    () => retailOrders.filter((o) =>
+      deliveredIds.has(o.id) || archivedIds.has(o.id) ||
+      !INBOX_PENDING_STATUSES.includes(o.production_status)
+    ),
     [retailOrders, deliveredIds, archivedIds]
   );
 
