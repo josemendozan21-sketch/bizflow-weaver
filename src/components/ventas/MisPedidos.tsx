@@ -21,6 +21,7 @@ import { StampingApprovals } from "./StampingApprovals";
 import { useAuth } from "@/contexts/AuthContext";
 import { PaymentsList } from "./PaymentsList";
 import { AddPaymentDialog } from "./AddPaymentDialog";
+import { PendingProofPanel } from "./PendingProofPanel";
 
 const STAGE_ORDER = [
   "pendiente",
@@ -332,6 +333,8 @@ export function MisPedidos() {
           </SelectContent>
         </Select>
       </div>
+
+      <PendingProofPanel orders={filteredOrders} isAdmin={isAdmin} />
 
       <Tabs value={activeTab} onValueChange={(v) => { setHasUserSelectedTab(true); setActiveTab(v as OrderCategory); }}>
         <TabsList className="flex flex-wrap h-auto">
