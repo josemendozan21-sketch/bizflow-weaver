@@ -201,15 +201,28 @@ export async function requestProductionForOrder(params: {
     }
   }
 
-  await supabase.from("notifications").insert({
-    target_role: "produccion",
-    title: "Nueva orden de producción",
-    message:
-      `Inventarios solicitó producir ${order.quantity} uds de "${order.product}" para el pedido de ${order.client_name}.` +
-      (params.note ? ` Obs: ${params.note}` : ""),
-    type: "info",
-    reference_id: order.id,
-  } as never);
+  await supabase.from("notifications").insert([
+    {
+      target_role: "produccion",
+      title: "Nueva orden de producción",
+      message:
+        `Inventarios solicitó producir ${order.quantity} uds de "${order.product}" para el pedido de ${order.client_name}.` +
+        (params.note ? ` Obs: ${params.note}` : ""),
+      type: "info",
+      reference_id: order.id,
+    },
+    {
+      // El pedido entra a Estampación siempre: pueden avanzar con la muestra
+      // mientras Inventarios entrega los cuerpos para el pedido completo.
+      target_role: "estampacion",
+      title: "Pedido en camino (muestra)",
+      message:
+        `Pedido de ${order.client_name}: ${order.quantity} uds de "${order.product}". ` +
+        `Puedes avanzar con la muestra; los cuerpos están en producción.`,
+      type: "info",
+      reference_id: order.id,
+    },
+  ] as never);
 
   return po;
 }
