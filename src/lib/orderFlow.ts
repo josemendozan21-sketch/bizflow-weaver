@@ -186,6 +186,15 @@ export async function requestProductionForOrder(params: {
   const po = await ensureProductionOrder(order, { needsCuerpos: true });
 
   if (order.brand !== "sweatspot") {
+    // El producto manda: si la referencia dice "térmica/calor" siempre es térmico,
+    // sin importar el valor por defecto del selector.
+    const tipo = isThermic(order.product) ? "calor" : (params.tipoPlastico ?? "frio");
+    const tipoLabel = tipo === "calor" ? "Térmico" : "Frío";
+    const baseRef = (order.product || "")
+      .replace(/\s*\((Frío|Frio|Calor|Térmico|Termico)\)\s*$/i, "")
+      .replace(/\s*(t[eé]rmic[oa]s?|fr[ií][oa]s?)\s*$/i, "")
+      .trim();
+    const canonicalRef = `${baseRef} (${tipoLabel})`;
     const { data: existingTask } = await supabase
       .from("body_production_tasks")
       .select("id")
@@ -194,9 +203,9 @@ export async function requestProductionForOrder(params: {
 
     if (!existingTask) {
       const { error } = await supabase.from("body_production_tasks").insert({
-        referencia: order.product,
+        referencia: canonicalRef,
         unidades: order.quantity,
-        tipo_plastico: params.tipoPlastico ?? (isThermic(order.product) ? "calor" : "frio"),
+        tipo_plastico: tipo,
         status: "pendiente",
         order_id: order.id,
         production_order_id: po.id,
