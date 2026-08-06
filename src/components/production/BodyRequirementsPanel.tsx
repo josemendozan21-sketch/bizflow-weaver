@@ -284,7 +284,7 @@ export function BodyRequirementsPanel({ references, orders, bodyStock, stockItem
               )}
               {selected?.referencia}
               <Badge variant="outline" className="text-[10px]">
-                {selectedTipo === "frio" ? "Frío" : "Calor"}
+                {selectedTipo === "frio" ? "Frío" : "Térmico"}
               </Badge>
             </DialogTitle>
             <DialogDescription>

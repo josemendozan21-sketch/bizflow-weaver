@@ -50,7 +50,7 @@ const TipoCard = ({
 }) => {
   const [openKey, setOpenKey] = useState<string | null>(null);
   const Icon = tipo === "frio" ? Snowflake : Thermometer;
-  const label = tipo === "frio" ? "Frío" : "Calor";
+  const label = tipo === "frio" ? "Frío" : "Térmico";
   const total = groups.reduce((s, g) => s + g.totalUnidades, 0);
   const accent = tipo === "frio" ? "text-sky-600" : "text-orange-600";
 
