@@ -89,7 +89,7 @@ export function RollCutsView() {
           <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos los tipos</SelectItem>
-            <SelectItem value="calor">Calor</SelectItem>
+            <SelectItem value="calor">Térmico</SelectItem>
             <SelectItem value="frio">Frío</SelectItem>
           </SelectContent>
         </Select>
@@ -128,7 +128,7 @@ export function RollCutsView() {
                     <Badge variant={statusVariant[r.status]}>{statusLabel[r.status]}</Badge>
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {r.tipo === "calor" ? "Calor" : "Frío"} · {r.medida_cm} cm · cortó {r.cortado_por} · {fmt(r.cortado_at)}
+                    {r.tipo === "calor" ? "Térmico" : "Frío"} · {r.medida_cm} cm · cortó {r.cortado_por} · {fmt(r.cortado_at)}
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-2">

@@ -73,7 +73,7 @@ export function CreateRollCutDialog({ open, onClose, onSubmit }: Props) {
               <Select value={tipo} onValueChange={(v) => setTipo(v as RollTipo)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="calor">Calor</SelectItem>
+                  <SelectItem value="calor">Térmico</SelectItem>
                   <SelectItem value="frio">Frío</SelectItem>
                 </SelectContent>
               </Select>

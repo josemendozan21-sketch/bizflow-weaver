@@ -28,7 +28,7 @@ export function StartRollUsageDialog({ roll, onClose, onSubmit }: Props) {
         <DialogHeader>
           <DialogTitle>Iniciar uso — {roll.code}</DialogTitle>
           <DialogDescription>
-            {roll.tipo === "calor" ? "Calor" : "Frío"} · {roll.medida_cm} cm · peso inicial {roll.peso_inicial_g} g
+            {roll.tipo === "calor" ? "Térmico" : "Frío"} · {roll.medida_cm} cm · peso inicial {roll.peso_inicial_g} g
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
