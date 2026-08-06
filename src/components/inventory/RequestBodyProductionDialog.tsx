@@ -23,9 +23,16 @@ const RequestBodyProductionDialog = () => {
   const [submitting, setSubmitting] = useState(false);
   const { stockItems } = useInventory();
 
+  const isTermico = (pt?: string | null) => /calor|t[eé]rmico/i.test(pt || "");
+
   const cuerpos = stockItems.filter(
-    (i) => i.brand === brand && i.category === "cuerpos_referencias"
+    (i) =>
+      i.brand === brand &&
+      i.category === "cuerpos_referencias" &&
+      (tipoPlastico === "calor" ? isTermico(i.product_type) : !isTermico(i.product_type))
   );
+
+  const tipoLabel = tipoPlastico === "calor" ? "Térmico" : "Frío";
 
   const submit = async () => {
     if (!referencia || !unidades || Number(unidades) <= 0) {
@@ -35,7 +42,7 @@ const RequestBodyProductionDialog = () => {
     setSubmitting(true);
     const { error } = await supabase.from("body_production_tasks").insert({
       tipo_plastico: tipoPlastico,
-      referencia,
+      referencia: `${referencia} (${tipoLabel})`,
       unidades: Number(unidades),
       status: "pendiente",
     } as any);
@@ -49,7 +56,7 @@ const RequestBodyProductionDialog = () => {
     await supabase.from("notifications").insert({
       target_role: "produccion",
       title: "Nueva solicitud de cuerpos",
-      message: `Inventarios solicita producir ${unidades} uds de "${referencia}" (${brand}, ${tipoPlastico})${notas ? `. Notas: ${notas}` : ""}`,
+      message: `Inventarios solicita producir ${unidades} uds de "${referencia}" (${brand}, ${tipoLabel})${notas ? `. Notas: ${notas}` : ""}`,
       type: "info",
     } as any);
 
@@ -88,11 +95,11 @@ const RequestBodyProductionDialog = () => {
           </div>
           <div>
             <Label>Tipo de plástico</Label>
-            <Select value={tipoPlastico} onValueChange={setTipoPlastico}>
+            <Select value={tipoPlastico} onValueChange={(v) => { setTipoPlastico(v); setReferencia(""); }}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="frio">Frío</SelectItem>
-                <SelectItem value="caliente">Caliente</SelectItem>
+                <SelectItem value="calor">Térmico</SelectItem>
               </SelectContent>
             </Select>
           </div>
