@@ -1,0 +1,3 @@
+CREATE POLICY "Inventarios can view production orders" ON public.production_orders FOR SELECT TO authenticated USING (has_role(auth.uid(), 'inventarios'::app_role));
+CREATE POLICY "Inventarios can create production orders" ON public.production_orders FOR INSERT TO authenticated WITH CHECK (has_role(auth.uid(), 'inventarios'::app_role));
+CREATE POLICY "Inventarios can update production orders" ON public.production_orders FOR UPDATE TO authenticated USING (has_role(auth.uid(), 'inventarios'::app_role)) WITH CHECK (has_role(auth.uid(), 'inventarios'::app_role));
