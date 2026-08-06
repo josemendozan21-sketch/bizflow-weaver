@@ -116,9 +116,10 @@ export default function QuickMovementForm() {
       setSubmitting(true);
       const ptRaw = `${selected.product_type || ""} ${selected.name || ""}`;
       const tipoPlastico = /calor|t[eé]rmico/i.test(ptRaw) ? "calor" : "frio";
+      const tipoLabel = tipoPlastico === "calor" ? "Térmico" : "Frío";
       const { error } = await supabase.from("body_production_tasks").insert({
         tipo_plastico: tipoPlastico,
-        referencia: selected.name,
+        referencia: `${selected.name} (${tipoLabel})`,
         unidades: qty,
         status: "pendiente",
       } as any);
