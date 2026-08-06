@@ -114,7 +114,8 @@ export default function QuickMovementForm() {
         return toast.error("Solo se puede solicitar cuerpos o producto terminado");
       }
       setSubmitting(true);
-      const tipoPlastico = (selected.product_type || "").toLowerCase().includes("calor") ? "calor" : "frio";
+      const ptRaw = `${selected.product_type || ""} ${selected.name || ""}`;
+      const tipoPlastico = /calor|t[eé]rmico/i.test(ptRaw) ? "calor" : "frio";
       const { error } = await supabase.from("body_production_tasks").insert({
         tipo_plastico: tipoPlastico,
         referencia: selected.name,
