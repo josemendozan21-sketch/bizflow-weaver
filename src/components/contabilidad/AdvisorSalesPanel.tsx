@@ -26,11 +26,15 @@ export default function AdvisorSalesPanel({ orders }: Props) {
   const [dateTo, setDateTo] = useState<string>("");
   const [advisorFilter, setAdvisorFilter] = useState<string>("__all__");
   const [paymentFilter, setPaymentFilter] = useState<"todos" | "pagados" | "pendientes">("todos");
+  const [dateBasis, setDateBasis] = useState<"pedido" | "factura">("pedido");
+
+  const refDate = (o: Order) =>
+    dateBasis === "factura" ? o.invoice_date || o.created_at : o.created_at;
 
   const years = useMemo(() => {
     const set = new Set<number>();
     orders.forEach((o) => {
-      const d = o.invoice_date || o.created_at;
+      const d = o.created_at;
       if (d) set.add(new Date(d).getFullYear());
     });
     set.add(now.getFullYear());
@@ -53,7 +57,7 @@ export default function AdvisorSalesPanel({ orders }: Props) {
       const start = startOfMonth(new Date(year, month, 1));
       const end = endOfMonth(new Date(year, month, 1));
       list = list.filter((o) => {
-        const ref = o.invoice_date || o.created_at;
+        const ref = refDate(o);
         if (!ref) return false;
         const d = typeof ref === "string" ? parseISO(ref) : new Date(ref);
         return isWithinInterval(d, { start, end });
@@ -62,7 +66,7 @@ export default function AdvisorSalesPanel({ orders }: Props) {
       const start = dateFrom ? parseISO(dateFrom) : new Date(0);
       const end = dateTo ? parseISO(dateTo + "T23:59:59") : new Date(8640000000000000);
       list = list.filter((o) => {
-        const ref = o.invoice_date || o.created_at;
+        const ref = refDate(o);
         if (!ref) return false;
         const d = typeof ref === "string" ? parseISO(ref) : new Date(ref);
         return d >= start && d <= end;
@@ -80,7 +84,7 @@ export default function AdvisorSalesPanel({ orders }: Props) {
     }
 
     return list;
-  }, [orders, year, month, scope, dateFrom, dateTo, advisorFilter, paymentFilter]);
+  }, [orders, year, month, scope, dateFrom, dateTo, advisorFilter, paymentFilter, dateBasis]);
 
   const summary = useMemo(() => {
     const map = new Map<
@@ -158,9 +162,18 @@ export default function AdvisorSalesPanel({ orders }: Props) {
                   : scope === "rango"
                   ? `Periodo: ${dateFrom || "inicio"} → ${dateTo || "hoy"}`
                   : "Periodo: Todos los pedidos"}
+                {" · "}
+                {dateBasis === "pedido" ? "por fecha de pedido" : "por fecha de factura"}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <Select value={dateBasis} onValueChange={(v) => setDateBasis(v as "pedido" | "factura")}>
+                <SelectTrigger className="w-[170px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pedido">Fecha de pedido</SelectItem>
+                  <SelectItem value="factura">Fecha de factura</SelectItem>
+                </SelectContent>
+              </Select>
               <Select value={scope} onValueChange={(v) => setScope(v as "mes" | "rango" | "todo")}>
                 <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
