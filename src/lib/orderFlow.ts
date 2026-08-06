@@ -76,7 +76,7 @@ export async function findProductionOrder(orderId: string) {
  */
 export async function ensureProductionOrder(
   order: FlowOrder,
-  opts: { needsCuerpos: boolean }
+  opts: { needsCuerpos: boolean; keepOrderStatus?: boolean; sampleOnly?: boolean }
 ): Promise<{ id: string; created: boolean; stage: string }> {
   const existing = await findProductionOrder(order.id);
   if (existing) return { id: existing.id, created: false, stage: existing.current_stage };
@@ -99,7 +99,9 @@ export async function ensureProductionOrder(
     workflow_type: opts.needsCuerpos ? "full" : "short",
     stages,
     ink_color: order.ink_color ?? null,
-    observations: order.observations ?? null,
+    observations: opts.sampleOnly
+      ? `MUESTRA (sin entrega de cuerpos) — ${order.observations ?? ""}`.trim()
+      : order.observations ?? null,
     advisor_id: order.advisor_id ?? null,
     delivery_date: order.delivery_date ?? null,
     needs_cuerpos: opts.needsCuerpos,
@@ -128,10 +130,12 @@ export async function ensureProductionOrder(
     throw error;
   }
 
-  await supabase
-    .from("orders")
-    .update({ production_status: initialStage })
-    .eq("id", order.id);
+  if (!opts.keepOrderStatus) {
+    await supabase
+      .from("orders")
+      .update({ production_status: initialStage })
+      .eq("id", order.id);
+  }
 
   return { id: data.id as string, created: true, stage: initialStage };
 }
