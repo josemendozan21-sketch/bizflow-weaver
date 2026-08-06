@@ -232,10 +232,10 @@ export default function QuickMovementForm() {
                 <div>
                   <Label className="text-xs text-muted-foreground">Tipo</Label>
                   <Select value={magicalTipo} onValueChange={(v) => setMagicalTipo(v as any)}>
-                    <SelectTrigger><SelectValue placeholder="Frío o Calor" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Frío o Térmico" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="frio">Frío</SelectItem>
-                      <SelectItem value="calor">Calor / Térmico</SelectItem>
+                      <SelectItem value="calor">Térmico</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -263,7 +263,7 @@ export default function QuickMovementForm() {
                 <SelectItem key={it.id} value={it.id}>
                   {it.name}
                   {it.brand === "magical" && it.product_type
-                    ? ` · ${/calor/i.test(it.product_type) ? "Calor" : it.product_type}`
+                    ? ` · ${/calor|t[eé]rmico/i.test(it.product_type) ? "Térmico" : it.product_type}`
                     : ""}
                   {it.brand === "sweatspot"
                     ? ` · ${it.logo ? `Con logo${typeof it.logo === "string" && it.logo.toLowerCase() !== "sweatspot" ? ` (${it.logo})` : ""}` : "Sin logo"}`

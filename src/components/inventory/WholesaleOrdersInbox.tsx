@@ -1019,7 +1019,7 @@ const WholesaleOrdersInbox = () => {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="frio">Frío</SelectItem>
-                    <SelectItem value="calor">Calor</SelectItem>
+                    <SelectItem value="calor">Térmico</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

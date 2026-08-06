@@ -81,7 +81,7 @@ const STATUS_BADGE: Record<string, { label: string; variant: "secondary" | "defa
 
 const PLASTICO_OPTIONS = [
   { value: "frio", label: "Frío", icon: Snowflake },
-  { value: "calor", label: "Calor", icon: Thermometer },
+  { value: "calor", label: "Térmico", icon: Thermometer },
 ];
 
 /** Canonical product references used for suggestions in body production */
@@ -299,7 +299,7 @@ export const MagicalWarmersWorkflow = () => {
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">
-                        {task.tipo_plastico === "frio" ? "Frío" : "Calor"} — {task.referencia}
+                        {task.tipo_plastico === "frio" ? "Frío" : "Térmico"} — {task.referencia}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Estimado: {task.unidades} uds · creado {new Date(task.created_at).toLocaleDateString()}
@@ -361,7 +361,7 @@ export const MagicalWarmersWorkflow = () => {
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">
-                        {task.tipo_plastico === "frio" ? "Frío" : "Calor"} — {task.referencia}
+                        {task.tipo_plastico === "frio" ? "Frío" : "Térmico"} — {task.referencia}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {task.unidades} uds
@@ -503,7 +503,7 @@ export const MagicalWarmersWorkflow = () => {
             <div className="space-y-4">
               <div className="rounded-md border p-3 text-sm space-y-1">
                 <Row label="Referencia" value={finalizeTask.referencia} />
-                <Row label="Tipo" value={finalizeTask.tipo_plastico === "frio" ? "Frío" : "Calor"} />
+                <Row label="Tipo" value={finalizeTask.tipo_plastico === "frio" ? "Frío" : "Térmico"} />
                 <Row label="Estimado" value={`${finalizeTask.unidades} unidades`} />
               </div>
               <div className="space-y-2">

@@ -150,7 +150,7 @@ const CategorizedInventoryPanel = ({
     const isMagical = selectedBrand === "magical_warmers";
     const needsTipo = isMagical && (targetCategory === "cuerpos_referencias" || targetCategory === "producto_terminado");
     if (needsTipo && !newForm.tipo) {
-      toast.error("Selecciona si el producto es de Frío o de Calor (Térmico)");
+      toast.error("Selecciona si el producto es de Frío o Térmico");
       return;
     }
     // Canonical name: base WITHOUT suffix in stock_items (product_type carries the tipo).
@@ -544,7 +544,7 @@ const CategorizedInventoryPanel = ({
                                       className="gap-1.5"
                                       onClick={() => setNewForm({ ...newForm, tipo: "Térmico" })}
                                     >
-                                      <Flame className="h-4 w-4" /> Calor
+                                      <Flame className="h-4 w-4" /> Térmico
                                     </Button>
                                     <Button
                                       type="button"
