@@ -26,6 +26,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { OperatorPromptDialog } from "./OperatorPromptDialog";
 import { StageLogsList } from "./StageLogsList";
+import { ensureProductionOrder } from "@/lib/orderFlow";
 
 interface BodyStockItem {
   id: string;
@@ -51,6 +52,12 @@ interface PendingIntakeOrder {
   advisor_name: string | null;
   delivery_date: string | null;
   created_at: string;
+  ink_color?: string | null;
+  gel_color?: string | null;
+  silicone_color?: string | null;
+  logo_url?: string | null;
+  observations?: string | null;
+  advisor_id?: string | null;
 }
 
 const STATUS_BADGE: Record<string, { label: string; variant: "secondary" | "default" | "outline" }> = {
@@ -61,6 +68,38 @@ const STATUS_BADGE: Record<string, { label: string; variant: "secondary" | "defa
 
 export const EstampacionProductionView = () => {
   const { orders: allOrders, stageLogs, isLoading, updateStageStatus, advanceStage } = useProductionOrders();
+  const qc = useQueryClient();
+  const [receivingId, setReceivingId] = useState<string | null>(null);
+
+  const receiveForSample = async (o: PendingIntakeOrder) => {
+    setReceivingId(o.id);
+    try {
+      await ensureProductionOrder(
+        {
+          id: o.id,
+          brand: o.brand,
+          client_name: o.client_name,
+          product: o.product,
+          quantity: o.quantity,
+          ink_color: o.ink_color,
+          gel_color: o.gel_color,
+          silicone_color: o.silicone_color,
+          logo_url: o.logo_url,
+          observations: o.observations,
+          advisor_id: o.advisor_id,
+          delivery_date: o.delivery_date,
+        },
+        { needsCuerpos: true, keepOrderStatus: true, sampleOnly: true }
+      );
+      toast.success("Pedido recibido en estampación para muestra. Inventarios sigue pendiente de ingresarlo.");
+      qc.invalidateQueries({ queryKey: ["production_orders"] });
+      qc.invalidateQueries({ queryKey: ["orders_pending_intake_estampacion"] });
+    } catch (e) {
+      toast.error((e as Error).message || "No se pudo recibir el pedido");
+    } finally {
+      setReceivingId(null);
+    }
+  };
 
   const [searchQuery, setSearchQuery] = useState("");
   const [operatorPrompt, setOperatorPrompt] = useState<
@@ -116,7 +155,9 @@ export const EstampacionProductionView = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, client_name, brand, product, quantity, advisor_name, delivery_date, created_at, production_status")
+        .select(
+          "id, client_name, brand, product, quantity, advisor_name, delivery_date, created_at, production_status, ink_color, gel_color, silicone_color, logo_url, observations, advisor_id"
+        )
         .eq("production_status", "pendiente")
         .is("inventory_archived_at", null)
         .order("created_at", { ascending: false });
@@ -193,8 +234,9 @@ export const EstampacionProductionView = () => {
         <Alert className="border-blue-300 bg-blue-50 text-blue-800">
           <Info className="h-4 w-4" />
           <AlertDescription className="text-xs">
-            Pedidos con logo aprobado que aún no han sido ingresados a producción por Inventarios
-            (reservar stock o mandar a producir cuerpos). Todavía no puedes estamparlos.
+            Pedidos con logo aprobado que aún no han sido ingresados por Inventarios. Puedes
+            recibirlos para <strong>hacer la muestra y enviarla a aprobación</strong>; no implica
+            entrega de cuerpos ni descuento de inventario.
           </AlertDescription>
         </Alert>
         {pendingIntake.length === 0 ? (
@@ -216,6 +258,19 @@ export const EstampacionProductionView = () => {
                   {o.delivery_date && (
                     <Row label="Fecha de entrega" value={new Date(o.delivery_date).toLocaleDateString()} />
                   )}
+                  <Button
+                    size="sm"
+                    className="w-full mt-2"
+                    disabled={receivingId === o.id}
+                    onClick={() => receiveForSample(o)}
+                  >
+                    {receivingId === o.id ? (
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    ) : (
+                      <Play className="h-3 w-3 mr-1" />
+                    )}
+                    Recibir para muestra
+                  </Button>
                 </CardContent>
               </Card>
             ))}
