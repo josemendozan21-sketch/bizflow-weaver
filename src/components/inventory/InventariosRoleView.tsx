@@ -7,6 +7,7 @@ import MateriaPrimaPanel from "@/components/inventory/MateriaPrimaPanel";
 import WholesaleOrdersInbox from "@/components/inventory/WholesaleOrdersInbox";
 import QuickMovementForm from "@/components/inventory/QuickMovementForm";
 import MovementHistoryTable from "@/components/inventory/MovementHistoryTable";
+import ProductionMovementHistory from "@/components/production/ProductionMovementHistory";
 import WeeklyInventoryExport from "@/components/inventory/WeeklyInventoryExport";
 import InventoryDashboardSummary from "@/components/inventory/InventoryDashboardSummary";
 import Punto92WarehousePanel from "@/components/inventory/Punto92WarehousePanel";
@@ -94,8 +95,9 @@ const InventariosRoleView = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="historial" className="mt-4">
+        <TabsContent value="historial" className="mt-4 space-y-4">
           <MovementHistoryTable />
+          <ProductionMovementHistory />
         </TabsContent>
 
         <TabsContent value="materia_prima" className="mt-4">
