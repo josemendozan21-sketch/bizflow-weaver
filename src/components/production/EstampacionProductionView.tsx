@@ -51,6 +51,12 @@ interface PendingIntakeOrder {
   advisor_name: string | null;
   delivery_date: string | null;
   created_at: string;
+  ink_color?: string | null;
+  gel_color?: string | null;
+  silicone_color?: string | null;
+  logo_url?: string | null;
+  observations?: string | null;
+  advisor_id?: string | null;
 }
 
 const STATUS_BADGE: Record<string, { label: string; variant: "secondary" | "default" | "outline" }> = {
@@ -116,7 +122,9 @@ export const EstampacionProductionView = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, client_name, brand, product, quantity, advisor_name, delivery_date, created_at, production_status")
+        .select(
+          "id, client_name, brand, product, quantity, advisor_name, delivery_date, created_at, production_status, ink_color, gel_color, silicone_color, logo_url, observations, advisor_id"
+        )
         .eq("production_status", "pendiente")
         .is("inventory_archived_at", null)
         .order("created_at", { ascending: false });
