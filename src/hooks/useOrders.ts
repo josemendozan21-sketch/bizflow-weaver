@@ -112,7 +112,12 @@ export function useOrders() {
     refetchOnWindowFocus: false,
     placeholderData: (prev) => prev,
     queryFn: async () => {
-      let query = supabase.from("orders").select("*").order("created_at", { ascending: false });
+      let query = supabase
+        .from("orders")
+        .select("*")
+        .order("created_at", { ascending: false })
+        // Evita el tope por defecto de 1000 filas: los asesores deben ver todo su historial
+        .range(0, 9999);
       // Para asesores, filtramos explícitamente por advisor_id (coincide con RLS)
       // y evitamos depender solo de las RLS, que pueden devolver [] si el token está rotando.
       if (role === "asesor_comercial" && user?.id) {
