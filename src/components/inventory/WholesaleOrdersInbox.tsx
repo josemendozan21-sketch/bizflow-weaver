@@ -172,6 +172,14 @@ const WholesaleOrdersInbox = () => {
   const [kitQuantities, setKitQuantities] = useState<Record<string, string>>({});
   const [lineRows, setLineRows] = useState<Array<{ name: string; qty: string; stockItemId: string }>>([]);
 
+  // El tipo de plástico se deduce del producto del pedido (evita que una referencia
+  // térmica se envíe a producción como fría por dejar el valor por defecto).
+  useEffect(() => {
+    if (!delivering) return;
+    const txt = `${delivering.order.product || ""}`;
+    setPlastico(/t[eé]rmic|calor/i.test(txt) ? "calor" : "frio");
+  }, [delivering]);
+
   // Archivado compartido en el servidor (antes era localStorage y se descuadraba entre equipos)
   useEffect(() => {
     try { localStorage.removeItem("inbox-archived-order-ids"); } catch { /* noop */ }
