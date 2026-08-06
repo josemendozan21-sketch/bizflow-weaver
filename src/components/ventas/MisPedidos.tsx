@@ -176,8 +176,16 @@ export function MisPedidos() {
   const [saleTypeFilter, setSaleTypeFilter] = useState<string>("all");
   const [advisorFilter, setAdvisorFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState<string>("all"); // all | 30 | 90 | old
+  const [monthFilter, setMonthFilter] = useState<string>("all"); // all | YYYY-MM
 
   const isAdmin = role === "admin";
+
+  // Meses disponibles según los pedidos cargados (historial completo)
+  const monthOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const o of orders) set.add(o.created_at.slice(0, 7));
+    return Array.from(set).sort((a, b) => b.localeCompare(a));
+  }, [orders]);
 
   const advisorOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -217,6 +225,7 @@ export function MisPedidos() {
       if (brandFilter !== "all" && o.brand !== brandFilter) return false;
       if (saleTypeFilter !== "all" && o.sale_type !== saleTypeFilter) return false;
       if (isAdmin && advisorFilter !== "all" && o.advisor_id !== advisorFilter) return false;
+      if (monthFilter !== "all" && o.created_at.slice(0, 7) !== monthFilter) return false;
       if (dateRange !== "all") {
         const created = new Date(o.created_at).getTime();
         const ageMs = now - created;
@@ -232,7 +241,7 @@ export function MisPedidos() {
         (o.advisor_name || "").toLowerCase().includes(q)
       );
     });
-  }, [orders, search, brandFilter, saleTypeFilter, advisorFilter, dateRange, isAdmin]);
+  }, [orders, search, brandFilter, saleTypeFilter, advisorFilter, dateRange, monthFilter, isAdmin]);
 
   const groups = useMemo(() => groupOrders(filteredOrders), [filteredOrders]);
 
@@ -330,6 +339,24 @@ export function MisPedidos() {
             <SelectItem value="30">Últimos 30 días</SelectItem>
             <SelectItem value="90">Últimos 90 días</SelectItem>
             <SelectItem value="old">Pedidos antiguos (+90 días)</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={monthFilter} onValueChange={setMonthFilter}>
+          <SelectTrigger className="w-[190px]"><SelectValue placeholder="Mes" /></SelectTrigger>
+          <SelectContent className="max-h-72">
+            <SelectItem value="all">Todos los meses</SelectItem>
+            {monthOptions.map((m) => {
+              const [y, mo] = m.split("-");
+              const label = new Date(Number(y), Number(mo) - 1, 1).toLocaleDateString("es-CO", {
+                month: "long",
+                year: "numeric",
+              });
+              return (
+                <SelectItem key={m} value={m}>
+                  {label.charAt(0).toUpperCase() + label.slice(1)}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       </div>
