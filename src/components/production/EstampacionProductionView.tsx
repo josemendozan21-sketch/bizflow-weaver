@@ -42,6 +42,17 @@ interface LogoRequestInfo {
   client_name: string;
 }
 
+interface PendingIntakeOrder {
+  id: string;
+  client_name: string;
+  brand: string;
+  product: string;
+  quantity: number;
+  advisor_name: string | null;
+  delivery_date: string | null;
+  created_at: string;
+}
+
 const STATUS_BADGE: Record<string, { label: string; variant: "secondary" | "default" | "outline" }> = {
   pendiente: { label: "Pendiente", variant: "secondary" },
   en_proceso: { label: "En proceso", variant: "default" },
@@ -98,6 +109,36 @@ export const EstampacionProductionView = () => {
   const bodyStock = bodyStockQuery.data ?? [];
   const logoRequests = logoRequestsQuery.data ?? [];
 
+  // Pedidos con logo aprobado que aún no fueron ingresados a producción por Inventarios.
+  // Antes quedaban "invisibles": solo aparecían en Diseño de Logos.
+  const pendingIntakeQuery = useQuery({
+    queryKey: ["orders_pending_intake_estampacion"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("id, client_name, brand, product, quantity, advisor_name, delivery_date, created_at, production_status")
+        .eq("production_status", "pendiente")
+        .is("inventory_archived_at", null)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as PendingIntakeOrder[];
+    },
+  });
+
+  const approvedLogoClients = new Set(
+    logoRequests
+      .filter((lr) => lr.status === "aprobado")
+      .map((lr) => lr.client_name.trim().toLowerCase())
+  );
+  const clientsWithProductionOrder = new Set(
+    allOrders.map((o) => o.client_name.trim().toLowerCase())
+  );
+  const pendingIntake = (pendingIntakeQuery.data ?? []).filter(
+    (o) =>
+      approvedLogoClients.has(o.client_name.trim().toLowerCase()) &&
+      !clientsWithProductionOrder.has(o.client_name.trim().toLowerCase())
+  );
+
   if (isLoading) {
     return <div className="space-y-4">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-32 w-full" />)}</div>;
   }
@@ -111,8 +152,9 @@ export const EstampacionProductionView = () => {
 
   return (
     <Tabs defaultValue="ordenes" className="space-y-4">
-      <TabsList className="grid w-full grid-cols-3">
+      <TabsList className="grid w-full grid-cols-4">
         <TabsTrigger value="ordenes">Órdenes ({filteredOrders.length})</TabsTrigger>
+        <TabsTrigger value="por_ingresar">Por ingresar ({pendingIntake.length})</TabsTrigger>
         <TabsTrigger value="frios">Productos Fríos ({coldStock.length})</TabsTrigger>
         <TabsTrigger value="termicos">Productos Térmicos ({thermalStock.length})</TabsTrigger>
       </TabsList>
@@ -142,6 +184,40 @@ export const EstampacionProductionView = () => {
                 onStart={() => setOperatorPrompt({ mode: "start", orderId: order.id, clientName: order.client_name })}
                 onFinish={() => setOperatorPrompt({ mode: "finish", orderId: order.id, clientName: order.client_name })}
               />
+            ))}
+          </div>
+        )}
+      </TabsContent>
+
+      <TabsContent value="por_ingresar" className="space-y-3">
+        <Alert className="border-blue-300 bg-blue-50 text-blue-800">
+          <Info className="h-4 w-4" />
+          <AlertDescription className="text-xs">
+            Pedidos con logo aprobado que aún no han sido ingresados a producción por Inventarios
+            (reservar stock o mandar a producir cuerpos). Todavía no puedes estamparlos.
+          </AlertDescription>
+        </Alert>
+        {pendingIntake.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">
+            No hay pedidos pendientes de ingreso.
+          </p>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {pendingIntake.map((o) => (
+              <Card key={o.id}>
+                <CardContent className="p-3 space-y-1 text-xs">
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold text-sm">{o.client_name}</p>
+                    <Badge variant="secondary">Esperando Inventarios</Badge>
+                  </div>
+                  <Row label="Producto" value={o.product} />
+                  <Row label="Cantidad" value={`${o.quantity} uds`} />
+                  <Row label="Asesor" value={o.advisor_name || "—"} />
+                  {o.delivery_date && (
+                    <Row label="Fecha de entrega" value={new Date(o.delivery_date).toLocaleDateString()} />
+                  )}
+                </CardContent>
+              </Card>
             ))}
           </div>
         )}
