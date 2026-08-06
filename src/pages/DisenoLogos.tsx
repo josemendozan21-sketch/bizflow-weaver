@@ -42,6 +42,7 @@ const DisenoLogos = () => {
   // Estampacion only sees the Aprobación tab (read-only)
   if (isEstampacion) {
     const aprobadosList = filteredForEstampacion.filter((r) => r.status === "aprobado");
+    const finalizadosList = filteredForEstampacion.filter((r) => r.status === "finalizado");
     return (
       <div className="space-y-6">
         <div>
@@ -57,10 +58,18 @@ const DisenoLogos = () => {
             className="pl-9"
           />
         </div>
-        <div className="text-sm text-muted-foreground">
-          {aprobadosList.length} pendiente(s) por estampar
-        </div>
-        <AprobacionAsesor requests={filteredForEstampacion} />
+        <Tabs defaultValue="por_estampar">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="por_estampar">Por estampar ({aprobadosList.length})</TabsTrigger>
+            <TabsTrigger value="finalizados">Finalizados ({finalizadosList.length})</TabsTrigger>
+          </TabsList>
+          <TabsContent value="por_estampar">
+            <AprobacionAsesor requests={filteredForEstampacion} />
+          </TabsContent>
+          <TabsContent value="finalizados">
+            <DisenosFinalizados requests={filteredForEstampacion} />
+          </TabsContent>
+        </Tabs>
       </div>
     );
   }
