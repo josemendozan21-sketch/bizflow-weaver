@@ -245,7 +245,12 @@ export const EstampacionProductionView = () => {
           </p>
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
-            {pendingIntake.map((o) => (
+            {pendingIntake.map((o) => {
+              const lr = logoRequests.find(
+                (l) => l.client_name.trim().toLowerCase() === o.client_name.trim().toLowerCase()
+              );
+              const lrUrl = lr?.adjusted_logo_url || lr?.original_logo_url || o.logo_url || null;
+              return (
               <Card key={o.id}>
                 <CardContent className="p-3 space-y-1 text-xs">
                   <div className="flex items-center justify-between">
@@ -257,6 +262,33 @@ export const EstampacionProductionView = () => {
                   <Row label="Asesor" value={o.advisor_name || "—"} />
                   {o.delivery_date && (
                     <Row label="Fecha de entrega" value={new Date(o.delivery_date).toLocaleDateString()} />
+                  )}
+                  {(o.ink_color || o.gel_color || o.silicone_color) && (
+                    <>
+                      {o.ink_color && <Row label="Color de tinta" value={o.ink_color} />}
+                      {o.gel_color && <Row label="Color de gel" value={o.gel_color} />}
+                      {o.silicone_color && <Row label="Color de silicona" value={o.silicone_color} />}
+                    </>
+                  )}
+                  {o.observations && <Row label="Observaciones" value={o.observations} />}
+                  {lrUrl ? (
+                    <div className="rounded-md border p-2 space-y-2 mt-2">
+                      <p className="text-[11px] font-medium text-muted-foreground">
+                        Logo {lr?.adjusted_logo_url ? "(ajustado)" : "(original)"}
+                      </p>
+                      <img
+                        src={lrUrl}
+                        alt={`Logo ${o.client_name}`}
+                        className="max-h-24 w-full rounded border object-contain bg-white"
+                      />
+                      <a href={lrUrl} download target="_blank" rel="noopener noreferrer">
+                        <Button size="sm" variant="outline" className="w-full">
+                          <Download className="h-3 w-3 mr-1" /> Descargar logo
+                        </Button>
+                      </a>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground mt-2">Sin archivo de logo disponible.</p>
                   )}
                   <Button
                     size="sm"
@@ -273,7 +305,8 @@ export const EstampacionProductionView = () => {
                   </Button>
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
           </div>
         )}
       </TabsContent>
