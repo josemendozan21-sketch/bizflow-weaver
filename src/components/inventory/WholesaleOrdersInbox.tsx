@@ -414,14 +414,14 @@ const WholesaleOrdersInbox = () => {
   const pendingRetail = useMemo(
     () => retailOrders.filter((o) =>
       !deliveredIds.has(o.id) && !archivedIds.has(o.id) &&
-      INBOX_PENDING_STATUSES.includes(o.production_status)
+      ACTIVE_STATUSES.includes(o.production_status)
     ),
     [retailOrders, deliveredIds, archivedIds]
   );
   const deliveredRetail = useMemo(
     () => retailOrders.filter((o) =>
       deliveredIds.has(o.id) || archivedIds.has(o.id) ||
-      !INBOX_PENDING_STATUSES.includes(o.production_status)
+      !ACTIVE_STATUSES.includes(o.production_status)
     ),
     [retailOrders, deliveredIds, archivedIds]
   );
