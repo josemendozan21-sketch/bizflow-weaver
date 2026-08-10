@@ -274,20 +274,19 @@ const WholesaleOrdersInbox = () => {
     refetchInterval: 15_000,
   });
 
-  const { data: retailOrders = [], isLoading: loadingRetail } = useQuery({
-    queryKey: ["detal-orders-inbox"],
+  const { data: retailOrders = [], isLoading: loadingRetail, error: retailError } = useQuery({
+    queryKey: ["detal-orders-inbox-v2"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
         .select("id,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color")
-        .eq("sale_type", "menor")
-        .in("production_status", ACTIVE_STATUSES)
-        .gte("created_at", "2026-05-15")
+        .in("sale_type", ["menor", "detal"])
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as MayorOrder[];
     },
     refetchInterval: 15_000,
+    refetchOnMount: "always",
   });
 
   const { data: orderStates = { deliveredIds: new Set<string>(), producedIds: new Set<string>(), inProductionIds: new Set<string>() } } = useQuery({
@@ -837,6 +836,11 @@ const WholesaleOrdersInbox = () => {
             <CardContent>
               {loadingRetail ? (
                 <p className="text-center text-sm text-muted-foreground py-6">Cargando…</p>
+              ) : retailError ? (
+                <div className="text-center py-8 text-destructive">
+                  <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No se pudieron cargar los pedidos al detal.</p>
+                </div>
               ) : filterOrders(pendingRetail).length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
