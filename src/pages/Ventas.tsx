@@ -718,6 +718,9 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const form = e.target as HTMLFormElement;
     const fd = new FormData(form);
     const clientName = fd.get("mw_nombre") as string;
+    // Identifica todas las líneas creadas en un mismo envío del formulario,
+    // para que la validación anti-duplicados no bloquee líneas iguales.
+    const submissionId = crypto.randomUUID();
     const personalizacion = (fd.get("mw_personalizacion") as string) || "";
     const observacionesRaw = (fd.get("mw_observaciones") as string) || "";
     const observaciones = paymentChannel
@@ -865,6 +868,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           client_city: (fd.get("mw_ciudad") as string) || null,
           product: `Molde: ${moldeNombre}`,
           quantity: 1,
+          submission_id: submissionId,
           unit_price: moldeCostoNum,
           total_amount: moldeCostoNum,
           abono: moldeAbono,
@@ -1008,6 +1012,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           client_city: (fd.get("mw_ciudad") as string) || null,
           product: referencia,
           quantity,
+          submission_id: submissionId,
           unit_price: parseFloat(line.valorUnitario) || 0,
           total_amount: lineTotal,
           abono: abonoAmount,
