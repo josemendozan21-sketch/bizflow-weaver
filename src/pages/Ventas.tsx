@@ -1643,6 +1643,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     const fd = new FormData(form);
     const clientName = fd.get("ss_nombre") as string;
     const personalizacion = (fd.get("ss_personalizacion") as string) || "";
+    const submissionId = crypto.randomUUID();
     const observacionesRaw = (fd.get("ss_observaciones") as string) || "";
     const observaciones = ssPaymentChannel
       ? `Medio de pago: ${ssPaymentChannel}${observacionesRaw ? ` | ${observacionesRaw}` : ""}`
@@ -1803,6 +1804,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
           client_city: (fd.get("ss_ciudad") as string) || null,
           product: referencia,
           quantity,
+          submission_id: submissionId,
           unit_price: parseFloat(line.valorUnitario) || 0,
           total_amount: lineTotal,
           abono: abonoAmount,
