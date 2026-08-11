@@ -2353,6 +2353,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
     const fd = new FormData(form);
     const clientName = nombre.trim();
     const shippingAmount = parseFloat(shippingCost) || 0;
+    const submissionId = crypto.randomUUID();
 
     // Validate all lines have product selected
     for (const line of productLines) {
@@ -2463,6 +2464,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
             client_city: ciu || null,
             product: referencia,
             quantity,
+            submission_id: submissionId,
             total_amount: totalAmount,
             abono: line.isGift || paymentMethod === "pagado" || paymentProofUrl ? totalAmount : 0,
             advisor_id: user?.id || "",
