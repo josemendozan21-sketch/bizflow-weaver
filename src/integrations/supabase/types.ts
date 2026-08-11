@@ -1683,6 +1683,7 @@ export type Database = {
           silicone_color: string | null
           stamping_completed_at: string | null
           stamping_due_date: string | null
+          submission_id: string | null
           total_amount: number | null
           transportadora: string | null
           unit_price: number | null
@@ -1739,6 +1740,7 @@ export type Database = {
           silicone_color?: string | null
           stamping_completed_at?: string | null
           stamping_due_date?: string | null
+          submission_id?: string | null
           total_amount?: number | null
           transportadora?: string | null
           unit_price?: number | null
@@ -1795,6 +1797,7 @@ export type Database = {
           silicone_color?: string | null
           stamping_completed_at?: string | null
           stamping_due_date?: string | null
+          submission_id?: string | null
           total_amount?: number | null
           transportadora?: string | null
           unit_price?: number | null

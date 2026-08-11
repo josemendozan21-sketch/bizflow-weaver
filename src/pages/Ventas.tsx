@@ -718,6 +718,9 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const form = e.target as HTMLFormElement;
     const fd = new FormData(form);
     const clientName = fd.get("mw_nombre") as string;
+    // Identifica todas las líneas creadas en un mismo envío del formulario,
+    // para que la validación anti-duplicados no bloquee líneas iguales.
+    const submissionId = crypto.randomUUID();
     const personalizacion = (fd.get("mw_personalizacion") as string) || "";
     const observacionesRaw = (fd.get("mw_observaciones") as string) || "";
     const observaciones = paymentChannel
@@ -865,6 +868,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           client_city: (fd.get("mw_ciudad") as string) || null,
           product: `Molde: ${moldeNombre}`,
           quantity: 1,
+          submission_id: submissionId,
           unit_price: moldeCostoNum,
           total_amount: moldeCostoNum,
           abono: moldeAbono,
@@ -1008,6 +1012,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           client_city: (fd.get("mw_ciudad") as string) || null,
           product: referencia,
           quantity,
+          submission_id: submissionId,
           unit_price: parseFloat(line.valorUnitario) || 0,
           total_amount: lineTotal,
           abono: abonoAmount,
@@ -1638,6 +1643,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     const fd = new FormData(form);
     const clientName = fd.get("ss_nombre") as string;
     const personalizacion = (fd.get("ss_personalizacion") as string) || "";
+    const submissionId = crypto.randomUUID();
     const observacionesRaw = (fd.get("ss_observaciones") as string) || "";
     const observaciones = ssPaymentChannel
       ? `Medio de pago: ${ssPaymentChannel}${observacionesRaw ? ` | ${observacionesRaw}` : ""}`
@@ -1798,6 +1804,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
           client_city: (fd.get("ss_ciudad") as string) || null,
           product: referencia,
           quantity,
+          submission_id: submissionId,
           unit_price: parseFloat(line.valorUnitario) || 0,
           total_amount: lineTotal,
           abono: abonoAmount,
@@ -2346,6 +2353,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
     const fd = new FormData(form);
     const clientName = nombre.trim();
     const shippingAmount = parseFloat(shippingCost) || 0;
+    const submissionId = crypto.randomUUID();
 
     // Validate all lines have product selected
     for (const line of productLines) {
@@ -2456,6 +2464,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
             client_city: ciu || null,
             product: referencia,
             quantity,
+            submission_id: submissionId,
             total_amount: totalAmount,
             abono: line.isGift || paymentMethod === "pagado" || paymentProofUrl ? totalAmount : 0,
             advisor_id: user?.id || "",
