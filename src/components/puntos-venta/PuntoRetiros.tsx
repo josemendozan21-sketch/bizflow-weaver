@@ -60,6 +60,35 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
     .filter((w) => w.status === "pendiente" && w.movement_type === "consignacion")
     .reduce((a, b) => a + Number(b.amount), 0);
   const pendingTotal = pendingRetiros + pendingConsignaciones;
+
+  // ---- Movimientos diarios de caja (ventas efectivo vs retiros/consignaciones) ----
+  const dayMap = new Map<string, { sales: number; retiros: number; consignaciones: number }>();
+  const bump = (d: string, key: "sales" | "retiros" | "consignaciones", v: number) => {
+    const row = dayMap.get(d) ?? { sales: 0, retiros: 0, consignaciones: 0 };
+    row[key] += v;
+    dayMap.set(d, row);
+  };
+  sales.filter((s) => isCash(s.payment_method)).forEach((s) =>
+    bump(s.sale_date.slice(0, 10), "sales", Number(s.total_amount))
+  );
+  withdrawals
+    .filter((w) => w.status !== "rechazado")
+    .forEach((w) =>
+      bump(
+        String(w.created_at).slice(0, 10),
+        (w.movement_type ?? "retiro") === "consignacion" ? "consignaciones" : "retiros",
+        Number(w.amount)
+      )
+    );
+  const dayRowsAsc = Array.from(dayMap.entries()).sort((a, b) => (a[0] < b[0] ? -1 : 1));
+  let acc = cashBase;
+  const dayRows = dayRowsAsc
+    .map(([date, r]) => {
+      acc += r.sales - r.retiros - r.consignaciones;
+      return { date, ...r, balance: acc };
+    })
+    .reverse();
+
   // Descontamos también los movimientos pendientes: el dinero ya salió físicamente
   // de la caja aunque contabilidad no los haya aprobado todavía.
   const cashOnHand =
