@@ -91,7 +91,6 @@ export default function CajaMenor() {
   });
 
   const activeFund = funds[0] ?? null;
-  const historyFunds = funds.slice(1);
 
   // Global cumulative balance across ALL funds (income) and ALL expenses.
   // Each "fund" entry is treated as an income deposit into caja menor.
