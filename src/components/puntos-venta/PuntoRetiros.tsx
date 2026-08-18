@@ -205,6 +205,40 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
         {withdrawals.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">Sin movimientos de caja registrados.</p>
         ) : (
+          <>
+          {dayRows.length > 0 && (
+            <div className="rounded-lg border overflow-x-auto">
+              <div className="px-3 py-2 text-xs font-semibold border-b bg-muted/40">
+                Resumen diario de caja (saldo acumulado desde la base)
+              </div>
+              <table className="w-full text-xs">
+                <thead className="text-muted-foreground">
+                  <tr className="border-b">
+                    <th className="text-left p-2">Fecha</th>
+                    <th className="text-right p-2">Ventas efectivo</th>
+                    <th className="text-right p-2">Retiros</th>
+                    <th className="text-right p-2">Consignaciones</th>
+                    <th className="text-right p-2">Saldo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dayRows.slice(0, 31).map((r) => (
+                    <tr key={r.date} className="border-b last:border-0">
+                      <td className="p-2">{r.date}</td>
+                      <td className="p-2 text-right">${r.sales.toLocaleString()}</td>
+                      <td className="p-2 text-right text-destructive">
+                        {r.retiros ? `-$${r.retiros.toLocaleString()}` : "—"}
+                      </td>
+                      <td className="p-2 text-right text-destructive">
+                        {r.consignaciones ? `-$${r.consignaciones.toLocaleString()}` : "—"}
+                      </td>
+                      <td className="p-2 text-right font-semibold">${r.balance.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
           <div className="space-y-2">
             {withdrawals.map((w) => (
               <div key={w.id} className="border rounded-md p-3 flex flex-col md:flex-row md:items-center gap-2">
@@ -255,6 +289,7 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
               </div>
             ))}
           </div>
+          </>
         )}
       </CardContent>
     </Card>
