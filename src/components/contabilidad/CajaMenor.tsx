@@ -56,6 +56,7 @@ export default function CajaMenor() {
   const [showFundDialog, setShowFundDialog] = useState(false);
   const [showExpenseDialog, setShowExpenseDialog] = useState(false);
   const [editingFund, setEditingFund] = useState<PettyCashFund | null>(null);
+  const [monthFilter, setMonthFilter] = useState<string>("todos");
   const canManage = role === "admin" || role === "contabilidad";
 
   const refresh = () => {
