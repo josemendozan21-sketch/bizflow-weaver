@@ -426,6 +426,7 @@ const WholesaleOrdersInbox = () => {
   );
 
   const openDeliver = (order: MayorOrder, target: Target) => {
+    // (sin cambios)
     setDelivering({ order, target });
     setQty(String(order.quantity));
     setObs("");
