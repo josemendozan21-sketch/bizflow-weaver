@@ -60,6 +60,35 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
     .filter((w) => w.status === "pendiente" && w.movement_type === "consignacion")
     .reduce((a, b) => a + Number(b.amount), 0);
   const pendingTotal = pendingRetiros + pendingConsignaciones;
+
+  // ---- Movimientos diarios de caja (ventas efectivo vs retiros/consignaciones) ----
+  const dayMap = new Map<string, { sales: number; retiros: number; consignaciones: number }>();
+  const bump = (d: string, key: "sales" | "retiros" | "consignaciones", v: number) => {
+    const row = dayMap.get(d) ?? { sales: 0, retiros: 0, consignaciones: 0 };
+    row[key] += v;
+    dayMap.set(d, row);
+  };
+  sales.filter((s) => isCash(s.payment_method)).forEach((s) =>
+    bump(s.sale_date.slice(0, 10), "sales", Number(s.total_amount))
+  );
+  withdrawals
+    .filter((w) => w.status !== "rechazado")
+    .forEach((w) =>
+      bump(
+        String(w.created_at).slice(0, 10),
+        (w.movement_type ?? "retiro") === "consignacion" ? "consignaciones" : "retiros",
+        Number(w.amount)
+      )
+    );
+  const dayRowsAsc = Array.from(dayMap.entries()).sort((a, b) => (a[0] < b[0] ? -1 : 1));
+  let acc = cashBase;
+  const dayRows = dayRowsAsc
+    .map(([date, r]) => {
+      acc += r.sales - r.retiros - r.consignaciones;
+      return { date, ...r, balance: acc };
+    })
+    .reverse();
+
   // Descontamos también los movimientos pendientes: el dinero ya salió físicamente
   // de la caja aunque contabilidad no los haya aprobado todavía.
   const cashOnHand =
@@ -176,6 +205,40 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
         {withdrawals.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">Sin movimientos de caja registrados.</p>
         ) : (
+          <>
+          {dayRows.length > 0 && (
+            <div className="rounded-lg border overflow-x-auto">
+              <div className="px-3 py-2 text-xs font-semibold border-b bg-muted/40">
+                Resumen diario de caja (saldo acumulado desde la base)
+              </div>
+              <table className="w-full text-xs">
+                <thead className="text-muted-foreground">
+                  <tr className="border-b">
+                    <th className="text-left p-2">Fecha</th>
+                    <th className="text-right p-2">Ventas efectivo</th>
+                    <th className="text-right p-2">Retiros</th>
+                    <th className="text-right p-2">Consignaciones</th>
+                    <th className="text-right p-2">Saldo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dayRows.slice(0, 31).map((r) => (
+                    <tr key={r.date} className="border-b last:border-0">
+                      <td className="p-2">{r.date}</td>
+                      <td className="p-2 text-right">${r.sales.toLocaleString()}</td>
+                      <td className="p-2 text-right text-destructive">
+                        {r.retiros ? `-$${r.retiros.toLocaleString()}` : "—"}
+                      </td>
+                      <td className="p-2 text-right text-destructive">
+                        {r.consignaciones ? `-$${r.consignaciones.toLocaleString()}` : "—"}
+                      </td>
+                      <td className="p-2 text-right font-semibold">${r.balance.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
           <div className="space-y-2">
             {withdrawals.map((w) => (
               <div key={w.id} className="border rounded-md p-3 flex flex-col md:flex-row md:items-center gap-2">
@@ -226,6 +289,7 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
               </div>
             ))}
           </div>
+          </>
         )}
       </CardContent>
     </Card>

@@ -15,13 +15,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Wallet, Plus, DollarSign, FileText, Upload, Loader2, Camera, User, Trash2, Pencil, FileSpreadsheet } from "lucide-react";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Wallet, Plus, DollarSign, FileText, Upload, Loader2, Camera, User, Trash2, Pencil, FileSpreadsheet, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { openSignedUrl } from "@/lib/signedUrl";
@@ -56,6 +51,7 @@ export default function CajaMenor() {
   const [showFundDialog, setShowFundDialog] = useState(false);
   const [showExpenseDialog, setShowExpenseDialog] = useState(false);
   const [editingFund, setEditingFund] = useState<PettyCashFund | null>(null);
+  const [monthFilter, setMonthFilter] = useState<string>("todos");
   const canManage = role === "admin" || role === "contabilidad";
 
   const refresh = () => {
@@ -95,7 +91,6 @@ export default function CajaMenor() {
   });
 
   const activeFund = funds[0] ?? null;
-  const historyFunds = funds.slice(1);
 
   // Global cumulative balance across ALL funds (income) and ALL expenses.
   // Each "fund" entry is treated as an income deposit into caja menor.
@@ -114,12 +109,63 @@ export default function CajaMenor() {
     },
   });
 
-  const expenses = activeFund
-    ? allExpenses.filter((e) => e.fund_id === activeFund.id)
-    : [];
-
   const totalExpensesAll = allExpenses.reduce((s, e) => s + Number(e.amount), 0);
   const currentBalance = totalIncome - totalExpensesAll;
+
+  // ---- Libro de movimientos unificado (ingresos + gastos, orden cronológico) ----
+  type Movement = {
+    id: string;
+    kind: "ingreso" | "gasto";
+    amount: number;
+    date: string;
+    description: string;
+    requestedBy?: string;
+    recordedBy?: string;
+    proofUrl?: string | null;
+    raw: PettyCashFund | PettyCashExpense;
+  };
+
+  const movements: Movement[] = [
+    ...funds.map((f) => ({
+      id: f.id,
+      kind: "ingreso" as const,
+      amount: Number(f.amount),
+      date: f.created_at,
+      description: f.notes?.trim() || "Ingreso a caja menor",
+      proofUrl: null,
+      raw: f,
+    })),
+    ...allExpenses.map((e) => ({
+      id: e.id,
+      kind: "gasto" as const,
+      amount: Number(e.amount),
+      date: e.created_at,
+      description: e.description,
+      requestedBy: e.requested_by,
+      recordedBy: e.recorded_by_name,
+      proofUrl: e.proof_url,
+      raw: e,
+    })),
+  ].sort((a, b) => +new Date(a.date) - +new Date(b.date));
+
+  // Saldo acumulado por movimiento (ascendente)
+  let running = 0;
+  const withBalance = movements.map((m) => {
+    running += m.kind === "ingreso" ? m.amount : -m.amount;
+    return { ...m, balance: running };
+  });
+
+  // Filtro por mes
+  const monthKeys = Array.from(
+    new Set(withBalance.map((m) => m.date.slice(0, 7)))
+  ).sort((a, b) => (a < b ? 1 : -1));
+  const visible = withBalance
+    .filter((m) => monthFilter === "todos" || m.date.slice(0, 7) === monthFilter)
+    .slice()
+    .reverse();
+
+  const monthIncome = visible.filter((m) => m.kind === "ingreso").reduce((s, m) => s + m.amount, 0);
+  const monthExpense = visible.filter((m) => m.kind === "gasto").reduce((s, m) => s + m.amount, 0);
 
   return (
     <div className="space-y-6">
@@ -186,61 +232,107 @@ export default function CajaMenor() {
         </Button>
       </div>
 
-      {/* Expense list */}
-      {expenses.length === 0 ? (
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            {activeFund ? "No hay gastos registrados aún." : "Establece un fondo inicial para comenzar."}
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-foreground">Gastos registrados ({expenses.length})</h3>
-          <div className="grid gap-3">
-            {expenses.map((expense) => {
-              const runningBalance = Number(activeFund!.amount) - expenses
-                .filter((e) => new Date(e.created_at) <= new Date(expense.created_at))
-                .reduce((s, e) => s + Number(e.amount), 0);
-              return (
-                <Card key={expense.id}>
-                  <CardContent className="pt-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-1 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-destructive">-${Number(expense.amount).toLocaleString("es-CO")}</span>
-                          <Badge variant="outline" className="text-xs">
-                            Saldo: ${runningBalance.toLocaleString("es-CO")}
-                          </Badge>
-                        </div>
-                        <p className="text-sm font-medium text-foreground">{expense.description}</p>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                          <span className="flex items-center gap-1">
-                            <User className="h-3 w-3" /> Solicitó: <span className="font-medium text-foreground">{expense.requested_by}</span>
-                          </span>
-                          <span>Registró: {expense.recorded_by_name}</span>
-                          <span>{format(new Date(expense.created_at), "d MMM yyyy HH:mm", { locale: es })}</span>
-                        </div>
-                      </div>
-                      {expense.proof_url && (
-                        <Button size="sm" variant="ghost" className="shrink-0"
-                          onClick={() => openSignedUrl(expense.proof_url!)}>
-                          <FileText className="h-4 w-4 mr-1" /> Soporte
-                        </Button>
-                      )}
-                      {canManage && (
-                        <Button size="sm" variant="ghost" className="shrink-0 text-destructive"
-                          onClick={() => deleteExpense(expense)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+      {/* Libro de movimientos unificado */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <h3 className="text-sm font-semibold text-foreground">
+            Movimientos de caja menor ({visible.length})
+          </h3>
+          <div className="flex items-center gap-2">
+            <Select value={monthFilter} onValueChange={setMonthFilter}>
+              <SelectTrigger className="h-8 w-[190px]">
+                <SelectValue placeholder="Mes" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos los meses</SelectItem>
+                {monthKeys.map((mk) => (
+                  <SelectItem key={mk} value={mk}>
+                    {format(new Date(mk + "-01T12:00:00"), "MMMM yyyy", { locale: es })}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
-      )}
+
+        <div className="flex gap-3 text-xs text-muted-foreground flex-wrap">
+          <span>Ingresos del periodo: <span className="font-semibold text-primary">${monthIncome.toLocaleString("es-CO")}</span></span>
+          <span>Gastos del periodo: <span className="font-semibold text-destructive">${monthExpense.toLocaleString("es-CO")}</span></span>
+          <span>Neto: <span className="font-semibold text-foreground">${(monthIncome - monthExpense).toLocaleString("es-CO")}</span></span>
+        </div>
+
+        {visible.length === 0 ? (
+          <Card>
+            <CardContent className="py-8 text-center text-muted-foreground">
+              No hay movimientos en este periodo.
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="rounded-md border divide-y bg-card">
+            {visible.map((m) => (
+              <div key={m.kind + m.id} className="p-3 flex items-start gap-3">
+                <div className="shrink-0 mt-0.5">
+                  {m.kind === "ingreso" ? (
+                    <ArrowDownCircle className="h-4 w-4 text-primary" />
+                  ) : (
+                    <ArrowUpCircle className="h-4 w-4 text-destructive" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0 space-y-0.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={m.kind === "ingreso" ? "font-semibold text-primary" : "font-semibold text-destructive"}>
+                      {m.kind === "ingreso" ? "+" : "-"}${m.amount.toLocaleString("es-CO")}
+                    </span>
+                    <Badge variant="outline" className="text-[10px]">
+                      Saldo: ${m.balance.toLocaleString("es-CO")}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {format(new Date(m.date), "d MMM yyyy HH:mm", { locale: es })}
+                    </span>
+                  </div>
+                  <p className="text-sm text-foreground whitespace-pre-wrap break-words">{m.description}</p>
+                  {(m.requestedBy || m.recordedBy) && (
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                      {m.requestedBy && (
+                        <span className="flex items-center gap-1">
+                          <User className="h-3 w-3" /> Solicitó: <span className="font-medium text-foreground">{m.requestedBy}</span>
+                        </span>
+                      )}
+                      {m.recordedBy && <span>Registró: {m.recordedBy}</span>}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {m.proofUrl && (
+                    <Button size="sm" variant="ghost" className="h-7" onClick={() => openSignedUrl(m.proofUrl!)}>
+                      <FileText className="h-3 w-3 mr-1" /> Soporte
+                    </Button>
+                  )}
+                  {canManage && m.kind === "ingreso" && (
+                    <Button size="sm" variant="ghost" className="h-7" onClick={() => setEditingFund(m.raw as PettyCashFund)}>
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  )}
+                  {canManage && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-destructive"
+                      onClick={() =>
+                        m.kind === "ingreso"
+                          ? deleteFund(m.raw as PettyCashFund)
+                          : deleteExpense(m.raw as PettyCashExpense)
+                      }
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Fund Dialog */}
       <FundDialog
@@ -277,109 +369,6 @@ export default function CajaMenor() {
         onSaved={() => { setEditingFund(null); refresh(); }}
       />
 
-      {/* History of previous funds */}
-      {historyFunds.length > 0 && (
-        <div className="space-y-2 pt-4">
-          <h3 className="text-sm font-semibold text-foreground">
-            Historial de fondos anteriores ({historyFunds.length})
-          </h3>
-          <Accordion type="multiple" className="space-y-2">
-            {historyFunds.map((fund) => {
-              const fundExpenses = allExpenses
-                .filter((e) => e.fund_id === fund.id)
-                .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
-              const spent = fundExpenses.reduce((s, e) => s + Number(e.amount), 0);
-              const closing = Number(fund.amount) - spent;
-              return (
-                <AccordionItem
-                  key={fund.id}
-                  value={fund.id}
-                  className="border rounded-md px-3 bg-card"
-                >
-                  <AccordionTrigger className="hover:no-underline">
-                    <div className="flex flex-1 items-center justify-between gap-3 pr-2 text-left">
-                      <div>
-                        <p className="text-sm font-medium">
-                          {format(new Date(fund.created_at), "d MMM yyyy HH:mm", { locale: es })}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Fondo ${Number(fund.amount).toLocaleString("es-CO")} ·
-                          {" "}{fundExpenses.length} mov.
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs">
-                        <Badge variant="outline" className="text-destructive border-destructive/40">
-                          -${spent.toLocaleString("es-CO")}
-                        </Badge>
-                        <Badge variant="outline">
-                          Cierre: ${closing.toLocaleString("es-CO")}
-                        </Badge>
-                      </div>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    {fund.notes && (
-                      <p className="text-xs text-muted-foreground mb-2 italic">{fund.notes}</p>
-                    )}
-                    {fundExpenses.length === 0 ? (
-                      <p className="text-xs text-muted-foreground py-2">Sin gastos en este fondo.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {fundExpenses.map((expense) => (
-                          <div
-                            key={expense.id}
-                            className="flex items-start justify-between gap-3 p-2 rounded border bg-background"
-                          >
-                            <div className="space-y-0.5 flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-semibold text-destructive text-sm">
-                                  -${Number(expense.amount).toLocaleString("es-CO")}
-                                </span>
-                              </div>
-                              <p className="text-xs text-foreground">{expense.description}</p>
-                              <div className="flex items-center gap-2 text-[10px] text-muted-foreground flex-wrap">
-                                <span>Solicitó: <span className="font-medium text-foreground">{expense.requested_by}</span></span>
-                                <span>· Registró: {expense.recorded_by_name}</span>
-                                <span>· {format(new Date(expense.created_at), "d MMM HH:mm", { locale: es })}</span>
-                              </div>
-                            </div>
-                            {expense.proof_url && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="shrink-0 h-7"
-                                onClick={() => openSignedUrl(expense.proof_url!)}
-                              >
-                                <FileText className="h-3 w-3 mr-1" /> Soporte
-                              </Button>
-                            )}
-                            {canManage && (
-                              <Button size="sm" variant="ghost" className="shrink-0 h-7 text-destructive"
-                                onClick={() => deleteExpense(expense)}>
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {canManage && (
-                      <div className="flex gap-2 pt-2">
-                        <Button size="sm" variant="outline" className="h-7" onClick={() => setEditingFund(fund)}>
-                          <Pencil className="h-3 w-3 mr-1" /> Editar
-                        </Button>
-                        <Button size="sm" variant="ghost" className="h-7 text-destructive" onClick={() => deleteFund(fund)}>
-                          <Trash2 className="h-3 w-3 mr-1" /> Eliminar
-                        </Button>
-                      </div>
-                    )}
-                  </AccordionContent>
-                </AccordionItem>
-              );
-            })}
-          </Accordion>
-        </div>
-      )}
     </div>
   );
 }
