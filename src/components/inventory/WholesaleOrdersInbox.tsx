@@ -425,6 +425,21 @@ const WholesaleOrdersInbox = () => {
     [retailOrders, deliveredIds, archivedIds]
   );
 
+  // Todas las líneas por cliente (mayor + detal). Un mismo cliente puede tener
+  // varias líneas repartidas en distintas pestañas; el resumen evita que
+  // Inventarios crea que "faltan unidades".
+  const linesByClient = useMemo(() => {
+    const map = new Map<string, MayorOrder[]>();
+    [...orders, ...retailOrders].forEach((o) => {
+      const key = (o.client_name || "").trim().toLowerCase();
+      if (!key) return;
+      const arr = map.get(key) || [];
+      arr.push(o);
+      map.set(key, arr);
+    });
+    return map;
+  }, [orders, retailOrders]);
+
   const openDeliver = (order: MayorOrder, target: Target) => {
     setDelivering({ order, target });
     setQty(String(order.quantity));
