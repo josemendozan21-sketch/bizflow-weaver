@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Wallet, Plus, DollarSign, FileText, Upload, Loader2, Camera, User, Trash2, Pencil } from "lucide-react";
+import { Wallet, Plus, DollarSign, FileText, Upload, Loader2, Camera, User, Trash2, Pencil, FileSpreadsheet } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -28,6 +28,7 @@ import { openSignedUrl } from "@/lib/signedUrl";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { exportPettyCashXlsx } from "@/lib/accountingExports";
 
 interface PettyCashFund {
   id: string;
@@ -172,6 +173,17 @@ export default function CajaMenor() {
             </Button>
           </>
         )}
+        <Button
+          variant="outline"
+          className="ml-auto"
+          disabled={funds.length === 0 && allExpenses.length === 0}
+          onClick={() => {
+            exportPettyCashXlsx(funds, allExpenses);
+            toast.success("Movimientos de caja menor descargados");
+          }}
+        >
+          <FileSpreadsheet className="h-4 w-4 mr-1" /> Descargar movimientos
+        </Button>
       </div>
 
       {/* Expense list */}

@@ -5,9 +5,10 @@ import {
   PosSale, PosMovement, PosProduct,
   usePosCashWithdrawals,
 } from "@/hooks/usePuntosVenta";
-import { TrendingUp, DollarSign, Package, History, Receipt, Banknote, BarChart3, Wallet } from "lucide-react";
+import { TrendingUp, DollarSign, Package, History, Receipt, Banknote, BarChart3, Wallet, FileSpreadsheet } from "lucide-react";
 import { PuntoVentasDelDia } from "./PuntoVentasDelDia";
 import { PuntoRetiros } from "./PuntoRetiros";
+import { PuntoContabilidadExport } from "./PuntoContabilidadExport";
 import type { InvoiceLocation } from "@/lib/posInvoicePdf";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -28,6 +29,7 @@ export function PuntoReportes({ sales, movements, products, locationId, location
   const { data: withdrawals = [] } = usePosCashWithdrawals(locationId);
   const { role } = useAuth();
   const isAdmin = role === "admin";
+  const canExport = role === "admin" || role === "contabilidad";
   const today = new Date().toISOString().slice(0, 10);
   const todaySales = useMemo(() => sales.filter((s) => s.sale_date.slice(0, 10) === today), [sales, today]);
   const totals = useMemo(() => {
@@ -78,7 +80,9 @@ export function PuntoReportes({ sales, movements, products, locationId, location
         <TabsTrigger value="resumen"><BarChart3 className="h-4 w-4 mr-1" /> Resumen</TabsTrigger>
         <TabsTrigger value="ventas-dia"><Receipt className="h-4 w-4 mr-1" /> Ventas del día</TabsTrigger>
         <TabsTrigger value="retiros"><Wallet className="h-4 w-4 mr-1" /> Caja</TabsTrigger>
-        
+        {canExport && (
+          <TabsTrigger value="contabilidad"><FileSpreadsheet className="h-4 w-4 mr-1" /> Contabilidad</TabsTrigger>
+        )}
       </TabsList>
 
       <TabsContent value="resumen" className="space-y-4">
@@ -150,6 +154,12 @@ export function PuntoReportes({ sales, movements, products, locationId, location
       <TabsContent value="retiros">
         <PuntoRetiros locationId={locationId} cashBase={cashBase} />
       </TabsContent>
+
+      {canExport && (
+        <TabsContent value="contabilidad">
+          <PuntoContabilidadExport sales={sales} locationId={locationId} locationName={location.name ?? "punto"} />
+        </TabsContent>
+      )}
     </Tabs>
   );
 }
