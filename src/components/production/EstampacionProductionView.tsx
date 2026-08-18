@@ -67,7 +67,7 @@ const STATUS_BADGE: Record<string, { label: string; variant: "secondary" | "defa
 };
 
 export const EstampacionProductionView = () => {
-  const { orders: allOrders, stageLogs, isLoading, updateStageStatus, advanceStage } = useProductionOrders();
+  const { orders: allOrders, stageLogs, isLoading, updateStageStatus, completeStamping } = useProductionOrders();
   const qc = useQueryClient();
   const [receivingId, setReceivingId] = useState<string | null>(null);
 
@@ -110,7 +110,10 @@ export const EstampacionProductionView = () => {
   // Include orders in estampacion AND orders still waiting bodies (produccion_cuerpos)
   // so stamping team can start preparing/logo work even if bodies aren't ready.
   const estampacionOrders = allOrders.filter(
-    (o) => o.current_stage === "estampacion" || o.current_stage === "produccion_cuerpos"
+    (o) =>
+      o.current_stage === "estampacion" ||
+      (o.current_stage === "produccion_cuerpos" &&
+        !(o.stamp_size_status === "finalizado" && o.stamp_inkgel_status === "finalizado"))
   );
 
   const q = searchQuery.trim().toLowerCase();
@@ -224,6 +227,7 @@ export const EstampacionProductionView = () => {
                 logoRequests={logoRequests}
                 onStart={() => setOperatorPrompt({ mode: "start", orderId: order.id, clientName: order.client_name })}
                 onFinish={() => setOperatorPrompt({ mode: "finish", orderId: order.id, clientName: order.client_name })}
+                finishing={completeStamping.isPending && completeStamping.variables?.orderId === order.id}
               />
             ))}
           </div>
@@ -330,7 +334,7 @@ export const EstampacionProductionView = () => {
           if (operatorPrompt.mode === "start") {
             updateStageStatus.mutate({ orderId: operatorPrompt.orderId, status: "en_proceso", operatorName: name });
           } else {
-            advanceStage.mutate({ orderId: operatorPrompt.orderId, operatorName: name });
+            completeStamping.mutate({ orderId: operatorPrompt.orderId, operatorName: name });
           }
           setOperatorPrompt(null);
         }}
@@ -371,12 +375,14 @@ function EstampacionOrderCard({
   logoRequests,
   onStart,
   onFinish,
+  finishing,
 }: {
   order: ProductionOrder;
   stageLogs: import("@/hooks/useProductionOrders").ProductionStageLog[];
   logoRequests: LogoRequestInfo[];
   onStart: () => void;
   onFinish: () => void;
+  finishing: boolean;
 }) {
   const queryClient = useQueryClient();
   const badge = STATUS_BADGE[order.stage_status] || STATUS_BADGE.pendiente;
@@ -544,8 +550,9 @@ function EstampacionOrderCard({
             </Button>
           )}
           {canFinalize && (
-            <Button size="sm" onClick={onFinish}>
-              <CheckCircle2 className="h-3 w-3 mr-1" /> Finalizar estampación
+            <Button size="sm" onClick={onFinish} disabled={finishing}>
+              {finishing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
+              {finishing ? "Finalizando..." : "Finalizar estampación"}
             </Button>
           )}
         </div>
