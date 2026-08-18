@@ -1927,6 +1927,12 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     queryClient.invalidateQueries({ queryKey: ["orders"] });
 
     const lineCount = ssLines.length;
+    if (failedSsLines.length > 0) {
+      toast.error(`No se guardaron ${failedSsLines.length} línea(s) del pedido`, {
+        description: failedSsLines.join(" | "),
+        duration: 15000,
+      });
+    }
     toast.success(`${lineCount > 1 ? lineCount + " pedidos creados" : "Pedido al por mayor creado"}`, {
       description: `${clientName} — ${lineCount > 1 ? lineCount + " líneas" : ssLines[0].units + " uds"}. Enviado a Inventarios y Contabilidad.`,
     });
