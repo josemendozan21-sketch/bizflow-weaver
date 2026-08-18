@@ -114,12 +114,63 @@ export default function CajaMenor() {
     },
   });
 
-  const expenses = activeFund
-    ? allExpenses.filter((e) => e.fund_id === activeFund.id)
-    : [];
-
   const totalExpensesAll = allExpenses.reduce((s, e) => s + Number(e.amount), 0);
   const currentBalance = totalIncome - totalExpensesAll;
+
+  // ---- Libro de movimientos unificado (ingresos + gastos, orden cronológico) ----
+  type Movement = {
+    id: string;
+    kind: "ingreso" | "gasto";
+    amount: number;
+    date: string;
+    description: string;
+    requestedBy?: string;
+    recordedBy?: string;
+    proofUrl?: string | null;
+    raw: PettyCashFund | PettyCashExpense;
+  };
+
+  const movements: Movement[] = [
+    ...funds.map((f) => ({
+      id: f.id,
+      kind: "ingreso" as const,
+      amount: Number(f.amount),
+      date: f.created_at,
+      description: f.notes?.trim() || "Ingreso a caja menor",
+      proofUrl: null,
+      raw: f,
+    })),
+    ...allExpenses.map((e) => ({
+      id: e.id,
+      kind: "gasto" as const,
+      amount: Number(e.amount),
+      date: e.created_at,
+      description: e.description,
+      requestedBy: e.requested_by,
+      recordedBy: e.recorded_by_name,
+      proofUrl: e.proof_url,
+      raw: e,
+    })),
+  ].sort((a, b) => +new Date(a.date) - +new Date(b.date));
+
+  // Saldo acumulado por movimiento (ascendente)
+  let running = 0;
+  const withBalance = movements.map((m) => {
+    running += m.kind === "ingreso" ? m.amount : -m.amount;
+    return { ...m, balance: running };
+  });
+
+  // Filtro por mes
+  const monthKeys = Array.from(
+    new Set(withBalance.map((m) => m.date.slice(0, 7)))
+  ).sort((a, b) => (a < b ? 1 : -1));
+  const visible = withBalance
+    .filter((m) => monthFilter === "todos" || m.date.slice(0, 7) === monthFilter)
+    .slice()
+    .reverse();
+
+  const monthIncome = visible.filter((m) => m.kind === "ingreso").reduce((s, m) => s + m.amount, 0);
+  const monthExpense = visible.filter((m) => m.kind === "gasto").reduce((s, m) => s + m.amount, 0);
 
   return (
     <div className="space-y-6">
