@@ -15,13 +15,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Wallet, Plus, DollarSign, FileText, Upload, Loader2, Camera, User, Trash2, Pencil, FileSpreadsheet } from "lucide-react";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Wallet, Plus, DollarSign, FileText, Upload, Loader2, Camera, User, Trash2, Pencil, FileSpreadsheet, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { openSignedUrl } from "@/lib/signedUrl";
@@ -375,109 +370,6 @@ export default function CajaMenor() {
         onSaved={() => { setEditingFund(null); refresh(); }}
       />
 
-      {/* History of previous funds */}
-      {historyFunds.length > 0 && (
-        <div className="space-y-2 pt-4">
-          <h3 className="text-sm font-semibold text-foreground">
-            Historial de fondos anteriores ({historyFunds.length})
-          </h3>
-          <Accordion type="multiple" className="space-y-2">
-            {historyFunds.map((fund) => {
-              const fundExpenses = allExpenses
-                .filter((e) => e.fund_id === fund.id)
-                .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
-              const spent = fundExpenses.reduce((s, e) => s + Number(e.amount), 0);
-              const closing = Number(fund.amount) - spent;
-              return (
-                <AccordionItem
-                  key={fund.id}
-                  value={fund.id}
-                  className="border rounded-md px-3 bg-card"
-                >
-                  <AccordionTrigger className="hover:no-underline">
-                    <div className="flex flex-1 items-center justify-between gap-3 pr-2 text-left">
-                      <div>
-                        <p className="text-sm font-medium">
-                          {format(new Date(fund.created_at), "d MMM yyyy HH:mm", { locale: es })}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Fondo ${Number(fund.amount).toLocaleString("es-CO")} ·
-                          {" "}{fundExpenses.length} mov.
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs">
-                        <Badge variant="outline" className="text-destructive border-destructive/40">
-                          -${spent.toLocaleString("es-CO")}
-                        </Badge>
-                        <Badge variant="outline">
-                          Cierre: ${closing.toLocaleString("es-CO")}
-                        </Badge>
-                      </div>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    {fund.notes && (
-                      <p className="text-xs text-muted-foreground mb-2 italic">{fund.notes}</p>
-                    )}
-                    {fundExpenses.length === 0 ? (
-                      <p className="text-xs text-muted-foreground py-2">Sin gastos en este fondo.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {fundExpenses.map((expense) => (
-                          <div
-                            key={expense.id}
-                            className="flex items-start justify-between gap-3 p-2 rounded border bg-background"
-                          >
-                            <div className="space-y-0.5 flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-semibold text-destructive text-sm">
-                                  -${Number(expense.amount).toLocaleString("es-CO")}
-                                </span>
-                              </div>
-                              <p className="text-xs text-foreground">{expense.description}</p>
-                              <div className="flex items-center gap-2 text-[10px] text-muted-foreground flex-wrap">
-                                <span>Solicitó: <span className="font-medium text-foreground">{expense.requested_by}</span></span>
-                                <span>· Registró: {expense.recorded_by_name}</span>
-                                <span>· {format(new Date(expense.created_at), "d MMM HH:mm", { locale: es })}</span>
-                              </div>
-                            </div>
-                            {expense.proof_url && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="shrink-0 h-7"
-                                onClick={() => openSignedUrl(expense.proof_url!)}
-                              >
-                                <FileText className="h-3 w-3 mr-1" /> Soporte
-                              </Button>
-                            )}
-                            {canManage && (
-                              <Button size="sm" variant="ghost" className="shrink-0 h-7 text-destructive"
-                                onClick={() => deleteExpense(expense)}>
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {canManage && (
-                      <div className="flex gap-2 pt-2">
-                        <Button size="sm" variant="outline" className="h-7" onClick={() => setEditingFund(fund)}>
-                          <Pencil className="h-3 w-3 mr-1" /> Editar
-                        </Button>
-                        <Button size="sm" variant="ghost" className="h-7 text-destructive" onClick={() => deleteFund(fund)}>
-                          <Trash2 className="h-3 w-3 mr-1" /> Eliminar
-                        </Button>
-                      </div>
-                    )}
-                  </AccordionContent>
-                </AccordionItem>
-              );
-            })}
-          </Accordion>
-        </div>
-      )}
     </div>
   );
 }
