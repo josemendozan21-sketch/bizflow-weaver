@@ -931,6 +931,9 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     // antes de guardar para que Inventarios y Estampación reciban la cantidad total
     // (por ejemplo, 50 + 50 se convierte en una sola orden de 100 unidades).
     const linesToSubmit = consolidateMagicalLines(orderLines);
+    // Si una línea falla, las demás deben guardarse igual (antes se abortaba
+    // el pedido completo y se perdían unidades del mismo cliente).
+    const failedLines: string[] = [];
 
     // Process each distinct line as a separate order
     const moldeCostoNum = parseFloat(moldeCosto) || 0;
@@ -1056,26 +1059,21 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         if (error) {
           console.error("Error saving order:", error);
           const dup = /duplicad|duplicate/i.test(error.message);
-          toast.error("Error al crear el pedido", {
-            description: dup
-              ? "Ya existe un pedido idéntico creado hace menos de 2 minutos. Revisa Mis pedidos antes de reintentar."
-              : error.message,
-          });
-          setIsSubmitting(false);
-          return;
+          failedLines.push(
+            `${quantity} × ${referencia}: ${dup ? "posible duplicado" : error.message}`
+          );
+          continue;
         }
         orderData = data;
       } catch (err: any) {
         console.error("Error saving order:", err);
-        toast.error("Error al crear el pedido", { description: err?.message || "No se pudo guardar. Intenta de nuevo." });
-        setIsSubmitting(false);
-        return;
+        failedLines.push(`${quantity} × ${referencia}: ${err?.message || "error desconocido"}`);
+        continue;
       }
 
       if (!orderData) {
-        toast.error("Error al crear el pedido", { description: "No se recibió confirmación de la base de datos." });
-        setIsSubmitting(false);
-        return;
+        failedLines.push(`${quantity} × ${referencia}: sin confirmación de la base de datos`);
+        continue;
       }
 
       // El pedido queda pendiente de revisión de Inventarios.
@@ -1096,6 +1094,13 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
     queryClient.invalidateQueries({ queryKey: ["production-orders"] });
     queryClient.invalidateQueries({ queryKey: ["orders"] });
+
+    if (failedLines.length > 0) {
+      toast.error(`No se guardaron ${failedLines.length} línea(s) del pedido`, {
+        description: failedLines.join(" | "),
+        duration: 15000,
+      });
+    }
 
     const giftCount = orderLines.filter((l) => l.isGift).length;
     const productCount = orderLines.filter((l) => !l.isGift).length;
@@ -1773,6 +1778,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
     // Consolidar referencias idénticas para que todo el flujo reciba la cantidad total.
     const linesToSubmit = consolidateSweatspotLines(ssLines);
+    const failedSsLines: string[] = [];
 
     // Process each distinct line as a separate order
     // Calcular totales para prorratear el abono entre líneas (el abono es por el TOTAL del pedido).
@@ -1869,30 +1875,21 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         if (error) {
           console.error("Error saving order:", error);
           const dup = /duplicad|duplicate/i.test(error.message);
-          toast.error("Error al crear el pedido", {
-            description: dup
-              ? "Ya existe un pedido idéntico creado hace menos de 2 minutos. Revisa Mis pedidos antes de reintentar."
-              : error.message,
-          });
-          setIsSubmitting(false);
-          return;
+          failedSsLines.push(
+            `${quantity} × ${referencia}: ${dup ? "posible duplicado" : error.message}`
+          );
+          continue;
         }
         orderData = data;
       } catch (err: any) {
         console.error("Error saving order:", err);
-        toast.error("Error al crear el pedido", {
-          description: err?.message || "No se pudo guardar el pedido. Intenta de nuevo.",
-        });
-        setIsSubmitting(false);
-        return;
+        failedSsLines.push(`${quantity} × ${referencia}: ${err?.message || "error desconocido"}`);
+        continue;
       }
 
       if (!orderData) {
-        toast.error("Error al crear el pedido", {
-          description: "No se recibió confirmación de la base de datos.",
-        });
-        setIsSubmitting(false);
-        return;
+        failedSsLines.push(`${quantity} × ${referencia}: sin confirmación de la base de datos`);
+        continue;
       }
 
       // Productos importados: saltan producción y van directo a logística
@@ -1930,6 +1927,12 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     queryClient.invalidateQueries({ queryKey: ["orders"] });
 
     const lineCount = ssLines.length;
+    if (failedSsLines.length > 0) {
+      toast.error(`No se guardaron ${failedSsLines.length} línea(s) del pedido`, {
+        description: failedSsLines.join(" | "),
+        duration: 15000,
+      });
+    }
     toast.success(`${lineCount > 1 ? lineCount + " pedidos creados" : "Pedido al por mayor creado"}`, {
       description: `${clientName} — ${lineCount > 1 ? lineCount + " líneas" : ssLines[0].units + " uds"}. Enviado a Inventarios y Contabilidad.`,
     });

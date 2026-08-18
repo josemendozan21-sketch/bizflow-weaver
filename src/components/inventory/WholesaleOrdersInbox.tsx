@@ -425,6 +425,21 @@ const WholesaleOrdersInbox = () => {
     [retailOrders, deliveredIds, archivedIds]
   );
 
+  // Todas las líneas por cliente (mayor + detal). Un mismo cliente puede tener
+  // varias líneas repartidas en distintas pestañas; el resumen evita que
+  // Inventarios crea que "faltan unidades".
+  const linesByClient = useMemo(() => {
+    const map = new Map<string, MayorOrder[]>();
+    [...orders, ...retailOrders].forEach((o) => {
+      const key = (o.client_name || "").trim().toLowerCase();
+      if (!key) return;
+      const arr = map.get(key) || [];
+      arr.push(o);
+      map.set(key, arr);
+    });
+    return map;
+  }, [orders, retailOrders]);
+
   const openDeliver = (order: MayorOrder, target: Target) => {
     setDelivering({ order, target });
     setQty(String(order.quantity));
@@ -651,6 +666,27 @@ const WholesaleOrdersInbox = () => {
               <p className="text-sm text-muted-foreground">
                 {o.quantity.toLocaleString("es-CO")} × {o.product}
               </p>
+              {(() => {
+                const siblings = (linesByClient.get((o.client_name || "").trim().toLowerCase()) || [])
+                  .filter((s) => s.id !== o.id);
+                if (siblings.length === 0) return null;
+                const totalUds = siblings.reduce((sum, s) => sum + (Number(s.quantity) || 0), 0)
+                  + (Number(o.quantity) || 0);
+                return (
+                  <div className="mt-1.5 text-xs rounded border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-2">
+                    <span className="font-medium">
+                      Este cliente tiene {siblings.length + 1} líneas ({totalUds.toLocaleString("es-CO")} uds en total):
+                    </span>
+                    <ul className="mt-1 space-y-0.5">
+                      {siblings.map((s) => (
+                        <li key={s.id}>
+                          • {Number(s.quantity).toLocaleString("es-CO")} × {s.product} — {s.production_status}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })()}
               {isSweatspotMayor && siliconeColor && (
                 <div className="mt-1.5"><ColorChip color={siliconeColor} /></div>
               )}
