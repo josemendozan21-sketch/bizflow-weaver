@@ -238,61 +238,107 @@ export default function CajaMenor() {
         </Button>
       </div>
 
-      {/* Expense list */}
-      {expenses.length === 0 ? (
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            {activeFund ? "No hay gastos registrados aún." : "Establece un fondo inicial para comenzar."}
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-foreground">Gastos registrados ({expenses.length})</h3>
-          <div className="grid gap-3">
-            {expenses.map((expense) => {
-              const runningBalance = Number(activeFund!.amount) - expenses
-                .filter((e) => new Date(e.created_at) <= new Date(expense.created_at))
-                .reduce((s, e) => s + Number(e.amount), 0);
-              return (
-                <Card key={expense.id}>
-                  <CardContent className="pt-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-1 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-destructive">-${Number(expense.amount).toLocaleString("es-CO")}</span>
-                          <Badge variant="outline" className="text-xs">
-                            Saldo: ${runningBalance.toLocaleString("es-CO")}
-                          </Badge>
-                        </div>
-                        <p className="text-sm font-medium text-foreground">{expense.description}</p>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                          <span className="flex items-center gap-1">
-                            <User className="h-3 w-3" /> Solicitó: <span className="font-medium text-foreground">{expense.requested_by}</span>
-                          </span>
-                          <span>Registró: {expense.recorded_by_name}</span>
-                          <span>{format(new Date(expense.created_at), "d MMM yyyy HH:mm", { locale: es })}</span>
-                        </div>
-                      </div>
-                      {expense.proof_url && (
-                        <Button size="sm" variant="ghost" className="shrink-0"
-                          onClick={() => openSignedUrl(expense.proof_url!)}>
-                          <FileText className="h-4 w-4 mr-1" /> Soporte
-                        </Button>
-                      )}
-                      {canManage && (
-                        <Button size="sm" variant="ghost" className="shrink-0 text-destructive"
-                          onClick={() => deleteExpense(expense)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+      {/* Libro de movimientos unificado */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <h3 className="text-sm font-semibold text-foreground">
+            Movimientos de caja menor ({visible.length})
+          </h3>
+          <div className="flex items-center gap-2">
+            <Select value={monthFilter} onValueChange={setMonthFilter}>
+              <SelectTrigger className="h-8 w-[190px]">
+                <SelectValue placeholder="Mes" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos los meses</SelectItem>
+                {monthKeys.map((mk) => (
+                  <SelectItem key={mk} value={mk}>
+                    {format(new Date(mk + "-01T12:00:00"), "MMMM yyyy", { locale: es })}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
-      )}
+
+        <div className="flex gap-3 text-xs text-muted-foreground flex-wrap">
+          <span>Ingresos del periodo: <span className="font-semibold text-primary">${monthIncome.toLocaleString("es-CO")}</span></span>
+          <span>Gastos del periodo: <span className="font-semibold text-destructive">${monthExpense.toLocaleString("es-CO")}</span></span>
+          <span>Neto: <span className="font-semibold text-foreground">${(monthIncome - monthExpense).toLocaleString("es-CO")}</span></span>
+        </div>
+
+        {visible.length === 0 ? (
+          <Card>
+            <CardContent className="py-8 text-center text-muted-foreground">
+              No hay movimientos en este periodo.
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="rounded-md border divide-y bg-card">
+            {visible.map((m) => (
+              <div key={m.kind + m.id} className="p-3 flex items-start gap-3">
+                <div className="shrink-0 mt-0.5">
+                  {m.kind === "ingreso" ? (
+                    <ArrowDownCircle className="h-4 w-4 text-primary" />
+                  ) : (
+                    <ArrowUpCircle className="h-4 w-4 text-destructive" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0 space-y-0.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={m.kind === "ingreso" ? "font-semibold text-primary" : "font-semibold text-destructive"}>
+                      {m.kind === "ingreso" ? "+" : "-"}${m.amount.toLocaleString("es-CO")}
+                    </span>
+                    <Badge variant="outline" className="text-[10px]">
+                      Saldo: ${m.balance.toLocaleString("es-CO")}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {format(new Date(m.date), "d MMM yyyy HH:mm", { locale: es })}
+                    </span>
+                  </div>
+                  <p className="text-sm text-foreground whitespace-pre-wrap break-words">{m.description}</p>
+                  {(m.requestedBy || m.recordedBy) && (
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                      {m.requestedBy && (
+                        <span className="flex items-center gap-1">
+                          <User className="h-3 w-3" /> Solicitó: <span className="font-medium text-foreground">{m.requestedBy}</span>
+                        </span>
+                      )}
+                      {m.recordedBy && <span>Registró: {m.recordedBy}</span>}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {m.proofUrl && (
+                    <Button size="sm" variant="ghost" className="h-7" onClick={() => openSignedUrl(m.proofUrl!)}>
+                      <FileText className="h-3 w-3 mr-1" /> Soporte
+                    </Button>
+                  )}
+                  {canManage && m.kind === "ingreso" && (
+                    <Button size="sm" variant="ghost" className="h-7" onClick={() => setEditingFund(m.raw as PettyCashFund)}>
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  )}
+                  {canManage && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-destructive"
+                      onClick={() =>
+                        m.kind === "ingreso"
+                          ? deleteFund(m.raw as PettyCashFund)
+                          : deleteExpense(m.raw as PettyCashExpense)
+                      }
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Fund Dialog */}
       <FundDialog
