@@ -67,7 +67,7 @@ const STATUS_BADGE: Record<string, { label: string; variant: "secondary" | "defa
 };
 
 export const EstampacionProductionView = () => {
-  const { orders: allOrders, stageLogs, isLoading, updateStageStatus, completeStamping } = useProductionOrders();
+  const { orders: allOrders, stageLogs, isLoading, startStamping, completeStamping } = useProductionOrders();
   const qc = useQueryClient();
   const [receivingId, setReceivingId] = useState<string | null>(null);
 
@@ -332,7 +332,7 @@ export const EstampacionProductionView = () => {
         onConfirm={(name) => {
           if (!operatorPrompt) return;
           if (operatorPrompt.mode === "start") {
-            updateStageStatus.mutate({ orderId: operatorPrompt.orderId, status: "en_proceso", operatorName: name });
+            startStamping.mutate({ orderId: operatorPrompt.orderId, operatorName: name });
           } else {
             completeStamping.mutate({ orderId: operatorPrompt.orderId, operatorName: name });
           }

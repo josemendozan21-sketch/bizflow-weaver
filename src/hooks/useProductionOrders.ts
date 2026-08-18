@@ -226,6 +226,58 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
     },
   });
 
+  /** Starts the parallel stamping work without recording it as body production. */
+  const startStamping = useMutation({
+    mutationFn: async ({ orderId, operatorName }: { orderId: string; operatorName: string }) => {
+      const { data: order, error: fetchError } = await supabase
+        .from("production_orders")
+        .select("current_stage")
+        .eq("id", orderId)
+        .single();
+      if (fetchError || !order) throw fetchError || new Error("Orden no encontrada");
+
+      if (order.current_stage !== "produccion_cuerpos") {
+        return updateStageStatus.mutateAsync({ orderId, status: "en_proceso", operatorName });
+      }
+
+      const { error: statusError } = await supabase
+        .from("production_orders")
+        .update({ stage_status: "en_proceso" })
+        .eq("id", orderId);
+      if (statusError) throw statusError;
+
+      const { data: openLogs, error: logReadError } = await (supabase as any)
+        .from("production_stage_logs")
+        .select("id")
+        .eq("production_order_id", orderId)
+        .eq("stage", "estampacion")
+        .is("ended_at", null)
+        .limit(1);
+      if (logReadError) throw logReadError;
+
+      if (!(openLogs ?? []).length) {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        const { error: logError } = await (supabase as any).from("production_stage_logs").insert({
+          production_order_id: orderId,
+          stage: "estampacion",
+          operator_name: operatorName,
+          started_at: new Date().toISOString(),
+          recorded_by: authUser?.id ?? null,
+        });
+        if (logError) throw logError;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["production_orders"] });
+      queryClient.invalidateQueries({ queryKey: ["production_stage_logs"] });
+    },
+    onError: (error) => {
+      toast.error("No se pudo iniciar estampación", {
+        description: error instanceof Error ? error.message : "Intenta nuevamente.",
+      });
+    },
+  });
+
   const advanceStage = useMutation({
     mutationFn: async ({ orderId, confirmedQuantity, completionData, operatorName }: { orderId: string; confirmedQuantity?: number; completionData?: { photoUrl: string; packagerName: string; finalCount: number }; operatorName?: string }) => {
       // Get fresh order data
@@ -604,7 +656,7 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
         .from("production_stage_logs")
         .select("id")
         .eq("production_order_id", orderId)
-        .eq("stage", "produccion_cuerpos")
+        .eq("stage", "estampacion")
         .is("ended_at", null)
         .order("started_at", { ascending: false })
         .limit(1);
@@ -779,6 +831,7 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
     isLoading: ordersQuery.isLoading,
     isBodyTasksLoading: bodyTasksQuery.isLoading,
     updateStageStatus,
+    startStamping,
     advanceStage,
     completeStamping,
     addBodyTask,
