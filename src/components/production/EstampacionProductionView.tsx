@@ -171,13 +171,13 @@ export const EstampacionProductionView = () => {
       .filter((lr) => lr.status === "aprobado")
       .map((lr) => lr.client_name.trim().toLowerCase())
   );
-  const clientsWithProductionOrder = new Set(
-    allOrders.map((o) => o.client_name.trim().toLowerCase())
+  const orderIdsWithProductionOrder = new Set(
+    allOrders.map((o) => o.order_id).filter((id): id is string => Boolean(id))
   );
   const pendingIntake = (pendingIntakeQuery.data ?? []).filter(
     (o) =>
       approvedLogoClients.has(o.client_name.trim().toLowerCase()) &&
-      !clientsWithProductionOrder.has(o.client_name.trim().toLowerCase())
+      !orderIdsWithProductionOrder.has(o.id)
   );
 
   if (isLoading) {

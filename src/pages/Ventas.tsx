@@ -219,6 +219,24 @@ interface OrderLine {
   isGift: boolean;
 }
 
+function consolidateMagicalLines(lines: OrderLine[]): OrderLine[] {
+  const consolidated = new Map<string, OrderLine>();
+  for (const line of lines) {
+    const key = [
+      line.product, line.type, line.gelColor, line.gelCustom,
+      line.inkColor, line.inkCustom, line.valorUnitario, line.isGift,
+    ].join("|");
+    const existing = consolidated.get(key);
+    if (!existing) {
+      consolidated.set(key, { ...line });
+      continue;
+    }
+    existing.units = String((parseInt(existing.units, 10) || 0) + (parseInt(line.units, 10) || 0));
+    existing.valorTotal = String((parseFloat(existing.valorTotal) || 0) + (parseFloat(line.valorTotal) || 0));
+  }
+  return Array.from(consolidated.values());
+}
+
 function createEmptyLine(isGift = false): OrderLine {
   return {
     id: crypto.randomUUID(),
@@ -909,7 +927,12 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       return;
     }
 
-    // Process each line as a separate order
+    // Las líneas idénticas pertenecen al mismo producto del pedido. Se consolidan
+    // antes de guardar para que Inventarios y Estampación reciban la cantidad total
+    // (por ejemplo, 50 + 50 se convierte en una sola orden de 100 unidades).
+    const linesToSubmit = consolidateMagicalLines(orderLines);
+
+    // Process each distinct line as a separate order
     const moldeCostoNum = parseFloat(moldeCosto) || 0;
     const moldeIncluidoEnTotal = moldeNuevo && moldeModo === "con_pedido" && moldeCostoNum > 0;
     const extraCost = ((dobleTinta || escarcha) ? (parseFloat(costoAdicional) || 0) : 0)
@@ -931,7 +954,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
     // Calcular totales del pedido completo para prorratear el abono entre líneas.
     // El abono ingresado por el asesor es por el TOTAL del pedido, no por cada línea.
-    const lineTotalsForProration = orderLines.map((line, idx) => {
+    const lineTotalsForProration = linesToSubmit.map((line, idx) => {
       if (line.isGift) return 0;
       const base = parseFloat(line.valorTotal) || 0;
       return idx === 0 ? base + extraCost : base;
@@ -942,8 +965,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       : (parseFloat(abono) || 0);
     let abonoAsignado = 0;
 
-    for (let lineIdx = 0; lineIdx < orderLines.length; lineIdx++) {
-      const line = orderLines[lineIdx];
+    for (let lineIdx = 0; lineIdx < linesToSubmit.length; lineIdx++) {
+      const line = linesToSubmit[lineIdx];
       const isFirstLine = lineIdx === 0;
       const quantity = parseInt(line.units, 10) || 0;
       const referencia = `${line.product} (${line.type})`;
@@ -1559,6 +1582,24 @@ interface SweatspotOrderLine {
   autoCalc: boolean;
 }
 
+function consolidateSweatspotLines(lines: SweatspotOrderLine[]): SweatspotOrderLine[] {
+  const consolidated = new Map<string, SweatspotOrderLine>();
+  for (const line of lines) {
+    const key = [
+      line.referencia, line.tamano, line.tipoLogo, line.colorSilicona,
+      line.colorTinta, line.valorUnitario,
+    ].join("|");
+    const existing = consolidated.get(key);
+    if (!existing) {
+      consolidated.set(key, { ...line });
+      continue;
+    }
+    existing.units = String((parseInt(existing.units, 10) || 0) + (parseInt(line.units, 10) || 0));
+    existing.valorTotal = String((parseFloat(existing.valorTotal) || 0) + (parseFloat(line.valorTotal) || 0));
+  }
+  return Array.from(consolidated.values());
+}
+
 function createEmptySSLine(): SweatspotOrderLine {
   return {
     id: crypto.randomUUID(),
@@ -1730,10 +1771,13 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       ? ["produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"]
       : ["estampacion", "produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"];
 
-    // Process each line as a separate order
+    // Consolidar referencias idénticas para que todo el flujo reciba la cantidad total.
+    const linesToSubmit = consolidateSweatspotLines(ssLines);
+
+    // Process each distinct line as a separate order
     // Calcular totales para prorratear el abono entre líneas (el abono es por el TOTAL del pedido).
     const ssLogoExtra = ssCobroLogo ? (parseFloat(ssCostoLogo) || 0) : 0;
-    const ssLineTotals = ssLines.map((line, idx) => {
+    const ssLineTotals = linesToSubmit.map((line, idx) => {
       const base = parseFloat(line.valorTotal) || 0;
       return idx === 0 ? base + ssLogoExtra : base;
     });
@@ -1746,8 +1790,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       : (parseFloat(ssAbono) || 0);
     let abonoAsignadoSs = 0;
 
-    for (let lineIdx = 0; lineIdx < ssLines.length; lineIdx++) {
-      const line = ssLines[lineIdx];
+    for (let lineIdx = 0; lineIdx < linesToSubmit.length; lineIdx++) {
+      const line = linesToSubmit[lineIdx];
       const quantity = parseInt(line.units, 10) || 0;
       const referencia = line.referencia;
       const inkColor = line.colorTinta;
@@ -1758,7 +1802,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       // Prorratear el abono según el peso de la línea sobre el total del pedido.
       let abonoAmount = 0;
       if (ssGrandTotal > 0) {
-        const isLast = lineIdx === ssLines.length - 1;
+        const isLast = lineIdx === linesToSubmit.length - 1;
         if (!isLast) {
           abonoAmount = Math.round((totalAbonoPedidoSs * lineTotal) / ssGrandTotal);
           abonoAsignadoSs += abonoAmount;
