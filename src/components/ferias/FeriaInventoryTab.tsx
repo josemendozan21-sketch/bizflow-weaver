@@ -85,6 +85,23 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
     return acc;
   }, {});
 
+  const filteredInventory = useMemo(() => {
+    const q = inventorySearch.trim().toLowerCase();
+    return inventory.filter((it) => {
+      if (brandFilter && it.brand !== brandFilter) return false;
+      const matchesSearch = !q ||
+        String(it.product_name).toLowerCase().includes(q) ||
+        String(it.brand).toLowerCase().includes(q) ||
+        String(it.notes).toLowerCase().includes(q);
+      if (!matchesSearch) return false;
+      if (colorFilter) {
+        const productText = String(it.product_name).toLowerCase();
+        return productText.includes(colorFilter.toLowerCase());
+      }
+      return true;
+    });
+  }, [inventory, inventorySearch, brandFilter, colorFilter]);
+
   const handleAdd = async () => {
     if (!brand || !form.quantity_assigned) return;
     let label = "";
