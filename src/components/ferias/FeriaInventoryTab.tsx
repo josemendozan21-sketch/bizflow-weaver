@@ -174,26 +174,46 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   const netExpectedMargin = projection.expectedMargin - fixedCostsTotal;
   const totalExpectedCost = projection.expectedCost + fixedCostsTotal;
 
+  const isMagicalTermoReference = (productName: string) => {
+    const raw = String(productName || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    if (raw.includes("canguro") || raw.includes("chaleco")) return false;
+    const termoKeywords = ["250", "150", "500", "jugueton", "juguetón", "con correa", "sin correa"];
+    return termoKeywords.some((k) => raw.includes(k));
+  };
+
   const handleExportEstampacion = () => {
-    const rows = inventory.map((it: any) => {
-      const raw = String(it.product_name || "");
-      const m = raw.match(/^(.*?)\s*[\(\-]\s*([^()]+)\)?\s*$/);
-      const ref = (m ? m[1] : raw).trim();
-      const col = m ? m[2].trim() : "";
-      return {
-        Referencia: ref,
-        Color: col,
-        Marca: it.brand === "magical" ? "Magical Warmers" : "Sweatspot",
-        Unidades: Number(it.quantity_dispatched || 0) || Number(it.quantity_assigned || 0),
-      };
-    });
+    const rows = inventory
+      .filter((it: any) => it.brand === "magical" && isMagicalTermoReference(it.product_name))
+      .map((it: any) => {
+        const raw = String(it.product_name || "");
+        // Try to split "REFERENCE - COLOR" or "REFERENCE (VARIANT)"
+        const m = raw.match(/^(.*?)\s*[-\(]\s*(.+?)\)?\s*$/);
+        const ref = (m ? m[1] : raw).trim();
+        const col = m ? m[2].trim().replace(/\)$/, "") : "";
+        return {
+          Referencia: ref,
+          Color: col,
+          Marca: "Magical Warmers",
+          Unidades: Number(it.quantity_dispatched || 0) || Number(it.quantity_assigned || 0),
+        };
+      });
+    if (rows.length === 0) {
+      toast.info("No hay referencias de termos Magical para exportar");
+      return;
+    }
     const ws = XLSX.utils.json_to_sheet(rows, { header: ["Referencia", "Color", "Marca", "Unidades"] });
     ws["!cols"] = [{ wch: 40 }, { wch: 22 }, { wch: 18 }, { wch: 10 }];
+    const total = rows.reduce((a, r) => a + (Number(r.Unidades) || 0), 0);
+    XLSX.utils.sheet_add_json(
+      ws,
+      [{ Referencia: "Total unidades", Color: "", Marca: "", Unidades: total }],
+      { origin: -1, skipHeader: true }
+    );
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Estampacion");
     const name = (feria?.name || "feria").replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "_");
     XLSX.writeFile(wb, `unidades_feria_${name}.xlsx`);
-    toast.success("Excel descargado para estampación");
+    toast.success(`Excel descargado para estampación (${rows.length} referencias, ${total} unidades)`);
   };
 
   return (
