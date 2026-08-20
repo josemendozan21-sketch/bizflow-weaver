@@ -388,10 +388,10 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
                 className="pl-8 h-9 w-full"
               />
             </div>
-            <Select value={brandFilter} onValueChange={(v) => setBrandFilter(v as any)}>
+            <Select value={brandFilter || "all"} onValueChange={(v) => setBrandFilter((v === "all" ? "" : v) as any)}>
               <SelectTrigger className="w-36 h-9"><SelectValue placeholder="Marca" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas</SelectItem>
+                <SelectItem value="all">Todas</SelectItem>
                 <SelectItem value="magical">Magical</SelectItem>
                 <SelectItem value="sweatspot">Sweatspot</SelectItem>
               </SelectContent>
@@ -407,6 +407,7 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
                 Limpiar filtros
               </Button>
             )}
+
             <span className="text-xs text-muted-foreground ml-auto">{filteredInventory.length} de {inventory.length} referencias</span>
           </div>
         </div>
