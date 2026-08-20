@@ -425,9 +425,9 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {inventory.length === 0 ? (
-              <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-6">Sin productos asignados</TableCell></TableRow>
-            ) : inventory.map((it) => {
+            {filteredInventory.length === 0 ? (
+                  <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-6">Sin productos que coincidan con el filtro</TableCell></TableRow>
+                ) : filteredInventory.map((it) => {
               const sold = soldByProduct[`${it.brand}|${it.product_name}`] || 0;
               const base = it.dispatch_status === "despachado" ? it.quantity_dispatched : it.quantity_assigned;
               const remaining = base - sold;
