@@ -1,0 +1,1 @@
+UPDATE public.orders SET inventory_archived_at = NULL, inventory_archived_by = NULL WHERE id IN ('2da83fbe-38ff-4443-8c39-e0bdc0ab2d1f','99b3bf4c-4751-4824-b8c7-34833635876f','e676aa9d-8605-4500-91f2-bed70b14bb94');

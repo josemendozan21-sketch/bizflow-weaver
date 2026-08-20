@@ -37,6 +37,7 @@ interface MayorOrder {
   production_status: string;
   created_at: string;
   observations: string | null;
+  is_recompra?: boolean | null;
 }
 
 const ACTIVE_STATUSES = [
@@ -264,7 +265,7 @@ const WholesaleOrdersInbox = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color")
+        .select("id,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color,is_recompra")
         .eq("sale_type", "mayor")
         .gte("created_at", "2026-05-15")
         .order("created_at", { ascending: false });
@@ -279,7 +280,7 @@ const WholesaleOrdersInbox = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color")
+        .select("id,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color,is_recompra")
         .in("sale_type", ["menor", "detal"])
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -660,6 +661,9 @@ const WholesaleOrdersInbox = () => {
                   ? <Badge className="bg-blue-600 hover:bg-blue-700 text-white">Mayor</Badge>
                   : <Badge className="bg-purple-600 hover:bg-purple-700 text-white">Detal</Badge>}
                 <Badge variant="outline" className="capitalize">{o.brand}</Badge>
+                {o.is_recompra && (
+                  <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">Recompra</Badge>
+                )}
                 {isDelivered && <Badge variant="secondary">Entregado</Badge>}
               </div>
               <h3 className="font-semibold mt-1.5">{o.client_name}</h3>
