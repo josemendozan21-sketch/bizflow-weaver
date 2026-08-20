@@ -6,13 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Send, CheckCircle2, Pencil, Check, X, Target, Download } from "lucide-react";
+import { Trash2, Plus, Send, CheckCircle2, Pencil, Check, X, Target, Download, Search } from "lucide-react";
 import { useFeriaInventory, useAddFeriaInventory, useDeleteFeriaInventory, useUpdateFeriaInventory, useFeriaSales, useFeriaDispatchRequest, useCreateDispatchRequest, useFerias } from "@/hooks/useFerias";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInventory } from "@/hooks/useInventory";
 import { useMemo } from "react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
+import DebouncedSearchInput from "@/components/inventory/DebouncedSearchInput";
 
 export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   const { data: inventory = [] } = useFeriaInventory(feriaId);
