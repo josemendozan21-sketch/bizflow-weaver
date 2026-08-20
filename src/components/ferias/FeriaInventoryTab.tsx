@@ -41,6 +41,11 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   const [form, setForm] = useState({ quantity_assigned: "", unit_price: "", unit_cost: "", notes: "" });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ quantity_assigned: "", unit_price: "", unit_cost: "" });
+  const [inventorySearch, setInventorySearch] = useState("");
+  const [brandFilter, setBrandFilter] = useState<"" | "magical" | "sweatspot">("");
+  const [colorFilter, setColorFilter] = useState("");
+
+  const brandOptions = useMemo(() => Array.from(new Set(inventory.map((it) => it.brand))).filter(Boolean).sort(), [inventory]);
 
   // Distinct product names per brand (color is selected separately so admin can project any color)
   const productsByBrand = useMemo(() => {
