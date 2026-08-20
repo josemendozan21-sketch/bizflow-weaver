@@ -2047,7 +2047,23 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Información del cliente</legend>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Nombre del cliente" name="ss_nombre" required />
+              <ClientNameAutocomplete
+                name="ss_nombre"
+                required
+                onSelect={(c) => {
+                  const f = ssFormRef.current;
+                  if (!f) return;
+                  const set = (n: string, v: string) => {
+                    const el = f.querySelector(`[name="${n}"]`) as HTMLInputElement | null;
+                    if (el && v) el.value = v;
+                  };
+                  set("ss_cedulaNit", c.nit);
+                  set("ss_contacto", c.telefono);
+                  set("ss_email", c.email);
+                  set("ss_direccion", c.direccion);
+                  set("ss_ciudad", c.ciudad);
+                }}
+              />
               <Field label="Cédula o NIT" name="ss_cedulaNit" required />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
