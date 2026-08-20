@@ -26,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { createOrderNotifications } from "@/hooks/useNotifications";
 import SmartPasteField, { type ParsedOrderData } from "@/components/ventas/SmartPasteField";
+import ClientNameAutocomplete from "@/components/ventas/ClientNameAutocomplete";
 import { useFormDraft, clearFormDraft, usePersistedState } from "@/hooks/useFormDraft";
 import { OrderConfirmationDialog, type OrderSummary } from "@/components/ventas/OrderConfirmationDialog";
 type Brand = "sweatspot" | "magical";
@@ -1189,7 +1190,23 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Información del cliente</legend>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Nombre del cliente" name="mw_nombre" required />
+              <ClientNameAutocomplete
+                name="mw_nombre"
+                required
+                onSelect={(c) => {
+                  const f = formRef.current;
+                  if (!f) return;
+                  const set = (n: string, v: string) => {
+                    const el = f.querySelector(`[name="${n}"]`) as HTMLInputElement | null;
+                    if (el && v) el.value = v;
+                  };
+                  set("mw_cedulaNit", c.nit);
+                  set("mw_contacto", c.telefono);
+                  set("mw_email", c.email);
+                  set("mw_direccion", c.direccion);
+                  set("mw_ciudad", c.ciudad);
+                }}
+              />
               <Field label="Cédula o NIT" name="mw_cedulaNit" required />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -2030,7 +2047,23 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Información del cliente</legend>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Nombre del cliente" name="ss_nombre" required />
+              <ClientNameAutocomplete
+                name="ss_nombre"
+                required
+                onSelect={(c) => {
+                  const f = ssFormRef.current;
+                  if (!f) return;
+                  const set = (n: string, v: string) => {
+                    const el = f.querySelector(`[name="${n}"]`) as HTMLInputElement | null;
+                    if (el && v) el.value = v;
+                  };
+                  set("ss_cedulaNit", c.nit);
+                  set("ss_contacto", c.telefono);
+                  set("ss_email", c.email);
+                  set("ss_direccion", c.direccion);
+                  set("ss_ciudad", c.ciudad);
+                }}
+              />
               <Field label="Cédula o NIT" name="ss_cedulaNit" required />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -2585,10 +2618,20 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
            <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Datos del cliente</legend>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="nombre">Nombre completo</Label>
-                <Input id="nombre" name="nombre" required value={nombre} onChange={(e) => setNombre(e.target.value)} />
-              </div>
+               <ClientNameAutocomplete
+                 label="Nombre completo"
+                 name="nombre"
+                 required
+                 value={nombre}
+                 onValueChange={setNombre}
+                 onSelect={(c) => {
+                   if (c.telefono) setTelefono(c.telefono);
+                   if (c.nit) setCedula(c.nit);
+                   if (c.email) setEmail(c.email);
+                   if (c.ciudad) setCiudad(c.ciudad);
+                   if (c.direccion) setDireccion(c.direccion);
+                 }}
+               />
               <div className="space-y-1.5">
                 <Label htmlFor="telefono">Teléfono</Label>
                 <Input id="telefono" name="telefono" type="tel" required value={telefono} onChange={(e) => setTelefono(e.target.value)} />
