@@ -437,9 +437,6 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
               <TableHead>Marca</TableHead>
               <TableHead>Producto</TableHead>
               <TableHead className="text-right">Pedido</TableHead>
-              <TableHead className="text-right">Despachado</TableHead>
-              <TableHead className="text-right">Vendido</TableHead>
-              <TableHead className="text-right">Restante</TableHead>
               {canSeeFinancials && <TableHead className="text-right">Costo</TableHead>}
               {canSeeFinancials && <TableHead className="text-right">Precio</TableHead>}
               {canEditQuantity && <TableHead></TableHead>}
