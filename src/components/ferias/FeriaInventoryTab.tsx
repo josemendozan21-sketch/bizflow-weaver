@@ -324,6 +324,12 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
       )}
 
       <Card>
+        <div className="flex items-center justify-between gap-2 p-3 border-b flex-wrap">
+          <h3 className="font-semibold text-sm">Inventario asignado</h3>
+          <Button size="sm" variant="outline" onClick={handleExportEstampacion} disabled={inventory.length === 0}>
+            <Download className="mr-2 h-4 w-4" /> Descargar para estampación
+          </Button>
+        </div>
         <Table>
           <TableHeader>
             <TableRow>
