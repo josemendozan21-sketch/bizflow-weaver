@@ -2618,10 +2618,20 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
            <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Datos del cliente</legend>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="nombre">Nombre completo</Label>
-                <Input id="nombre" name="nombre" required value={nombre} onChange={(e) => setNombre(e.target.value)} />
-              </div>
+               <ClientNameAutocomplete
+                 label="Nombre completo"
+                 name="nombre"
+                 required
+                 value={nombre}
+                 onValueChange={setNombre}
+                 onSelect={(c) => {
+                   if (c.telefono) setTelefono(c.telefono);
+                   if (c.nit) setCedula(c.nit);
+                   if (c.email) setEmail(c.email);
+                   if (c.ciudad) setCiudad(c.ciudad);
+                   if (c.direccion) setDireccion(c.direccion);
+                 }}
+               />
               <div className="space-y-1.5">
                 <Label htmlFor="telefono">Teléfono</Label>
                 <Input id="telefono" name="telefono" type="tel" required value={telefono} onChange={(e) => setTelefono(e.target.value)} />
