@@ -460,17 +460,6 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
                         onChange={(e) => setEditForm({ ...editForm, quantity_assigned: e.target.value })} />
                     ) : it.quantity_assigned}
                   </TableCell>
-                  <TableCell className="text-right">
-                    {it.dispatch_status === "despachado" ? (
-                      <span className="font-medium text-emerald-600">{it.quantity_dispatched}</span>
-                    ) : (
-                      <Badge variant="outline">Pendiente</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">{sold}</TableCell>
-                  <TableCell className="text-right">
-                    <Badge variant={remaining < 0 ? "destructive" : remaining === 0 ? "secondary" : "default"}>{remaining}</Badge>
-                  </TableCell>
                   {canSeeFinancials && <TableCell className="text-right">
                     {isEditing ? (
                       <Input type="number" className="h-7 w-24 ml-auto text-right" value={editForm.unit_cost}
