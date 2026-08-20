@@ -6,13 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Send, CheckCircle2, Pencil, Check, X, Target, Download } from "lucide-react";
+import { Trash2, Plus, Send, CheckCircle2, Pencil, Check, X, Target, Download, Search } from "lucide-react";
 import { useFeriaInventory, useAddFeriaInventory, useDeleteFeriaInventory, useUpdateFeriaInventory, useFeriaSales, useFeriaDispatchRequest, useCreateDispatchRequest, useFerias } from "@/hooks/useFerias";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInventory } from "@/hooks/useInventory";
 import { useMemo } from "react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
+import DebouncedSearchInput from "@/components/inventory/DebouncedSearchInput";
 
 export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   const { data: inventory = [] } = useFeriaInventory(feriaId);
@@ -40,6 +41,11 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   const [form, setForm] = useState({ quantity_assigned: "", unit_price: "", unit_cost: "", notes: "" });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ quantity_assigned: "", unit_price: "", unit_cost: "" });
+  const [inventorySearch, setInventorySearch] = useState("");
+  const [brandFilter, setBrandFilter] = useState<"" | "magical" | "sweatspot">("");
+  const [colorFilter, setColorFilter] = useState("");
+
+  const brandOptions = useMemo(() => Array.from(new Set(inventory.map((it) => it.brand))).filter(Boolean).sort(), [inventory]);
 
   // Distinct product names per brand (color is selected separately so admin can project any color)
   const productsByBrand = useMemo(() => {
@@ -78,6 +84,23 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
     acc[k] = (acc[k] || 0) + s.quantity;
     return acc;
   }, {});
+
+  const filteredInventory = useMemo(() => {
+    const q = inventorySearch.trim().toLowerCase();
+    return inventory.filter((it) => {
+      if (brandFilter && it.brand !== brandFilter) return false;
+      const matchesSearch = !q ||
+        String(it.product_name).toLowerCase().includes(q) ||
+        String(it.brand).toLowerCase().includes(q) ||
+        String(it.notes).toLowerCase().includes(q);
+      if (!matchesSearch) return false;
+      if (colorFilter) {
+        const productText = String(it.product_name).toLowerCase();
+        return productText.includes(colorFilter.toLowerCase());
+      }
+      return true;
+    });
+  }, [inventory, inventorySearch, brandFilter, colorFilter]);
 
   const handleAdd = async () => {
     if (!brand || !form.quantity_assigned) return;
@@ -348,11 +371,44 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
       )}
 
       <Card>
-        <div className="flex items-center justify-between gap-2 p-3 border-b flex-wrap">
-          <h3 className="font-semibold text-sm">Inventario asignado</h3>
-          <Button size="sm" variant="outline" onClick={handleExportEstampacion} disabled={inventory.length === 0}>
-            <Download className="mr-2 h-4 w-4" /> Descargar para estampación
-          </Button>
+        <div className="p-3 border-b flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <h3 className="font-semibold text-sm">Inventario asignado</h3>
+            <Button size="sm" variant="outline" onClick={handleExportEstampacion} disabled={inventory.length === 0}>
+              <Download className="mr-2 h-4 w-4" /> Descargar para estampación
+            </Button>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative flex-1 min-w-[180px] max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <DebouncedSearchInput
+                value={inventorySearch}
+                onChange={setInventorySearch}
+                placeholder="Buscar referencia, color o producto..."
+                className="pl-8 h-9 w-full"
+              />
+            </div>
+            <Select value={brandFilter} onValueChange={(v) => setBrandFilter(v as any)}>
+              <SelectTrigger className="w-36 h-9"><SelectValue placeholder="Marca" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todas</SelectItem>
+                <SelectItem value="magical">Magical</SelectItem>
+                <SelectItem value="sweatspot">Sweatspot</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              placeholder="Color o variante"
+              value={colorFilter}
+              onChange={(e) => setColorFilter(e.target.value)}
+              className="w-40 h-9"
+            />
+            {(inventorySearch || brandFilter || colorFilter) && (
+              <Button variant="ghost" size="sm" className="h-9" onClick={() => { setInventorySearch(""); setBrandFilter(""); setColorFilter(""); }}>
+                Limpiar filtros
+              </Button>
+            )}
+            <span className="text-xs text-muted-foreground ml-auto">{filteredInventory.length} de {inventory.length} referencias</span>
+          </div>
         </div>
         <Table>
           <TableHeader>
@@ -369,9 +425,9 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {inventory.length === 0 ? (
-              <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-6">Sin productos asignados</TableCell></TableRow>
-            ) : inventory.map((it) => {
+            {filteredInventory.length === 0 ? (
+                  <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-6">Sin productos que coincidan con el filtro</TableCell></TableRow>
+                ) : filteredInventory.map((it) => {
               const sold = soldByProduct[`${it.brand}|${it.product_name}`] || 0;
               const base = it.dispatch_status === "despachado" ? it.quantity_dispatched : it.quantity_assigned;
               const remaining = base - sold;
