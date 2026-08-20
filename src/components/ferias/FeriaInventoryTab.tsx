@@ -437,9 +437,6 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
               <TableHead>Marca</TableHead>
               <TableHead>Producto</TableHead>
               <TableHead className="text-right">Pedido</TableHead>
-              <TableHead className="text-right">Despachado</TableHead>
-              <TableHead className="text-right">Vendido</TableHead>
-              <TableHead className="text-right">Restante</TableHead>
               {canSeeFinancials && <TableHead className="text-right">Costo</TableHead>}
               {canSeeFinancials && <TableHead className="text-right">Precio</TableHead>}
               {canEditQuantity && <TableHead></TableHead>}
@@ -447,11 +444,8 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
           </TableHeader>
           <TableBody>
             {filteredInventory.length === 0 ? (
-                  <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-6">Sin productos que coincidan con el filtro</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">Sin productos que coincidan con el filtro</TableCell></TableRow>
                 ) : filteredInventory.map((it) => {
-              const sold = soldByProduct[`${it.brand}|${it.product_name}`] || 0;
-              const base = it.dispatch_status === "despachado" ? it.quantity_dispatched : it.quantity_assigned;
-              const remaining = base - sold;
               const isEditing = editingId === it.id;
               return (
                 <TableRow key={it.id}>
@@ -462,17 +456,6 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
                       <Input type="number" className="h-7 w-20 ml-auto text-right" value={editForm.quantity_assigned}
                         onChange={(e) => setEditForm({ ...editForm, quantity_assigned: e.target.value })} />
                     ) : it.quantity_assigned}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {it.dispatch_status === "despachado" ? (
-                      <span className="font-medium text-emerald-600">{it.quantity_dispatched}</span>
-                    ) : (
-                      <Badge variant="outline">Pendiente</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">{sold}</TableCell>
-                  <TableCell className="text-right">
-                    <Badge variant={remaining < 0 ? "destructive" : remaining === 0 ? "secondary" : "default"}>{remaining}</Badge>
                   </TableCell>
                   {canSeeFinancials && <TableCell className="text-right">
                     {isEditing ? (
