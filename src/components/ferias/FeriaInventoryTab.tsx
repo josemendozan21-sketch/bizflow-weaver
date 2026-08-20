@@ -6,11 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Send, CheckCircle2, Pencil, Check, X, Target } from "lucide-react";
+import { Trash2, Plus, Send, CheckCircle2, Pencil, Check, X, Target, Download } from "lucide-react";
 import { useFeriaInventory, useAddFeriaInventory, useDeleteFeriaInventory, useUpdateFeriaInventory, useFeriaSales, useFeriaDispatchRequest, useCreateDispatchRequest, useFerias } from "@/hooks/useFerias";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInventory } from "@/hooks/useInventory";
 import { useMemo } from "react";
+import * as XLSX from "xlsx";
+import { toast } from "sonner";
 
 export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   const { data: inventory = [] } = useFeriaInventory(feriaId);
@@ -148,6 +150,28 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   );
   const netExpectedMargin = projection.expectedMargin - fixedCostsTotal;
   const totalExpectedCost = projection.expectedCost + fixedCostsTotal;
+
+  const handleExportEstampacion = () => {
+    const rows = inventory.map((it: any) => {
+      const raw = String(it.product_name || "");
+      const m = raw.match(/^(.*?)\s*[\(\-]\s*([^()]+)\)?\s*$/);
+      const ref = (m ? m[1] : raw).trim();
+      const col = m ? m[2].trim() : "";
+      return {
+        Referencia: ref,
+        Color: col,
+        Marca: it.brand === "magical" ? "Magical Warmers" : "Sweatspot",
+        Unidades: Number(it.quantity_dispatched || 0) || Number(it.quantity_assigned || 0),
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(rows, { header: ["Referencia", "Color", "Marca", "Unidades"] });
+    ws["!cols"] = [{ wch: 40 }, { wch: 22 }, { wch: 18 }, { wch: 10 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Estampacion");
+    const name = (feria?.name || "feria").replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "_");
+    XLSX.writeFile(wb, `unidades_feria_${name}.xlsx`);
+    toast.success("Excel descargado para estampación");
+  };
 
   return (
     <div className="space-y-4">
@@ -324,6 +348,12 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
       )}
 
       <Card>
+        <div className="flex items-center justify-between gap-2 p-3 border-b flex-wrap">
+          <h3 className="font-semibold text-sm">Inventario asignado</h3>
+          <Button size="sm" variant="outline" onClick={handleExportEstampacion} disabled={inventory.length === 0}>
+            <Download className="mr-2 h-4 w-4" /> Descargar para estampación
+          </Button>
+        </div>
         <Table>
           <TableHeader>
             <TableRow>
