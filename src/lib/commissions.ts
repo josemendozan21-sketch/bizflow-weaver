@@ -27,6 +27,22 @@ export const RETURN_PENALTY = 10_000;
 export const MIN_TICKET_DETAL = 80_000;
 export const MIN_WEEKEND_PCT = 0.10;
 
+/**
+ * Asesores con tarifa plana: Valentina Mendoza percibe 10% sobre cualquier
+ * venta (base sin IVA), sin importar canal, día o forma de pago.
+ */
+export const FLAT_RATE_ADVISORS: { match: string; rate: number }[] = [
+  { match: "valentina mendoza", rate: 0.10 },
+  { match: "valemendoza", rate: 0.10 },
+];
+
+export function getFlatRateFor(advisorName?: string | null): number | null {
+  const n = (advisorName || "").toLowerCase().trim();
+  if (!n) return null;
+  const hit = FLAT_RATE_ADVISORS.find((f) => n.includes(f.match));
+  return hit ? hit.rate : null;
+}
+
 export type PaymentMode = "contado" | "contraentrega";
 export type ClientKind = "nuevo" | "recompra";
 
