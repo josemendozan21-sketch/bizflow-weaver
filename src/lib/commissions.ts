@@ -175,13 +175,15 @@ export function summarizeAdvisorMonth(
       const clientKind: ClientKind = o.is_recompra ? "recompra" : "nuevo";
       const total = Number(o.total_amount || 0);
       const baseSinIva = total / IVA_DIVISOR;
-      const rate = getCommissionRate({
-        saleType: o.sale_type as "menor" | "mayor",
-        weekend,
-        paymentMode: ctx.paymentMode,
-        clientKind,
-        weekendUnlocked,
-      });
+      const rate =
+        getFlatRateFor(o.advisor_name) ??
+        getCommissionRate({
+          saleType: o.sale_type as "menor" | "mayor",
+          weekend,
+          paymentMode: ctx.paymentMode,
+          clientKind,
+          weekendUnlocked,
+        });
       const rawCommission = baseSinIva * rate;
       // returned se lee desde el pedido (Logística lo registra). Solo aplica
       // penalización si la forma de pago configurada es contraentrega.
@@ -320,13 +322,15 @@ export function summarizeAdvisorProgress(
     const baseSinIva = total / IVA_DIVISOR;
     const paymentMode: PaymentMode =
       o.payment_method === "contra_entrega" ? "contraentrega" : "contado";
-    const rate = getCommissionRate({
-      saleType: (o.sale_type as "menor" | "mayor") || "mayor",
-      weekend,
-      paymentMode,
-      clientKind,
-      weekendUnlocked,
-    });
+    const rate =
+      getFlatRateFor(o.advisor_name) ??
+      getCommissionRate({
+        saleType: (o.sale_type as "menor" | "mayor") || "mayor",
+        weekend,
+        paymentMode,
+        clientKind,
+        weekendUnlocked,
+      });
     const rawCommission = baseSinIva * rate;
     const returned = !!o.returned_at;
     const penalty =
