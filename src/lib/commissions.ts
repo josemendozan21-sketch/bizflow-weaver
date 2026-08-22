@@ -234,3 +234,128 @@ export function summarizeAdvisorMonth(
 
   return result.sort((a, b) => b.totalToPay - a.totalToPay);
 }
+
+/* ------------------------------------------------------------------ *
+ * Progreso del asesor (vista para el propio asesor)
+ * Incluye pedidos facturados y pendientes por facturar.
+ * ------------------------------------------------------------------ */
+
+export interface ProgressLine extends CommissionLine {
+  invoiced: boolean;
+  date: Date;
+}
+
+export interface AdvisorProgressSummary {
+  ordersCount: number;
+  totalWithVat: number;
+  totalSinIva: number;
+  invoicedCount: number;
+  invoicedWithVat: number;
+  invoicedCommission: number;
+  pendingCount: number;
+  pendingWithVat: number;
+  pendingCommission: number;
+  bonusInvoiced: number;
+  bonusProjected: number;
+  toPayInvoiced: number;
+  toPayProjected: number;
+  weekendUnlocked: boolean;
+  lines: ProgressLine[];
+}
+
+function bonusFor(totalWithVat: number): number {
+  let b = 0;
+  if (totalWithVat >= BONUS_TIER_1_THRESHOLD) b += BONUS_TIER_1_AMOUNT;
+  if (totalWithVat >= BONUS_TIER_2_THRESHOLD) b += BONUS_TIER_2_AMOUNT;
+  return b;
+}
+
+export function summarizeAdvisorProgress(
+  orders: Order[],
+  year: number,
+  month: number,
+  advisorId?: string
+): AdvisorProgressSummary {
+  const start = startOfMonth(new Date(year, month, 1));
+  const end = endOfMonth(new Date(year, month, 1));
+
+  const monthOrders = orders.filter((o) => {
+    if (advisorId && o.advisor_id !== advisorId) return false;
+    const d = getOrderDate(o);
+    return isWithinInterval(d, { start, end });
+  });
+
+  const totalWithVat = monthOrders.reduce(
+    (s, o) => s + Number(o.total_amount || 0),
+    0
+  );
+  const invoicedWithVat = monthOrders
+    .filter((o) => o.invoice_status === "facturado")
+    .reduce((s, o) => s + Number(o.total_amount || 0), 0);
+
+  // El desbloqueo FDS se evalúa sobre lo facturado (política oficial).
+  const weekendUnlocked = invoicedWithVat >= UNLOCK_THRESHOLD;
+
+  const lines: ProgressLine[] = monthOrders.map((o) => {
+    const d = getOrderDate(o);
+    const weekend = isWeekend(d);
+    const clientKind: ClientKind = o.is_recompra ? "recompra" : "nuevo";
+    const total = Number(o.total_amount || 0);
+    const baseSinIva = total / IVA_DIVISOR;
+    const paymentMode: PaymentMode =
+      o.payment_method === "contra_entrega" ? "contraentrega" : "contado";
+    const rate = getCommissionRate({
+      saleType: (o.sale_type as "menor" | "mayor") || "mayor",
+      weekend,
+      paymentMode,
+      clientKind,
+      weekendUnlocked,
+    });
+    const rawCommission = baseSinIva * rate;
+    const returned = !!o.returned_at;
+    const penalty =
+      returned && paymentMode === "contraentrega" ? RETURN_PENALTY : 0;
+    return {
+      order: o,
+      date: d,
+      invoiced: o.invoice_status === "facturado",
+      weekend,
+      paymentMode,
+      clientKind,
+      returned,
+      totalWithVat: total,
+      baseSinIva,
+      ratePct: rate,
+      rawCommission,
+      penalty,
+      netCommission: Math.max(rawCommission - penalty, 0),
+    };
+  });
+
+  const invoicedLines = lines.filter((l) => l.invoiced);
+  const pendingLines = lines.filter((l) => !l.invoiced);
+
+  const invoicedCommission = invoicedLines.reduce((s, l) => s + l.netCommission, 0);
+  const pendingCommission = pendingLines.reduce((s, l) => s + l.netCommission, 0);
+
+  const bonusInvoiced = bonusFor(invoicedWithVat);
+  const bonusProjected = bonusFor(totalWithVat);
+
+  return {
+    ordersCount: lines.length,
+    totalWithVat,
+    totalSinIva: totalWithVat / IVA_DIVISOR,
+    invoicedCount: invoicedLines.length,
+    invoicedWithVat,
+    invoicedCommission,
+    pendingCount: pendingLines.length,
+    pendingWithVat: pendingLines.reduce((s, l) => s + l.totalWithVat, 0),
+    pendingCommission,
+    bonusInvoiced,
+    bonusProjected,
+    toPayInvoiced: invoicedCommission + bonusInvoiced,
+    toPayProjected: invoicedCommission + pendingCommission + bonusProjected,
+    weekendUnlocked,
+    lines: lines.sort((a, b) => b.date.getTime() - a.date.getTime()),
+  };
+}
