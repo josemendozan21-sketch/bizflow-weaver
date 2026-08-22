@@ -18,7 +18,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Loader2, Info, TrendingUp, Clock, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Info, TrendingUp, Clock, CheckCircle2, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useOrders } from "@/hooks/useOrders";
