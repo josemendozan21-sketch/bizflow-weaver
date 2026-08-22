@@ -240,10 +240,12 @@ export default function MisComisiones() {
           </div>
           <p className="text-xs text-muted-foreground flex items-start gap-1.5">
             <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-            El pago se liquida sobre pedidos facturados. Los pedidos pendientes por
-            facturar se pagan cuando contabilidad los facture; la comisión se calcula
-            sobre el valor sin IVA.
+            La comisión se causa cuando el pedido está pagado (soporte de pago cargado)
+            o ya facturado; que contabilidad aún no facture no afecta tu comisión. Solo
+            quedan pendientes los pedidos que el cliente no ha pagado. Se calcula sobre
+            el valor sin IVA.
           </p>
+
         </CardContent>
       </Card>
 
@@ -254,9 +256,10 @@ export default function MisComisiones() {
             <div className="flex gap-1">
               {([
                 ["todos", "Todos"],
-                ["facturado", "Facturados"],
-                ["pendiente", "Por facturar"],
+                ["facturado", "Pagados"],
+                ["pendiente", "Sin pago"],
               ] as [Filter, string][]).map(([v, label]) => (
+
                 <Button
                   key={v}
                   size="sm"
@@ -320,9 +323,10 @@ export default function MisComisiones() {
                         {l.returned ? (
                           <Badge variant="destructive">Devuelto</Badge>
                         ) : l.invoiced ? (
-                          <Badge className="bg-emerald-600">Facturado</Badge>
+                          <Badge className="bg-emerald-600">Pagado</Badge>
                         ) : (
-                          <Badge className="bg-amber-500">Por facturar</Badge>
+                          <Badge className="bg-amber-500">Sin pago</Badge>
+
                         )}
                       </TableCell>
                     </TableRow>
