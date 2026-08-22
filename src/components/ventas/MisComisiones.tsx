@@ -18,7 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Loader2, Info, TrendingUp, Clock, CheckCircle2 } from "lucide-react";
+import { Loader2, Info, TrendingUp, Clock, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useOrders } from "@/hooks/useOrders";
@@ -54,6 +54,50 @@ export default function MisComisiones() {
     [orders, year, month, user?.id]
   );
 
+  const yearOptions = useMemo(() => {
+    const years = new Set<number>([today.getFullYear()]);
+    for (const o of orders) {
+      const ref = o.invoice_date || o.created_at;
+      if (ref) years.add(new Date(ref as string).getFullYear());
+    }
+    return Array.from(years).sort((a, b) => b - a);
+  }, [orders]);
+
+  const isCurrentMonth =
+    year === today.getFullYear() && month === today.getMonth();
+
+  const goPrevMonth = () => {
+    if (month === 0) {
+      setMonth(11);
+      setYear((y) => y - 1);
+    } else setMonth((m) => m - 1);
+  };
+
+  const goNextMonth = () => {
+    if (isCurrentMonth) return;
+    if (month === 11) {
+      setMonth(0);
+      setYear((y) => y + 1);
+    } else setMonth((m) => m + 1);
+  };
+
+  // Histórico de los últimos 12 meses (hasta el mes actual)
+  const history = useMemo(() => {
+    const out: { label: string; total: number; commission: number; count: number }[] = [];
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const s = summarizeAdvisorProgress(orders, d.getFullYear(), d.getMonth(), user?.id);
+      if (s.ordersCount === 0) continue;
+      out.push({
+        label: `${MONTHS[d.getMonth()]} ${d.getFullYear()}`,
+        total: s.totalWithVat,
+        commission: s.toPayInvoiced,
+        count: s.ordersCount,
+      });
+    }
+    return out;
+  }, [orders, user?.id]);
+
   const lines = useMemo(() => {
     if (filter === "facturado") return summary.lines.filter((l) => l.invoiced);
     if (filter === "pendiente") return summary.lines.filter((l) => !l.invoiced);
@@ -79,7 +123,7 @@ export default function MisComisiones() {
         <div>
           <h2 className="text-xl font-bold">Mis comisiones</h2>
           <p className="text-sm text-muted-foreground">
-            Cómo vas este mes según los pedidos que has montado.
+            Consulta el mes actual o meses anteriores según los pedidos que has montado.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -288,6 +332,38 @@ export default function MisComisiones() {
           )}
         </CardContent>
       </Card>
+
+      {history.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Historial de meses anteriores</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Mes</TableHead>
+                  <TableHead className="text-right">Pedidos</TableHead>
+                  <TableHead className="text-right">Montado</TableHead>
+                  <TableHead className="text-right">Comisión facturada</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {history.map((h) => (
+                  <TableRow key={h.label}>
+                    <TableCell className="capitalize">{h.label}</TableCell>
+                    <TableCell className="text-right">{h.count}</TableCell>
+                    <TableCell className="text-right">{fmt(h.total)}</TableCell>
+                    <TableCell className="text-right font-medium text-emerald-600">
+                      {fmt(h.commission)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
