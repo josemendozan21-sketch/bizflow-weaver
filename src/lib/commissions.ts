@@ -27,6 +27,22 @@ export const RETURN_PENALTY = 10_000;
 export const MIN_TICKET_DETAL = 80_000;
 export const MIN_WEEKEND_PCT = 0.10;
 
+/**
+ * Asesores con tarifa plana: Valentina Mendoza percibe 10% sobre cualquier
+ * venta (base sin IVA), sin importar canal, día o forma de pago.
+ */
+export const FLAT_RATE_ADVISORS: { match: string; rate: number }[] = [
+  { match: "valentina mendoza", rate: 0.10 },
+  { match: "valemendoza", rate: 0.10 },
+];
+
+export function getFlatRateFor(advisorName?: string | null): number | null {
+  const n = (advisorName || "").toLowerCase().trim();
+  if (!n) return null;
+  const hit = FLAT_RATE_ADVISORS.find((f) => n.includes(f.match));
+  return hit ? hit.rate : null;
+}
+
 export type PaymentMode = "contado" | "contraentrega";
 export type ClientKind = "nuevo" | "recompra";
 
@@ -159,13 +175,15 @@ export function summarizeAdvisorMonth(
       const clientKind: ClientKind = o.is_recompra ? "recompra" : "nuevo";
       const total = Number(o.total_amount || 0);
       const baseSinIva = total / IVA_DIVISOR;
-      const rate = getCommissionRate({
-        saleType: o.sale_type as "menor" | "mayor",
-        weekend,
-        paymentMode: ctx.paymentMode,
-        clientKind,
-        weekendUnlocked,
-      });
+      const rate =
+        getFlatRateFor(o.advisor_name) ??
+        getCommissionRate({
+          saleType: o.sale_type as "menor" | "mayor",
+          weekend,
+          paymentMode: ctx.paymentMode,
+          clientKind,
+          weekendUnlocked,
+        });
       const rawCommission = baseSinIva * rate;
       // returned se lee desde el pedido (Logística lo registra). Solo aplica
       // penalización si la forma de pago configurada es contraentrega.
@@ -304,13 +322,15 @@ export function summarizeAdvisorProgress(
     const baseSinIva = total / IVA_DIVISOR;
     const paymentMode: PaymentMode =
       o.payment_method === "contra_entrega" ? "contraentrega" : "contado";
-    const rate = getCommissionRate({
-      saleType: (o.sale_type as "menor" | "mayor") || "mayor",
-      weekend,
-      paymentMode,
-      clientKind,
-      weekendUnlocked,
-    });
+    const rate =
+      getFlatRateFor(o.advisor_name) ??
+      getCommissionRate({
+        saleType: (o.sale_type as "menor" | "mayor") || "mayor",
+        weekend,
+        paymentMode,
+        clientKind,
+        weekendUnlocked,
+      });
     const rawCommission = baseSinIva * rate;
     const returned = !!o.returned_at;
     const penalty =
