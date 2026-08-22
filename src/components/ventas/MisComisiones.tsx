@@ -176,7 +176,7 @@ export default function MisComisiones() {
         <Card className="border-emerald-500/30">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Facturado
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Comisión causada (pagados)
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -192,7 +192,7 @@ export default function MisComisiones() {
         <Card className="border-amber-500/30">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-              <Clock className="h-4 w-4 text-amber-600" /> Pendiente por facturar
+              <Clock className="h-4 w-4 text-amber-600" /> Pendiente de pago del cliente
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -214,8 +214,9 @@ export default function MisComisiones() {
           <CardContent>
             <p className="text-2xl font-bold">{fmt(summary.toPayProjected)}</p>
             <p className="text-xs text-muted-foreground">
-              Comisión + bono si se factura todo
+              Comisión + bono si se cobra todo
             </p>
+
           </CardContent>
         </Card>
       </div>
