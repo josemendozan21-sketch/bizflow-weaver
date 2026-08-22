@@ -249,7 +249,20 @@ export default function MisComisiones() {
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
+          <Button
+            onClick={handleExport}
+            disabled={exporting || summary.lines.length === 0}
+            className="gap-2"
+          >
+            {exporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            Descargar Excel
+          </Button>
         </div>
+
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
