@@ -1,5 +1,15 @@
-import type { Order } from "@/hooks/useOrders";
+import { type Order, isOrderFullyPaid } from "@/hooks/useOrders";
 import { startOfMonth, endOfMonth, isWithinInterval, getDay, parseISO } from "date-fns";
+
+/**
+ * Base de causación: un pedido causa comisión cuando está PAGADO
+ * (soporte de pago cargado / pago completo) o ya fue facturado.
+ * La facturación posterior por contabilidad no es responsabilidad del asesor.
+ */
+export function isCommissionable(o: Order): boolean {
+  return isOrderFullyPaid(o) || o.invoice_status === "facturado";
+}
+
 
 /**
  * Política de Comisiones y Bonos – Asesores Comerciales 2026
@@ -147,7 +157,7 @@ export function summarizeAdvisorMonth(
   // Agrupar por asesor primero (para calcular desbloqueo y KPIs)
   const byAdvisor = new Map<string, Order[]>();
   for (const o of orders) {
-    if (o.invoice_status !== "facturado") continue;
+    if (!isCommissionable(o)) continue;
     const d = getOrderDate(o);
     if (!isWithinInterval(d, { start, end })) continue;
     const arr = byAdvisor.get(o.advisor_id) || [];
@@ -308,7 +318,7 @@ export function summarizeAdvisorProgress(
     0
   );
   const invoicedWithVat = monthOrders
-    .filter((o) => o.invoice_status === "facturado")
+    .filter((o) => isCommissionable(o))
     .reduce((s, o) => s + Number(o.total_amount || 0), 0);
 
   // El desbloqueo FDS se evalúa sobre lo facturado (política oficial).
@@ -338,7 +348,7 @@ export function summarizeAdvisorProgress(
     return {
       order: o,
       date: d,
-      invoiced: o.invoice_status === "facturado",
+      invoiced: isCommissionable(o),
       weekend,
       paymentMode,
       clientKind,

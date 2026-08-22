@@ -158,7 +158,7 @@ export default function CommissionsPanel({ orders }: Props) {
         <Card>
           <CardContent className="pt-6">
             <p className="text-center text-muted-foreground py-8">
-              No hay pedidos facturados en este período.
+              No hay pedidos pagados en este período.
             </p>
           </CardContent>
         </Card>
