@@ -157,7 +157,7 @@ export function summarizeAdvisorMonth(
   // Agrupar por asesor primero (para calcular desbloqueo y KPIs)
   const byAdvisor = new Map<string, Order[]>();
   for (const o of orders) {
-    if (o.invoice_status !== "facturado") continue;
+    if (!isCommissionable(o)) continue;
     const d = getOrderDate(o);
     if (!isWithinInterval(d, { start, end })) continue;
     const arr = byAdvisor.get(o.advisor_id) || [];
@@ -318,7 +318,7 @@ export function summarizeAdvisorProgress(
     0
   );
   const invoicedWithVat = monthOrders
-    .filter((o) => o.invoice_status === "facturado")
+    .filter((o) => isCommissionable(o))
     .reduce((s, o) => s + Number(o.total_amount || 0), 0);
 
   // El desbloqueo FDS se evalúa sobre lo facturado (política oficial).
@@ -348,7 +348,7 @@ export function summarizeAdvisorProgress(
     return {
       order: o,
       date: d,
-      invoiced: o.invoice_status === "facturado",
+      invoiced: isCommissionable(o),
       weekend,
       paymentMode,
       clientKind,
