@@ -82,7 +82,10 @@ export default function MisComisiones() {
             Cómo vas este mes según los pedidos que has montado.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={goPrevMonth} aria-label="Mes anterior">
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
           <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
             <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -94,11 +97,22 @@ export default function MisComisiones() {
           <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
             <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
             <SelectContent>
-              {[today.getFullYear() - 1, today.getFullYear()].map((y) => (
+              {yearOptions.map((y) => (
                 <SelectItem key={y} value={String(y)}>{y}</SelectItem>
               ))}
             </SelectContent>
           </Select>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={goNextMonth}
+            disabled={isCurrentMonth}
+            aria-label="Mes siguiente"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+
         </div>
       </div>
 
