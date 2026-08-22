@@ -1,5 +1,15 @@
-import type { Order } from "@/hooks/useOrders";
+import { type Order, isOrderFullyPaid } from "@/hooks/useOrders";
 import { startOfMonth, endOfMonth, isWithinInterval, getDay, parseISO } from "date-fns";
+
+/**
+ * Base de causación: un pedido causa comisión cuando está PAGADO
+ * (soporte de pago cargado / pago completo) o ya fue facturado.
+ * La facturación posterior por contabilidad no es responsabilidad del asesor.
+ */
+export function isCommissionable(o: Order): boolean {
+  return isOrderFullyPaid(o) || o.invoice_status === "facturado";
+}
+
 
 /**
  * Política de Comisiones y Bonos – Asesores Comerciales 2026
