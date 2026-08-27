@@ -90,7 +90,7 @@ const CANONICAL_REFERENCES = [
   "Muela", "Labios", "Círculo 8 cm", "Círculo 12 cm", "Círculo Ojo",
   "Tiroides", "Toalla Higiénica", "Toalla Higienica", "Huskvarna",
   "Corazón Térmico", "Corazon Termico",
-  "Bacteria", "Antifaz", "Gafas pequeñas", "Pélvica", "Pelvica",
+  "Bacteria", "Antifaz", "Gafas pequeñas", "Gafas grandes", "Gafas Fancy", "Pélvica", "Pelvica",
   "Mariposas", "Mariposa",
   "Gorro quimioterapia", "Gorro Quimioterapia", "Gorro",
   "Tornillo 3D",
