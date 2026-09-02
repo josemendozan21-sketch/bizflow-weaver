@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { OperatorPromptDialog } from "./OperatorPromptDialog";
 import { StageLogsList } from "./StageLogsList";
 import { ensureProductionOrder } from "@/lib/orderFlow";
+import { matchesQuery } from "@/lib/search";
 
 interface BodyStockItem {
   id: string;
@@ -132,12 +133,13 @@ export const EstampacionProductionView = () => {
         !(o.stamp_size_status === "finalizado" && o.stamp_inkgel_status === "finalizado"))
   );
 
-  const q = searchQuery.trim().toLowerCase();
+  const q = searchQuery.trim();
   const filteredOrders = q
     ? estampacionOrders.filter((o) =>
-        [o.client_name, o.logo_file, o.advisor_name, o.molde, o.thermo_size, o.ink_color, o.gel_color]
-          .filter(Boolean)
-          .some((v) => String(v).toLowerCase().includes(q))
+        matchesQuery(
+          [(o as any).order_code, o.client_name, o.logo_file, o.advisor_name, o.molde, o.thermo_size, o.ink_color, o.gel_color],
+          q,
+        ),
       )
     : estampacionOrders;
 

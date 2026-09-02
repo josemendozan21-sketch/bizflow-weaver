@@ -11,6 +11,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { baseRefName } from "@/lib/canonicalBodyRef";
+import { matchesQuery } from "@/lib/search";
+import { RESERVATIONS_ENABLED } from "@/lib/featureFlags";
 
 const extractTipo = (ref: string): "Frío" | "Térmico" | null => {
   const m = ref.match(/\((Frío|Frio|Térmico|Termico|Calor)\)/i);
@@ -138,14 +140,10 @@ export default function MovementHistoryTable() {
       if (catFilter !== "todas" && m.category !== catFilter) return false;
       const kind = m.movement_kind || (m.direction === "retorno" ? "entrada" : "salida");
       if (kindFilter !== "todos" && kind !== kindFilter) return false;
-      if (search) {
-        const q = search.toLowerCase();
-        if (
-          !m.item_name.toLowerCase().includes(q) &&
-          !(m.requested_by_name || "").toLowerCase().includes(q) &&
-          !(m.purpose || "").toLowerCase().includes(q)
-        ) return false;
-      }
+      if (!matchesQuery(
+        [m.item_name, m.brand, m.requested_by_name, m.purpose, m.reason, m.supplier, m.recorded_by_name],
+        search,
+      )) return false;
       return true;
     });
   }, [movements, brandFilter, catFilter, kindFilter, search]);
@@ -159,15 +157,15 @@ export default function MovementHistoryTable() {
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-          <Input placeholder="Buscar ítem, solicitante, motivo..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input placeholder="Buscar ítem, marca, solicitante, motivo…" value={search} onChange={(e) => setSearch(e.target.value)} />
           <Select value={kindFilter} onValueChange={setKindFilter}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos los tipos</SelectItem>
               <SelectItem value="entrada">Entradas</SelectItem>
               <SelectItem value="salida">Salidas</SelectItem>
-              <SelectItem value="reserva">Reservas</SelectItem>
-              <SelectItem value="liberar_reserva">Liberaciones</SelectItem>
+              {RESERVATIONS_ENABLED && <SelectItem value="reserva">Reservas</SelectItem>}
+              {RESERVATIONS_ENABLED && <SelectItem value="liberar_reserva">Liberaciones</SelectItem>}
             </SelectContent>
           </Select>
           <Select value={brandFilter} onValueChange={setBrandFilter}>

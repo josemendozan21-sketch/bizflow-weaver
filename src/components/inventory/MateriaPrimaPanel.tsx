@@ -21,6 +21,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import DebouncedSearchInput from "./DebouncedSearchInput";
+import { matchesQuery } from "@/lib/search";
 
 const UNITS = ["unidades", "gramos", "kilos", "tarros", "metros", "litros"];
 
@@ -85,7 +86,7 @@ const MateriaPrimaPanel = () => {
         // Magical or Sweatspot filter: incluye items compartidos ("ambas")
         return i.brand === brandFilter || i.brand === "ambas";
       })
-      .filter((i) => (q ? normalize(i.name).includes(q) : true))
+      .filter((i) => matchesQuery([i.name, i.brand, (i as any).unit, (i as any).color], search))
       .sort((a, b) =>
         sortDir === "asc"
           ? a.name.localeCompare(b.name, "es", { sensitivity: "base" })

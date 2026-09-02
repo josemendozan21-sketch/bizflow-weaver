@@ -11,10 +11,13 @@ import { toast } from "sonner";
 import { useInventory } from "@/hooks/useInventory";
 import { useInventoryMovements, type MovementKind } from "@/hooks/useInventoryMovements";
 import { supabase } from "@/integrations/supabase/client";
+import { RESERVATIONS_ENABLED } from "@/lib/featureFlags";
+import { matchesQuery } from "@/lib/search";
+import { useFerias } from "@/hooks/useFerias";
 
 type ActionKind = MovementKind | "solicitud";
 
-const KIND_OPTIONS: { value: ActionKind; label: string; icon: any; color: string }[] = [
+const ALL_KIND_OPTIONS: { value: ActionKind; label: string; icon: any; color: string }[] = [
   { value: "entrada", label: "Entrada", icon: ArrowDownToLine, color: "text-emerald-600" },
   { value: "salida", label: "Salida", icon: ArrowUpFromLine, color: "text-orange-600" },
   { value: "reserva", label: "Reservar (en proceso)", icon: Clock, color: "text-amber-600" },
@@ -28,6 +31,12 @@ const CATEGORIES = [
   { value: "producto_terminado", label: "Producto terminado" },
   { value: "importados", label: "Importados" },
 ];
+
+const KIND_OPTIONS = ALL_KIND_OPTIONS.filter(
+  (k) => RESERVATIONS_ENABLED || !["reserva", "liberar_reserva"].includes(k.value as string),
+);
+
+interface OrderOption { id: string; order_code: string | null; client_name: string; advisor_name: string | null; }
 
 const REQUESTER_OPTIONS = [
   "Producción",
@@ -55,7 +64,34 @@ export default function QuickMovementForm() {
   const [supplier, setSupplier] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [magicalTipo, setMagicalTipo] = useState<"" | "frio" | "calor">("");
+  const [destKind, setDestKind] = useState<"ninguno" | "pedido" | "feria">("ninguno");
+  const [orderId, setOrderId] = useState("");
+  const [orderSearch, setOrderSearch] = useState("");
+  const [recentOrders, setRecentOrders] = useState<OrderOption[]>([]);
+  const [feriaId, setFeriaId] = useState("");
   const [sweatLogo, setSweatLogo] = useState<"" | "con" | "sin">("");
+
+  const feriasQuery = useFerias();
+  const ferias = (feriasQuery.data ?? []).filter((f: any) => f.status !== "cancelada");
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("orders")
+        .select("id, order_code, client_name, advisor_name")
+        .order("created_at", { ascending: false })
+        .limit(300);
+      setRecentOrders((data as any) || []);
+    })();
+  }, []);
+
+  const orderOptions = useMemo(
+    () =>
+      recentOrders
+        .filter((o) => matchesQuery([o.order_code, o.client_name, o.advisor_name], orderSearch))
+        .slice(0, 60),
+    [recentOrders, orderSearch],
+  );
 
   const brands = useMemo(
     () => Array.from(new Set(stockItems.map((s) => s.brand))).sort(),
@@ -102,6 +138,10 @@ export default function QuickMovementForm() {
     setRequesterOther("");
     setPurpose("");
     setSupplier("");
+    setDestKind("ninguno");
+    setOrderId("");
+    setOrderSearch("");
+    setFeriaId("");
   };
 
   const handleSubmit = async () => {
@@ -163,6 +203,8 @@ export default function QuickMovementForm() {
       purpose: purpose || null,
       supplier: kind === "entrada" ? supplier || null : null,
       reason: purpose || null,
+      order_id: destKind === "pedido" && orderId ? orderId : null,
+      feria_id: destKind === "feria" && feriaId ? feriaId : null,
     });
     setSubmitting(false);
     if (res.success) {
@@ -320,6 +362,61 @@ export default function QuickMovementForm() {
             />
           </div>
         </div>
+
+        {kind !== "entrada" && kind !== "solicitud" && (
+          <div className="space-y-2 rounded-md border p-3">
+            <Label className="text-sm">Destino de la salida (para trazabilidad)</Label>
+            <div className="flex flex-wrap gap-2">
+              {([
+                { v: "ninguno", l: "Sin destino específico" },
+                { v: "pedido", l: "Pedido" },
+                { v: "feria", l: "Feria" },
+              ] as const).map((o) => (
+                <Button
+                  key={o.v}
+                  type="button"
+                  size="sm"
+                  variant={destKind === o.v ? "default" : "outline"}
+                  onClick={() => setDestKind(o.v)}
+                >
+                  {o.l}
+                </Button>
+              ))}
+            </div>
+            {destKind === "pedido" && (
+              <div className="space-y-2">
+                <Input
+                  placeholder="Buscar por número de pedido, cliente o asesor…"
+                  value={orderSearch}
+                  onChange={(e) => setOrderSearch(e.target.value)}
+                />
+                <Select value={orderId} onValueChange={setOrderId}>
+                  <SelectTrigger><SelectValue placeholder="Selecciona el pedido" /></SelectTrigger>
+                  <SelectContent>
+                    {orderOptions.length === 0 && (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">Sin resultados</div>
+                    )}
+                    {orderOptions.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.order_code || "s/n"} · {o.client_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {destKind === "feria" && (
+              <Select value={feriaId} onValueChange={setFeriaId}>
+                <SelectTrigger><SelectValue placeholder="Selecciona la feria" /></SelectTrigger>
+                <SelectContent>
+                  {ferias.map((f: any) => (
+                    <SelectItem key={f.id} value={f.id}>{f.name}{f.city ? ` — ${f.city}` : ""}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        )}
 
         <div>
           <Label>Para qué / motivo</Label>

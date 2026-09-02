@@ -23,8 +23,7 @@ import { PaymentsList } from "./PaymentsList";
 import { AddPaymentDialog } from "./AddPaymentDialog";
 import { PendingProofPanel } from "./PendingProofPanel";
 
-/** Compara códigos de pedido ignorando guiones y mayúsculas (SW-VM-00123 → swvm00123). */
-const normalizeCode = (v: string) => (v || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+import { matchesQuery } from "@/lib/search";
 
 
 const STAGE_ORDER = [
@@ -237,13 +236,9 @@ export function MisPedidos() {
         if (dateRange === "90" && ageMs > days(90)) return false;
         if (dateRange === "old" && ageMs <= days(90)) return false;
       }
-      if (!q) return true;
-      return (
-        normalizeCode(o.order_code || "").includes(normalizeCode(q)) ||
-        (o.client_name || "").toLowerCase().includes(q) ||
-        (o.client_nit || "").toLowerCase().includes(q) ||
-        (o.product || "").toLowerCase().includes(q) ||
-        (o.advisor_name || "").toLowerCase().includes(q)
+      return matchesQuery(
+        [o.order_code, o.client_name, o.client_nit, o.product, o.advisor_name, o.brand],
+        q,
       );
     });
   }, [orders, search, brandFilter, saleTypeFilter, advisorFilter, dateRange, monthFilter, isAdmin]);

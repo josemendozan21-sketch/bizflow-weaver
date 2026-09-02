@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Boxes, ShoppingBag, History, Beaker, Sparkles, Warehouse, Store, Tent, BookmarkCheck, PackageSearch } from "lucide-react";
+import { Boxes, ShoppingBag, History, Beaker, Sparkles, Warehouse, Store, Tent, BookmarkCheck, PackageSearch, Route } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
 import MateriaPrimaPanel from "@/components/inventory/MateriaPrimaPanel";
@@ -13,6 +13,8 @@ import InventoryDashboardSummary from "@/components/inventory/InventoryDashboard
 import Punto92WarehousePanel from "@/components/inventory/Punto92WarehousePanel";
 import FeriasWarehousePanel from "@/components/inventory/FeriasWarehousePanel";
 import ReservationsPanel from "@/components/inventory/ReservationsPanel";
+import InventoryTraceabilityPanel from "@/components/inventory/InventoryTraceabilityPanel";
+import { RESERVATIONS_ENABLED } from "@/lib/featureFlags";
 
 type WarehouseKey = "principal" | "punto92" | "ferias";
 
@@ -64,8 +66,13 @@ const InventariosRoleView = () => {
           <TabsTrigger value="bandeja" className="gap-1.5">
             <ShoppingBag className="h-4 w-4" /> Bandeja de pedidos
           </TabsTrigger>
-          <TabsTrigger value="reservas" className="gap-1.5">
-            <BookmarkCheck className="h-4 w-4" /> Reservas
+          {RESERVATIONS_ENABLED && (
+            <TabsTrigger value="reservas" className="gap-1.5">
+              <BookmarkCheck className="h-4 w-4" /> Reservas
+            </TabsTrigger>
+          )}
+          <TabsTrigger value="trazabilidad" className="gap-1.5 whitespace-nowrap">
+            <Route className="h-4 w-4" /> Trazabilidad
           </TabsTrigger>
           <TabsTrigger value="movimientos" className="gap-1.5">
             <Boxes className="h-4 w-4" /> Entradas y Salidas
@@ -117,8 +124,14 @@ const InventariosRoleView = () => {
           <WholesaleOrdersInbox />
         </TabsContent>
 
-        <TabsContent value="reservas" className="mt-4">
-          <ReservationsPanel />
+        {RESERVATIONS_ENABLED && (
+          <TabsContent value="reservas" className="mt-4">
+            <ReservationsPanel />
+          </TabsContent>
+        )}
+
+        <TabsContent value="trazabilidad" className="mt-4">
+          <InventoryTraceabilityPanel />
         </TabsContent>
 
         <TabsContent value="movimientos" className="mt-4 space-y-4">
