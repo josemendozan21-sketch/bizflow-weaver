@@ -24,6 +24,9 @@ import { AddPaymentDialog } from "./AddPaymentDialog";
 import { PendingProofPanel } from "./PendingProofPanel";
 
 import { matchesQuery } from "@/lib/search";
+import { useOrderCharges } from "@/hooks/useOrderCharges";
+import OrderChargesEditor from "./OrderChargesEditor";
+import OrderChangeLogPanel from "./OrderChangeLogPanel";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import DeliveryProgressBadge from "@/components/common/DeliveryProgressBadge";
 
