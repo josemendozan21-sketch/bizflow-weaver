@@ -57,11 +57,13 @@ export default function MisComisiones() {
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [filter, setFilter] = useState<Filter>("todos");
+  const [basis, setBasis] = useState<PeriodBasis>("venta");
 
   const summary = useMemo(
-    () => summarizeAdvisorProgress(orders, year, month, user?.id),
-    [orders, year, month, user?.id]
+    () => summarizeAdvisorProgress(orders, year, month, user?.id, basis),
+    [orders, year, month, user?.id, basis]
   );
+
 
   const yearOptions = useMemo(() => {
     const years = new Set<number>([today.getFullYear()]);
