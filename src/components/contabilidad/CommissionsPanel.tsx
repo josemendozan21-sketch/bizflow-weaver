@@ -319,16 +319,16 @@ export default function CommissionsPanel({ orders }: Props) {
                       </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="mt-3">
-                      <Table>
+                      <Table className="table-fixed">
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="w-8" />
+                            <TableHead className="w-10 px-1" />
                             <TableHead>Cliente</TableHead>
-                            <TableHead>Día</TableHead>
-                            <TableHead>Forma de pago</TableHead>
-                            <TableHead className="text-right">Total c/IVA</TableHead>
-                            <TableHead className="text-right">Comisión</TableHead>
-                            <TableHead>Causación</TableHead>
+                            <TableHead className="w-[90px] px-2">Día</TableHead>
+                            <TableHead className="w-[150px] px-2">Forma de pago</TableHead>
+                            <TableHead className="w-[120px] px-2 text-right">Total c/IVA</TableHead>
+                            <TableHead className="w-[120px] px-2 text-right">Comisión</TableHead>
+                            <TableHead className="w-[132px] px-2">Causación</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>

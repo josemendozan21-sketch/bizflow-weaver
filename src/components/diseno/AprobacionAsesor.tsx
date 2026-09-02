@@ -101,6 +101,8 @@ function ApprovedCard({ request: req, role }: { request: LogoRequest; role: stri
       }
 
       const today = format(new Date(), "d 'de' MMMM yyyy", { locale: es });
+      const logoUrl = req.adjusted_logo_url || req.original_logo_url;
+      const isPdfLogo = logoUrl.toLowerCase().split("?")[0].endsWith(".pdf");
       const approvedDate = req.approved_at
         ? format(new Date(req.approved_at), "d 'de' MMMM yyyy", { locale: es })
         : "—";
@@ -135,7 +137,9 @@ function ApprovedCard({ request: req, role }: { request: LogoRequest; role: stri
             <p>Documento generado para el área de producción</p>
           </div>
           <div class="logo-container">
-            <img src="${esc(req.adjusted_logo_url || req.original_logo_url)}" alt="Logo para estampar" />
+            ${isPdfLogo
+              ? `<p><strong>Diseño en PDF:</strong> <a href="${esc(logoUrl)}" target="_blank">Abrir archivo del logo</a></p>`
+              : `<img src="${esc(logoUrl)}" alt="Logo para estampar" />`}
           </div>
           <p class="section-title">Información del pedido</p>
           <table>

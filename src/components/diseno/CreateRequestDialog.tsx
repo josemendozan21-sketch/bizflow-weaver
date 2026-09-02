@@ -8,6 +8,7 @@ import { Plus, Upload, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCreateLogoRequest, uploadLogoFile } from "@/hooks/useLogoRequests";
 import { useToast } from "@/hooks/use-toast";
+import { LogoPreview } from "./LogoPreview";
 
 export function CreateRequestDialog() {
   const [open, setOpen] = useState(false);
@@ -117,8 +118,8 @@ export function CreateRequestDialog() {
             <input ref={fileRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
             {logoPreview ? (
               <div className="space-y-2">
-                <div className="border rounded-lg p-3 bg-muted/30 flex items-center justify-center">
-                  <img src={logoPreview} alt="Logo" className="max-h-24 object-contain" />
+                <div className="border rounded-lg p-2 bg-muted/30 flex items-center justify-center overflow-hidden">
+                  <LogoPreview url={logoPreview} alt="Logo" maxHeightClass="max-h-24" />
                 </div>
                 <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} className="w-full">Cambiar logo</Button>
               </div>
