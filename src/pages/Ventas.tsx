@@ -1308,12 +1308,64 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                     onValueChange={(v) => updateLine(line.id, { gelColor: v })}
                     onCustomChange={(v) => updateLine(line.id, { gelCustom: v })}
                   />
+                  <div className="space-y-1.5">
+                    <Label>Número de tintas</Label>
+                    <Select
+                      value={String(line.inkCount ?? 1)}
+                      onValueChange={(v) => {
+                        const n = parseInt(v, 10);
+                        updateLine(line.id, {
+                          inkCount: n,
+                          ...(n < 2 ? { inkColor2: "", inkCustom2: "" } : {}),
+                          ...(n < 3 ? { inkColor3: "", inkCustom3: "" } : {}),
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1 tinta</SelectItem>
+                        <SelectItem value="2">2 tintas</SelectItem>
+                        <SelectItem value="3">3 tintas</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
                   <ColorSelect
-                    label="Color de tinta"
+                    label={(line.inkCount ?? 1) > 1 ? "Color de tinta 1" : "Color de tinta"}
                     value={line.inkColor}
                     customValue={line.inkCustom}
                     onValueChange={(v) => updateLine(line.id, { inkColor: v })}
                     onCustomChange={(v) => updateLine(line.id, { inkCustom: v })}
+                  />
+                  {(line.inkCount ?? 1) >= 2 && (
+                    <ColorSelect
+                      label="Color de tinta 2"
+                      value={line.inkColor2 || ""}
+                      customValue={line.inkCustom2 || ""}
+                      onValueChange={(v) => updateLine(line.id, { inkColor2: v })}
+                      onCustomChange={(v) => updateLine(line.id, { inkCustom2: v })}
+                    />
+                  )}
+                  {(line.inkCount ?? 1) >= 3 && (
+                    <ColorSelect
+                      label="Color de tinta 3"
+                      value={line.inkColor3 || ""}
+                      customValue={line.inkCustom3 || ""}
+                      onValueChange={(v) => updateLine(line.id, { inkColor3: v })}
+                      onCustomChange={(v) => updateLine(line.id, { inkCustom3: v })}
+                    />
+                  )}
+                  <ColorSelect
+                    label="Color de escarcha"
+                    value={line.glitterColor || ""}
+                    customValue={line.glitterCustom || ""}
+                    onValueChange={(v) => updateLine(line.id, { glitterColor: v })}
+                    onCustomChange={(v) => updateLine(line.id, { glitterCustom: v })}
+                    options={glitterOptions}
+                    placeholder="Seleccionar escarcha"
                   />
                 </div>
                 {!line.isGift && (
