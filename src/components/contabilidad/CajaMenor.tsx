@@ -295,7 +295,7 @@ export default function CajaMenor() {
           <CardContent className="space-y-1">
             {counts.slice(0, 6).map((c) => (
               <div key={c.id} className="flex items-center gap-2 text-sm flex-wrap">
-                <Badge variant="outline">{sedeLabel(c.sede)}</Badge>
+                <SedeBadge sede={c.sede} />
                 <span className="text-xs text-muted-foreground">
                   {format(new Date(c.count_date + "T12:00:00"), "d MMM yyyy", { locale: es })}
                 </span>
@@ -377,7 +377,7 @@ export default function CajaMenor() {
         )}
 
         <div className="flex gap-3 text-xs text-muted-foreground flex-wrap">
-          <span>Ingresos del periodo: <span className="font-semibold text-primary">{formatCOP(monthIncome)}</span></span>
+          <span>Ingresos del periodo: <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatCOP(monthIncome)}</span></span>
           <span>Gastos del periodo: <span className="font-semibold text-destructive">{formatCOP(monthExpense)}</span></span>
           <span>Neto: <span className="font-semibold text-foreground">{formatCOP(monthIncome - monthExpense)}</span></span>
         </div>
