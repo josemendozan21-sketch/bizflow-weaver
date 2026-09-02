@@ -1620,6 +1620,47 @@ export type Database = {
         }
         Relationships: []
       }
+      logo_request_status_log: {
+        Row: {
+          changed_by: string | null
+          changed_by_name: string | null
+          created_at: string
+          id: string
+          logo_request_id: string
+          new_status: string
+          note: string | null
+          old_status: string | null
+        }
+        Insert: {
+          changed_by?: string | null
+          changed_by_name?: string | null
+          created_at?: string
+          id?: string
+          logo_request_id: string
+          new_status: string
+          note?: string | null
+          old_status?: string | null
+        }
+        Update: {
+          changed_by?: string | null
+          changed_by_name?: string | null
+          created_at?: string
+          id?: string
+          logo_request_id?: string
+          new_status?: string
+          note?: string | null
+          old_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logo_request_status_log_logo_request_id_fkey"
+            columns: ["logo_request_id"]
+            isOneToOne: false
+            referencedRelation: "logo_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       logo_requests: {
         Row: {
           additional_instructions: string | null
@@ -1834,6 +1875,89 @@ export type Database = {
           type?: string
         }
         Relationships: []
+      }
+      order_change_log: {
+        Row: {
+          changed_by: string | null
+          changed_by_name: string | null
+          created_at: string
+          field: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          order_code: string | null
+          order_id: string
+          reason: string | null
+        }
+        Insert: {
+          changed_by?: string | null
+          changed_by_name?: string | null
+          created_at?: string
+          field: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          order_code?: string | null
+          order_id: string
+          reason?: string | null
+        }
+        Update: {
+          changed_by?: string | null
+          changed_by_name?: string | null
+          created_at?: string
+          field?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          order_code?: string | null
+          order_id?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
+      order_charges: {
+        Row: {
+          amount: number
+          concept: string
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          id: string
+          notes: string | null
+          order_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          concept: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          id?: string
+          notes?: string | null
+          order_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          concept?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_charges_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       order_deliveries: {
         Row: {
