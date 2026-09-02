@@ -669,6 +669,19 @@ const CategorizedInventoryPanel = ({
                           <SelectItem value="otros">Otros</SelectItem>
                         </SelectContent>
                       </Select>
+                      {cat === "producto_terminado" && (
+                        <Select value={logoFilter} onValueChange={(v) => setLogoFilter(v as typeof logoFilter)}>
+                          <SelectTrigger className="h-9 w-[150px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="todos">Marcado: todos</SelectItem>
+                            <SelectItem value="con">Marcado (con logo)</SelectItem>
+                            <SelectItem value="sin">Sin marcar</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+
                       <Button
                         type="button"
                         variant="outline"
