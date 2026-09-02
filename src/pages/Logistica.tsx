@@ -23,6 +23,7 @@ import CreateInventoryRequestDialog from "@/components/inventory/CreateInventory
 import InventoryRequestsPanel from "@/components/inventory/InventoryRequestsPanel";
 import { MissingFinishedPhotoButton } from "@/components/logistics/MissingFinishedPhotoButton";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
+import PartialDeliveryControl from "@/components/common/PartialDeliveryControl";
 
 function OrderCodeList({ items }: { items: Order[] }) {
   const codes = items.slice(0, 3);
