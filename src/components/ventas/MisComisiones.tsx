@@ -57,6 +57,9 @@ export default function MisComisiones() {
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [filter, setFilter] = useState<Filter>("todos");
+  const [search, setSearch] = useState("");
+  const [minAmount, setMinAmount] = useState("");
+  const [maxAmount, setMaxAmount] = useState("");
   const [basis, setBasis] = useState<PeriodBasis>("venta");
 
   const summary = useMemo(
