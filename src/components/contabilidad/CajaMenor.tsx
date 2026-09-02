@@ -52,6 +52,23 @@ import {
   formatCOP,
 } from "@/lib/pettyCash";
 
+/** Badge de sede bien diferenciable: Toberín azul, Chicó violeta. */
+function SedeBadge({ sede }: { sede: string | null | undefined }) {
+  const isChico = sede === "chico";
+  return (
+    <Badge
+      variant="outline"
+      className={`text-[10px] font-bold uppercase tracking-wide border-2 ${
+        isChico
+          ? "bg-violet-500/10 text-violet-700 border-violet-500/50 dark:text-violet-300"
+          : "bg-blue-500/10 text-blue-700 border-blue-500/50 dark:text-blue-300"
+      }`}
+    >
+      {sedeLabel(sede)}
+    </Badge>
+  );
+}
+
 export default function CajaMenor() {
   const { user, role } = useAuth();
   const queryClient = useQueryClient();
@@ -59,6 +76,7 @@ export default function CajaMenor() {
   const [showExpenseDialog, setShowExpenseDialog] = useState(false);
   const [showCountDialog, setShowCountDialog] = useState(false);
   const [editingFund, setEditingFund] = useState<PettyFund | null>(null);
+  const [editingExpense, setEditingExpense] = useState<PettyExpense | null>(null);
   const [monthFilter, setMonthFilter] = useState<string>("todos");
   const [sedeFilter, setSedeFilter] = useState<"todas" | Sede>("todas");
   const canManage = role === "admin" || role === "contabilidad";
@@ -223,7 +241,7 @@ export default function CajaMenor() {
           <CardContent className="space-y-2">
             {pendingPos.map((e) => (
               <div key={e.id} className="flex items-center gap-2 flex-wrap rounded border p-2 text-sm">
-                <Badge variant="outline">{sedeLabel(e.sede)}</Badge>
+                <SedeBadge sede={e.sede} />
                 <span className="font-semibold text-destructive">-{formatCOP(Number(e.amount))}</span>
                 <span className="flex-1 min-w-[160px]">{e.description}</span>
                 <span className="text-xs text-muted-foreground">{e.recorded_by_name}</span>
@@ -277,7 +295,7 @@ export default function CajaMenor() {
           <CardContent className="space-y-1">
             {counts.slice(0, 6).map((c) => (
               <div key={c.id} className="flex items-center gap-2 text-sm flex-wrap">
-                <Badge variant="outline">{sedeLabel(c.sede)}</Badge>
+                <SedeBadge sede={c.sede} />
                 <span className="text-xs text-muted-foreground">
                   {format(new Date(c.count_date + "T12:00:00"), "d MMM yyyy", { locale: es })}
                 </span>
@@ -303,22 +321,39 @@ export default function CajaMenor() {
 
       {/* Libro de movimientos unificado */}
       <div className="space-y-3">
+        {/* Filtro de sede: botones segmentados, grandes y diferenciados por color */}
+        <div className="flex items-center gap-1 rounded-lg border bg-muted/40 p-1 w-fit">
+          {([{ value: "todas" as const, label: "Todas las sedes" }, ...SEDES.map((s) => ({ value: s.value as Sede, label: s.label }))]).map((opt) => {
+            const active = sedeFilter === opt.value;
+            const colorCls =
+              opt.value === "chico"
+                ? active
+                  ? "bg-violet-600 text-white shadow"
+                  : "text-violet-700 dark:text-violet-300 hover:bg-violet-500/10"
+                : opt.value === "toberin"
+                  ? active
+                    ? "bg-blue-600 text-white shadow"
+                    : "text-blue-700 dark:text-blue-300 hover:bg-blue-500/10"
+                  : active
+                    ? "bg-foreground text-background shadow"
+                    : "text-muted-foreground hover:bg-muted";
+            return (
+              <button
+                key={opt.value}
+                onClick={() => setSedeFilter(opt.value as any)}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${colorCls}`}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <h3 className="text-sm font-semibold text-foreground">
             Movimientos de caja menor ({visible.length})
           </h3>
           <div className="flex items-center gap-2 flex-wrap">
-            <Select value={sedeFilter} onValueChange={(v) => setSedeFilter(v as any)}>
-              <SelectTrigger className="h-8 w-[190px]">
-                <SelectValue placeholder="Sede" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todas">Todas las sedes</SelectItem>
-                {SEDES.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <Select value={monthFilter} onValueChange={setMonthFilter}>
               <SelectTrigger className="h-8 w-[190px]">
                 <SelectValue placeholder="Mes" />
@@ -342,7 +377,7 @@ export default function CajaMenor() {
         )}
 
         <div className="flex gap-3 text-xs text-muted-foreground flex-wrap">
-          <span>Ingresos del periodo: <span className="font-semibold text-primary">{formatCOP(monthIncome)}</span></span>
+          <span>Ingresos del periodo: <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatCOP(monthIncome)}</span></span>
           <span>Gastos del periodo: <span className="font-semibold text-destructive">{formatCOP(monthExpense)}</span></span>
           <span>Neto: <span className="font-semibold text-foreground">{formatCOP(monthIncome - monthExpense)}</span></span>
         </div>
@@ -363,7 +398,7 @@ export default function CajaMenor() {
                   ) : m.kind === "traslado" ? (
                     <ArrowLeftRight className="h-4 w-4 text-muted-foreground" />
                   ) : m.signedAmount > 0 ? (
-                    <ArrowDownCircle className="h-4 w-4 text-primary" />
+                    <ArrowDownCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                   ) : (
                     <ArrowUpCircle className="h-4 w-4 text-destructive" />
                   )}
@@ -375,14 +410,14 @@ export default function CajaMenor() {
                         m.kind === "saldo_inicial"
                           ? "font-semibold text-muted-foreground"
                           : m.signedAmount > 0
-                            ? "font-semibold text-primary"
+                            ? "font-semibold text-emerald-600 dark:text-emerald-400"
                             : "font-semibold text-destructive"
                       }
                     >
                       {m.kind === "saldo_inicial" ? "=" : m.signedAmount > 0 ? "+" : "-"}
                       {formatCOP(m.amount)}
                     </span>
-                    <Badge variant="outline" className="text-[10px]">{sedeLabel(m.sede)}</Badge>
+                    <SedeBadge sede={m.sede} />
                     {m.kind === "saldo_inicial" && (
                       <Badge variant="secondary" className="text-[10px]">Saldo inicial / arqueo</Badge>
                     )}
@@ -418,7 +453,12 @@ export default function CajaMenor() {
                     </Button>
                   )}
                   {canManage && m.source === "fund" && (
-                    <Button size="sm" variant="ghost" className="h-7" onClick={() => setEditingFund(m.raw as PettyFund)}>
+                    <Button size="sm" variant="ghost" className="h-7" title="Editar movimiento / cambiar de sede" onClick={() => setEditingFund(m.raw as PettyFund)}>
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  )}
+                  {canManage && m.source === "expense" && (
+                    <Button size="sm" variant="ghost" className="h-7" title="Editar gasto / cambiar de sede" onClick={() => setEditingExpense(m.raw as PettyExpense)}>
                       <Pencil className="h-3 w-3" />
                     </Button>
                   )}
@@ -476,7 +516,116 @@ export default function CajaMenor() {
         onClose={() => setEditingFund(null)}
         onSaved={() => { setEditingFund(null); refresh(); }}
       />
+
+      <EditExpenseDialog
+        expense={editingExpense}
+        onClose={() => setEditingExpense(null)}
+        onSaved={() => { setEditingExpense(null); refresh(); }}
+      />
     </div>
+  );
+}
+
+/** Edita un gasto: permite reasignarlo a Toberín o Chicó y corregir sus datos. */
+function EditExpenseDialog({ expense, onClose, onSaved }: {
+  expense: PettyExpense | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+  const [requestedBy, setRequestedBy] = useState("");
+  const [sede, setSede] = useState<Sede>("toberin");
+  const [status, setStatus] = useState<string>("aprobado");
+  const [saving, setSaving] = useState(false);
+  const [loadedId, setLoadedId] = useState<string | null>(null);
+
+  if (expense && loadedId !== expense.id) {
+    setLoadedId(expense.id);
+    setAmount(String(expense.amount));
+    setDescription(expense.description ?? "");
+    setRequestedBy(expense.requested_by ?? "");
+    setSede((expense.sede as Sede) ?? "toberin");
+    setStatus(expense.status ?? "aprobado");
+  }
+
+  const handleSave = async () => {
+    if (!expense) return;
+    const val = parseFloat(amount);
+    if (!val || val <= 0) { toast.error("Ingrese un monto válido"); return; }
+    if (!description.trim()) { toast.error("Describa el gasto"); return; }
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("petty_cash_expenses")
+        .update({
+          amount: val,
+          description: description.trim(),
+          requested_by: requestedBy.trim() || expense.requested_by,
+          sede,
+          status,
+        } as any)
+        .eq("id", expense.id);
+      if (error) throw error;
+      toast.success("Gasto actualizado");
+      onSaved();
+    } catch (err: any) {
+      toast.error("Error: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!expense} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Editar gasto</DialogTitle>
+          <DialogDescription>Corrige la sede, el monto, la descripción o el estado.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Sede</Label>
+            <Select value={sede} onValueChange={(v) => setSede(v as Sede)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {SEDES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Monto *</Label>
+            <Input type="number" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Descripción *</Label>
+            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Solicitado por</Label>
+            <Input value={requestedBy} onChange={(e) => setRequestedBy(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Estado</Label>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="aprobado">Aprobado</SelectItem>
+                <SelectItem value="pendiente">Pendiente</SelectItem>
+                <SelectItem value="rechazado">Rechazado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Pencil className="h-4 w-4 mr-1" />}
+            Guardar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
