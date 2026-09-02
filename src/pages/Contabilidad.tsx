@@ -819,6 +819,11 @@ const Contabilidad = () => {
           )}
         </TabsContent>
 
+        <TabsContent value="conciliacion">
+          <DisputesPanel orders={allOrders} />
+        </TabsContent>
+
+
         {!isReadOnly && (
           <TabsContent value="caja_menor">
             <CajaMenor />
