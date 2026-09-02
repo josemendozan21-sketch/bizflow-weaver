@@ -2570,6 +2570,57 @@ export type Database = {
           },
         ]
       }
+      process_audit_log: {
+        Row: {
+          action: string
+          area: string
+          brand: string | null
+          changed_at: string
+          changed_by: string | null
+          changed_by_email: string | null
+          entity_name: string | null
+          field: string | null
+          id: string
+          new_value: string | null
+          old_value: string | null
+          order_code: string | null
+          record_id: string | null
+          table_name: string
+        }
+        Insert: {
+          action: string
+          area: string
+          brand?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          changed_by_email?: string | null
+          entity_name?: string | null
+          field?: string | null
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          order_code?: string | null
+          record_id?: string | null
+          table_name: string
+        }
+        Update: {
+          action?: string
+          area?: string
+          brand?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          changed_by_email?: string | null
+          entity_name?: string | null
+          field?: string | null
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          order_code?: string | null
+          record_id?: string | null
+          table_name?: string
+        }
+        Relationships: []
+      }
       product_costs: {
         Row: {
           brand: string
