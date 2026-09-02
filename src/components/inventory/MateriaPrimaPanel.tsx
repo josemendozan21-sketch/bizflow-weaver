@@ -28,6 +28,8 @@ import { supabase } from "@/integrations/supabase/client";
 import DebouncedSearchInput from "./DebouncedSearchInput";
 import { matchesQuery } from "@/lib/search";
 import InventoryChangeLogPanel from "./InventoryChangeLogPanel";
+import { canManageInventory } from "@/lib/rolePermissions";
+
 
 
 const UNITS = ["unidades", "gramos", "kilos", "tarros", "metros", "litros"];
