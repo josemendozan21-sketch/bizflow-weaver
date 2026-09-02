@@ -541,7 +541,7 @@ El período de liquidación es el <b>mes de la factura</b> (si el pedido aún
                         </TableCell>
                         <TableCell>
                           <Badge
-                            className={
+                            className={`whitespace-nowrap ${
                               l.status === "total"
                                 ? "bg-emerald-600"
                                 : l.status === "parcial"
