@@ -491,9 +491,87 @@ const MateriaPrimaPanel = () => {
             </TableBody>
           </Table>
         )}
+
+        {/* Edición completa de materia prima */}
+        <Dialog open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Editar materia prima</DialogTitle>
+              <DialogDescription>Actualiza los datos del insumo.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <div className="grid gap-1.5">
+                <Label>Nombre</Label>
+                <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-1.5">
+                  <Label>Marca</Label>
+                  <Select value={editForm.brand} onValueChange={(v) => setEditForm({ ...editForm, brand: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ambas">Ambas</SelectItem>
+                      <SelectItem value="magical">Magical</SelectItem>
+                      <SelectItem value="sweatspot">Sweatspot</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-1.5">
+                  <Label>Unidad</Label>
+                  <Select value={editForm.unit} onValueChange={(v) => setEditForm({ ...editForm, unit: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-1.5">
+                  <Label>Disponible</Label>
+                  <Input type="number" min={0} value={editForm.available}
+                    onChange={(e) => setEditForm({ ...editForm, available: e.target.value })} />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label>Mínimo</Label>
+                  <Input type="number" min={0} value={editForm.minStock}
+                    onChange={(e) => setEditForm({ ...editForm, minStock: e.target.value })} />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditTarget(null)}>Cancelar</Button>
+              <Button onClick={saveEdit} disabled={savingEdit}>
+                <Check className="h-4 w-4 mr-1" />Guardar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Confirmación de eliminación */}
+        <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Eliminar "{deleteTarget?.name}"?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta acción no se puede deshacer y el insumo dejará de estar disponible en inventario.
+                {deleteMovements === null
+                  ? " Verificando movimientos asociados..."
+                  : deleteMovements > 0
+                    ? ` Atención: este insumo tiene ${deleteMovements} movimiento(s) de inventario registrados.`
+                    : " No tiene movimientos de inventario asociados."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                <X className="h-4 w-4 mr-1" />Eliminar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );
+
 };
 
 export default MateriaPrimaPanel;
