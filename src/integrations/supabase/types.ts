@@ -1637,9 +1637,11 @@ export type Database = {
       orders: {
         Row: {
           abono: number | null
+          advisor_code: string | null
           advisor_id: string
           advisor_name: string
           brand: string
+          brand_code: string | null
           client_address: string | null
           client_city: string | null
           client_email: string | null
@@ -1707,9 +1709,11 @@ export type Database = {
         }
         Insert: {
           abono?: number | null
+          advisor_code?: string | null
           advisor_id: string
           advisor_name: string
           brand: string
+          brand_code?: string | null
           client_address?: string | null
           client_city?: string | null
           client_email?: string | null
@@ -1777,9 +1781,11 @@ export type Database = {
         }
         Update: {
           abono?: number | null
+          advisor_code?: string | null
           advisor_id?: string
           advisor_name?: string
           brand?: string
+          brand_code?: string | null
           client_address?: string | null
           client_city?: string | null
           client_email?: string | null
@@ -2761,6 +2767,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          advisor_code: string | null
           created_at: string
           display_name: string | null
           email: string | null
@@ -2769,6 +2776,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          advisor_code?: string | null
           created_at?: string
           display_name?: string | null
           email?: string | null
@@ -2777,6 +2785,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          advisor_code?: string | null
           created_at?: string
           display_name?: string | null
           email?: string | null
