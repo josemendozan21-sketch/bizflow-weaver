@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { canEditSection } from "@/lib/rolePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { Package, Truck, CheckCircle2, Clock, AlertTriangle, CalendarDays, FileCheck, Download, FileImage, MapPin, PackageX, Undo2, Tent, Pencil, UserRound } from "lucide-react";
+import { Package, PackageCheck, Truck, CheckCircle2, Clock, AlertTriangle, CalendarDays, FileCheck, Download, FileImage, MapPin, PackageX, Undo2, Tent, Pencil, UserRound } from "lucide-react";
 import { FeriaDispatchTab } from "@/components/logistics/FeriaDispatchTab";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
@@ -23,6 +23,7 @@ import CreateInventoryRequestDialog from "@/components/inventory/CreateInventory
 import InventoryRequestsPanel from "@/components/inventory/InventoryRequestsPanel";
 import { MissingFinishedPhotoButton } from "@/components/logistics/MissingFinishedPhotoButton";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
+import PartialDeliveryControl from "@/components/common/PartialDeliveryControl";
 
 function OrderCodeList({ items }: { items: Order[] }) {
   const codes = items.slice(0, 3);
@@ -37,7 +38,7 @@ function OrderCodeList({ items }: { items: Order[] }) {
 }
 
 function exportOrdersToCSV(orders: Order[], brandLabel: (b: string) => string, saleLabel: (t: string) => string) {
-  const headers = ["N° Pedido", "Cliente", "Cédula/NIT", "Teléfono", "Email", "Ciudad", "Dirección", "Marca", "Tipo", "Producto", "Unidades", "Método de pago", "Valor total", "Abono", "Saldo pendiente", "Costo envío", "Observaciones"];
+  const headers = ["N° Pedido", "Cliente", "Cédula/NIT", "Teléfono", "Email", "Ciudad", "Dirección", "Marca", "Tipo", "Producto", "Unidades", "Entregadas", "Pendientes por entregar", "Método de pago", "Valor total", "Abono", "Saldo pendiente", "Costo envío", "Observaciones"];
   const rows = orders.map((o) => {
     const total = Number(o.total_amount) || 0;
     const abono = getOrderPaidAmount(o);
@@ -61,6 +62,8 @@ function exportOrdersToCSV(orders: Order[], brandLabel: (b: string) => string, s
       saleLabel(o.sale_type),
       o.product,
       o.quantity,
+      Number(o.delivered_quantity) || 0,
+      Math.max((Number(o.quantity) || 0) - (Number(o.delivered_quantity) || 0), 0),
       metodo,
       total ? `$${total.toLocaleString("es-CO")}` : "—",
       abono ? `$${abono.toLocaleString("es-CO")}` : "—",
@@ -348,6 +351,12 @@ const Logistica = () => {
 
   const dispatchedOrders = allOrders.filter((o) => o.dispatched_at || o.production_status === "despachado");
 
+  // Pedidos con entregas parciales en curso (entregado > 0 pero menor al total)
+  const partialOrders = allOrders.filter((o) => {
+    const d = Number(o.delivered_quantity) || 0;
+    return d > 0 && d < (Number(o.quantity) || 0);
+  });
+
   const brandLabel = (brand: string) => brand === "magical" ? "Magical Warmers" : "Sweatspot";
   const saleLabel = (type: string) => type === "mayor" ? "Por mayor" : "Por menor";
 
@@ -402,6 +411,10 @@ const Logistica = () => {
           <TabsTrigger value="dispatched" className="gap-1.5">
             <CheckCircle2 className="h-4 w-4" /> Despachados
             {dispatchedOrders.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{dispatchedOrders.length}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="partial" className="gap-1.5">
+            <PackageCheck className="h-4 w-4" /> Entregas parciales
+            {partialOrders.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{partialOrders.length}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="ferias" className="gap-1.5">
             <Tent className="h-4 w-4" /> Ferias
@@ -498,6 +511,36 @@ const Logistica = () => {
                        canEdit={canEdit}
                      />
                    ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="partial">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Pedidos con entregas parciales</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {partialOrders.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No hay pedidos con entregas parciales en curso.</p>
+              ) : (
+                <div className="space-y-2">
+                  {partialOrders.map((o) => (
+                    <div key={o.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <OrderCodeBadge code={o.order_code} lineIndex={o.line_index} lineCount={o.line_count} compact />
+                          <span className="font-medium text-sm truncate">{o.client_name}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {o.product} · {o.quantity.toLocaleString("es-CO")} uds · {o.advisor_name || "—"}
+                        </p>
+                      </div>
+                      <PartialDeliveryControl order={o} />
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>
@@ -1015,6 +1058,7 @@ function ShipmentGroupCard({
               </span>
               <div className="flex items-center gap-3 shrink-0">
                 <span className="text-muted-foreground">{it.quantity} und</span>
+                <PartialDeliveryControl order={it} />
                 <PaymentBadge order={it} />
               </div>
             </div>
@@ -1127,6 +1171,7 @@ function PendingGroupCard({
                 <AdvisorTag order={it} />
               </span>
               <div className="flex items-center gap-2 shrink-0">
+                <PartialDeliveryControl order={it} />
                 <ProductionStatusBadge status={it.production_status} order={it} />
                 <PaymentBadge order={it} />
               </div>
@@ -1237,6 +1282,7 @@ function DispatchedGroupCard({
               </span>
               <div className="flex items-center gap-2 shrink-0">
                 <span className="text-muted-foreground">{it.quantity} und</span>
+                <PartialDeliveryControl order={it} />
                 <ReturnOrderButton order={it} />
               </div>
             </div>
