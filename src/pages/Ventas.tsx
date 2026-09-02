@@ -614,6 +614,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [cobroLogo, setCobroLogo] = usePersistedState("ventas:mw:cobroLogo", false);
   const [costoLogo, setCostoLogo] = usePersistedState("ventas:mw:costoLogo", "");
   const [logoFileState, setLogoFileState] = useState<File | null>(null);
+  const [logoFile2State, setLogoFile2State] = useState<File | null>(null);
+  const [logoCount, setLogoCount] = usePersistedState<number>("ventas:mw:logoCount", 1);
+  const [clientName, setClientName] = usePersistedState<string>("ventas:mw:clientName", "");
+  const [recompraLogoUrl, setRecompraLogoUrl] = usePersistedState<string>("ventas:mw:recompraLogoUrl", "");
   const [rutFileState, setRutFileState] = useState<File | null>(null);
   // Molde nuevo (sólo Magical)
   const [moldeNuevo, setMoldeNuevo] = usePersistedState("ventas:mw:moldeNuevo", false);
@@ -633,6 +637,25 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   useEffect(() => {
     if (!cobroLogo) setCostoLogo("");
   }, [cobroLogo]);
+
+  // Logos ya trabajados para este cliente (para recompras: el logo no se pierde)
+  const previousLogosQuery = useQuery({
+    queryKey: ["previous-logos", clientName.trim().toLowerCase()],
+    enabled: clientName.trim().length >= 3,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("logo_requests")
+        .select("id, logo_name, product, status, original_logo_url, adjusted_logo_url, created_at")
+        .ilike("client_name", `%${clientName.trim()}%`)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+  const previousLogos = (previousLogosQuery.data ?? []).filter(
+    (l: any) => (l.adjusted_logo_url || l.original_logo_url || "").startsWith("http"),
+  );
 
   const materialConfigs = useInventoryStore((s) => s.materialConfigs);
   const { reserveBodyStock: reserveBodyStockDB, discountStock: discountStockDB, stockItems: inventoryStockItems } = useInventory();
