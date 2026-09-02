@@ -292,22 +292,26 @@ function ColorSelect({
   customValue,
   onValueChange,
   onCustomChange,
+  options,
+  placeholder = "Seleccionar color",
 }: {
   label: string;
   value: string;
   customValue: string;
   onValueChange: (v: string) => void;
   onCustomChange: (v: string) => void;
+  options?: string[];
+  placeholder?: string;
 }) {
   return (
     <div className="space-y-1.5">
       <Label>{label}</Label>
       <Select value={value || undefined} onValueChange={onValueChange}>
         <SelectTrigger>
-          <SelectValue placeholder="Seleccionar color" />
+          <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
-          {PREDEFINED_COLORS.map((c) => (
+          {(options ?? PREDEFINED_COLORS).map((c) => (
             <SelectItem key={c} value={c}>{c}</SelectItem>
           ))}
           <SelectItem value="otro">Otro (escribir)</SelectItem>
