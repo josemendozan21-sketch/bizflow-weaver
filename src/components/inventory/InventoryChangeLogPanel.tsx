@@ -34,8 +34,13 @@ const BRAND_LABEL: Record<string, string> = {
 const label = (map: Record<string, string>, v?: string | null) =>
   (v && (map[v] ?? map[v.toLowerCase()])) || v || "—";
 
-export default function InventoryChangeLogPanel() {
-  const { data: entries = [], isLoading } = useInventoryAuditLog();
+export default function InventoryChangeLogPanel({ category }: { category?: string } = {}) {
+  const { data: allEntries = [], isLoading } = useInventoryAuditLog();
+  const entries = useMemo(
+    () => (category ? allEntries.filter((e) => e.category === category) : allEntries),
+    [allEntries, category],
+  );
+
 
   // Una misma edición de cuerpos Magical se registra dos veces (stock_items y su
   // espejo body_stock). Colapsamos esos pares en una sola línea.
