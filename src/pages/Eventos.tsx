@@ -545,8 +545,6 @@ const Eventos = () => {
                                 {entry.brand === "magical" ? "Magical" : "Sweatspot"}
                               </Badge>
                             </div>
-
-                            </div>
                             );
                           })}
                         </div>
