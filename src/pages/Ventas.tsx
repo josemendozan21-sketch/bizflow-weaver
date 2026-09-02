@@ -2225,6 +2225,10 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       });
     }
 
+    if (ssLogoRequestId && ssFirstOrderIdForLogo) {
+      await supabase.from("logo_requests").update({ order_id: ssFirstOrderIdForLogo }).eq("id", ssLogoRequestId);
+    }
+
     queryClient.invalidateQueries({ queryKey: ["production-orders"] });
     queryClient.invalidateQueries({ queryKey: ["orders"] });
 
