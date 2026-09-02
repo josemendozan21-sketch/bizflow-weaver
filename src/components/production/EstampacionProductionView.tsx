@@ -515,8 +515,16 @@ function EstampacionOrderCard({
               <p className="text-xs text-muted-foreground">Asesor: {order.advisor_name || "—"}</p>
             </div>
           </div>
-          <Badge variant={badge.variant}>{badge.label}</Badge>
+          <div className="flex items-center gap-2">
+            {order.stamp_size_status === "finalizado" && order.stamp_inkgel_status === "finalizado" && (
+              <Badge variant="outline" className="border-emerald-500 text-emerald-600">
+                Estampación finalizada
+              </Badge>
+            )}
+            <Badge variant={badge.variant}>{badge.label}</Badge>
+          </div>
         </div>
+
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="rounded-md border p-3 text-xs space-y-1">
