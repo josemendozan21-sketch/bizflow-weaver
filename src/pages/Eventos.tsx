@@ -86,7 +86,17 @@ export interface DeliveryEntry {
   advisorName: string;
 }
 
+/** Muestra el nombre del asesor; si solo hay correo, usa la parte antes del @. */
+const displayAdvisor = (name?: string | null) => {
+  const v = (name || "").trim();
+  if (!v) return "—";
+  if (!v.includes("@")) return v;
+  const local = v.split("@")[0].replace(/[._-]+/g, " ").trim();
+  return local ? local.replace(/\b\w/g, (c) => c.toUpperCase()) : v;
+};
+
 const mapProductionStatus = (ps: string): DeliveryEntry["status"] => {
+
   if (ps === "completado" || ps === "entregado") return "entregado";
   if (ps === "listo") return "listo";
   if (ps === "pendiente") return "pendiente";
