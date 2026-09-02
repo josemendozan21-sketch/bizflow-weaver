@@ -73,7 +73,7 @@ export default function InventoryChangeLogPanel() {
       if (category !== "todas" && e.category !== category) return false;
       if (from && e.changed_at < new Date(`${from}T00:00:00`).toISOString()) return false;
       if (to && e.changed_at > new Date(`${to}T23:59:59`).toISOString()) return false;
-      if (search && !matchesQuery(`${e.item_name ?? ""} ${e.changed_by_email ?? ""}`, search)) return false;
+      if (search && !matchesQuery([e.item_name, e.changed_by_email, e.brand, e.category], search)) return false;
       return true;
     });
   }, [entries, user, action, brand, category, from, to, search]);
