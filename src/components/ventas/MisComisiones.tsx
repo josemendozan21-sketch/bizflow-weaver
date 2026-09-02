@@ -102,7 +102,7 @@ export default function MisComisiones() {
     const out: { label: string; total: number; commission: number; count: number }[] = [];
     for (let i = 0; i < 12; i++) {
       const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-      const s = summarizeAdvisorProgress(orders, d.getFullYear(), d.getMonth(), user?.id, basis);
+      const s = summarizeAdvisorProgress(orders, d.getFullYear(), d.getMonth(), user?.id, charges);
       if (s.ordersCount === 0) continue;
       out.push({
         label: `${MONTHS[d.getMonth()]} ${d.getFullYear()}`,
@@ -112,7 +112,7 @@ export default function MisComisiones() {
       });
     }
     return out;
-  }, [orders, user?.id, basis]);
+  }, [orders, user?.id, charges]);
 
   const lines = useMemo(() => {
     let list = summary.lines;
@@ -168,9 +168,14 @@ export default function MisComisiones() {
       { Concepto: "Periodo", Valor: `${MONTHS[month]} ${year}` },
       {
         Concepto: "Criterio del período",
-        Valor: basis === "venta" ? "Fecha de venta" : "Fecha de factura",
+        Valor: "Fecha de factura (si no hay factura, fecha de venta)",
       },
       { Concepto: "Pedidos del período", Valor: summary.ordersCount },
+      {
+        Concepto: "Flete y cargos excluidos de la base",
+        Valor: Math.round(summary.nonCommissionableWithVat),
+      },
+      { Concepto: "Pedidos sin factura emitida", Valor: summary.pendingInvoiceCount },
       { Concepto: "Ventas totales (con IVA)", Valor: Math.round(summary.totalWithVat) },
       { Concepto: "Pedidos considerados para comisión", Valor: summary.invoicedCount },
       { Concepto: "Valor considerado (con IVA)", Valor: Math.round(summary.invoicedWithVat) },
@@ -262,13 +267,6 @@ export default function MisComisiones() {
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
-          <Select value={basis} onValueChange={(v) => setBasis(v as PeriodBasis)}>
-            <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="venta">Por fecha de venta</SelectItem>
-              <SelectItem value="factura">Por fecha de factura</SelectItem>
-            </SelectContent>
-          </Select>
           <Button
             onClick={handleExportXlsx}
             disabled={exporting || summary.lines.length === 0}
@@ -362,7 +360,7 @@ export default function MisComisiones() {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
             <Info className="h-4 w-4" /> Resumen del período —{" "}
-            {MONTHS[month]} {year} ({basis === "venta" ? "por fecha de venta" : "por fecha de factura"})
+            {MONTHS[month]} {year} (por fecha de factura)
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
