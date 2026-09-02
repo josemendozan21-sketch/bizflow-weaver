@@ -794,7 +794,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     setIsSubmitting(true);
     const form = e.target as HTMLFormElement;
     const fd = new FormData(form);
-    const clientName = fd.get("mw_nombre") as string;
+    const clientNameValue = (clientName || (fd.get("mw_nombre") as string) || "").trim();
     // Identifica todas las líneas creadas en un mismo envío del formulario,
     // para que la validación anti-duplicados no bloquee líneas iguales.
     const submissionId = crypto.randomUUID();
@@ -897,7 +897,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       const referencia = `${firstLine.product} (${firstLine.type})`;
       const result = await createLogoRequestFromOrder({
         brand: "Magical Warmers",
-        clientName,
+        clientName: clientNameValue,
         logoName: logoNombre,
         product: referencia,
         advisorId: user.id,
@@ -948,7 +948,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         const { data } = await supabase.from("orders").insert({
           brand: "magical",
           sale_type: "mayor",
-          client_name: clientName,
+          client_name: clientName: clientNameValue,
           client_nit: (fd.get("mw_cedulaNit") as string) || null,
           client_phone: (fd.get("mw_contacto") as string) || null,
           client_email: (fd.get("mw_email") as string) || null,
@@ -972,7 +972,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         }).select("id").single();
         if (data) {
           queryClient.invalidateQueries({ queryKey: ["orders"] });
-          toast.success("Compra de molde registrada", { description: `${clientName} — Molde "${moldeNombre}"` });
+          toast.success("Compra de molde registrada", { description: `${clientNameValue} — Molde "${moldeNombre}"` });
           [
             "ventas:mw:lines","ventas:mw:abono","ventas:mw:estadoPago",
             "ventas:mw:dobleTinta","ventas:mw:escarcha","ventas:mw:isRecompra",
@@ -1080,7 +1080,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
       // Accounting store
       useAccountingStore.getState().addOrder({
-        clientName,
+        clientName: clientNameValue,
         brand: "magical",
         product: referencia,
         quantity,
@@ -1104,7 +1104,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         const { data, error } = await supabase.from("orders").insert({
           brand: "magical",
           sale_type: "mayor",
-          client_name: clientName,
+          client_name: clientName: clientNameValue,
           client_nit: (fd.get("mw_cedulaNit") as string) || null,
           client_phone: (fd.get("mw_contacto") as string) || null,
           client_email: (fd.get("mw_email") as string) || null,
@@ -1162,7 +1162,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         brand: "magical",
         product: referencia,
         quantity,
-        clientName,
+        clientName: clientNameValue,
         needsCuerpos: false,
         shortage: 0,
         hasLogo: !!logoFile,
@@ -1187,7 +1187,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       giftCount > 0 ? `${giftCount} obsequio(s)` : "",
     ].filter(Boolean).join(" + ");
     toast.success("Pedido creado", {
-      description: `${clientName} — ${summary}. Enviado a Inventarios y Contabilidad.`,
+      description: `${clientNameValue} — ${summary}. Enviado a Inventarios y Contabilidad.`,
     });
 
     [
