@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
 import MateriaPrimaPanel from "@/components/inventory/MateriaPrimaPanel";
 import WholesaleOrdersInbox from "@/components/inventory/WholesaleOrdersInbox";
+import UnroutedOrdersPanel from "@/components/production/UnroutedOrdersPanel";
+
 import QuickMovementForm from "@/components/inventory/QuickMovementForm";
 import InventoryChangeLogPanel from "@/components/inventory/InventoryChangeLogPanel";
 import MovementHistoryTable from "@/components/inventory/MovementHistoryTable";
