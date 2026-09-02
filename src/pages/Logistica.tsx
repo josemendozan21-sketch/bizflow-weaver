@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { canEditSection } from "@/lib/rolePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { Package, Truck, CheckCircle2, Clock, AlertTriangle, CalendarDays, FileCheck, Download, FileImage, MapPin, PackageX, Undo2, Tent, Pencil, UserRound } from "lucide-react";
+import { Package, PackageCheck, Truck, CheckCircle2, Clock, AlertTriangle, CalendarDays, FileCheck, Download, FileImage, MapPin, PackageX, Undo2, Tent, Pencil, UserRound } from "lucide-react";
 import { FeriaDispatchTab } from "@/components/logistics/FeriaDispatchTab";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
@@ -509,6 +509,36 @@ const Logistica = () => {
                        canEdit={canEdit}
                      />
                    ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="partial">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Pedidos con entregas parciales</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {partialOrders.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No hay pedidos con entregas parciales en curso.</p>
+              ) : (
+                <div className="space-y-2">
+                  {partialOrders.map((o) => (
+                    <div key={o.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <OrderCodeBadge code={o.order_code} lineIndex={o.line_index} lineCount={o.line_count} compact />
+                          <span className="font-medium text-sm truncate">{o.client_name}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {o.product} · {o.quantity.toLocaleString("es-CO")} uds · {o.advisor_name || "—"}
+                        </p>
+                      </div>
+                      <PartialDeliveryControl order={o} />
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>
