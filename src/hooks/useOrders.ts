@@ -22,6 +22,7 @@ export interface Order {
   client_city: string | null;
   product: string;
   quantity: number;
+  delivered_quantity?: number | null;
   unit_price: number | null;
   total_amount: number | null;
   abono: number | null;
