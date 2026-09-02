@@ -131,11 +131,25 @@ export async function ensureProductionOrder(
   });
   const initialStage = stages[0];
 
+  // El número de pedido debe quedar guardado en la orden de producción para que
+  // Producción pueda buscarla por código. Si no viene, lo consultamos.
+  let orderCode = order.order_code ?? null;
+  if (!orderCode) {
+    const { data: parent } = await supabase
+      .from("orders")
+      .select("order_code")
+      .eq("id", order.id)
+      .maybeSingle();
+    orderCode = (parent as { order_code?: string | null } | null)?.order_code ?? null;
+  }
+
   const payload: Record<string, unknown> = {
     order_id: order.id,
+    order_code: orderCode,
     brand: order.brand,
     client_name: order.client_name,
     quantity: order.quantity,
+
     current_stage: initialStage,
     stage_status: "pendiente",
     workflow_type: opts.needsCuerpos ? "full" : "short",
