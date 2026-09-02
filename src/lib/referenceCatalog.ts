@@ -17,6 +17,8 @@ export interface ReferenceItem {
   /** Nombre limpio, sin sufijo (Frío)/(Térmico) */
   name: string;
   tipo: ReferenceTipo;
+  /** Valor crudo de product_type (p.ej. "Importado"/"Nacional" en Sweatspot) */
+  productType: string | null;
   color: string | null;
   logo: string | null;
   /** true = viene marcado (con logo); false = sin marcar */
@@ -121,6 +123,7 @@ export function buildReferenceCatalog(items: RawStockItem[]): ReferenceItem[] {
       category: raw.category,
       name,
       tipo,
+      productType: raw.product_type,
       color: raw.color,
       logo: raw.logo,
       marcado: Boolean(raw.logo),

@@ -323,7 +323,7 @@ export default function AsesorInventoryView() {
                                 <Badge className="text-[10px] bg-blue-600 hover:bg-blue-700">MARCABLE</Badge>
                               )}
                             </TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{item.product_type || "—"}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{item.productType || "—"}</TableCell>
                             <TableCell className="text-right">{item.available}</TableCell>
                             <TableCell>{item.unit}</TableCell>
                             <TableCell><StockIndicator available={item.available} /></TableCell>
