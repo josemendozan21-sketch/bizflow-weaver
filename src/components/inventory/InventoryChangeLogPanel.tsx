@@ -28,6 +28,8 @@ const FIELD_LABEL: Record<string, string> = {
   min_stock: "Stock mínimo",
   unit: "Unidad",
   color: "Color",
+  logo: "Marcación (logo)",
+  sweatspot_category: "Categoría Sweatspot",
 };
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -65,8 +67,22 @@ export default function InventoryChangeLogPanel() {
     [entries],
   );
 
+  // Una misma edición de cuerpos Magical se registra dos veces (stock_items y su
+  // espejo body_stock). Colapsamos esos pares en una sola línea.
+  const deduped = useMemo(() => {
+    const map = new Map<string, InventoryAuditEntry>();
+    for (const e of entries) {
+      const key = [e.changed_at, e.changed_by_email ?? "", (e.brand ?? "").toLowerCase(), e.action, e.field, e.old_value ?? "", e.new_value ?? ""].join("|");
+      const prev = map.get(key);
+      if (!prev) { map.set(key, e); continue; }
+      // Preferimos el registro de stock_items (trae tipo y categoría reales)
+      if (prev.table_name !== "stock_items" && e.table_name === "stock_items") map.set(key, e);
+    }
+    return Array.from(map.values());
+  }, [entries]);
+
   const filtered = useMemo(() => {
-    return entries.filter((e) => {
+    return deduped.filter((e) => {
       if (user !== "todos" && e.changed_by_email !== user) return false;
       if (action !== "todas" && e.action !== action) return false;
       if (brand !== "todas" && (e.brand || "").toLowerCase() !== brand) return false;
@@ -76,7 +92,7 @@ export default function InventoryChangeLogPanel() {
       if (search && !matchesQuery([e.item_name, e.changed_by_email, e.brand, e.category], search)) return false;
       return true;
     });
-  }, [entries, user, action, brand, category, from, to, search]);
+  }, [deduped, user, action, brand, category, from, to, search]);
 
   const exportExcel = () => {
     const rows = filtered.map((e: InventoryAuditEntry) => ({
