@@ -46,7 +46,7 @@ export function DisenosFinalizados({ requests }: Props) {
                 <p className="text-sm text-muted-foreground">{req.brand} · {req.product}</p>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="border rounded-lg p-3 bg-muted/20 flex items-center justify-center">
+                <div className="min-h-28 overflow-hidden rounded-lg border bg-muted/20 p-2 flex items-center justify-center">
                   <LogoPreview
                     url={req.adjusted_logo_url || req.original_logo_url}
                     alt="Diseño final"

@@ -21,7 +21,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import OrderDisputeDialog from "@/components/ventas/OrderDisputeDialog";
 import DisputesPanel from "@/components/contabilidad/DisputesPanel";
-import { Loader2, Info, TrendingUp, Clock, CheckCircle2, ChevronLeft, ChevronRight, ChevronDown, Download, AlertTriangle } from "lucide-react";
+import { Loader2, Info, TrendingUp, Clock, CheckCircle2, ChevronLeft, ChevronRight, Download, AlertTriangle } from "lucide-react";
+import { CommissionExpandButton } from "@/components/commissions/CommissionExpandButton";
+import { CommissionStatusBadge } from "@/components/commissions/CommissionStatusBadge";
 
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -31,7 +33,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import {
   summarizeAdvisorProgress,
-  STATUS_LABEL,
   BONUS_TIER_1_THRESHOLD,
   BONUS_TIER_1_AMOUNT,
   BONUS_TIER_2_THRESHOLD,
@@ -496,17 +497,17 @@ El período de liquidación es el <b>mes de la factura</b> (si el pedido aún
               No hay pedidos en este período.
             </p>
           ) : (
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-8" />
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>N° Pedido</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
-                  <TableHead className="text-right">Comisión</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead className="text-right">Acción</TableHead>
+                  <TableHead className="w-10 px-1" />
+                  <TableHead className="w-[74px] px-2">Fecha</TableHead>
+                  <TableHead className="w-[116px] px-2">N° Pedido</TableHead>
+                  <TableHead className="px-2">Cliente</TableHead>
+                  <TableHead className="w-[112px] px-2 text-right">Valor</TableHead>
+                  <TableHead className="w-[112px] px-2 text-right">Comisión</TableHead>
+                  <TableHead className="w-[132px] px-2">Estado</TableHead>
+                  <TableHead className="w-[170px] px-2 text-right">Acción</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -518,43 +519,33 @@ El período de liquidación es el <b>mes de la factura</b> (si el pedido aún
                         className="cursor-pointer"
                         onClick={() => setExpandedId(open ? null : l.order.id)}
                       >
-                        <TableCell className="w-8 pr-0">
-                          <ChevronDown
-                            className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
+                        <TableCell className="w-10 px-1">
+                          <CommissionExpandButton
+                            open={open}
+                            label={(l.order as any).order_code || l.order.client_name}
+                            onClick={() => setExpandedId(open ? null : l.order.id)}
                           />
                         </TableCell>
-                        <TableCell className="whitespace-nowrap text-xs">
+                        <TableCell className="whitespace-nowrap px-2 text-xs">
                           {format(l.saleDate, "d MMM", { locale: es })}
                           {l.weekend && (
                             <Badge variant="outline" className="ml-1 text-[10px]">FDS</Badge>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="px-2">
                           <OrderCodeBadge code={(l.order as any).order_code} compact />
                         </TableCell>
-                        <TableCell className="max-w-[180px] truncate">
+                        <TableCell className="truncate px-2" title={l.order.client_name}>
                           {l.order.client_name}
                         </TableCell>
-                        <TableCell className="text-right whitespace-nowrap">{fmt(l.totalWithVat)}</TableCell>
-                        <TableCell className="text-right font-medium whitespace-nowrap">
+                        <TableCell className="px-2 text-right whitespace-nowrap">{fmt(l.totalWithVat)}</TableCell>
+                        <TableCell className="px-2 text-right font-medium whitespace-nowrap">
                           {fmt(l.netCommission)}
                         </TableCell>
-                        <TableCell>
-                          <Badge
-                            className={`whitespace-nowrap ${
-                              l.status === "total"
-                                ? "bg-emerald-600"
-                                : l.status === "parcial"
-                                  ? "bg-sky-600"
-                                  : l.status === "pendiente"
-                                    ? "bg-amber-500"
-                                    : "bg-muted text-muted-foreground"
-                            }`}
-                          >
-                            {STATUS_LABEL[l.status]}
-                          </Badge>
+                        <TableCell className="w-[126px] px-2">
+                          <CommissionStatusBadge status={l.status} />
                         </TableCell>
-                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                        <TableCell className="px-2 text-right" onClick={(e) => e.stopPropagation()}>
                           <OrderDisputeDialog
                             orderId={l.order.id}
                             orderCode={(l.order as any).order_code}

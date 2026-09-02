@@ -28,11 +28,12 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ChevronDown, Info, TrendingUp, AlertCircle, Download } from "lucide-react";
+import { CommissionExpandButton } from "@/components/commissions/CommissionExpandButton";
+import { CommissionStatusBadge } from "@/components/commissions/CommissionStatusBadge";
 import type { Order } from "@/hooks/useOrders";
 import { useAllOrderCharges } from "@/hooks/useOrderCharges";
 import {
   summarizeAdvisorMonth,
-  STATUS_LABEL,
   type OrderOverrides,
   type PaymentMode,
   type AdvisorMonthSummary,
@@ -318,16 +319,16 @@ export default function CommissionsPanel({ orders }: Props) {
                       </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="mt-3">
-                      <Table>
+                      <Table className="table-fixed">
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="w-8" />
+                            <TableHead className="w-10 px-1" />
                             <TableHead>Cliente</TableHead>
-                            <TableHead>Día</TableHead>
-                            <TableHead>Forma de pago</TableHead>
-                            <TableHead className="text-right">Total c/IVA</TableHead>
-                            <TableHead className="text-right">Comisión</TableHead>
-                            <TableHead>Causación</TableHead>
+                            <TableHead className="w-[90px] px-2">Día</TableHead>
+                            <TableHead className="w-[150px] px-2">Forma de pago</TableHead>
+                            <TableHead className="w-[120px] px-2 text-right">Total c/IVA</TableHead>
+                            <TableHead className="w-[120px] px-2 text-right">Comisión</TableHead>
+                            <TableHead className="w-[132px] px-2">Causación</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -339,9 +340,11 @@ export default function CommissionsPanel({ orders }: Props) {
                                   className="cursor-pointer"
                                   onClick={() => setExpandedLine(open ? null : l.order.id)}
                                 >
-                                  <TableCell className="w-8 pr-0">
-                                    <ChevronDown
-                                      className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
+                                  <TableCell className="w-10 px-1">
+                                    <CommissionExpandButton
+                                      open={open}
+                                      label={l.order.client_name}
+                                      onClick={() => setExpandedLine(open ? null : l.order.id)}
                                     />
                                   </TableCell>
                                   <TableCell className="font-medium max-w-[200px] truncate">
@@ -395,20 +398,8 @@ export default function CommissionsPanel({ orders }: Props) {
                                       </div>
                                     )}
                                   </TableCell>
-                                  <TableCell>
-                                    <Badge
-                                      className={`whitespace-nowrap ${
-                                        l.status === "total"
-                                          ? "bg-emerald-600"
-                                          : l.status === "parcial"
-                                            ? "bg-sky-600"
-                                            : l.status === "pendiente"
-                                              ? "bg-amber-500"
-                                              : "bg-muted text-muted-foreground"
-                                      }`}
-                                    >
-                                      {STATUS_LABEL[l.status]}
-                                    </Badge>
+                                  <TableCell className="w-[126px] px-2">
+                                    <CommissionStatusBadge status={l.status} />
                                   </TableCell>
                                 </TableRow>
                                 {open && (
