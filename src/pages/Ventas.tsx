@@ -227,6 +227,13 @@ interface OrderLine {
   gelCustom: string;
   inkColor: string;
   inkCustom: string;
+  inkCount?: number;
+  inkColor2?: string;
+  inkCustom2?: string;
+  inkColor3?: string;
+  inkCustom3?: string;
+  glitterColor?: string;
+  glitterCustom?: string;
   units: string;
   valorUnitario: string;
   valorTotal: string;
@@ -239,7 +246,10 @@ function consolidateMagicalLines(lines: OrderLine[]): OrderLine[] {
   for (const line of lines) {
     const key = [
       line.product, line.type, line.gelColor, line.gelCustom,
-      line.inkColor, line.inkCustom, line.valorUnitario, line.isGift,
+      line.inkColor, line.inkCustom, line.inkCount ?? 1,
+      line.inkColor2, line.inkCustom2, line.inkColor3, line.inkCustom3,
+      line.glitterColor, line.glitterCustom,
+      line.valorUnitario, line.isGift,
     ].join("|");
     const existing = consolidated.get(key);
     if (!existing) {
@@ -261,6 +271,13 @@ function createEmptyLine(isGift = false): OrderLine {
     gelCustom: "",
     inkColor: "",
     inkCustom: "",
+    inkCount: 1,
+    inkColor2: "",
+    inkCustom2: "",
+    inkColor3: "",
+    inkCustom3: "",
+    glitterColor: "",
+    glitterCustom: "",
     units: isGift ? "1" : "",
     valorUnitario: isGift ? "0" : "",
     valorTotal: isGift ? "0" : "",
@@ -275,22 +292,26 @@ function ColorSelect({
   customValue,
   onValueChange,
   onCustomChange,
+  options,
+  placeholder = "Seleccionar color",
 }: {
   label: string;
   value: string;
   customValue: string;
   onValueChange: (v: string) => void;
   onCustomChange: (v: string) => void;
+  options?: string[];
+  placeholder?: string;
 }) {
   return (
     <div className="space-y-1.5">
       <Label>{label}</Label>
       <Select value={value || undefined} onValueChange={onValueChange}>
         <SelectTrigger>
-          <SelectValue placeholder="Seleccionar color" />
+          <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
-          {PREDEFINED_COLORS.map((c) => (
+          {(options ?? PREDEFINED_COLORS).map((c) => (
             <SelectItem key={c} value={c}>{c}</SelectItem>
           ))}
           <SelectItem value="otro">Otro (escribir)</SelectItem>
@@ -395,6 +416,10 @@ function buildMagicalMayorSummary(args: {
     productos: orderLines.map((line, idx) => {
       const gel = resolveColorVal(line.gelColor, line.gelCustom);
       const tinta = resolveColorVal(line.inkColor, line.inkCustom);
+      const tinta2 = resolveColorVal(line.inkColor2 || "", line.inkCustom2 || "");
+      const tinta3 = resolveColorVal(line.inkColor3 || "", line.inkCustom3 || "");
+      const escarcha = resolveColorVal(line.glitterColor || "", line.glitterCustom || "");
+      const nTintas = line.inkCount ?? 1;
       const qty = parseInt(line.units, 10) || 0;
       const total = parseFloat(line.valorTotal) || 0;
       const unit = parseFloat(line.valorUnitario) || 0;
@@ -404,7 +429,11 @@ function buildMagicalMayorSummary(args: {
         details: [
           { label: "Unidades", value: qty ? String(qty) : "—" },
           { label: "Color gel", value: gel || "—" },
-          { label: "Color tinta", value: tinta || "—" },
+          { label: "N° de tintas", value: String(nTintas) },
+          { label: nTintas > 1 ? "Color tinta 1" : "Color tinta", value: tinta || "—" },
+          ...(nTintas >= 2 ? [{ label: "Color tinta 2", value: tinta2 || "—" }] : []),
+          ...(nTintas >= 3 ? [{ label: "Color tinta 3", value: tinta3 || "—" }] : []),
+          ...(escarcha ? [{ label: "Color escarcha", value: escarcha }] : []),
           ...(line.isGift ? [] : [
             { label: "Valor unitario", value: unit ? formatMoney(unit) : "—" },
             { label: "Valor total", value: total ? formatMoney(total) : "—" },
@@ -624,6 +653,14 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     [productNames],
   );
 
+  // Colores de escarcha administrados desde Inventarios (materia prima "Escarcha ...")
+  const glitterOptions = useMemo(() => {
+    const names = inventoryStockItems
+      .filter((s) => /^escarcha\b/i.test(s.name || ""))
+      .map((s) => s.name.replace(/^escarcha\s*/i, "").trim() || s.name);
+    return ["No aplica", ...[...new Set(names)].sort((a, b) => a.localeCompare(b, "es"))];
+  }, [inventoryStockItems]);
+
   const getProductSelectValue = (line: OrderLine) => line.product;
 
   const handleProductSelect = (lineId: string, value: string) => {
@@ -769,6 +806,17 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       }
       if (!inkFinal) {
         toast.error("Color de tinta requerido", { description: "Seleccione un color de tinta en todas las líneas." });
+        setIsSubmitting(false);
+        return;
+      }
+      const nTintas = line.inkCount ?? 1;
+      if (nTintas >= 2 && !resolveColor(line.inkColor2 || "", line.inkCustom2 || "")) {
+        toast.error("Color de tinta 2 requerido", { description: "Seleccione el color de la tinta 2." });
+        setIsSubmitting(false);
+        return;
+      }
+      if (nTintas >= 3 && !resolveColor(line.inkColor3 || "", line.inkCustom3 || "")) {
+        toast.error("Color de tinta 3 requerido", { description: "Seleccione el color de la tinta 3." });
         setIsSubmitting(false);
         return;
       }
@@ -953,6 +1001,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       const referencia = `${line.product} (${line.type})`;
       const gelColor = resolveColor(line.gelColor, line.gelCustom);
       const inkColor = resolveColor(line.inkColor, line.inkCustom);
+      const inkCount = line.inkCount ?? 1;
+      const inkColor2 = inkCount >= 2 ? resolveColor(line.inkColor2 || "", line.inkCustom2 || "") : null;
+      const inkColor3 = inkCount >= 3 ? resolveColor(line.inkColor3 || "", line.inkCustom3 || "") : null;
+      const glitterColorVal = resolveColor(line.glitterColor || "", line.glitterCustom || "") || null;
       const baseLineTotal = line.isGift ? 0 : (parseFloat(line.valorTotal) || 0);
       // Sumar el costo adicional sólo a la primera línea (no a obsequios)
       const lineTotal = (isFirstLine && !line.isGift) ? baseLineTotal + extraCost : baseLineTotal;
@@ -1021,6 +1073,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           total_amount: lineTotal,
           abono: abonoAmount,
           ink_color: inkColor,
+          ink_count: inkCount,
+          ink_color_2: inkColor2,
+          ink_color_3: inkColor3,
+          glitter_color: glitterColorVal,
           gel_color: gelColor,
           logo_url: logoUrl,
           observations: [observaciones, line.isGift ? "🎁 OBSEQUIO" : "", isFirstLine ? extraNote : ""].filter(Boolean).join(" | ") || null,
@@ -1252,12 +1308,64 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                     onValueChange={(v) => updateLine(line.id, { gelColor: v })}
                     onCustomChange={(v) => updateLine(line.id, { gelCustom: v })}
                   />
+                  <div className="space-y-1.5">
+                    <Label>Número de tintas</Label>
+                    <Select
+                      value={String(line.inkCount ?? 1)}
+                      onValueChange={(v) => {
+                        const n = parseInt(v, 10);
+                        updateLine(line.id, {
+                          inkCount: n,
+                          ...(n < 2 ? { inkColor2: "", inkCustom2: "" } : {}),
+                          ...(n < 3 ? { inkColor3: "", inkCustom3: "" } : {}),
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1 tinta</SelectItem>
+                        <SelectItem value="2">2 tintas</SelectItem>
+                        <SelectItem value="3">3 tintas</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
                   <ColorSelect
-                    label="Color de tinta"
+                    label={(line.inkCount ?? 1) > 1 ? "Color de tinta 1" : "Color de tinta"}
                     value={line.inkColor}
                     customValue={line.inkCustom}
                     onValueChange={(v) => updateLine(line.id, { inkColor: v })}
                     onCustomChange={(v) => updateLine(line.id, { inkCustom: v })}
+                  />
+                  {(line.inkCount ?? 1) >= 2 && (
+                    <ColorSelect
+                      label="Color de tinta 2"
+                      value={line.inkColor2 || ""}
+                      customValue={line.inkCustom2 || ""}
+                      onValueChange={(v) => updateLine(line.id, { inkColor2: v })}
+                      onCustomChange={(v) => updateLine(line.id, { inkCustom2: v })}
+                    />
+                  )}
+                  {(line.inkCount ?? 1) >= 3 && (
+                    <ColorSelect
+                      label="Color de tinta 3"
+                      value={line.inkColor3 || ""}
+                      customValue={line.inkCustom3 || ""}
+                      onValueChange={(v) => updateLine(line.id, { inkColor3: v })}
+                      onCustomChange={(v) => updateLine(line.id, { inkCustom3: v })}
+                    />
+                  )}
+                  <ColorSelect
+                    label="Color de escarcha"
+                    value={line.glitterColor || ""}
+                    customValue={line.glitterCustom || ""}
+                    onValueChange={(v) => updateLine(line.id, { glitterColor: v })}
+                    onCustomChange={(v) => updateLine(line.id, { glitterCustom: v })}
+                    options={glitterOptions}
+                    placeholder="Seleccionar escarcha"
                   />
                 </div>
                 {!line.isGift && (

@@ -53,6 +53,10 @@ interface PendingIntakeOrder {
   delivery_date: string | null;
   created_at: string;
   ink_color?: string | null;
+  ink_count?: number | null;
+  ink_color_2?: string | null;
+  ink_color_3?: string | null;
+  glitter_color?: string | null;
   gel_color?: string | null;
   silicone_color?: string | null;
   logo_url?: string | null;
@@ -82,6 +86,10 @@ export const EstampacionProductionView = () => {
           product: o.product,
           quantity: o.quantity,
           ink_color: o.ink_color,
+          ink_count: o.ink_count,
+          ink_color_2: o.ink_color_2,
+          ink_color_3: o.ink_color_3,
+          glitter_color: o.glitter_color,
           gel_color: o.gel_color,
           silicone_color: o.silicone_color,
           logo_url: o.logo_url,
@@ -159,7 +167,7 @@ export const EstampacionProductionView = () => {
       const { data, error } = await supabase
         .from("orders")
         .select(
-          "id, client_name, brand, product, quantity, advisor_name, delivery_date, created_at, production_status, ink_color, gel_color, silicone_color, logo_url, observations, advisor_id"
+          "id, client_name, brand, product, quantity, advisor_name, delivery_date, created_at, production_status, ink_color, ink_count, ink_color_2, ink_color_3, glitter_color, gel_color, silicone_color, logo_url, observations, advisor_id"
         )
         .eq("production_status", "pendiente")
         .is("inventory_archived_at", null)
@@ -269,7 +277,10 @@ export const EstampacionProductionView = () => {
                   )}
                   {(o.ink_color || o.gel_color || o.silicone_color) && (
                     <>
-                      {o.ink_color && <Row label="Color de tinta" value={o.ink_color} />}
+                      {o.ink_color && <Row label={(o.ink_count ?? 1) > 1 ? "Color de tinta 1" : "Color de tinta"} value={o.ink_color} />}
+                      {o.ink_color_2 && <Row label="Color de tinta 2" value={o.ink_color_2} />}
+                      {o.ink_color_3 && <Row label="Color de tinta 3" value={o.ink_color_3} />}
+                      {o.glitter_color && <Row label="Color de escarcha" value={o.glitter_color} />}
                       {o.gel_color && <Row label="Color de gel" value={o.gel_color} />}
                       {o.silicone_color && <Row label="Color de silicona" value={o.silicone_color} />}
                     </>
@@ -454,7 +465,10 @@ function EstampacionOrderCard({
           )}
           <Row label="Molde / Referencia" value={order.molde || order.thermo_size || "-"} />
           <Row label="Cantidad" value={`${order.quantity} uds`} />
-          <Row label="Color de tinta" value={order.ink_color || "-"} />
+          <Row label={(order.ink_count ?? 1) > 1 ? "Color de tinta 1" : "Color de tinta"} value={order.ink_color || "-"} />
+          {order.ink_color_2 && <Row label="Color de tinta 2" value={order.ink_color_2} />}
+          {order.ink_color_3 && <Row label="Color de tinta 3" value={order.ink_color_3} />}
+          {order.glitter_color && <Row label="Color de escarcha" value={order.glitter_color} />}
           {order.brand === "sweatspot" ? (
             <Row label="Color de silicona" value={(order as any).silicone_color || "-"} />
           ) : (

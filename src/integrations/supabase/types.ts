@@ -1650,8 +1650,12 @@ export type Database = {
           dispatched_at: string | null
           external_order_id: string | null
           gel_color: string | null
+          glitter_color: string | null
           id: string
           ink_color: string | null
+          ink_color_2: string | null
+          ink_color_3: string | null
+          ink_count: number
           inventory_archived_at: string | null
           inventory_archived_by: string | null
           invoice_amount: number | null
@@ -1707,8 +1711,12 @@ export type Database = {
           dispatched_at?: string | null
           external_order_id?: string | null
           gel_color?: string | null
+          glitter_color?: string | null
           id?: string
           ink_color?: string | null
+          ink_color_2?: string | null
+          ink_color_3?: string | null
+          ink_count?: number
           inventory_archived_at?: string | null
           inventory_archived_by?: string | null
           invoice_amount?: number | null
@@ -1764,8 +1772,12 @@ export type Database = {
           dispatched_at?: string | null
           external_order_id?: string | null
           gel_color?: string | null
+          glitter_color?: string | null
           id?: string
           ink_color?: string | null
+          ink_color_2?: string | null
+          ink_color_3?: string | null
+          ink_count?: number
           inventory_archived_at?: string | null
           inventory_archived_by?: string | null
           invoice_amount?: number | null
@@ -2506,9 +2518,13 @@ export type Database = {
           final_count: number | null
           finished_photo_url: string | null
           gel_color: string | null
+          glitter_color: string | null
           has_stock: boolean | null
           id: string
           ink_color: string | null
+          ink_color_2: string | null
+          ink_color_3: string | null
+          ink_count: number
           logo_file: string | null
           logo_type: string | null
           molde: string | null
@@ -2542,9 +2558,13 @@ export type Database = {
           final_count?: number | null
           finished_photo_url?: string | null
           gel_color?: string | null
+          glitter_color?: string | null
           has_stock?: boolean | null
           id?: string
           ink_color?: string | null
+          ink_color_2?: string | null
+          ink_color_3?: string | null
+          ink_count?: number
           logo_file?: string | null
           logo_type?: string | null
           molde?: string | null
@@ -2578,9 +2598,13 @@ export type Database = {
           final_count?: number | null
           finished_photo_url?: string | null
           gel_color?: string | null
+          glitter_color?: string | null
           has_stock?: boolean | null
           id?: string
           ink_color?: string | null
+          ink_color_2?: string | null
+          ink_color_3?: string | null
+          ink_count?: number
           logo_file?: string | null
           logo_type?: string | null
           molde?: string | null
