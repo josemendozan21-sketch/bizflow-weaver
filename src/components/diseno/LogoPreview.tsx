@@ -65,8 +65,9 @@ function PdfThumbnail({ url, name, alt }: { url: string; name: string; alt: stri
         const pdfjs = await import("pdfjs-dist");
         const workerUrl = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
         pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
-        loadingTask = pdfjs.getDocument({ url });
-        const pdf = await loadingTask.promise;
+        const task = pdfjs.getDocument({ url });
+        loadingTask = task;
+        const pdf = await task.promise;
         const page = await pdf.getPage(1);
         const initialViewport = page.getViewport({ scale: 1 });
         const scale = Math.min(1.5, 520 / initialViewport.width);
