@@ -69,10 +69,11 @@ export default function CommissionsPanel({ orders }: Props) {
   const [month, setMonth] = useState(today.getMonth());
   const [overrides, setOverrides] = useState<OrderOverrides>({});
   const [openAdvisor, setOpenAdvisor] = useState<string | null>(null);
+  const [basis, setBasis] = useState<PeriodBasis>("venta");
 
   const summaries = useMemo(
-    () => summarizeAdvisorMonth(orders, overrides, year, month),
-    [orders, overrides, year, month]
+    () => summarizeAdvisorMonth(orders, overrides, year, month, basis),
+    [orders, overrides, year, month, basis]
   );
 
   const setLineOverride = (
@@ -85,7 +86,46 @@ export default function CommissionsPanel({ orders }: Props) {
     }));
   };
 
+  const buildExport = (a: AdvisorMonthSummary) => {
+    const motivos = new Map<string, { count: number; value: number }>();
+    for (const l of a.excludedLines) {
+      const prev = motivos.get(l.reason) || { count: 0, value: 0 };
+      motivos.set(l.reason, {
+        count: prev.count + 1,
+        value: prev.value + l.totalWithVat,
+      });
+    }
+    return {
+      fileBase: `comisiones_${a.advisorName.replace(/[^a-z0-9]+/gi, "_").toLowerCase()}_${MONTHS[month].toLowerCase()}_${year}`,
+      summary: [
+        { Concepto: "Asesor", Valor: a.advisorName },
+        { Concepto: "Periodo", Valor: `${MONTHS[month]} ${year}` },
+        {
+          Concepto: "Criterio del período",
+          Valor: basis === "venta" ? "Fecha de venta" : "Fecha de factura",
+        },
+        { Concepto: "Pedidos del período", Valor: a.grossOrdersCount },
+        { Concepto: "Ventas totales (con IVA)", Valor: Math.round(a.grossSalesWithVat) },
+        { Concepto: "Pedidos considerados", Valor: a.ordersCount },
+        { Concepto: "Valor considerado (con IVA)", Valor: Math.round(a.totalWithVat) },
+        { Concepto: "Base sin IVA", Valor: Math.round(a.totalSinIva) },
+        { Concepto: "Pedidos excluidos", Valor: a.excludedCount },
+        { Concepto: "Valor excluido (con IVA)", Valor: Math.round(a.excludedWithVat) },
+        { Concepto: "Comisión calculada", Valor: Math.round(a.rawCommission) },
+        { Concepto: "Bono", Valor: Math.round(a.bonus) },
+        { Concepto: "Total a pagar", Valor: Math.round(a.totalToPay) },
+        ...Array.from(motivos.entries()).map(([reason, v]) => ({
+          Concepto: `Motivo exclusión: ${reason}`,
+          Valor: `${v.count} pedido(s) · ${fmt(v.value)}`,
+        })),
+      ],
+      lines: a.lines,
+      excluded: a.excludedLines,
+    };
+  };
+
   const grandTotal = summaries.reduce((s, a) => s + a.totalToPay, 0);
+
 
   return (
     <div className="space-y-6">
