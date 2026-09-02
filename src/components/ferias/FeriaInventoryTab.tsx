@@ -218,6 +218,8 @@ export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
 
   return (
     <div className="space-y-4">
+      <FeriaShipmentsSummary feriaId={feriaId} />
+
       {dispatchReq && (
         <Card className="p-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-sm">
