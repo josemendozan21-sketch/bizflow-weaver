@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Boxes, ShoppingBag, History, Beaker, Sparkles, Warehouse, Store, Tent, PackageSearch, Route } from "lucide-react";
+import { Boxes, ShoppingBag, History, Beaker, Sparkles, Warehouse, Store, Tent, PackageSearch, Route, PackageCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
 import MateriaPrimaPanel from "@/components/inventory/MateriaPrimaPanel";
@@ -14,6 +14,10 @@ import InventoryDashboardSummary from "@/components/inventory/InventoryDashboard
 import Punto92WarehousePanel from "@/components/inventory/Punto92WarehousePanel";
 import FeriasWarehousePanel from "@/components/inventory/FeriasWarehousePanel";
 import InventoryTraceabilityPanel from "@/components/inventory/InventoryTraceabilityPanel";
+import OrderRequirementsPanel from "@/components/inventory/OrderRequirementsPanel";
+import BatchReceptionPanel from "@/components/inventory/BatchReceptionPanel";
+import ProductionBatchesPanel from "@/components/production/ProductionBatchesPanel";
+
 
 type WarehouseKey = "principal" | "punto92" | "ferias";
 
@@ -65,6 +69,10 @@ const InventariosRoleView = () => {
           <TabsTrigger value="bandeja" className="gap-1.5">
             <ShoppingBag className="h-4 w-4" /> Bandeja de pedidos
           </TabsTrigger>
+          <TabsTrigger value="abastecimiento" className="gap-1.5 whitespace-nowrap">
+            <PackageCheck className="h-4 w-4" /> Abastecimiento
+          </TabsTrigger>
+
           <TabsTrigger value="trazabilidad" className="gap-1.5 whitespace-nowrap">
             <Route className="h-4 w-4" /> Trazabilidad
           </TabsTrigger>
@@ -120,6 +128,13 @@ const InventariosRoleView = () => {
         <TabsContent value="bandeja" className="mt-4">
           <WholesaleOrdersInbox />
         </TabsContent>
+
+        <TabsContent value="abastecimiento" className="mt-4 space-y-4">
+          <OrderRequirementsPanel />
+          <BatchReceptionPanel />
+          <ProductionBatchesPanel readOnly />
+        </TabsContent>
+
 
         <TabsContent value="trazabilidad" className="mt-4">
           <InventoryTraceabilityPanel />

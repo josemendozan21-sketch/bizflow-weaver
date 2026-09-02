@@ -10,6 +10,8 @@ import { EstampacionProductionView } from "@/components/production/EstampacionPr
 import { RollCutsView } from "@/components/production/RollCutsView";
 import ProductionMovementHistory from "@/components/production/ProductionMovementHistory";
 import ProcessChangeLogPanel from "@/components/production/ProcessChangeLogPanel";
+import ProductionBatchesPanel from "@/components/production/ProductionBatchesPanel";
+
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProductionAlerts } from "@/hooks/useProductionAlerts";
@@ -72,6 +74,7 @@ const Produccion = () => {
         <Tabs value={topTab} onValueChange={(v) => setTopTab(v as any)}>
           <TabsList>
             <TabsTrigger value="marcas">Marcas</TabsTrigger>
+            <TabsTrigger value="lotes">Lotes de producción</TabsTrigger>
             <TabsTrigger value="rollos">Corte de Rollos</TabsTrigger>
             <TabsTrigger value="historial">Historial</TabsTrigger>
             <TabsTrigger value="cambios">Historial de cambios</TabsTrigger>
@@ -79,6 +82,10 @@ const Produccion = () => {
           <TabsContent value="marcas" className="mt-4">
             <ProductionBrandSelector selectedBrand={selectedBrand} onSelectBrand={setSelectedBrand} />
           </TabsContent>
+          <TabsContent value="lotes" className="mt-4">
+            <ProductionBatchesPanel readOnly={isReadOnly} />
+          </TabsContent>
+
           <TabsContent value="rollos" className="mt-4">
             <RollCutsView />
           </TabsContent>

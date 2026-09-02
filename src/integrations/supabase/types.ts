@@ -1849,6 +1849,86 @@ export type Database = {
           },
         ]
       }
+      order_requirements: {
+        Row: {
+          brand: string
+          category: string
+          color: string | null
+          confirmed_at: string | null
+          confirmed_by: string | null
+          confirmed_by_name: string | null
+          created_at: string
+          id: string
+          item_name: string
+          logo: string | null
+          notes: string | null
+          order_code: string | null
+          order_id: string
+          product_type: string | null
+          quantity_covered: number
+          quantity_missing: number
+          quantity_required: number
+          ref_key: string
+          status: string
+          stock_item_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          brand: string
+          category?: string
+          color?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          confirmed_by_name?: string | null
+          created_at?: string
+          id?: string
+          item_name: string
+          logo?: string | null
+          notes?: string | null
+          order_code?: string | null
+          order_id: string
+          product_type?: string | null
+          quantity_covered?: number
+          quantity_missing?: number
+          quantity_required?: number
+          ref_key: string
+          status?: string
+          stock_item_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          brand?: string
+          category?: string
+          color?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          confirmed_by_name?: string | null
+          created_at?: string
+          id?: string
+          item_name?: string
+          logo?: string | null
+          notes?: string | null
+          order_code?: string | null
+          order_id?: string
+          product_type?: string | null
+          quantity_covered?: number
+          quantity_missing?: number
+          quantity_required?: number
+          ref_key?: string
+          status?: string
+          stock_item_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_requirements_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           abono: number | null
@@ -2811,6 +2891,141 @@ export type Database = {
         }
         Relationships: []
       }
+      production_batch_items: {
+        Row: {
+          batch_id: string
+          client_name: string | null
+          created_at: string
+          id: string
+          order_code: string | null
+          order_id: string | null
+          quantity: number
+          requirement_id: string | null
+        }
+        Insert: {
+          batch_id: string
+          client_name?: string | null
+          created_at?: string
+          id?: string
+          order_code?: string | null
+          order_id?: string | null
+          quantity?: number
+          requirement_id?: string | null
+        }
+        Update: {
+          batch_id?: string
+          client_name?: string | null
+          created_at?: string
+          id?: string
+          order_code?: string | null
+          order_id?: string | null
+          quantity?: number
+          requirement_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_batch_items_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "production_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_batch_items_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "order_requirements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_batches: {
+        Row: {
+          batch_number: number
+          brand: string
+          category: string
+          color: string | null
+          created_at: string
+          finished_at: string | null
+          finished_by: string | null
+          finished_by_name: string | null
+          id: string
+          item_name: string
+          logo: string | null
+          notes: string | null
+          produced_quantity: number | null
+          product_type: string | null
+          received_at: string | null
+          received_by: string | null
+          received_by_name: string | null
+          received_quantity: number | null
+          ref_key: string
+          started_at: string | null
+          started_by: string | null
+          started_by_name: string | null
+          status: string
+          stock_item_id: string | null
+          target_quantity: number
+          updated_at: string
+        }
+        Insert: {
+          batch_number?: number
+          brand: string
+          category?: string
+          color?: string | null
+          created_at?: string
+          finished_at?: string | null
+          finished_by?: string | null
+          finished_by_name?: string | null
+          id?: string
+          item_name: string
+          logo?: string | null
+          notes?: string | null
+          produced_quantity?: number | null
+          product_type?: string | null
+          received_at?: string | null
+          received_by?: string | null
+          received_by_name?: string | null
+          received_quantity?: number | null
+          ref_key: string
+          started_at?: string | null
+          started_by?: string | null
+          started_by_name?: string | null
+          status?: string
+          stock_item_id?: string | null
+          target_quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          batch_number?: number
+          brand?: string
+          category?: string
+          color?: string | null
+          created_at?: string
+          finished_at?: string | null
+          finished_by?: string | null
+          finished_by_name?: string | null
+          id?: string
+          item_name?: string
+          logo?: string | null
+          notes?: string | null
+          produced_quantity?: number | null
+          product_type?: string | null
+          received_at?: string | null
+          received_by?: string | null
+          received_by_name?: string | null
+          received_quantity?: number | null
+          ref_key?: string
+          started_at?: string | null
+          started_by?: string | null
+          started_by_name?: string | null
+          status?: string
+          stock_item_id?: string | null
+          target_quantity?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       production_orders: {
         Row: {
           advisor_id: string | null
@@ -3531,6 +3746,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      build_ref_key: {
+        Args: {
+          _brand: string
+          _color: string
+          _logo: string
+          _name: string
+          _type: string
+        }
+        Returns: string
+      }
+      canonical_reference_name: { Args: { _name: string }; Returns: string }
+      confirm_order_requirement: {
+        Args: { _confirm_quantity?: number; _requirement_id: string }
+        Returns: Json
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -3539,6 +3769,10 @@ export type Database = {
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
+      }
+      finish_production_batch: {
+        Args: { _batch_id: string; _produced: number }
+        Returns: Json
       }
       get_all_deliveries: {
         Args: never
@@ -3588,6 +3822,11 @@ export type Database = {
         Args: { _customer_id: string }
         Returns: undefined
       }
+      receive_production_batch: {
+        Args: { _batch_id: string; _received: number }
+        Returns: Json
+      }
+      start_production_batch: { Args: { _batch_id: string }; Returns: Json }
     }
     Enums: {
       app_role:

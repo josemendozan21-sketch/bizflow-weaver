@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Beaker, Warehouse, Store, Tent, Route, History } from "lucide-react";
+import { Beaker, Warehouse, Store, Tent, Route, History, PackageCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
@@ -10,6 +10,10 @@ import Punto92WarehousePanel from "@/components/inventory/Punto92WarehousePanel"
 import FeriasWarehousePanel from "@/components/inventory/FeriasWarehousePanel";
 import InventoryTraceabilityPanel from "@/components/inventory/InventoryTraceabilityPanel";
 import InventoryChangeLogPanel from "@/components/inventory/InventoryChangeLogPanel";
+import OrderRequirementsPanel from "@/components/inventory/OrderRequirementsPanel";
+import BatchReceptionPanel from "@/components/inventory/BatchReceptionPanel";
+import ProductionBatchesPanel from "@/components/production/ProductionBatchesPanel";
+
 import { useAuth } from "@/contexts/AuthContext";
 
 type WarehouseKey = "principal" | "punto92" | "ferias";
@@ -55,6 +59,9 @@ const FullInventoryView = () => {
           <TabsTrigger value="materia_prima" className="gap-1.5">
             <Beaker className="h-4 w-4" /> Materia Prima
           </TabsTrigger>
+          <TabsTrigger value="abastecimiento" className="gap-1.5">
+            <PackageCheck className="h-4 w-4" /> Abastecimiento
+          </TabsTrigger>
           <TabsTrigger value="trazabilidad" className="gap-1.5">
             <Route className="h-4 w-4" /> Trazabilidad
           </TabsTrigger>
@@ -72,6 +79,13 @@ const FullInventoryView = () => {
         <TabsContent value="materia_prima" className="mt-4">
           <MateriaPrimaPanel />
         </TabsContent>
+
+        <TabsContent value="abastecimiento" className="mt-4 space-y-4">
+          <OrderRequirementsPanel />
+          <BatchReceptionPanel />
+          <ProductionBatchesPanel readOnly />
+        </TabsContent>
+
 
         <TabsContent value="trazabilidad" className="mt-4">
           <InventoryTraceabilityPanel />
