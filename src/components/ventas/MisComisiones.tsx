@@ -25,6 +25,7 @@ import { Loader2, Info, TrendingUp, Clock, CheckCircle2, ChevronLeft, ChevronRig
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useOrders } from "@/hooks/useOrders";
+import { useAllOrderCharges } from "@/hooks/useOrderCharges";
 import { useAuth } from "@/contexts/AuthContext";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import {
@@ -35,7 +36,6 @@ import {
   BONUS_TIER_2_THRESHOLD,
   BONUS_TIER_2_AMOUNT,
   UNLOCK_THRESHOLD,
-  type PeriodBasis,
 } from "@/lib/commissions";
 import {
   exportCommissionsCsv,
