@@ -27,6 +27,8 @@ function methodMatches(method: string | null | undefined, target: string) {
 
 export function PuntoReportes({ sales, movements, products, locationId, location, cashBase = 0 }: Props) {
   const { data: withdrawals = [] } = usePosCashWithdrawals(locationId);
+  const { data: posExpenses = [] } = useSedePettyExpenses("chico");
+  const { data: counts = [] } = useSedeCashCounts("chico");
   const { role } = useAuth();
   const isAdmin = role === "admin";
   const canExport = role === "admin" || role === "contabilidad";
@@ -47,15 +49,13 @@ export function PuntoReportes({ sales, movements, products, locationId, location
       todaySales
         .filter((s) => methodMatches(s.payment_method, m))
         .reduce((a, b) => a + Number(b.total_amount), 0);
-    const cashSalesAll = sales
-      .filter((s) => methodMatches(s.payment_method, "efectivo"))
-      .reduce((a, b) => a + Number(b.total_amount), 0);
-    const approvedWithdrawalsAll = withdrawals
-      .filter((w) => w.status === "aprobado")
-      .reduce((a, b) => a + Number(b.amount), 0);
-    const pendingWithdrawalsAll = withdrawals
-      .filter((w) => w.status === "pendiente")
-      .reduce((a, b) => a + Number(b.amount), 0);
+    const cash = computePosCash({
+      cashBase,
+      lastCount: counts[0] ?? null,
+      sales,
+      withdrawals,
+      expenses: posExpenses,
+    });
     const efectivo = byMethod("efectivo");
     return {
       totalToday,
@@ -67,12 +67,13 @@ export function PuntoReportes({ sales, movements, products, locationId, location
       nequi: byMethod("nequi"),
       otros: byMethod("transferencia") + byMethod("otro"),
       countToday: todaySales.length,
-      cashSalesAll,
-      approvedWithdrawalsAll,
-      pendingWithdrawalsAll,
-      cashOnHand: cashBase + cashSalesAll - approvedWithdrawalsAll - pendingWithdrawalsAll,
+      cash,
+      cashSalesAll: cash.cashSales,
+      salidasAll: cash.retiros + cash.consignaciones + cash.gastos,
+      pendingAll: cash.pending + cash.gastosPendientes,
+      cashOnHand: cash.cashOnHand,
     };
-  }, [sales, products, today, withdrawals, cashBase, todaySales]);
+  }, [sales, products, today, withdrawals, cashBase, todaySales, posExpenses, counts]);
 
   return (
     <Tabs defaultValue="resumen" className="space-y-4">
