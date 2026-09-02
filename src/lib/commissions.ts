@@ -535,7 +535,8 @@ export function summarizeAdvisorProgress(
   year: number,
   month: number,
   advisorId?: string,
-  basis: PeriodBasis = "venta"
+  charges?: ChargesMap,
+  basis: PeriodBasis = PERIOD_BASIS
 ): AdvisorProgressSummary {
   const start = startOfMonth(new Date(year, month, 1));
   const end = endOfMonth(new Date(year, month, 1));
@@ -551,7 +552,7 @@ export function summarizeAdvisorProgress(
     0
   );
   const causadoWithVat = monthOrders.reduce(
-    (s, o) => s + classifyOrderForCommission(o).base,
+    (s, o) => s + classifyOrderForCommission(o, charges).base,
     0
   );
 
@@ -561,7 +562,7 @@ export function summarizeAdvisorProgress(
   const lines: ProgressLine[] = monthOrders.map((o) => {
     const paymentMode: PaymentMode =
       o.payment_method === "contra_entrega" ? "contraentrega" : "contado";
-    const base = buildLine(o, paymentMode, weekendUnlocked, basis);
+    const base = buildLine(o, paymentMode, weekendUnlocked, basis, charges);
     return {
       ...base,
       date: getPeriodDate(o, basis),
@@ -577,13 +578,12 @@ export function summarizeAdvisorProgress(
 
   // Comisión proyectada de lo que aún no causa (si el cliente paga todo).
   const pendingCommission = pendingLines.reduce((s, l) => {
-    const rate = l.ratePct;
-    const restante = Math.max(l.totalWithVat - l.commissionableWithVat, 0);
-    return s + (restante / IVA_DIVISOR) * rate;
+    const restante = Math.max(l.netTotalWithVat - l.commissionableWithVat, 0);
+    return s + (restante / IVA_DIVISOR) * l.ratePct;
   }, 0);
   // Saldo aún no causado de los pedidos parciales.
   const partialRemaining = invoicedLines.reduce((s, l) => {
-    const restante = Math.max(l.totalWithVat - l.commissionableWithVat, 0);
+    const restante = Math.max(l.netTotalWithVat - l.commissionableWithVat, 0);
     return s + (restante / IVA_DIVISOR) * l.ratePct;
   }, 0);
 
@@ -602,6 +602,11 @@ export function summarizeAdvisorProgress(
     pendingCommission: pendingCommission + partialRemaining,
     excludedCount: excludedLines.length,
     excludedWithVat: excludedLines.reduce((s, l) => s + l.totalWithVat, 0),
+    nonCommissionableWithVat: lines.reduce(
+      (s, l) => s + l.shippingCost + l.extraCharges,
+      0
+    ),
+    pendingInvoiceCount: lines.filter((l) => l.pendingInvoice).length,
     bonusInvoiced,
     bonusProjected,
     toPayInvoiced: invoicedCommission + bonusInvoiced,
@@ -610,4 +615,5 @@ export function summarizeAdvisorProgress(
     weekendUnlocked,
     lines: lines.sort((a, b) => b.date.getTime() - a.date.getTime()),
   };
+}
 }
