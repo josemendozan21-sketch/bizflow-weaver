@@ -463,14 +463,10 @@ const WholesaleOrdersInbox = () => {
       const parsed = parseOrderLines(order.product, order.quantity);
       const cat = "producto_terminado";
       const rows = parsed.map((p) => {
-        const guess = stockItems.find(
-          (s) =>
-            s.brand === order.brand &&
-            s.category === cat &&
-            s.name.trim().toLowerCase() === p.name.trim().toLowerCase()
-        );
+        const guess = findStockMatch(stockItems as any[], p.name, { brand: order.brand, category: cat });
         return { name: p.name, qty: String(p.qty), stockItemId: guess?.id ?? "" };
       });
+
       setLineRows(rows);
     } else {
       setLineRows([]);
