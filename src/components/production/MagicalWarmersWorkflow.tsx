@@ -433,7 +433,37 @@ export const MagicalWarmersWorkflow = () => {
             </div>
           );
         })}
+
+        {otherStageOrders.length > 0 && (
+          <div className="space-y-2 scroll-mt-4">
+            <div className="flex items-center gap-2 border-b pb-1.5">
+              <Package className="h-4 w-4 text-amber-600" />
+              <h4 className="text-sm font-semibold text-foreground">Otras etapas / fuera de flujo</h4>
+              <Badge variant="secondary">{otherStageOrders.length}</Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Estas órdenes están en una etapa que no pertenece al tablero. Al finalizar la etapa el sistema
+              reubica la orden en el flujo correcto.
+            </p>
+            <div className="grid gap-4">
+              {otherStageOrders.map((order) => (
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  stageLogs={stageLogs.filter((l) => l.production_order_id === order.id)}
+                  role={role}
+                  isAdmin={isAdmin}
+                  selected={selected.has(order.id)}
+                  onToggleSelect={() => toggleSelect(order.id)}
+                  onStart={() => setOperatorPrompt({ mode: "start", orderId: order.id, clientName: order.client_name })}
+                  onFinish={() => handleFinishOrder(order)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
+
 
       {completedOrders.length > 0 && (
         <>
