@@ -29,6 +29,7 @@ import { StageLogsList } from "./StageLogsList";
 import { ensureProductionOrder } from "@/lib/orderFlow";
 import { matchesQuery } from "@/lib/search";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
+import DeliveryProgressBadge from "@/components/common/DeliveryProgressBadge";
 
 interface BodyStockItem {
   id: string;
@@ -72,6 +73,7 @@ interface PendingIntakeOrder {
   is_recompra?: boolean | null;
   observations?: string | null;
   advisor_id?: string | null;
+  delivered_quantity?: number | null;
 }
 
 const STATUS_BADGE: Record<string, { label: string; variant: "secondary" | "default" | "outline" }> = {
@@ -178,7 +180,7 @@ export const EstampacionProductionView = () => {
       const { data, error } = await supabase
         .from("orders")
         .select(
-          "id, order_code, client_name, brand, product, quantity, advisor_name, delivery_date, created_at, production_status, ink_color, ink_count, ink_color_2, ink_color_3, glitter_color, gel_color, silicone_color, logo_url, logo_url_2, logo_count, logo_name, logo_name_2, line_index, line_count, is_recompra, observations, advisor_id"
+          "id, order_code, client_name, brand, product, quantity, advisor_name, delivery_date, created_at, production_status, ink_color, ink_count, ink_color_2, ink_color_3, glitter_color, gel_color, silicone_color, logo_url, logo_url_2, logo_count, logo_name, logo_name_2, line_index, line_count, is_recompra, observations, advisor_id, delivered_quantity"
         )
         .eq("production_status", "pendiente")
         .is("inventory_archived_at", null)
@@ -281,7 +283,10 @@ export const EstampacionProductionView = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-semibold text-sm">{o.client_name}</p>
-                      <OrderCodeBadge code={o.order_code} lineIndex={o.line_index} lineCount={o.line_count} compact />
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <OrderCodeBadge code={o.order_code} lineIndex={o.line_index} lineCount={o.line_count} compact />
+                        <DeliveryProgressBadge quantity={o.quantity} delivered={o.delivered_quantity} compact />
+                      </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <Badge variant="secondary">Esperando Inventarios</Badge>
