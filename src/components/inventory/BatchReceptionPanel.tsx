@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { PackagePlus } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { PackagePlus, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import { useProductionBatches, type ProductionBatch } from "@/hooks/useProductionBatches";
@@ -16,10 +17,13 @@ const brandLabel = (b: string) =>
   /sweat/i.test(b) ? "Sweatspot" : /magical/i.test(b) ? "Magical Warmers" : b;
 
 export default function BatchReceptionPanel() {
-  const { batches, itemsOf, isLoading, receiveBatch } = useProductionBatches();
+  const { batches, itemsOf, isLoading, receiveBatch, revertReception } = useProductionBatches();
   const [target, setTarget] = useState<ProductionBatch | null>(null);
   const [qty, setQty] = useState("");
   const [busy, setBusy] = useState(false);
+  const [returnTarget, setReturnTarget] = useState<ProductionBatch | null>(null);
+  const [returnReason, setReturnReason] = useState("");
+
 
   const pending = useMemo(() => batches.filter((b) => b.status === "finalizado"), [batches]);
   const recent = useMemo(
