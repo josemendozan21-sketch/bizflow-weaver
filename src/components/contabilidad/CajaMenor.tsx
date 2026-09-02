@@ -516,7 +516,116 @@ export default function CajaMenor() {
         onClose={() => setEditingFund(null)}
         onSaved={() => { setEditingFund(null); refresh(); }}
       />
+
+      <EditExpenseDialog
+        expense={editingExpense}
+        onClose={() => setEditingExpense(null)}
+        onSaved={() => { setEditingExpense(null); refresh(); }}
+      />
     </div>
+  );
+}
+
+/** Edita un gasto: permite reasignarlo a Toberín o Chicó y corregir sus datos. */
+function EditExpenseDialog({ expense, onClose, onSaved }: {
+  expense: PettyExpense | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+  const [requestedBy, setRequestedBy] = useState("");
+  const [sede, setSede] = useState<Sede>("toberin");
+  const [status, setStatus] = useState<string>("aprobado");
+  const [saving, setSaving] = useState(false);
+  const [loadedId, setLoadedId] = useState<string | null>(null);
+
+  if (expense && loadedId !== expense.id) {
+    setLoadedId(expense.id);
+    setAmount(String(expense.amount));
+    setDescription(expense.description ?? "");
+    setRequestedBy(expense.requested_by ?? "");
+    setSede((expense.sede as Sede) ?? "toberin");
+    setStatus(expense.status ?? "aprobado");
+  }
+
+  const handleSave = async () => {
+    if (!expense) return;
+    const val = parseFloat(amount);
+    if (!val || val <= 0) { toast.error("Ingrese un monto válido"); return; }
+    if (!description.trim()) { toast.error("Describa el gasto"); return; }
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("petty_cash_expenses")
+        .update({
+          amount: val,
+          description: description.trim(),
+          requested_by: requestedBy.trim() || expense.requested_by,
+          sede,
+          status,
+        } as any)
+        .eq("id", expense.id);
+      if (error) throw error;
+      toast.success("Gasto actualizado");
+      onSaved();
+    } catch (err: any) {
+      toast.error("Error: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!expense} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Editar gasto</DialogTitle>
+          <DialogDescription>Corrige la sede, el monto, la descripción o el estado.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Sede</Label>
+            <Select value={sede} onValueChange={(v) => setSede(v as Sede)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {SEDES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Monto *</Label>
+            <Input type="number" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Descripción *</Label>
+            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Solicitado por</Label>
+            <Input value={requestedBy} onChange={(e) => setRequestedBy(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Estado</Label>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="aprobado">Aprobado</SelectItem>
+                <SelectItem value="pendiente">Pendiente</SelectItem>
+                <SelectItem value="rechazado">Rechazado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Pencil className="h-4 w-4 mr-1" />}
+            Guardar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
