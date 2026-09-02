@@ -239,8 +239,15 @@ export default function MisComisiones() {
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
+          <Select value={basis} onValueChange={(v) => setBasis(v as PeriodBasis)}>
+            <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="venta">Por fecha de venta</SelectItem>
+              <SelectItem value="factura">Por fecha de factura</SelectItem>
+            </SelectContent>
+          </Select>
           <Button
-            onClick={handleExport}
+            onClick={handleExportXlsx}
             disabled={exporting || summary.lines.length === 0}
             className="gap-2"
           >
@@ -249,8 +256,18 @@ export default function MisComisiones() {
             ) : (
               <Download className="h-4 w-4" />
             )}
-            Descargar Excel
+            Excel
           </Button>
+          <Button
+            variant="outline"
+            onClick={handleExportCsv}
+            disabled={summary.lines.length === 0}
+            className="gap-2"
+          >
+            <Download className="h-4 w-4" />
+            CSV
+          </Button>
+
         </div>
 
       </div>
