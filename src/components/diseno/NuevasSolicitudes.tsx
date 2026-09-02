@@ -52,7 +52,7 @@ export function NuevasSolicitudes({ requests }: Props) {
                 {req.order_code && <div className="mt-1"><OrderCodeBadge code={req.order_code} compact /></div>}
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="border rounded-lg p-2 bg-muted/20 flex items-center justify-center min-h-20">
+                <div className="border rounded-lg p-2 bg-muted/20 flex items-center justify-center min-h-20 overflow-hidden">
                   {req.original_logo_url && req.original_logo_url.startsWith("http") ? (
                     <LogoPreview url={req.original_logo_url} alt="Logo original" />
                   ) : (

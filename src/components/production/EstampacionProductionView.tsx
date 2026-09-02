@@ -34,6 +34,7 @@ import { ensureProductionOrder } from "@/lib/orderFlow";
 import { matchesQuery } from "@/lib/search";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import DeliveryProgressBadge from "@/components/common/DeliveryProgressBadge";
+import { LogoPreview } from "@/components/diseno/LogoPreview";
 
 interface BodyStockItem {
   id: string;
@@ -330,11 +331,7 @@ export const EstampacionProductionView = () => {
                       <p className="text-[11px] font-medium text-muted-foreground">
                         Logo {lr?.adjusted_logo_url ? "(ajustado)" : "(original)"}
                       </p>
-                      <img
-                        src={lrUrl}
-                        alt={`Logo ${o.client_name}`}
-                        className="max-h-24 w-full rounded border object-contain bg-white"
-                      />
+                      <LogoPreview url={lrUrl} alt={`Logo ${o.client_name}`} maxHeightClass="max-h-24" />
                       <a href={lrUrl} download target="_blank" rel="noopener noreferrer">
                         <Button size="sm" variant="outline" className="w-full">
                           <Download className="h-3 w-3 mr-1" /> Descargar logo
@@ -349,11 +346,7 @@ export const EstampacionProductionView = () => {
                       <p className="text-[11px] font-medium text-muted-foreground">
                         Logo 2 {o.logo_name_2 ? `— ${o.logo_name_2}` : ""}
                       </p>
-                      <img
-                        src={o.logo_url_2}
-                        alt={`Logo 2 ${o.client_name}`}
-                        className="max-h-24 w-full rounded border object-contain bg-white"
-                      />
+                      <LogoPreview url={o.logo_url_2} alt={`Logo 2 ${o.client_name}`} maxHeightClass="max-h-24" />
                       <a href={o.logo_url_2} download target="_blank" rel="noopener noreferrer">
                         <Button size="sm" variant="outline" className="w-full">
                           <Download className="h-3 w-3 mr-1" /> Descargar logo 2
@@ -552,7 +545,7 @@ function EstampacionOrderCard({
         {logoUrl && (
           <div className="rounded-md border p-3 space-y-2">
             <p className="text-xs font-medium text-muted-foreground">Logo</p>
-            <img src={logoUrl} alt="Logo del cliente" className="max-h-24 rounded border object-contain" />
+            <LogoPreview url={logoUrl} alt="Logo del cliente" maxHeightClass="max-h-24" />
             <a href={logoUrl} download target="_blank" rel="noopener noreferrer">
               <Button size="sm" variant="outline" className="mt-1">
                 <Download className="h-3 w-3 mr-1" /> Descargar logo
