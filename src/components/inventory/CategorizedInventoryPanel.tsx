@@ -73,7 +73,8 @@ const CategorizedInventoryPanel = ({
 }: CategorizedInventoryPanelProps) => {
   const { stockItems, addStockItem, updateStockItem, deleteStockItem, isLoading } = useInventory();
   const { role } = useAuth();
-  const isReadOnly = role !== "admin";
+  // Solo Admin e Inventarios pueden crear/editar/eliminar referencias.
+  const isReadOnly = role !== "admin" && role !== "inventarios";
   const baseCategories = role === "asesor_comercial" ? ASESOR_CATEGORIES : ALL_CATEGORIES;
   // Magical Warmers no tiene productos importados; Sweatspot no tiene cuerpos de referencia.
   const CATEGORIES = initialBrand === "magical_warmers"
