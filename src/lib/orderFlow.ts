@@ -103,6 +103,10 @@ export async function ensureProductionOrder(
     workflow_type: opts.needsCuerpos ? "full" : "short",
     stages,
     ink_color: order.ink_color ?? null,
+    ink_count: order.ink_count ?? 1,
+    ink_color_2: order.ink_color_2 ?? null,
+    ink_color_3: order.ink_color_3 ?? null,
+    glitter_color: order.glitter_color ?? null,
     observations: opts.sampleOnly
       ? `MUESTRA (sin entrega de cuerpos) — ${order.observations ?? ""}`.trim()
       : order.observations ?? null,
