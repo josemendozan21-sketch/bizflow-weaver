@@ -97,7 +97,7 @@ export default function MisComisiones() {
     const out: { label: string; total: number; commission: number; count: number }[] = [];
     for (let i = 0; i < 12; i++) {
       const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-      const s = summarizeAdvisorProgress(orders, d.getFullYear(), d.getMonth(), user?.id);
+      const s = summarizeAdvisorProgress(orders, d.getFullYear(), d.getMonth(), user?.id, basis);
       if (s.ordersCount === 0) continue;
       out.push({
         label: `${MONTHS[d.getMonth()]} ${d.getFullYear()}`,
@@ -107,106 +107,85 @@ export default function MisComisiones() {
       });
     }
     return out;
-  }, [orders, user?.id]);
+  }, [orders, user?.id, basis]);
 
   const lines = useMemo(() => {
     if (filter === "facturado") return summary.lines.filter((l) => l.invoiced);
-    if (filter === "pendiente") return summary.lines.filter((l) => !l.invoiced);
+    if (filter === "pendiente")
+      return summary.lines.filter((l) => l.status === "pendiente");
+    if (filter === "excluido")
+      return summary.lines.filter((l) => l.status === "excluido");
     return summary.lines;
   }, [summary.lines, filter]);
 
+  const causadas = useMemo(
+    () => summary.lines.filter((l) => l.invoiced),
+    [summary.lines]
+  );
+  const noCausadas = useMemo(
+    () => summary.lines.filter((l) => !l.invoiced),
+    [summary.lines]
+  );
+
+  const motivos = useMemo(() => {
+    const m = new Map<string, { count: number; value: number }>();
+    for (const l of noCausadas) {
+      const prev = m.get(l.reason) || { count: 0, value: 0 };
+      m.set(l.reason, { count: prev.count + 1, value: prev.value + l.totalWithVat });
+    }
+    return Array.from(m.entries()).sort((a, b) => b[1].value - a[1].value);
+  }, [noCausadas]);
+
   const [exporting, setExporting] = useState(false);
 
-  const handleExport = async () => {
+  const buildExportInput = () => ({
+    fileBase: `comisiones_${MONTHS[month].toLowerCase()}_${year}`,
+    summary: [
+      { Concepto: "Asesor", Valor: summary.lines[0]?.order.advisor_name || "" },
+      { Concepto: "Periodo", Valor: `${MONTHS[month]} ${year}` },
+      {
+        Concepto: "Criterio del período",
+        Valor: basis === "venta" ? "Fecha de venta" : "Fecha de factura",
+      },
+      { Concepto: "Pedidos del período", Valor: summary.ordersCount },
+      { Concepto: "Ventas totales (con IVA)", Valor: Math.round(summary.totalWithVat) },
+      { Concepto: "Pedidos considerados para comisión", Valor: summary.invoicedCount },
+      { Concepto: "Valor considerado (con IVA)", Valor: Math.round(summary.invoicedWithVat) },
+      { Concepto: "Pedidos pendientes de pago", Valor: summary.pendingCount },
+      { Concepto: "Valor pendiente (con IVA)", Valor: Math.round(summary.pendingWithVat) },
+      { Concepto: "Pedidos excluidos", Valor: summary.excludedCount },
+      { Concepto: "Valor excluido (con IVA)", Valor: Math.round(summary.excludedWithVat) },
+      { Concepto: "Comisión causada", Valor: Math.round(summary.invoicedCommission) },
+      { Concepto: "Bono", Valor: Math.round(summary.bonusInvoiced) },
+      { Concepto: "Total a pagar", Valor: Math.round(summary.toPayInvoiced) },
+      {
+        Concepto: "Comisión por causar (saldos pendientes)",
+        Valor: Math.round(summary.pendingCommission),
+      },
+      ...motivos.map(([reason, v]) => ({
+        Concepto: `Motivo exclusión: ${reason}`,
+        Valor: `${v.count} pedido(s) · ${fmt(v.value)}`,
+      })),
+    ],
+    lines: causadas,
+    excluded: noCausadas,
+  });
+
+  const handleExportXlsx = async () => {
     if (summary.lines.length === 0) return;
     setExporting(true);
     try {
-      const XLSX = await import("xlsx");
-      const ids = summary.lines.map((l) => l.order.id);
-      const payMap = new Map<string, { date: string; where: string }>();
-      for (let i = 0; i < ids.length; i += 100) {
-        const { data } = await supabase
-          .from("order_payments")
-          .select("order_id, payment_date, method, notes")
-          .in("order_id", ids.slice(i, i + 100))
-          .order("payment_date", { ascending: true });
-        for (const p of data || []) {
-          payMap.set(p.order_id, {
-            date: p.payment_date as string,
-            where: (p.method || p.notes || "") as string,
-          });
-        }
-      }
-
-      const rows = summary.lines.map((l) => {
-        const o = l.order;
-        const pay = payMap.get(o.id);
-        return {
-          "N° pedido": (o as any).order_code || "",
-          "Fecha del pedido": format(new Date(o.created_at), "dd/MM/yyyy"),
-          "Fecha soporte de pago": pay?.date
-            ? format(new Date(`${pay.date}T12:00:00`), "dd/MM/yyyy")
-            : o.payment_complete && o.updated_at
-              ? format(new Date(o.updated_at), "dd/MM/yyyy")
-              : "—",
-          Cliente: o.client_name,
-          "Referencia del pedido": o.product,
-          Unidades: Number(o.quantity) || 0,
-          "Dónde pagaron": pay?.where || o.payment_method || "—",
-          "Valor con IVA": Math.round(l.totalWithVat),
-          "Base sin IVA": Math.round(l.baseSinIva),
-          "% comisión": `${(l.ratePct * 100).toFixed(0)}%`,
-          Comisión: Math.round(l.netCommission),
-          Estado: l.returned ? "Devuelto" : l.invoiced ? "Pagado" : "Sin pago",
-        };
-      });
-
-      rows.push({
-        "N° pedido": "",
-        "Fecha del pedido": "",
-        "Fecha soporte de pago": "",
-        Cliente: "TOTAL",
-        "Referencia del pedido": "",
-        Unidades: rows.reduce((s, r) => s + (r.Unidades as number), 0),
-        "Dónde pagaron": "",
-        "Valor con IVA": rows.reduce((s, r) => s + (r["Valor con IVA"] as number), 0),
-        "Base sin IVA": rows.reduce((s, r) => s + (r["Base sin IVA"] as number), 0),
-        "% comisión": "",
-        Comisión: rows.reduce((s, r) => s + (r["Comisión"] as number), 0),
-        Estado: "",
-      } as (typeof rows)[number]);
-
-      const resumen = [
-        { Concepto: "Asesor", Valor: summary.lines[0]?.order.advisor_name || "" },
-        { Concepto: "Periodo", Valor: `${MONTHS[month]} ${year}` },
-        { Concepto: "Pedidos montados", Valor: summary.ordersCount },
-        { Concepto: "Monto montado (con IVA)", Valor: Math.round(summary.totalWithVat) },
-        { Concepto: "Pedidos pagados", Valor: summary.invoicedCount },
-        { Concepto: "Monto pagado (con IVA)", Valor: Math.round(summary.invoicedWithVat) },
-        { Concepto: "Comisión causada", Valor: Math.round(summary.invoicedCommission) },
-        { Concepto: "Bono", Valor: Math.round(summary.bonusInvoiced) },
-        { Concepto: "Total a pagar", Valor: Math.round(summary.toPayInvoiced) },
-        { Concepto: "Comisión pendiente (sin pago)", Valor: Math.round(summary.pendingCommission) },
-      ];
-
-      const wb = XLSX.utils.book_new();
-      const wsResumen = XLSX.utils.json_to_sheet(resumen);
-      wsResumen["!cols"] = [{ wch: 32 }, { wch: 22 }];
-      XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen");
-      const ws = XLSX.utils.json_to_sheet(rows);
-      ws["!cols"] = [
-        { wch: 16 }, { wch: 20 }, { wch: 32 }, { wch: 40 }, { wch: 10 },
-        { wch: 20 }, { wch: 16 }, { wch: 16 }, { wch: 12 }, { wch: 14 }, { wch: 12 },
-      ];
-      XLSX.utils.book_append_sheet(wb, ws, "Ventas y comisiones");
-      XLSX.writeFile(
-        wb,
-        `comisiones_${MONTHS[month].toLowerCase()}_${year}.xlsx`
-      );
+      await exportCommissionsXlsx(buildExportInput());
     } finally {
       setExporting(false);
     }
   };
+
+  const handleExportCsv = () => {
+    if (summary.lines.length === 0) return;
+    exportCommissionsCsv(buildExportInput());
+  };
+
 
 
   if (isLoading) {
