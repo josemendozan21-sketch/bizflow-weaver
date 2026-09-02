@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2 } from "lucide-react";
-import { LogoPreview } from "@/components/diseno/LogoPreview";
+import { FileText, Plus, Trash2 } from "lucide-react";
 
 export interface LogoEntry {
   id: string;
@@ -42,12 +41,10 @@ function LogoRow({
     return () => URL.revokeObjectURL(url);
   }, [entry.file]);
 
-  const previewUrl = useMemo(() => {
-    if (!objectUrl || !entry.file) return null;
-    // LogoPreview detecta el tipo por extensión: se la anexamos al blob URL.
-    const ext = entry.file.name.split(".").pop();
-    return ext ? `${objectUrl}#name.${ext.toLowerCase()}` : objectUrl;
-  }, [objectUrl, entry.file]);
+  const isImage = useMemo(
+    () => !!entry.file && entry.file.type.startsWith("image/"),
+    [entry.file],
+  );
 
   return (
     <div className="rounded-md border border-input bg-background p-3">
@@ -80,9 +77,17 @@ function LogoRow({
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-center gap-2">
-          {previewUrl && (
-            <div className="w-20 overflow-hidden rounded border p-1">
-              <LogoPreview url={previewUrl} alt={entry.name || `Logo ${index + 1}`} maxHeightClass="max-h-16" />
+          {entry.file && (
+            <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded border bg-muted/40">
+              {isImage && objectUrl ? (
+                <img
+                  src={objectUrl}
+                  alt={entry.name || `Logo ${index + 1}`}
+                  className="max-h-14 max-w-14 object-contain"
+                />
+              ) : (
+                <FileText className="h-6 w-6 text-muted-foreground" />
+              )}
             </div>
           )}
           <Button
