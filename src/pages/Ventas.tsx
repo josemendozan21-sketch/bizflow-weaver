@@ -30,6 +30,7 @@ import { createOrderNotifications } from "@/hooks/useNotifications";
 import SmartPasteField, { type ParsedOrderData } from "@/components/ventas/SmartPasteField";
 import ClientNameAutocomplete from "@/components/ventas/ClientNameAutocomplete";
 import { useFormDraft, clearFormDraft, usePersistedState } from "@/hooks/useFormDraft";
+import OrderLogosField, { makeLogoEntry, type LogoEntry } from "@/components/ventas/OrderLogosField";
 import { OrderConfirmationDialog, type OrderSummary } from "@/components/ventas/OrderConfirmationDialog";
 import { buildStages } from "@/lib/orderFlow";
 type Brand = "sweatspot" | "magical";
@@ -1741,6 +1742,38 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
             {!noLogo && (
               <div className="rounded-lg border border-input p-4 space-y-4">
+                {isRecompra && (
+                  <div className="space-y-1.5 rounded-md border border-input bg-muted/30 p-3">
+                    <Label>Logo anterior del cliente *</Label>
+                    <Select value={recompraLogoUrl || undefined} onValueChange={setRecompraLogoUrl}>
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            clientName.trim().length < 3
+                              ? "Escriba primero el nombre del cliente"
+                              : previousLogos.length
+                                ? "Seleccionar logo ya trabajado"
+                                : "Sin logos previos — adjunte el archivo"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {previousLogos.map((l: any) => {
+                          const url = l.adjusted_logo_url || l.original_logo_url;
+                          return (
+                            <SelectItem key={l.id} value={url}>
+                              {(l.logo_name || l.product || "Logo") + " — " + new Date(l.created_at).toLocaleDateString("es-CO")}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      En recompras el logo no se genera de nuevo: selecciónelo aquí o adjunte el archivo para que Estampación lo reciba.
+                    </p>
+                  </div>
+                )}
+
                 <OrderLogosField logos={mwLogos} onChange={setMwLogos} />
               </div>
             )}
