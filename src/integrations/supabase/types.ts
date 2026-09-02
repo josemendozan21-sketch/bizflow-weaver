@@ -2133,6 +2133,68 @@ export type Database = {
           },
         ]
       }
+      order_value_disputes: {
+        Row: {
+          created_at: string
+          current_amount: number
+          evidence_url: string | null
+          id: string
+          order_id: string
+          proposed_amount: number
+          reason: string
+          requested_by: string
+          requested_by_name: string | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          resolved_by_name: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_amount?: number
+          evidence_url?: string | null
+          id?: string
+          order_id: string
+          proposed_amount: number
+          reason: string
+          requested_by: string
+          requested_by_name?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          resolved_by_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_amount?: number
+          evidence_url?: string | null
+          id?: string
+          order_id?: string
+          proposed_amount?: number
+          reason?: string
+          requested_by?: string
+          requested_by_name?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          resolved_by_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_value_disputes_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           abono: number | null
@@ -4112,6 +4174,10 @@ export type Database = {
       }
       receive_production_batch: {
         Args: { _batch_id: string; _received: number }
+        Returns: Json
+      }
+      resolve_order_value_dispute: {
+        Args: { _approve: boolean; _dispute_id: string; _note?: string }
         Returns: Json
       }
       revert_production_batch_reception: {

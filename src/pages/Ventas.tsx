@@ -888,6 +888,13 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         setIsSubmitting(false);
         return;
       }
+      if (!line.isGift && !((parseFloat(line.valorTotal) || 0) > 0)) {
+        toast.error("Valor del pedido requerido", {
+          description: "No se puede guardar un pedido en $0. Ingresa el valor total (o márcalo como obsequio).",
+        });
+        setIsSubmitting(false);
+        return;
+      }
     }
     }
 
@@ -2020,6 +2027,13 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         setIsSubmitting(false);
         return;
       }
+      if (!((parseFloat(line.valorTotal) || 0) > 0)) {
+        toast.error("Valor del pedido requerido", {
+          description: "No se puede guardar un pedido en $0. Ingresa el valor total de cada producto.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
     }
 
     // RUT es opcional en ventas al por mayor
@@ -2755,6 +2769,13 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
       }
       if (brand === "magical" && !line.tipo) {
         toast.error("Tipo requerido", { description: "Seleccione Frío o Térmico en todas las líneas." });
+        setIsSubmitting(false);
+        return;
+      }
+      if (!line.isGift && !((parseFloat(line.retailPrice) || 0) > 0)) {
+        toast.error("Valor del pedido requerido", {
+          description: "No se puede guardar un pedido en $0. Ingresa el precio de venta (o márcalo como obsequio).",
+        });
         setIsSubmitting(false);
         return;
       }
