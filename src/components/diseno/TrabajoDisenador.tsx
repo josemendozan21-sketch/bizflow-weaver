@@ -12,6 +12,7 @@ import { toast as sonnerToast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { LogoPreview } from "./LogoPreview";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
+import LogoStatusHistory from "./LogoStatusHistory";
 
 interface Props {
   requests: LogoRequest[];
@@ -356,6 +357,8 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
             )}
           </div>
         )}
+
+        <LogoStatusHistory requestId={req.id} />
       </CardContent>
     </Card>
   );
