@@ -1008,7 +1008,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           payment_complete: estadoPago === "pago_total",
           delivery_date: fechaRequerida || null,
           payment_date: paymentDate || new Date().toISOString().slice(0, 10),
-        }).select("id").single();
+        }).select("id, order_code").single();
         if (data) {
           queryClient.invalidateQueries({ queryKey: ["orders"] });
           toast.success("Compra de molde registrada", { description: `${clientNameValue} — Molde "${moldeNombre}"` });
@@ -1043,6 +1043,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     // Si una línea falla, las demás deben guardarse igual (antes se abortaba
     // el pedido completo y se perdían unidades del mismo cliente).
     const failedLines: string[] = [];
+    const createdCodes: string[] = [];
 
     // Process each distinct line as a separate order
     const moldeCostoNum = parseFloat(moldeCosto) || 0;
@@ -1138,7 +1139,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
 
       // Insert order to DB
-      let orderData: { id: string } | null = null;
+      let orderData: { id: string; order_code?: string | null } | null = null;
       try {
         const { data, error } = await supabase.from("orders").insert({
           brand: "magical",
@@ -1162,6 +1163,12 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           glitter_color: glitterColorVal,
           gel_color: gelColor,
           logo_url: logoUrl,
+          logo_url_2: logoUrl2,
+          logo_count: logosCount,
+          logo_name: logoNombre || null,
+          logo_name_2: logosCount >= 2 ? (logoNombre2 || null) : null,
+          line_index: lineIdx + 1,
+          line_count: linesToSubmit.length,
           observations: [observaciones, line.isGift ? "🎁 OBSEQUIO" : "", isFirstLine ? extraNote : ""].filter(Boolean).join(" | ") || null,
           personalization: personalizacion || null,
           advisor_id: user?.id || "",
@@ -1193,6 +1200,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         continue;
       }
 
+      if (orderData.order_code) createdCodes.push(orderData.order_code);
+
       // El pedido queda pendiente de revisión de Inventarios.
       // Ni se reserva stock ni se crea orden de producción desde Ventas:
       // Inventarios decide (reservar inventario o solicitar producción).
@@ -1219,15 +1228,22 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       });
     }
 
+    const savedCount = linesToSubmit.length - failedLines.length;
     const giftCount = orderLines.filter((l) => l.isGift).length;
     const productCount = orderLines.filter((l) => !l.isGift).length;
     const summary = [
       `${productCount} producto(s)`,
       giftCount > 0 ? `${giftCount} obsequio(s)` : "",
     ].filter(Boolean).join(" + ");
-    toast.success("Pedido creado", {
-      description: `${clientNameValue} — ${summary}. Enviado a Inventarios y Contabilidad.`,
-    });
+    toast.success(
+      savedCount === linesToSubmit.length ? "Pedido creado" : "Pedido creado parcialmente",
+      {
+        description: `${clientNameValue} — ${summary}. ${savedCount} de ${linesToSubmit.length} línea(s) guardada(s)${
+          createdCodes.length ? ` (${createdCodes.join(", ")})` : ""
+        }. Enviado a Inventarios y Contabilidad.`,
+        duration: 12000,
+      },
+    );
 
     [
       "ventas:mw:lines","ventas:mw:abono","ventas:mw:estadoPago",
