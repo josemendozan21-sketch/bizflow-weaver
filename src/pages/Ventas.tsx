@@ -1001,6 +1001,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       const referencia = `${line.product} (${line.type})`;
       const gelColor = resolveColor(line.gelColor, line.gelCustom);
       const inkColor = resolveColor(line.inkColor, line.inkCustom);
+      const inkCount = line.inkCount ?? 1;
+      const inkColor2 = inkCount >= 2 ? resolveColor(line.inkColor2 || "", line.inkCustom2 || "") : null;
+      const inkColor3 = inkCount >= 3 ? resolveColor(line.inkColor3 || "", line.inkCustom3 || "") : null;
+      const glitterColorVal = resolveColor(line.glitterColor || "", line.glitterCustom || "") || null;
       const baseLineTotal = line.isGift ? 0 : (parseFloat(line.valorTotal) || 0);
       // Sumar el costo adicional sólo a la primera línea (no a obsequios)
       const lineTotal = (isFirstLine && !line.isGift) ? baseLineTotal + extraCost : baseLineTotal;
