@@ -234,10 +234,10 @@ export default function InventoryTraceabilityPanel() {
                   )}
                   {filteredItems.map((it) => (
                     <SelectItem key={it.id} value={it.id}>
-                      {it.name} · {it.brand}
-                      {(it as any).product_type ? ` · ${(it as any).product_type}` : ""} · disp. {it.available}
+                      {formatStockOptionLabel(it as any)} · {it.brand}
                     </SelectItem>
                   ))}
+
                 </SelectContent>
               </Select>
             </div>
