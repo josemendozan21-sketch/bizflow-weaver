@@ -550,7 +550,7 @@ El período de liquidación es el <b>mes de la factura</b> (si el pedido aún
                         <TableCell className="px-2 text-right font-medium whitespace-nowrap">
                           {fmt(l.netCommission)}
                         </TableCell>
-                        <TableCell className="w-[126px] px-2">
+                        <TableCell className="px-2">
                           <CommissionStatusBadge status={l.status} />
                         </TableCell>
                         <TableCell className="px-2 text-right" onClick={(e) => e.stopPropagation()}>
@@ -559,8 +559,19 @@ El período de liquidación es el <b>mes de la factura</b> (si el pedido aún
                             orderCode={(l.order as any).order_code}
                             clientName={l.order.client_name}
                             currentAmount={Number(l.order.total_amount) || 0}
+                            trigger={
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 gap-1 whitespace-nowrap px-2 text-[11px]"
+                                title="Solicitar corrección de valor"
+                              >
+                                <AlertTriangle className="h-3.5 w-3.5" /> Corrección
+                              </Button>
+                            }
                           />
                         </TableCell>
+
                       </TableRow>
                       {open && (
                         <TableRow className="bg-muted/30 hover:bg-muted/30">
