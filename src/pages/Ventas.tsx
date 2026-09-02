@@ -31,6 +31,7 @@ import SmartPasteField, { type ParsedOrderData } from "@/components/ventas/Smart
 import ClientNameAutocomplete from "@/components/ventas/ClientNameAutocomplete";
 import { useFormDraft, clearFormDraft, usePersistedState } from "@/hooks/useFormDraft";
 import { OrderConfirmationDialog, type OrderSummary } from "@/components/ventas/OrderConfirmationDialog";
+import { buildStages } from "@/lib/orderFlow";
 type Brand = "sweatspot" | "magical";
 type SaleType = "mayor" | "menor";
 
