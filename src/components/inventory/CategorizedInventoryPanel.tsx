@@ -73,7 +73,8 @@ const CategorizedInventoryPanel = ({
 }: CategorizedInventoryPanelProps) => {
   const { stockItems, addStockItem, updateStockItem, deleteStockItem, isLoading } = useInventory();
   const { role } = useAuth();
-  const isReadOnly = role !== "admin";
+  // Solo Admin e Inventarios pueden crear/editar/eliminar referencias.
+  const isReadOnly = role !== "admin" && role !== "inventarios";
   const baseCategories = role === "asesor_comercial" ? ASESOR_CATEGORIES : ALL_CATEGORIES;
   // Magical Warmers no tiene productos importados; Sweatspot no tiene cuerpos de referencia.
   const CATEGORIES = initialBrand === "magical_warmers"
@@ -89,7 +90,7 @@ const CategorizedInventoryPanel = ({
   const [sweatspotOrigin, setSweatspotOrigin] = useState<"todos" | "IMPORTADO" | "NACIONAL">("todos");
   const [addOpen, setAddOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ available: "", minStock: "" });
+  const [editForm, setEditForm] = useState({ name: "", available: "", minStock: "" });
   const [newForm, setNewForm] = useState({
     name: "",
     available: "",
@@ -228,11 +229,17 @@ const CategorizedInventoryPanel = ({
 
   const startEdit = (item: SupabaseStockItem) => {
     setEditingId(item.id);
-    setEditForm({ available: String(item.available), minStock: String(item.min_stock) });
+    setEditForm({ name: item.name, available: String(item.available), minStock: String(item.min_stock) });
   };
 
   const saveEdit = async (id: string) => {
+    const trimmedName = editForm.name.trim();
+    if (!trimmedName) {
+      toast.error("El nombre de la referencia no puede estar vacío");
+      return;
+    }
     const result = await updateStockItem(id, {
+      name: trimmedName,
       available: Number(editForm.available),
       min_stock: Number(editForm.minStock),
     });
@@ -280,7 +287,17 @@ const CategorizedInventoryPanel = ({
             : ""
         }`}
       >
-        <TableCell className="font-medium">{item.name}</TableCell>
+        <TableCell className="font-medium">
+          {isEditing ? (
+            <Input
+              value={editForm.name}
+              onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+              className="h-7 w-56"
+            />
+          ) : (
+            item.name
+          )}
+        </TableCell>
         <TableCell className="text-right">
           {isEditing ? (
             <Input type="number" min={0} value={editForm.available}

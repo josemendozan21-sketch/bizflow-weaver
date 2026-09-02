@@ -608,8 +608,9 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
   // Unique product names — combine local material configs with Magical products from DB
   // so newly-added references (e.g. "Tiroides") show up for all advisors.
+  // Fuente única de verdad: el catálogo de referencias de Inventarios.
+  // El asesor solo puede elegir de esta lista; Inventarios la administra.
   const productNames = useMemo(() => {
-    const fromConfig = materialConfigs.map((c) => c.productName);
     const fromDB = inventoryStockItems
       .filter(
         (s) =>
@@ -617,34 +618,37 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           (s.category === "producto_terminado" || s.category === "cuerpos_referencias")
       )
       .map((s) => s.name);
-    // Hardcoded fallback to guarantee key references always show up
-    // even if the database fetch hasn't completed or is filtered out.
-    const fallback = ["Tiroides", "Herbology", "Tapaojos con Velcro", "Mordedores"];
-    const names = [...new Set([...fromConfig, ...fromDB, ...fallback])];
+    const names = [...new Set(fromDB)];
     return names.sort((a, b) => a.localeCompare(b, "es"));
-  }, [materialConfigs, inventoryStockItems]);
+  }, [inventoryStockItems]);
 
   const productOptions = useMemo(() => {
-    const tiroidesDirectOptions = TIROIDES_TYPES.map((type) => ({
-      value: `${TIROIDES_OPTION_PREFIX}${type}`,
-      label: `Tiroides (${type})`,
-      product: "Tiroides",
-      type,
-    }));
-    const herbologyDirectOptions = HERBOLOGY_TYPES.map((type) => ({
-      value: `${HERBOLOGY_OPTION_PREFIX}${type}`,
-      label: `Herbology (${type})`,
-      product: "Herbology",
-      type,
-    }));
+    const hasTiroides = productNames.includes("Tiroides");
+    const hasHerbology = productNames.includes("Herbology");
+    const tiroidesDirectOptions = hasTiroides
+      ? TIROIDES_TYPES.map((type) => ({
+          value: `${TIROIDES_OPTION_PREFIX}${type}`,
+          label: `Tiroides (${type})`,
+          product: "Tiroides",
+          type,
+        }))
+      : [];
+    const herbologyDirectOptions = hasHerbology
+      ? HERBOLOGY_TYPES.map((type) => ({
+          value: `${HERBOLOGY_OPTION_PREFIX}${type}`,
+          label: `Herbology (${type})`,
+          product: "Herbology",
+          type,
+        }))
+      : [];
     const regularOptions = productNames
       .filter((name) => name !== "Tiroides" && name !== "Herbology")
       .map((name) => ({ value: name, label: name, product: name, type: "" }));
     return [
       ...tiroidesDirectOptions,
-      { value: "Tiroides", label: "Tiroides", product: "Tiroides", type: "" },
+      ...(hasTiroides ? [{ value: "Tiroides", label: "Tiroides", product: "Tiroides", type: "" }] : []),
       ...herbologyDirectOptions,
-      { value: "Herbology", label: "Herbology", product: "Herbology", type: "" },
+      ...(hasHerbology ? [{ value: "Herbology", label: "Herbology", product: "Herbology", type: "" }] : []),
       ...regularOptions,
     ];
   }, [productNames]);
