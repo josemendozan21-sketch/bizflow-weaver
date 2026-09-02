@@ -18,6 +18,7 @@ import {
 import { useInventory, type SupabaseStockItem } from "@/hooks/useInventory";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 type SweatCat = "termos_150" | "termos_250" | "termos_500" | "canguros" | "chalecos" | "accesorios";
 
@@ -222,18 +223,28 @@ const SweatspotFinishedProducts = ({ originFilter = "todos" }: SweatspotFinished
       toast.error(`Solo hay ${markGroup.sinLogo.available} uds sin marcar`);
       return;
     }
-    let target = markGroup.conLogo;
+    const target = markGroup.conLogo;
     if (!target) {
-      const created = await createVariant(markGroup, true);
-      if (!created) return;
-      target = (created as any).data ?? null;
-    }
-    const sinRes = await updateStockItem(markGroup.sinLogo.id, { available: markGroup.sinLogo.available - qty });
-    if (!sinRes.success) { toast.error(sinRes.message); return; }
-    if (target) {
+      const base = markGroup.sinLogo;
+      const { error } = await supabase.from("stock_items").insert({
+        brand: "sweatspot",
+        category: "producto_terminado",
+        name: base.name,
+        available: qty,
+        unit: base.unit || "unidades",
+        min_stock: base.min_stock || 0,
+        product_type: base.product_type,
+        color: base.color,
+        logo: "Sweatspot",
+        sweatspot_category: (base as any).sweatspot_category,
+      } as any);
+      if (error) { toast.error(error.message); return; }
+    } else {
       const conRes = await updateStockItem(target.id, { available: (target.available || 0) + qty });
       if (!conRes.success) { toast.error(conRes.message); return; }
     }
+    const sinRes = await updateStockItem(markGroup.sinLogo.id, { available: markGroup.sinLogo.available - qty });
+    if (!sinRes.success) { toast.error(sinRes.message); return; }
     toast.success(`${qty} uds marcadas con logo`);
     setMarkGroup(null);
     setMarkQty("");
