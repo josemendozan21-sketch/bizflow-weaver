@@ -294,6 +294,8 @@ function ColorSelect({
   onCustomChange,
   options,
   placeholder = "Seleccionar color",
+  allowCustom = true,
+  hint,
 }: {
   label: string;
   value: string;
@@ -302,6 +304,8 @@ function ColorSelect({
   onCustomChange: (v: string) => void;
   options?: string[];
   placeholder?: string;
+  allowCustom?: boolean;
+  hint?: string;
 }) {
   return (
     <div className="space-y-1.5">
@@ -314,10 +318,10 @@ function ColorSelect({
           {(options ?? PREDEFINED_COLORS).map((c) => (
             <SelectItem key={c} value={c}>{c}</SelectItem>
           ))}
-          <SelectItem value="otro">Otro (escribir)</SelectItem>
+          {allowCustom && <SelectItem value="otro">Otro (escribir)</SelectItem>}
         </SelectContent>
       </Select>
-      {value === "otro" && (
+      {allowCustom && value === "otro" && (
         <Input
           placeholder="Escriba el color..."
           value={customValue}
@@ -325,6 +329,7 @@ function ColorSelect({
           required
         />
       )}
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
 }
@@ -659,6 +664,21 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       .filter((s) => /^escarcha\b/i.test(s.name || ""))
       .map((s) => s.name.replace(/^escarcha\s*/i, "").trim() || s.name);
     return ["No aplica", ...[...new Set(names)].sort((a, b) => a.localeCompare(b, "es"))];
+  }, [inventoryStockItems]);
+
+  // Tintas y gel también salen de Inventarios (materia prima)
+  const inkOptions = useMemo(() => {
+    const names = inventoryStockItems
+      .filter((s) => /^tinta\b/i.test(s.name || ""))
+      .map((s) => s.name.replace(/^tinta\s*(pvc)?\s*/i, "").trim() || s.name);
+    return [...new Set(names)].sort((a, b) => a.localeCompare(b, "es"));
+  }, [inventoryStockItems]);
+
+  const gelOptions = useMemo(() => {
+    const names = inventoryStockItems
+      .filter((s) => /^colorante\b/i.test(s.name || ""))
+      .map((s) => s.name.replace(/^colorante\s*/i, "").trim() || s.name);
+    return ["No aplica", "Transparente", ...[...new Set(names)].sort((a, b) => a.localeCompare(b, "es"))];
   }, [inventoryStockItems]);
 
   const getProductSelectValue = (line: OrderLine) => line.product;
@@ -1307,66 +1327,69 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                     customValue={line.gelCustom}
                     onValueChange={(v) => updateLine(line.id, { gelColor: v })}
                     onCustomChange={(v) => updateLine(line.id, { gelCustom: v })}
+                    options={gelOptions}
+                    allowCustom={false}
                   />
-                  <div className="space-y-1.5">
-                    <Label>Número de tintas</Label>
-                    <Select
-                      value={String(line.inkCount ?? 1)}
-                      onValueChange={(v) => {
-                        const n = parseInt(v, 10);
-                        updateLine(line.id, {
-                          inkCount: n,
-                          ...(n < 2 ? { inkColor2: "", inkCustom2: "" } : {}),
-                          ...(n < 3 ? { inkColor3: "", inkCustom3: "" } : {}),
-                        });
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">1 tinta</SelectItem>
-                        <SelectItem value="2">2 tintas</SelectItem>
-                        <SelectItem value="3">3 tintas</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
                   <ColorSelect
-                    label={(line.inkCount ?? 1) > 1 ? "Color de tinta 1" : "Color de tinta"}
-                    value={line.inkColor}
-                    customValue={line.inkCustom}
-                    onValueChange={(v) => updateLine(line.id, { inkColor: v })}
-                    onCustomChange={(v) => updateLine(line.id, { inkCustom: v })}
-                  />
-                  {(line.inkCount ?? 1) >= 2 && (
-                    <ColorSelect
-                      label="Color de tinta 2"
-                      value={line.inkColor2 || ""}
-                      customValue={line.inkCustom2 || ""}
-                      onValueChange={(v) => updateLine(line.id, { inkColor2: v })}
-                      onCustomChange={(v) => updateLine(line.id, { inkCustom2: v })}
-                    />
-                  )}
-                  {(line.inkCount ?? 1) >= 3 && (
-                    <ColorSelect
-                      label="Color de tinta 3"
-                      value={line.inkColor3 || ""}
-                      customValue={line.inkCustom3 || ""}
-                      onValueChange={(v) => updateLine(line.id, { inkColor3: v })}
-                      onCustomChange={(v) => updateLine(line.id, { inkCustom3: v })}
-                    />
-                  )}
-                  <ColorSelect
-                    label="Color de escarcha"
+                    label="Color de escarcha (opcional)"
                     value={line.glitterColor || ""}
                     customValue={line.glitterCustom || ""}
                     onValueChange={(v) => updateLine(line.id, { glitterColor: v })}
                     onCustomChange={(v) => updateLine(line.id, { glitterCustom: v })}
                     options={glitterOptions}
-                    placeholder="Seleccionar escarcha"
+                    placeholder="Sin escarcha"
+                    allowCustom={false}
                   />
+                </div>
+
+                <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium">Tintas de marcación</p>
+                      <p className="text-xs text-muted-foreground">Elija cuántas tintas lleva el logo (máx. 3)</p>
+                    </div>
+                    <div className="inline-flex rounded-md border bg-background p-0.5">
+                      {[1, 2, 3].map((n) => (
+                        <Button
+                          key={n}
+                          type="button"
+                          size="sm"
+                          variant={(line.inkCount ?? 1) === n ? "default" : "ghost"}
+                          className="h-8 px-4"
+                          onClick={() =>
+                            updateLine(line.id, {
+                              inkCount: n,
+                              ...(n < 2 ? { inkColor2: "", inkCustom2: "" } : {}),
+                              ...(n < 3 ? { inkColor3: "", inkCustom3: "" } : {}),
+                            })
+                          }
+                        >
+                          {n} {n === 1 ? "tinta" : "tintas"}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    {[1, 2, 3].map((slot) => {
+                      const active = (line.inkCount ?? 1) >= slot;
+                      const val = slot === 1 ? line.inkColor : slot === 2 ? line.inkColor2 || "" : line.inkColor3 || "";
+                      const key = slot === 1 ? "inkColor" : slot === 2 ? "inkColor2" : "inkColor3";
+                      return (
+                        <div key={slot} className={active ? "" : "opacity-40 pointer-events-none"}>
+                          <ColorSelect
+                            label={`Tinta ${slot}`}
+                            value={val}
+                            customValue=""
+                            onValueChange={(v) => updateLine(line.id, { [key]: v } as Partial<OrderLine>)}
+                            onCustomChange={() => {}}
+                            options={inkOptions}
+                            placeholder={active ? "Seleccionar tinta" : "—"}
+                            allowCustom={false}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
                 {!line.isGift && (
                 <div className="grid gap-4 sm:grid-cols-3">
