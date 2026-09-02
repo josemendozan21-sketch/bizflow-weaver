@@ -25,6 +25,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAccountingAlerts } from "@/hooks/useAccountingAlerts";
 import type { AccountingOrder } from "@/stores/accountingStore";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
+import OrderDisputeDialog from "@/components/ventas/OrderDisputeDialog";
+import DisputesPanel from "@/components/contabilidad/DisputesPanel";
 
 function toAccountingOrder(o: Order): AccountingOrder {
   return {
