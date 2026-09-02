@@ -349,6 +349,12 @@ const Logistica = () => {
 
   const dispatchedOrders = allOrders.filter((o) => o.dispatched_at || o.production_status === "despachado");
 
+  // Pedidos con entregas parciales en curso (entregado > 0 pero menor al total)
+  const partialOrders = allOrders.filter((o) => {
+    const d = Number(o.delivered_quantity) || 0;
+    return d > 0 && d < (Number(o.quantity) || 0);
+  });
+
   const brandLabel = (brand: string) => brand === "magical" ? "Magical Warmers" : "Sweatspot";
   const saleLabel = (type: string) => type === "mayor" ? "Por mayor" : "Por menor";
 
@@ -403,6 +409,10 @@ const Logistica = () => {
           <TabsTrigger value="dispatched" className="gap-1.5">
             <CheckCircle2 className="h-4 w-4" /> Despachados
             {dispatchedOrders.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{dispatchedOrders.length}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="partial" className="gap-1.5">
+            <PackageCheck className="h-4 w-4" /> Entregas parciales
+            {partialOrders.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{partialOrders.length}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="ferias" className="gap-1.5">
             <Tent className="h-4 w-4" /> Ferias
