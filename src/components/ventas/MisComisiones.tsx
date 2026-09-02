@@ -110,13 +110,31 @@ export default function MisComisiones() {
   }, [orders, user?.id, basis]);
 
   const lines = useMemo(() => {
-    if (filter === "facturado") return summary.lines.filter((l) => l.invoiced);
-    if (filter === "pendiente")
-      return summary.lines.filter((l) => l.status === "pendiente");
-    if (filter === "excluido")
-      return summary.lines.filter((l) => l.status === "excluido");
-    return summary.lines;
-  }, [summary.lines, filter]);
+    let list = summary.lines;
+    if (filter === "facturado") list = list.filter((l) => l.invoiced);
+    else if (filter === "pendiente") list = list.filter((l) => l.status === "pendiente");
+    else if (filter === "excluido") list = list.filter((l) => l.status === "excluido");
+    else if (filter === "cero") list = list.filter((l) => !(Number(l.order.total_amount) > 0));
+
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter((l) =>
+        `${(l.order as any).order_code || ""} ${l.order.client_name || ""} ${l.order.product || ""}`
+          .toLowerCase()
+          .includes(q)
+      );
+    }
+    const min = minAmount ? parseFloat(minAmount) : null;
+    const max = maxAmount ? parseFloat(maxAmount) : null;
+    if (min !== null) list = list.filter((l) => l.totalWithVat >= min);
+    if (max !== null) list = list.filter((l) => l.totalWithVat <= max);
+    return list;
+  }, [summary.lines, filter, search, minAmount, maxAmount]);
+
+  const zeroLines = useMemo(
+    () => summary.lines.filter((l) => !(Number(l.order.total_amount) > 0)),
+    [summary.lines]
+  );
 
   const causadas = useMemo(
     () => summary.lines.filter((l) => l.invoiced),
