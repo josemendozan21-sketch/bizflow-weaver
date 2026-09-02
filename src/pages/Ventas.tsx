@@ -33,6 +33,9 @@ import { useFormDraft, clearFormDraft, usePersistedState } from "@/hooks/useForm
 import OrderLogosField, { makeLogoEntry, type LogoEntry } from "@/components/ventas/OrderLogosField";
 import { OrderConfirmationDialog, type OrderSummary } from "@/components/ventas/OrderConfirmationDialog";
 import { buildStages } from "@/lib/orderFlow";
+import { LogoSearchDialog } from "@/components/ventas/LogoSearchDialog";
+import { notifyLogoFlow, type LogoSource } from "@/lib/recompraLogoFlow";
+import { LogoPreview } from "@/components/diseno/LogoPreview";
 type Brand = "sweatspot" | "magical";
 type SaleType = "mayor" | "menor";
 
@@ -1647,10 +1650,33 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 <Switch id="mw_cobroLogo" checked={cobroLogo} onCheckedChange={setCobroLogo} />
               </div>
             </div>
-            {isRecompra && (
-              <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3">
-                ✓ Recompra: El logo ya existe, no se generará solicitud de diseño automática.
-              </p>
+            {isRecompra && !noLogo && (
+              <div className="space-y-2 rounded-md border border-primary/40 bg-primary/5 p-3">
+                <Label className="text-sm font-semibold">¿El cliente utilizará el mismo logo?</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={recompraMismoLogo === "si" ? "default" : "outline"}
+                    onClick={() => setRecompraMismoLogo("si")}
+                  >
+                    Sí, el mismo logo
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={recompraMismoLogo === "no" ? "default" : "outline"}
+                    onClick={() => setRecompraMismoLogo("no")}
+                  >
+                    No, logo actualizado
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {recompraMismoLogo === "si"
+                    ? "Se reutiliza el logo aprobado anteriormente y se notifica a Estampación."
+                    : "Se creará una solicitud de diseño y se notificará a Diseño y Estampación del logo nuevo."}
+                </p>
+              </div>
             )}
             {noLogo && (
               <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3">
@@ -1758,39 +1784,37 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
             {!noLogo && (
               <div className="rounded-lg border border-input p-4 space-y-4">
-                {isRecompra && (
-                  <div className="space-y-1.5 rounded-md border border-input bg-muted/30 p-3">
+                {isRecompra && recompraMismoLogo === "si" && (
+                  <div className="space-y-2 rounded-md border border-input bg-muted/30 p-3">
                     <Label>Logo anterior del cliente *</Label>
-                    <Select value={recompraLogoUrl || undefined} onValueChange={setRecompraLogoUrl}>
-                      <SelectTrigger>
-                        <SelectValue
-                          placeholder={
-                            clientName.trim().length < 3
-                              ? "Escriba primero el nombre del cliente"
-                              : previousLogos.length
-                                ? "Seleccionar logo ya trabajado"
-                                : "Sin logos previos — adjunte el archivo"
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {previousLogos.map((l: any) => {
-                          const url = l.adjusted_logo_url || l.original_logo_url;
-                          return (
-                            <SelectItem key={l.id} value={url}>
-                              {(l.logo_name || l.product || "Logo") + " — " + new Date(l.created_at).toLocaleDateString("es-CO")}
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      En recompras el logo no se genera de nuevo: selecciónelo aquí o adjunte el archivo para que Estampación lo reciba.
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <LogoSearchDialog
+                        clientName={clientName}
+                        brand="Magical"
+                        selectedUrl={recompraLogoUrl}
+                        onSelect={setRecompraLogoUrl}
+                      />
+                      {recompraLogoUrl && (
+                        <Button type="button" variant="ghost" size="sm" onClick={() => setRecompraLogoUrl("")}>
+                          Quitar selección
+                        </Button>
+                      )}
+                    </div>
+                    {recompraLogoUrl ? (
+                      <div className="max-w-[220px]">
+                        <LogoPreview url={recompraLogoUrl} alt="Logo seleccionado" />
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Busque por cliente, marca, producto o nombre del logo. Si no lo encuentra, elija "No, logo actualizado" y adjunte el archivo.
+                      </p>
+                    )}
                   </div>
                 )}
 
-                <OrderLogosField logos={mwLogos} onChange={setMwLogos} />
+                {!(isRecompra && recompraMismoLogo === "si") && (
+                  <OrderLogosField logos={mwLogos} onChange={setMwLogos} />
+                )}
               </div>
             )}
 
