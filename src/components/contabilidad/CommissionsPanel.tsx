@@ -400,6 +400,9 @@ export default function CommissionsPanel({ orders }: Props) {
                                 <TableCell className="text-right">
                                   {fmt(l.totalWithVat)}
                                 </TableCell>
+                                <TableCell className="text-right">
+                                  {fmt(l.commissionableWithVat)}
+                                </TableCell>
                                 <TableCell className="text-right text-muted-foreground">
                                   {fmt(l.baseSinIva)}
                                 </TableCell>
@@ -414,6 +417,20 @@ export default function CommissionsPanel({ orders }: Props) {
                                     </div>
                                   )}
                                 </TableCell>
+                                <TableCell className="max-w-[220px]">
+                                  <Badge
+                                    className={
+                                      l.status === "total"
+                                        ? "bg-emerald-600"
+                                        : "bg-sky-600"
+                                    }
+                                  >
+                                    {STATUS_LABEL[l.status]}
+                                  </Badge>
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                                    {l.reason}
+                                  </p>
+                                </TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -421,6 +438,51 @@ export default function CommissionsPanel({ orders }: Props) {
                       </div>
                     </CollapsibleContent>
                   </Collapsible>
+
+                  {a.excludedLines.length > 0 && (
+                    <div className="rounded-md border border-amber-300 bg-amber-50/40 dark:bg-amber-950/10 p-3 space-y-2">
+                      <p className="text-xs font-semibold flex items-center gap-1.5">
+                        <AlertCircle className="h-3.5 w-3.5 text-amber-600" />
+                        Pedidos excluidos y motivo ({a.excludedLines.length} ·{" "}
+                        {fmt(a.excludedWithVat)})
+                      </p>
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Cliente</TableHead>
+                              <TableHead>N° pedido</TableHead>
+                              <TableHead className="text-right">Total c/IVA</TableHead>
+                              <TableHead className="text-right">Abono</TableHead>
+                              <TableHead>Motivo</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {a.excludedLines.map((l) => (
+                              <TableRow key={l.order.id}>
+                                <TableCell className="font-medium">
+                                  {l.order.client_name}
+                                </TableCell>
+                                <TableCell className="text-xs">
+                                  {(l.order as any).order_code || "—"}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {fmt(l.totalWithVat)}
+                                </TableCell>
+                                <TableCell className="text-right text-muted-foreground">
+                                  {fmt(Number(l.order.abono) || 0)}
+                                </TableCell>
+                                <TableCell className="text-xs text-muted-foreground">
+                                  {l.reason}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  )}
+
                 </CardContent>
               </Card>
             );
