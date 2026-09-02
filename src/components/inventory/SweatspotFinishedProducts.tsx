@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Check, X, Pencil, Sparkles, Plus, Trash2, TextCursorInput } from "lucide-react";
+import { Check, X, Pencil, Sparkles, Plus, Trash2, TextCursorInput, Tag } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
@@ -64,6 +64,8 @@ const SweatspotFinishedProducts = ({ originFilter = "todos" }: SweatspotFinished
   const [searchQuery, setSearchQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ available: "", minStock: "" });
+  const [markGroup, setMarkGroup] = useState<Group | null>(null);
+  const [markQty, setMarkQty] = useState("");
 
   const allItems = useMemo(
     () => stockItems.filter((i) => i.brand === "sweatspot" && i.category === "producto_terminado"),
@@ -186,8 +188,66 @@ const SweatspotFinishedProducts = ({ originFilter = "todos" }: SweatspotFinished
     else toast.error(res.message);
   };
 
-  const renderCell = (item: SupabaseStockItem | null, marcable: boolean) => {
+
+  const createVariant = async (g: Group, marcado: boolean) => {
+    const base = marcado ? g.sinLogo : g.conLogo;
+    if (!base) return null;
+    const res = await addStockItem({
+      brand: "sweatspot",
+      category: "producto_terminado",
+      name: base.name,
+      available: 0,
+      unit: base.unit || "unidades",
+      min_stock: base.min_stock || 0,
+      product_type: base.product_type,
+      color: base.color,
+      logo: marcado ? "Sweatspot" : null,
+      sweatspot_category: (base as any).sweatspot_category,
+    } as any);
+    if (!res.success) {
+      toast.error(res.message);
+      return null;
+    }
+    return res;
+  };
+
+  const handleMark = async () => {
+    if (!markGroup || !markGroup.sinLogo) return;
+    const qty = Number(markQty);
+    if (!qty || qty <= 0) {
+      toast.error("Indica una cantidad válida");
+      return;
+    }
+    if (qty > markGroup.sinLogo.available) {
+      toast.error(`Solo hay ${markGroup.sinLogo.available} uds sin marcar`);
+      return;
+    }
+    let target = markGroup.conLogo;
+    if (!target) {
+      const created = await createVariant(markGroup, true);
+      if (!created) return;
+      target = (created as any).data ?? null;
+    }
+    const sinRes = await updateStockItem(markGroup.sinLogo.id, { available: markGroup.sinLogo.available - qty });
+    if (!sinRes.success) { toast.error(sinRes.message); return; }
+    if (target) {
+      const conRes = await updateStockItem(target.id, { available: (target.available || 0) + qty });
+      if (!conRes.success) { toast.error(conRes.message); return; }
+    }
+    toast.success(`${qty} uds marcadas con logo`);
+    setMarkGroup(null);
+    setMarkQty("");
+  };
+
+  const renderCell = (item: SupabaseStockItem | null, marcable: boolean, group?: Group) => {
     if (!item) {
+      if (canManage && group) {
+        return (
+          <Button size="sm" variant="ghost" className="h-6 text-[11px]" onClick={() => createVariant(group, !marcable)}>
+            <Plus className="h-3 w-3 mr-1" />Crear
+          </Button>
+        );
+      }
       return <span className="text-xs text-muted-foreground">—</span>;
     }
     const isEditing = editingId === item.id;
@@ -378,6 +438,7 @@ const SweatspotFinishedProducts = ({ originFilter = "todos" }: SweatspotFinished
                 {!onlySinLogo && (
                   <TableHead className="text-right">CON LOGO<br/><span className="text-[10px] font-normal">(Sweatspot)</span></TableHead>
                 )}
+                {canManage && <TableHead className="text-right">Marcación</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -390,9 +451,18 @@ const SweatspotFinishedProducts = ({ originFilter = "todos" }: SweatspotFinished
                       <Badge variant="outline" className="text-[10px]">{g.productType}</Badge>
                     ) : "—"}
                   </TableCell>
-                  <TableCell className="text-right bg-blue-50/40">{renderCell(g.sinLogo, true)}</TableCell>
+                  <TableCell className="text-right bg-blue-50/40">{renderCell(g.sinLogo, true, g)}</TableCell>
                   {!onlySinLogo && (
-                    <TableCell className="text-right">{renderCell(g.conLogo, false)}</TableCell>
+                    <TableCell className="text-right">{renderCell(g.conLogo, false, g)}</TableCell>
+                  )}
+                  {canManage && (
+                    <TableCell className="text-right">
+                      {g.sinLogo && g.sinLogo.available > 0 && (
+                        <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => { setMarkGroup(g); setMarkQty(""); }}>
+                          <Tag className="h-3 w-3 mr-1" />Marcar
+                        </Button>
+                      )}
+                    </TableCell>
                   )}
                 </TableRow>
               ))}
@@ -400,6 +470,25 @@ const SweatspotFinishedProducts = ({ originFilter = "todos" }: SweatspotFinished
           </Table>
         )}
       </CardContent>
+
+      <Dialog open={!!markGroup} onOpenChange={(o) => { if (!o) { setMarkGroup(null); setMarkQty(""); } }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Marcar unidades</DialogTitle>
+            <DialogDescription>
+              {markGroup ? `${markGroup.name}${markGroup.color ? ` — ${markGroup.color}` : ""} · disponibles sin marcar: ${markGroup.sinLogo?.available ?? 0}` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-1.5 py-2">
+            <Label>Cantidad a marcar</Label>
+            <Input type="number" min={1} value={markQty} onChange={(e) => setMarkQty(e.target.value)} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMarkGroup(null)}>Cancelar</Button>
+            <Button onClick={handleMark}>Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
