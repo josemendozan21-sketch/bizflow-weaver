@@ -156,7 +156,15 @@ export default function CommissionsPanel({ orders }: Props) {
               )}
             </SelectContent>
           </Select>
+          <Select value={basis} onValueChange={(v) => setBasis(v as PeriodBasis)}>
+            <SelectTrigger className="w-[190px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="venta">Por fecha de venta</SelectItem>
+              <SelectItem value="factura">Por fecha de factura</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
+
       </div>
 
       {/* Resumen política */}
