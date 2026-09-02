@@ -2323,7 +2323,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
     [
       "ventas:ss:lines","ventas:ss:abono","ventas:ss:estadoPago",
-      "ventas:ss:isRecompra","ventas:ss:recompraMismoLogo","ventas:ss:recompraLogoUrl","ventas:ss:noLogo","ventas:ss:needsLogoAdjustment",
+      "ventas:ss:isRecompra","ventas:ss:recompraMismoLogo","ventas:ss:recompraLogoUrl","ventas:ss:clientName","ventas:ss:noLogo","ventas:ss:needsLogoAdjustment",
       "ventas:ss:cobroLogo","ventas:ss:costoLogo",
       "ventas:ss:fields",
     ].forEach(clearFormDraft);
@@ -2408,6 +2408,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
               <ClientNameAutocomplete
                 name="ss_nombre"
                 required
+                value={ssClientName}
+                onValueChange={setSsClientName}
                 onSelect={(c) => {
                   const f = ssFormRef.current;
                   if (!f) return;
