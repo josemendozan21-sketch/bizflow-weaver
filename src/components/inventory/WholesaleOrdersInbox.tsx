@@ -612,7 +612,7 @@ const WholesaleOrdersInbox = () => {
         return;
       }
       setBusy(false);
-      toast.success(`Reservadas ${quantity} uds. Pedido enviado a ${TARGET_LABEL.estampacion}.`);
+      toast.success(`${quantity} uds enviadas a ${TARGET_LABEL.estampacion}.`);
     }
 
     setDelivering(null);
@@ -744,7 +744,7 @@ const WholesaleOrdersInbox = () => {
                     disabled={!markable}
                     title={markable ? `Termos SIN LOGO disponibles: ${markableStock}` : "Sin termos SIN LOGO que coincidan con color y tamaño"}>
                     <PackageCheck className="h-3.5 w-3.5" />
-                    Reservar termos (marcar) {markable ? `(${markableStock})` : "(sin stock)"}
+                    Entregar termos (marcar) {markable ? `(${markableStock})` : "(sin stock)"}
                   </Button>
                   <Button size="sm" variant={markableEnough ? "outline" : "default"} className="flex-1 min-w-[150px] gap-1.5"
                     onClick={() => openDeliver(o, "estampacion")}>
@@ -762,8 +762,8 @@ const WholesaleOrdersInbox = () => {
                 <Button size="sm" variant={enough ? "default" : "outline"} className="flex-1 min-w-[150px] gap-1.5"
                   onClick={() => openDeliver(o, "estampacion")}
                   disabled={!enough}
-                  title={enough ? "Reservar cuerpos y enviar a Estampación" : "No hay inventario suficiente: solicita producción"}>
-                  <Paintbrush className="h-3.5 w-3.5" /> Reservar inventario
+                  title={enough ? "Enviar cuerpos a Estampación" : "No hay inventario suficiente: solicita producción"}>
+                  <Paintbrush className="h-3.5 w-3.5" /> Enviar a Estampación
                 </Button>
                 {!enough && (
                   <Button size="sm" variant="default" className="flex-1 min-w-[150px] gap-1.5"
@@ -981,7 +981,7 @@ const WholesaleOrdersInbox = () => {
                   </div>
                   {markable ? (
                     <div>
-                      Se reservará de: <span className="font-medium">{markable.name}</span>
+                      Se tomará de: <span className="font-medium">{markable.name}</span>
                       {markable.color ? ` · ${markable.color}` : ""} · <Badge variant="outline" className="ml-1">SIN LOGO</Badge>
                       <span className="ml-2 text-muted-foreground">Disp. {markable.available}</span>
                     </div>
@@ -1055,7 +1055,7 @@ const WholesaleOrdersInbox = () => {
               </div>
             ) : (
               <div>
-                <Label>{delivering?.target === "produccion" ? "Cantidad a producir" : "Cantidad a reservar"}</Label>
+                <Label>{delivering?.target === "produccion" ? "Cantidad a producir" : "Cantidad a enviar"}</Label>
                 <Input
                   type="number"
                   value={qty}
@@ -1093,7 +1093,7 @@ const WholesaleOrdersInbox = () => {
             <Button onClick={confirmDeliver} disabled={busy}>
               {isSweatspotKit
                 ? "Confirmar entrega del kit"
-                : delivering?.target === "produccion" ? "Solicitar producción" : "Confirmar reserva"}
+                : delivering?.target === "produccion" ? "Solicitar producción" : "Confirmar envío"}
             </Button>
           </DialogFooter>
         </DialogContent>
