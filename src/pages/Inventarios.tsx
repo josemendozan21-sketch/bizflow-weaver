@@ -10,6 +10,10 @@ import Punto92WarehousePanel from "@/components/inventory/Punto92WarehousePanel"
 import FeriasWarehousePanel from "@/components/inventory/FeriasWarehousePanel";
 import InventoryTraceabilityPanel from "@/components/inventory/InventoryTraceabilityPanel";
 import InventoryChangeLogPanel from "@/components/inventory/InventoryChangeLogPanel";
+import OrderRequirementsPanel from "@/components/inventory/OrderRequirementsPanel";
+import BatchReceptionPanel from "@/components/inventory/BatchReceptionPanel";
+import ProductionBatchesPanel from "@/components/production/ProductionBatchesPanel";
+
 import { useAuth } from "@/contexts/AuthContext";
 
 type WarehouseKey = "principal" | "punto92" | "ferias";

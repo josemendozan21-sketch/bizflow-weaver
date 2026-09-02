@@ -10,6 +10,8 @@ import { EstampacionProductionView } from "@/components/production/EstampacionPr
 import { RollCutsView } from "@/components/production/RollCutsView";
 import ProductionMovementHistory from "@/components/production/ProductionMovementHistory";
 import ProcessChangeLogPanel from "@/components/production/ProcessChangeLogPanel";
+import ProductionBatchesPanel from "@/components/production/ProductionBatchesPanel";
+
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProductionAlerts } from "@/hooks/useProductionAlerts";
