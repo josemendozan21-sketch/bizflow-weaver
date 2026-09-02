@@ -10,9 +10,11 @@ import { CheckCircle2, XCircle, Camera, Loader2, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
+import { useOrderLineContext } from "@/hooks/useOrderLineContext";
 
 interface StampApproval {
   id: string;
+  order_id: string | null;
   order_code?: string | null;
   client_name: string;
   brand: string;
@@ -40,7 +42,7 @@ export function StampingApprovals() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("production_orders")
-        .select("id, order_code, client_name, brand, molde, quantity, ink_color, gel_color, stamp_size_photo_url, stamp_size_status, stamp_inkgel_photo_url, stamp_inkgel_status, stamp_advisor_feedback, advisor_id")
+        .select("id, order_id, order_code, client_name, brand, molde, quantity, ink_color, gel_color, stamp_size_photo_url, stamp_size_status, stamp_inkgel_photo_url, stamp_inkgel_status, stamp_advisor_feedback, advisor_id")
         .or("stamp_size_status.eq.pendiente,stamp_inkgel_status.eq.pendiente");
       if (error) throw error;
       // Filter to only those with photos uploaded (waiting approval)
@@ -70,6 +72,8 @@ export function StampingApprovals() {
       supabase.removeChannel(channel);
     };
   }, [user, queryClient]);
+
+  const { contextById } = useOrderLineContext(pendingApprovals.map((o) => o.order_id));
 
   if (isLoading) {
     return (
