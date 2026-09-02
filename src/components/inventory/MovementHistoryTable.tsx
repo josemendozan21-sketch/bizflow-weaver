@@ -46,8 +46,22 @@ export default function MovementHistoryTable() {
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
   const confirmReception = async (m: typeof movements[number]) => {
+    if (confirmingId) return;
     setConfirmingId(m.id);
     try {
+      // Guard against double-confirmation (double click / stale list): re-read the row.
+      const { data: fresh, error: freshErr } = await supabase
+        .from("inventory_movements")
+        .select("reception_confirmed")
+        .eq("id", m.id)
+        .maybeSingle();
+      if (freshErr) throw freshErr;
+      if (!fresh || (fresh as any).reception_confirmed !== false) {
+        toast.info("Esta entrada ya fue recibida. No se sumó nada.");
+        refetch();
+        return;
+      }
+
       // For cuerpos_referencias the canonical row is (base name + product_type),
       // not the suffix-named row that stock_item_id may point to.
       let targetId: string | null = m.stock_item_id;
