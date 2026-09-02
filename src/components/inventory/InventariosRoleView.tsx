@@ -65,6 +65,10 @@ const InventariosRoleView = () => {
           <TabsTrigger value="bandeja" className="gap-1.5">
             <ShoppingBag className="h-4 w-4" /> Bandeja de pedidos
           </TabsTrigger>
+          <TabsTrigger value="abastecimiento" className="gap-1.5 whitespace-nowrap">
+            <PackageCheck className="h-4 w-4" /> Abastecimiento
+          </TabsTrigger>
+
           <TabsTrigger value="trazabilidad" className="gap-1.5 whitespace-nowrap">
             <Route className="h-4 w-4" /> Trazabilidad
           </TabsTrigger>
