@@ -397,7 +397,7 @@ export default function CommissionsPanel({ orders }: Props) {
                                   </TableCell>
                                   <TableCell>
                                     <Badge
-                                      className={
+                                      className={`whitespace-nowrap ${
                                         l.status === "total"
                                           ? "bg-emerald-600"
                                           : l.status === "parcial"
@@ -405,7 +405,7 @@ export default function CommissionsPanel({ orders }: Props) {
                                             : l.status === "pendiente"
                                               ? "bg-amber-500"
                                               : "bg-muted text-muted-foreground"
-                                      }
+                                      }`}
                                     >
                                       {STATUS_LABEL[l.status]}
                                     </Badge>

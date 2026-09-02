@@ -549,7 +549,7 @@ El período de liquidación es el <b>mes de la factura</b> (si el pedido aún
                                   : l.status === "pendiente"
                                     ? "bg-amber-500"
                                     : "bg-muted text-muted-foreground"
-                            }
+                            }`}
                           >
                             {STATUS_LABEL[l.status]}
                           </Badge>
