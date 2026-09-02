@@ -331,9 +331,14 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
         await closeOpenStageLog(orderId, stageBeingFinished);
       }
 
-      const stages = po.stages;
+      // Si la etapa actual no está dentro del flujo guardado, reconstruimos el flujo
+      // correcto: de lo contrario indexOf devuelve -1 y la orden saltaba al inicio.
+      const storedStages = po.stages ?? [];
+      const stagesNeedFix = !storedStages.includes(po.current_stage);
+      const stages = stagesNeedFix ? normalizeStages(po as any) : storedStages;
       const currentIdx = stages.indexOf(po.current_stage);
       const lastActionableIdx = stages.length - 2; // before "listo"
+
 
       // If current stage is produccion_cuerpos, add produced quantity to body_stock
       if (po.current_stage === "produccion_cuerpos" && po.molde) {
