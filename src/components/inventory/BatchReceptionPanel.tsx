@@ -44,6 +44,25 @@ export default function BatchReceptionPanel() {
     }
   };
 
+  const doRevert = async () => {
+    if (!returnTarget) return;
+    if (!returnReason.trim()) {
+      toast.error("Indica el motivo de la devolución");
+      return;
+    }
+    setBusy(true);
+    const res = await revertReception(returnTarget.id, returnReason.trim());
+    setBusy(false);
+    if (res.success) {
+      toast.success("Lote devuelto a producción. Stock revertido.");
+      setReturnTarget(null);
+      setReturnReason("");
+    } else {
+      toast.error(res.message);
+    }
+  };
+
+
   return (
     <Card>
       <CardHeader className="pb-3">
