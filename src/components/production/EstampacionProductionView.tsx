@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ProcessChangeLogPanel from "@/components/production/ProcessChangeLogPanel";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
@@ -219,12 +221,14 @@ export const EstampacionProductionView = () => {
 
   return (
     <Tabs defaultValue="ordenes" className="space-y-4">
-      <TabsList className="grid w-full grid-cols-4">
+      <TabsList className="grid w-full grid-cols-5">
         <TabsTrigger value="ordenes">Órdenes ({filteredOrders.length})</TabsTrigger>
         <TabsTrigger value="por_ingresar">Por ingresar ({pendingIntake.length})</TabsTrigger>
         <TabsTrigger value="frios">Productos Fríos ({coldStock.length})</TabsTrigger>
         <TabsTrigger value="termicos">Productos Térmicos ({thermalStock.length})</TabsTrigger>
+        <TabsTrigger value="cambios">Historial de cambios</TabsTrigger>
       </TabsList>
+
 
       <TabsContent value="ordenes" className="space-y-4">
         <div className="relative">
@@ -374,6 +378,12 @@ export const EstampacionProductionView = () => {
       <TabsContent value="termicos">
         <BodyStockGrid items={thermalStock} title="Productos Térmicos" />
       </TabsContent>
+
+      <TabsContent value="cambios">
+        <ProcessChangeLogPanel area="estampacion" title="Historial de cambios — Estampación" />
+      </TabsContent>
+
+
 
       <OperatorPromptDialog
         open={!!operatorPrompt}
