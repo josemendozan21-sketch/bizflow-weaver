@@ -235,7 +235,7 @@ export function MisPedidos() {
       }
       if (!q) return true;
       return (
-        (o.order_code || "").toLowerCase().includes(q) ||
+        normalizeCode(o.order_code || "").includes(normalizeCode(q)) ||
         (o.client_name || "").toLowerCase().includes(q) ||
         (o.client_nit || "").toLowerCase().includes(q) ||
         (o.product || "").toLowerCase().includes(q) ||

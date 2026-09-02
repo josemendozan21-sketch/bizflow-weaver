@@ -236,7 +236,7 @@ const WholesaleOrdersInbox = () => {
     const q = searchQuery.toLowerCase();
     return list.filter(
       (o) =>
-        (o.order_code || "").toLowerCase().includes(q) ||
+        normalizeCode(o.order_code || "").includes(normalizeCode(q)) ||
         o.client_name.toLowerCase().includes(q) ||
         o.product.toLowerCase().includes(q) ||
         o.advisor_name.toLowerCase().includes(q)
