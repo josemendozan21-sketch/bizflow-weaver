@@ -6,15 +6,14 @@ import CategorizedInventoryPanel from "@/components/inventory/CategorizedInvento
 import MateriaPrimaPanel from "@/components/inventory/MateriaPrimaPanel";
 import WholesaleOrdersInbox from "@/components/inventory/WholesaleOrdersInbox";
 import QuickMovementForm from "@/components/inventory/QuickMovementForm";
+import InventoryChangeLogPanel from "@/components/inventory/InventoryChangeLogPanel";
 import MovementHistoryTable from "@/components/inventory/MovementHistoryTable";
 import ProductionMovementHistory from "@/components/production/ProductionMovementHistory";
 import WeeklyInventoryExport from "@/components/inventory/WeeklyInventoryExport";
 import InventoryDashboardSummary from "@/components/inventory/InventoryDashboardSummary";
 import Punto92WarehousePanel from "@/components/inventory/Punto92WarehousePanel";
 import FeriasWarehousePanel from "@/components/inventory/FeriasWarehousePanel";
-import ReservationsPanel from "@/components/inventory/ReservationsPanel";
 import InventoryTraceabilityPanel from "@/components/inventory/InventoryTraceabilityPanel";
-import { RESERVATIONS_ENABLED } from "@/lib/featureFlags";
 
 type WarehouseKey = "principal" | "punto92" | "ferias";
 
@@ -66,16 +65,14 @@ const InventariosRoleView = () => {
           <TabsTrigger value="bandeja" className="gap-1.5">
             <ShoppingBag className="h-4 w-4" /> Bandeja de pedidos
           </TabsTrigger>
-          {RESERVATIONS_ENABLED && (
-            <TabsTrigger value="reservas" className="gap-1.5">
-              <BookmarkCheck className="h-4 w-4" /> Reservas
-            </TabsTrigger>
-          )}
           <TabsTrigger value="trazabilidad" className="gap-1.5 whitespace-nowrap">
             <Route className="h-4 w-4" /> Trazabilidad
           </TabsTrigger>
           <TabsTrigger value="movimientos" className="gap-1.5">
             <Boxes className="h-4 w-4" /> Entradas y Salidas
+          </TabsTrigger>
+          <TabsTrigger value="historial_cambios" className="gap-1.5 whitespace-nowrap">
+            <History className="h-4 w-4" /> Historial de cambios
           </TabsTrigger>
           <TabsTrigger value="historial" className="gap-1.5">
             <History className="h-4 w-4" /> Historial de movimientos
@@ -124,12 +121,6 @@ const InventariosRoleView = () => {
           <WholesaleOrdersInbox />
         </TabsContent>
 
-        {RESERVATIONS_ENABLED && (
-          <TabsContent value="reservas" className="mt-4">
-            <ReservationsPanel />
-          </TabsContent>
-        )}
-
         <TabsContent value="trazabilidad" className="mt-4">
           <InventoryTraceabilityPanel />
         </TabsContent>
@@ -139,6 +130,10 @@ const InventariosRoleView = () => {
             <QuickMovementForm />
             <WeeklyInventoryExport />
           </div>
+        </TabsContent>
+
+        <TabsContent value="historial_cambios" className="mt-4">
+          <InventoryChangeLogPanel />
         </TabsContent>
 
         <TabsContent value="historial" className="mt-4 space-y-4">

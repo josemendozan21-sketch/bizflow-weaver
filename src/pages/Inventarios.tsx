@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Beaker, Warehouse, Store, Tent, BookmarkCheck, Route } from "lucide-react";
+import { Beaker, Warehouse, Store, Tent, Route, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
@@ -8,9 +8,8 @@ import AsesorInventoryView from "@/components/inventory/AsesorInventoryView";
 import InventariosRoleView from "@/components/inventory/InventariosRoleView";
 import Punto92WarehousePanel from "@/components/inventory/Punto92WarehousePanel";
 import FeriasWarehousePanel from "@/components/inventory/FeriasWarehousePanel";
-import ReservationsPanel from "@/components/inventory/ReservationsPanel";
 import InventoryTraceabilityPanel from "@/components/inventory/InventoryTraceabilityPanel";
-import { RESERVATIONS_ENABLED } from "@/lib/featureFlags";
+import InventoryChangeLogPanel from "@/components/inventory/InventoryChangeLogPanel";
 import { useAuth } from "@/contexts/AuthContext";
 
 type WarehouseKey = "principal" | "punto92" | "ferias";
@@ -56,13 +55,11 @@ const FullInventoryView = () => {
           <TabsTrigger value="materia_prima" className="gap-1.5">
             <Beaker className="h-4 w-4" /> Materia Prima
           </TabsTrigger>
-          {RESERVATIONS_ENABLED && (
-            <TabsTrigger value="reservas" className="gap-1.5">
-              <BookmarkCheck className="h-4 w-4" /> Reservas
-            </TabsTrigger>
-          )}
           <TabsTrigger value="trazabilidad" className="gap-1.5">
             <Route className="h-4 w-4" /> Trazabilidad
+          </TabsTrigger>
+          <TabsTrigger value="historial_cambios" className="gap-1.5">
+            <History className="h-4 w-4" /> Historial de cambios
           </TabsTrigger>
           <TabsTrigger value="magical_warmers" className="gap-1.5">
             Magical Warmers
@@ -76,14 +73,12 @@ const FullInventoryView = () => {
           <MateriaPrimaPanel />
         </TabsContent>
 
-        {RESERVATIONS_ENABLED && (
-          <TabsContent value="reservas" className="mt-4">
-            <ReservationsPanel />
-          </TabsContent>
-        )}
-
         <TabsContent value="trazabilidad" className="mt-4">
           <InventoryTraceabilityPanel />
+        </TabsContent>
+
+        <TabsContent value="historial_cambios" className="mt-4">
+          <InventoryChangeLogPanel />
         </TabsContent>
 
         <TabsContent value="magical_warmers" className="mt-4 space-y-4">
