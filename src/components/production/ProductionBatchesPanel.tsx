@@ -137,6 +137,16 @@ export default function ProductionBatchesPanel({ readOnly = false }: Props) {
                     </span>
                   </div>
 
+                  {Number(b.return_count ?? 0) > 0 && (
+                    <div className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
+                      <strong>Devuelto por inventario</strong>
+                      {b.returned_at && <> · {new Date(b.returned_at).toLocaleString("es-CO")}</>}
+                      {b.returned_by_name && <> · {b.returned_by_name}</>}
+                      {b.return_reason && <div className="text-[11px]">Motivo: {b.return_reason}</div>}
+                    </div>
+                  )}
+
+
                   {orders.length > 0 && (
                     <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                       {orders.map((o) => (
