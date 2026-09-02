@@ -62,6 +62,21 @@ export function NuevasSolicitudes({ requests }: Props) {
                     </div>
                   )}
                 </div>
+                {[
+                  ...(((req as any).original_logo_url_2 ? [{ name: (req as any).logo_name_2 || null, url: (req as any).original_logo_url_2 }] : [])),
+                  ...(((req as any).extra_logos as Array<{ name?: string | null; url?: string | null }> | null) || []),
+                ]
+                  .filter((l) => l?.url)
+                  .map((l, i) => (
+                    <div key={`extra-logo-${i}`} className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Logo {i + 2}{l?.name ? ` — ${l.name}` : ""}
+                      </p>
+                      <div className="border rounded-lg p-2 bg-muted/20 flex items-center justify-center min-h-[80px]">
+                        <LogoPreview url={l!.url!} alt={`Logo ${i + 2}`} />
+                      </div>
+                    </div>
+                  ))}
                 {req.client_comments && (
                   <div className="flex gap-2 text-sm">
                     <MessageSquare className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
