@@ -39,40 +39,37 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
   const [uploading, setUploading] = useState(false);
 
   const today = new Date().toISOString().slice(0, 10);
-  const isCash = (m: string | null | undefined) =>
-    (m ?? "").toLowerCase().split("+").some((p) => p.trim() === "efectivo");
+  const isCash = isCashMethod;
+  const lastCount = counts[0] ?? null;
+  const cash = computePosCash({
+    cashBase,
+    lastCount,
+    sales,
+    withdrawals,
+    expenses: posExpenses,
+  });
   const cashSalesToday = sales
     .filter((s) => s.sale_date.slice(0, 10) === today && isCash(s.payment_method))
     .reduce((a, b) => a + Number(b.total_amount), 0);
-  const cashSalesAll = sales
-    .filter((s) => isCash(s.payment_method))
-    .reduce((a, b) => a + Number(b.total_amount), 0);
-  const approvedRetiros = withdrawals
-    .filter((w) => w.status === "aprobado" && (w.movement_type ?? "retiro") === "retiro")
-    .reduce((a, b) => a + Number(b.amount), 0);
-  const approvedConsignaciones = withdrawals
-    .filter((w) => w.status === "aprobado" && w.movement_type === "consignacion")
-    .reduce((a, b) => a + Number(b.amount), 0);
-  const pendingRetiros = withdrawals
-    .filter((w) => w.status === "pendiente" && (w.movement_type ?? "retiro") === "retiro")
-    .reduce((a, b) => a + Number(b.amount), 0);
-  const pendingConsignaciones = withdrawals
-    .filter((w) => w.status === "pendiente" && w.movement_type === "consignacion")
-    .reduce((a, b) => a + Number(b.amount), 0);
-  const pendingTotal = pendingRetiros + pendingConsignaciones;
+  const cashSalesAll = cash.cashSales;
+  const approvedRetiros = cash.retiros;
+  const approvedConsignaciones = cash.consignaciones;
+  const pendingTotal = cash.pending + cash.gastosPendientes;
 
-  // ---- Movimientos diarios de caja (ventas efectivo vs retiros/consignaciones) ----
-  const dayMap = new Map<string, { sales: number; retiros: number; consignaciones: number }>();
-  const bump = (d: string, key: "sales" | "retiros" | "consignaciones", v: number) => {
-    const row = dayMap.get(d) ?? { sales: 0, retiros: 0, consignaciones: 0 };
+  // ---- Movimientos diarios de caja (ventas efectivo vs salidas) ----
+  const since = lastCount ? +new Date(lastCount.created_at) : -Infinity;
+  const after = (d: string) => +new Date(d) > since;
+  const dayMap = new Map<string, { sales: number; retiros: number; consignaciones: number; gastos: number }>();
+  const bump = (d: string, key: "sales" | "retiros" | "consignaciones" | "gastos", v: number) => {
+    const row = dayMap.get(d) ?? { sales: 0, retiros: 0, consignaciones: 0, gastos: 0 };
     row[key] += v;
     dayMap.set(d, row);
   };
-  sales.filter((s) => isCash(s.payment_method)).forEach((s) =>
-    bump(s.sale_date.slice(0, 10), "sales", Number(s.total_amount))
-  );
+  sales
+    .filter((s) => isCash(s.payment_method) && after(s.sale_date))
+    .forEach((s) => bump(s.sale_date.slice(0, 10), "sales", Number(s.total_amount)));
   withdrawals
-    .filter((w) => w.status !== "rechazado")
+    .filter((w) => w.status !== "rechazado" && after(String(w.created_at)))
     .forEach((w) =>
       bump(
         String(w.created_at).slice(0, 10),
@@ -80,21 +77,19 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
         Number(w.amount)
       )
     );
+  posExpenses
+    .filter((e) => (e.status ?? "aprobado") !== "rechazado" && after(e.created_at))
+    .forEach((e) => bump(e.created_at.slice(0, 10), "gastos", Number(e.amount)));
   const dayRowsAsc = Array.from(dayMap.entries()).sort((a, b) => (a[0] < b[0] ? -1 : 1));
-  let acc = cashBase;
+  let acc = cash.base;
   const dayRows = dayRowsAsc
     .map(([date, r]) => {
-      acc += r.sales - r.retiros - r.consignaciones;
+      acc += r.sales - r.retiros - r.consignaciones - r.gastos;
       return { date, ...r, balance: acc };
     })
     .reverse();
 
-  // Descontamos también los movimientos pendientes: el dinero ya salió físicamente
-  // de la caja aunque contabilidad no los haya aprobado todavía.
-  const cashOnHand =
-    cashBase + cashSalesAll
-    - approvedRetiros - approvedConsignaciones
-    - pendingRetiros - pendingConsignaciones;
+  const cashOnHand = cash.cashOnHand;
 
   const reset = () => {
     setAmount(""); setConcept(""); setNotes(""); setFile(null); setShowForm(false); setMovementType("retiro");
