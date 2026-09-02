@@ -69,7 +69,8 @@ const MateriaPrimaList = () => {
   const { stockItems, addStockItem, updateStockItem, deleteStockItem, refetch } = useInventory();
   const { role } = useAuth();
   // Inventarios gestiona el catálogo igual que en referencias/productos.
-  const isReadOnly = role !== "admin" && role !== "inventarios";
+  const isReadOnly = !canManageInventory(role);
+
 
   const [brandFilter, setBrandFilter] = useState<BrandFilter>("todas");
   const [search, setSearch] = useState("");
