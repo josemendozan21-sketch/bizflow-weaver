@@ -641,7 +641,20 @@ const CategorizedInventoryPanel = ({
                                   <Input type="number" min={0} value={newForm.minStock} onChange={(e) => setNewForm({ ...newForm, minStock: e.target.value })} />
                                 </div>
                               </div>
+                              {((newForm.category || selectedCategory) === "producto_terminado") && (
+                                <div className="grid gap-1.5">
+                                  <Label>Marcado</Label>
+                                  <Select value={newForm.logo} onValueChange={(v) => setNewForm({ ...newForm, logo: v as "con" | "sin" })}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="sin">Sin marcar</SelectItem>
+                                      <SelectItem value="con">Marcado (con logo)</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
                             </div>
+
                             <DialogFooter>
                               <Button variant="outline" onClick={() => setAddOpen(false)}>Cancelar</Button>
                               <Button onClick={handleAdd}>Guardar</Button>
