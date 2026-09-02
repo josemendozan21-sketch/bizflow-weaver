@@ -153,7 +153,7 @@ export default function AsesorInventoryView() {
   const filteredMagicalFinished = useMemo(() => {
     return magicalFinished
       .filter((i) => {
-        if (q && !normalize(i.name).includes(q)) return false;
+        if (q && !normalize(`${i.name} ${i.tipo || ""}`).includes(q)) return false;
         if (typeFilter === "termico") return i.tipo === "Térmico";
         if (typeFilter === "frio") return i.tipo === "Frío";
         return true;
