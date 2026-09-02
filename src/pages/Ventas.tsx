@@ -626,6 +626,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [mwLogos, setMwLogos] = useState<LogoEntry[]>(() => [makeLogoEntry()]);
   const [clientName, setClientName] = usePersistedState<string>("ventas:mw:clientName", "");
   const [recompraLogoUrl, setRecompraLogoUrl] = usePersistedState<string>("ventas:mw:recompraLogoUrl", "");
+  const [recompraMismoLogo, setRecompraMismoLogo] = usePersistedState<"si" | "no">("ventas:mw:recompraMismoLogo", "si");
   const [rutFileState, setRutFileState] = useState<File | null>(null);
   // Molde nuevo (sólo Magical)
   const [moldeNuevo, setMoldeNuevo] = usePersistedState("ventas:mw:moldeNuevo", false);
@@ -825,9 +826,12 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
     // Cada logo agregado necesita archivo y nombre (excepto recompras, donde
     // el primer logo puede reutilizarse del histórico del cliente).
-    const incompleteIdx = activeLogos.findIndex(
-      (l, i) => (!l.file || l.file.size === 0 ? !(i === 0 && isRecompra) : false) || !l.name.trim(),
-    );
+    const reusaLogoAnterior = isRecompra && !noLogo && recompraMismoLogo === "si";
+    const incompleteIdx = reusaLogoAnterior
+      ? -1
+      : activeLogos.findIndex(
+          (l) => !l.file || l.file.size === 0 || !l.name.trim(),
+        );
     if (!noLogo && incompleteIdx >= 0) {
       toast.error(`Logo ${incompleteIdx + 1} incompleto`, {
         description: "Adjunte el archivo del logo y escriba su nombre de referencia.",
@@ -837,16 +841,23 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     }
 
     // Recompra: el logo debe quedar registrado (archivo nuevo o logo anterior)
-    if (isRecompra && !noLogo && !(logoFile && logoFile.size > 0) && !recompraLogoUrl) {
-      toast.error("Logo de la recompra requerido", {
-        description: "Seleccione un logo anterior del cliente o adjunte el archivo del logo.",
+    if (reusaLogoAnterior && !recompraLogoUrl) {
+      toast.error("Seleccione el logo anterior", {
+        description: "Use el buscador para elegir el logo ya trabajado con este cliente.",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+    if (isRecompra && !noLogo && recompraMismoLogo === "no" && !(logoFile && logoFile.size > 0)) {
+      toast.error("Adjunte el logo actualizado", {
+        description: "El cliente cambió el logo: adjunte el archivo nuevo para que Diseño y Estampación lo reciban.",
       });
       setIsSubmitting(false);
       return;
     }
 
     // Nombre/referencia del logo OBLIGATORIO para pedidos mayor con logo
-    if (!noLogo && !logoNombre) {
+    if (!noLogo && !reusaLogoAnterior && !logoNombre) {
       toast.error("Referencia del logo requerida", {
         description: "Escriba un nombre claro para identificar el logo (ej: Logo Coca-Cola v2).",
       });
@@ -940,7 +951,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     let firstOrderIdForLogo: string | null = null;
     const hasLogoFile = !!(logoFile && logoFile.size > 0);
     const hasPersonalization = !!(personalizacion && personalizacion.trim());
-    if ((hasLogoFile || hasPersonalization) && user && !isRecompra && !noLogo) {
+    if ((hasLogoFile || hasPersonalization) && user && !reusaLogoAnterior && !noLogo) {
       const firstLine = orderLines[0];
       const referencia = `${firstLine.product} (${firstLine.type})`;
       const result = await createLogoRequestFromOrder({
@@ -956,6 +967,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         extraLogos: activeLogos.slice(2).map((l) => ({ file: l.file, name: l.name.trim() })),
         clientComments: observaciones || undefined,
         additionalInstructions: personalizacion || undefined,
+        fromRecompra: isRecompra,
       });
       if (result.success) {
         toast.success("Diseño de logo", { description: result.message });
@@ -968,7 +980,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         if (result.logoUrl2) logoUrl2 = result.logoUrl2;
       }
       extraLogoUrls = result.extraLogoUrls || [];
-    } else if (logoFile && logoFile.size > 0 && isRecompra) {
+    } else if (false && logoFile && logoFile.size > 0 && isRecompra) {
       // Recompra: subir el logo directamente para conservar la URL real.
       const ext = logoFile.name.split(".").pop();
       const path = `originals/${crypto.randomUUID()}.${ext}`;
@@ -990,11 +1002,19 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         if (i === 1) logoUrl2 = urlExtra.publicUrl;
         else extraLogoUrls.push(urlExtra.publicUrl);
       }
-    } else if (isRecompra && !noLogo && recompraLogoUrl) {
+    } else if (reusaLogoAnterior && recompraLogoUrl) {
       // Recompra sin archivo nuevo: se reutiliza el logo aprobado anteriormente.
       logoUrl = recompraLogoUrl;
     }
-    if (isRecompra && !logoUrl && recompraLogoUrl) logoUrl = recompraLogoUrl;
+    if (reusaLogoAnterior && !logoUrl && recompraLogoUrl) logoUrl = recompraLogoUrl;
+
+    const logoSource: LogoSource = noLogo ? "sin_logo" : reusaLogoAnterior ? "reutilizado" : "nuevo";
+    const logoSourceMeta = {
+      logo_source: logoSource,
+      logo_source_at: new Date().toISOString(),
+      logo_source_by: user?.id || null,
+      logo_source_by_name: user?.email || null,
+    };
 
     const buildMagicalStages = (isThermic: boolean) => {
       const base = noLogo
@@ -1195,11 +1215,14 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           gel_color: gelColor,
           logo_url: logoUrl,
           logo_url_2: logoUrl2,
-          logo_count: logosCount,
+          ...logoSourceMeta,
+          logo_count: reusaLogoAnterior ? 1 : logosCount,
           logo_name: logoNombre || null,
           logo_name_2: logosCount >= 2 ? (logoNombre2 || null) : null,
           logos: noLogo
             ? []
+            : reusaLogoAnterior
+            ? [{ name: logoNombre || "Logo anterior del cliente", url: logoUrl }]
             : activeLogos.map((l, i) => ({
                 name: l.name.trim() || null,
                 url: i === 0 ? logoUrl : i === 1 ? logoUrl2 : (extraLogoUrls[i - 2] ?? null),
