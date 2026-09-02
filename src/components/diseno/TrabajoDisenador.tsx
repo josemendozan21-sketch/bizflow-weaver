@@ -108,7 +108,7 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
 
       if (updates.status === "listo_aprobacion") {
         await supabase.from("notifications").insert({
-          user_id: req.advisor_id,
+          target_user_id: req.advisor_id,
           target_role: "asesor_comercial",
           title: "Logo listo para tu aprobación",
           message: `El diseño de ${req.client_name} (${req.brand} · ${req.product}) ya está disponible para revisión y aprobación.`,
