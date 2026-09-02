@@ -1210,6 +1210,57 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_audit_log: {
+        Row: {
+          action: string
+          brand: string | null
+          category: string | null
+          changed_at: string
+          changed_by: string | null
+          changed_by_email: string | null
+          field: string | null
+          id: string
+          item_name: string | null
+          new_value: string | null
+          old_value: string | null
+          product_type: string | null
+          record_id: string | null
+          table_name: string
+        }
+        Insert: {
+          action: string
+          brand?: string | null
+          category?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          changed_by_email?: string | null
+          field?: string | null
+          id?: string
+          item_name?: string | null
+          new_value?: string | null
+          old_value?: string | null
+          product_type?: string | null
+          record_id?: string | null
+          table_name: string
+        }
+        Update: {
+          action?: string
+          brand?: string | null
+          category?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          changed_by_email?: string | null
+          field?: string | null
+          id?: string
+          item_name?: string | null
+          new_value?: string | null
+          old_value?: string | null
+          product_type?: string | null
+          record_id?: string | null
+          table_name?: string
+        }
+        Relationships: []
+      }
       inventory_movements: {
         Row: {
           area: string
