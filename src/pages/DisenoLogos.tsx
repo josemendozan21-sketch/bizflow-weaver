@@ -4,6 +4,7 @@ import { NuevasSolicitudes } from "@/components/diseno/NuevasSolicitudes";
 import { TrabajoDisenador } from "@/components/diseno/TrabajoDisenador";
 import { AprobacionAsesor } from "@/components/diseno/AprobacionAsesor";
 import { DisenosFinalizados } from "@/components/diseno/DisenosFinalizados";
+import LogosAtascados from "@/components/diseno/LogosAtascados";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useMemo } from "react";
@@ -35,8 +36,8 @@ const DisenoLogos = () => {
   }
 
   const pendingCount = requests.filter((r) => r.status === "pendiente_diseno").length;
-  const designCount = requests.filter((r) => ["pendiente_diseno", "en_revision", "ajustado", "ajustes_solicitados"].includes(r.status)).length;
-  const approvalCount = requests.filter((r) => r.status === "aprobado").length;
+  const designCount = requests.filter((r) => ["pendiente_diseno", "en_revision", "ajustado", "ajustes_solicitados", "listo_aprobacion"].includes(r.status)).length;
+  const approvalCount = requests.filter((r) => ["aprobado", "listo_aprobacion"].includes(r.status)).length;
   const doneCount = requests.filter((r) => r.status === "finalizado").length;
 
   // Estampacion only sees the Aprobación tab (read-only)
@@ -80,6 +81,9 @@ const DisenoLogos = () => {
         <h1 className="text-2xl font-bold text-foreground">Diseño de Logos</h1>
         <p className="text-muted-foreground">Gestión de solicitudes de diseño para productos personalizados</p>
       </div>
+
+      <LogosAtascados requests={requests} />
+
 
       <Tabs defaultValue="solicitudes">
         <TabsList className="grid w-full grid-cols-4">

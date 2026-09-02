@@ -12,6 +12,7 @@ import ProductionMovementHistory from "@/components/production/ProductionMovemen
 import ProcessChangeLogPanel from "@/components/production/ProcessChangeLogPanel";
 import ProductionBatchesPanel from "@/components/production/ProductionBatchesPanel";
 import UnroutedOrdersPanel from "@/components/production/UnroutedOrdersPanel";
+import OrderSyncHealthPanel from "@/components/production/OrderSyncHealthPanel";
 
 
 
@@ -83,6 +84,7 @@ const Produccion = () => {
           </TabsList>
           <TabsContent value="marcas" className="mt-4 space-y-4">
             <UnroutedOrdersPanel readOnly />
+            <OrderSyncHealthPanel readOnly={isReadOnly} />
             <ProductionBrandSelector selectedBrand={selectedBrand} onSelectBrand={setSelectedBrand} />
           </TabsContent>
 

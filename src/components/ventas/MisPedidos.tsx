@@ -24,6 +24,9 @@ import { AddPaymentDialog } from "./AddPaymentDialog";
 import { PendingProofPanel } from "./PendingProofPanel";
 
 import { matchesQuery } from "@/lib/search";
+import { useOrderCharges } from "@/hooks/useOrderCharges";
+import OrderChargesEditor from "./OrderChargesEditor";
+import OrderChangeLogPanel from "./OrderChangeLogPanel";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import DeliveryProgressBadge from "@/components/common/DeliveryProgressBadge";
 
@@ -943,15 +946,20 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
   const [extraDesc, setExtraDesc] = useState(initialExtras.extraDesc);
   const [deliveryDate, setDeliveryDate] = useState(order.delivery_date || "");
   const [quantity, setQuantity] = useState<number>(Number(order.quantity) || 1);
-  const initialUnitPrice =
-    Number(order.unit_price) ||
-    (Number(order.quantity) > 0
+  // El valor unitario NUNCA se recalcula solo: si el pedido lo tiene guardado se
+  // respeta tal cual. Solo cuando falta se estima a partir del total (y se avisa).
+  const hasStoredUnitPrice = Number(order.unit_price) > 0;
+  const derivedUnitPrice =
+    Number(order.quantity) > 0
       ? Math.round(((Number(order.total_amount) || 0) - (initialExtras.extraCost || 0)) / Number(order.quantity))
-      : 0);
+      : 0;
+  const initialUnitPrice = hasStoredUnitPrice ? Number(order.unit_price) : derivedUnitPrice;
   const [unitPrice, setUnitPrice] = useState<number>(initialUnitPrice);
+  const { data: charges = [] } = useOrderCharges(order.id);
+  const chargesTotal = charges.reduce((s, c) => s + (Number(c.amount) || 0), 0);
 
   const newBaseTotal = (Number(unitPrice) || 0) * (Number(quantity) || 0);
-  const newTotalPreview = newBaseTotal + (Number(extraCost) || 0);
+  const newTotalPreview = newBaseTotal + (Number(extraCost) || 0) + chargesTotal;
 
   const handleSave = async () => {
     setSaving(true);
@@ -966,7 +974,7 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
       // El asesor puede ajustar unidades y valor unitario: el total se recalcula siempre.
       const qty = Math.max(Number(quantity) || 0, 1);
       const price = Number(unitPrice) || 0;
-      const newTotal = price * qty + (Number(extraCost) || 0);
+      const newTotal = price * qty + (Number(extraCost) || 0) + chargesTotal;
 
       // Only update production-spec fields for wholesale orders (they go through producción).
       // Retail orders are sold from finished stock and shouldn't overwrite these specs.
@@ -1110,6 +1118,12 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
                   onChange={(e) => setUnitPrice(Number(e.target.value) || 0)}
                   placeholder="0"
                 />
+                {!hasStoredUnitPrice && (
+                  <p className="text-[11px] text-amber-700">
+                    Este pedido no tenía valor unitario guardado. Se estimó en $
+                    {derivedUnitPrice.toLocaleString("es-CO")} a partir del total; verifícalo antes de guardar.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -1200,6 +1214,9 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
                 />
               </div>
             </div>
+
+            <OrderChargesEditor orderId={order.id} disabled={isLocked || saving} />
+
             <div className="rounded-lg border bg-muted/40 p-3 text-xs space-y-1">
               <p className="text-muted-foreground">
                 Total anterior: ${(Number(order.total_amount) || 0).toLocaleString("es-CO")}
@@ -1210,6 +1227,7 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
               <p className="text-muted-foreground">
                 {quantity || 0} uds × ${(unitPrice || 0).toLocaleString("es-CO")}
                 {extraCost > 0 ? ` + $${extraCost.toLocaleString("es-CO")}` : ""}
+                {chargesTotal > 0 ? ` + $${chargesTotal.toLocaleString("es-CO")} en cargos` : ""}
                 {newTotalPreview !== (Number(order.total_amount) || 0) && (
                   <> · Diferencia: {newTotalPreview > (Number(order.total_amount) || 0) ? "+" : "-"}$
                     {Math.abs(newTotalPreview - (Number(order.total_amount) || 0)).toLocaleString("es-CO")}</>
@@ -1232,6 +1250,8 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
               />
             </div>
           </fieldset>
+
+          <OrderChangeLogPanel orderId={order.id} />
 
           {!isLocked && (
             <Button className="w-full" onClick={handleSave} disabled={saving}>

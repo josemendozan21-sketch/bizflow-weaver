@@ -12,6 +12,7 @@ import { toast as sonnerToast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { LogoPreview } from "./LogoPreview";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
+import LogoStatusHistory from "./LogoStatusHistory";
 
 interface Props {
   requests: LogoRequest[];
@@ -25,7 +26,7 @@ const DESIGNER_STATUSES: { value: LogoRequestStatus; label: string }[] = [
 
 export function TrabajoDisenador({ requests }: Props) {
   const filtered = requests.filter((r) =>
-    ["pendiente_diseno", "en_revision", "ajustado", "ajustes_solicitados"].includes(r.status)
+    ["pendiente_diseno", "en_revision", "ajustado", "ajustes_solicitados", "listo_aprobacion"].includes(r.status)
   );
 
   return (
@@ -52,7 +53,7 @@ export function TrabajoDisenador({ requests }: Props) {
   );
 }
 
-function DesignerCard({ request: req }: { request: LogoRequest }) {
+export function DesignerCard({ request: req }: { request: LogoRequest }) {
   const [designNotes, setDesignNotes] = useState(req.design_notes || "");
   const [newStatus, setNewStatus] = useState<LogoRequestStatus>(req.status);
   const [uploading, setUploading] = useState(false);
@@ -97,8 +98,28 @@ function DesignerCard({ request: req }: { request: LogoRequest }) {
       if (adjustedFile) {
         updates.adjusted_logo_url = await uploadLogoFile(adjustedFile, "adjusted");
         setAdjustedFile(null);
+        // Al subir un diseño ajustado el logo queda automáticamente disponible
+        // para el asesor: no requiere ninguna acción manual adicional.
+        if (newStatus !== "listo_aprobacion" && newStatus !== "aprobado" && newStatus !== "finalizado") {
+          updates.status = "listo_aprobacion";
+          setNewStatus("listo_aprobacion");
+        }
       }
       await updateRequest.mutateAsync(updates);
+
+      if (updates.status === "listo_aprobacion") {
+        await supabase.from("notifications").insert({
+          target_user_id: req.advisor_id,
+          target_role: "asesor_comercial",
+          title: "Logo listo para tu aprobación",
+          message: `El diseño de ${req.client_name} (${req.brand} · ${req.product}) ya está disponible para revisión y aprobación.`,
+          type: "info",
+          reference_id: req.id,
+        });
+        sonnerToast.success("Diseño publicado", {
+          description: "El asesor ya puede verlo y aprobarlo.",
+        });
+      }
     } catch {
       // handled
     } finally {
@@ -336,6 +357,8 @@ function DesignerCard({ request: req }: { request: LogoRequest }) {
             )}
           </div>
         )}
+
+        <LogoStatusHistory requestId={req.id} />
       </CardContent>
     </Card>
   );
