@@ -7,6 +7,7 @@ import { es } from "date-fns/locale";
 import { FileImage, User, MessageSquare, Info } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { LogoPreview } from "./LogoPreview";
+import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 
 interface Props {
   requests: LogoRequest[];
@@ -48,6 +49,7 @@ export function NuevasSolicitudes({ requests }: Props) {
                   <StatusBadge status={req.status} />
                 </div>
                 <p className="text-sm text-muted-foreground">{req.brand} · {req.product}</p>
+                {req.order_code && <div className="mt-1"><OrderCodeBadge code={req.order_code} compact /></div>}
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="border rounded-lg p-2 bg-muted/20 flex items-center justify-center min-h-20">

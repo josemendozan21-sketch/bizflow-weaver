@@ -11,6 +11,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { LogoPreview } from "./LogoPreview";
+import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 
 interface Props {
   requests: LogoRequest[];
@@ -160,6 +161,7 @@ function ApprovedCard({ request: req, role }: { request: LogoRequest; role: stri
               )}
             </CardTitle>
             <p className="text-sm text-muted-foreground">{req.brand} · {req.product}</p>
+            {req.order_code && <div className="mt-1"><OrderCodeBadge code={req.order_code} compact /></div>}
           </div>
           <Badge className="bg-green-100 text-green-800 border-green-200">
             <CheckCircle2 className="h-3 w-3 mr-1" /> Aprobado — Listo para estampar
