@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import OrderDisputeDialog from "@/components/ventas/OrderDisputeDialog";
 import DisputesPanel from "@/components/contabilidad/DisputesPanel";
-import { Loader2, Info, TrendingUp, Clock, CheckCircle2, ChevronLeft, ChevronRight, Download, AlertTriangle } from "lucide-react";
+import { Loader2, Info, TrendingUp, Clock, CheckCircle2, ChevronLeft, ChevronRight, ChevronDown, Download, AlertTriangle } from "lucide-react";
 
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -64,6 +64,7 @@ export default function MisComisiones() {
   const [search, setSearch] = useState("");
   const [minAmount, setMinAmount] = useState("");
   const [maxAmount, setMaxAmount] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const summary = useMemo(
     () => summarizeAdvisorProgress(orders, year, month, user?.id, charges),
