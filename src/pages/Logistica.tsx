@@ -38,7 +38,7 @@ function OrderCodeList({ items }: { items: Order[] }) {
 }
 
 function exportOrdersToCSV(orders: Order[], brandLabel: (b: string) => string, saleLabel: (t: string) => string) {
-  const headers = ["N° Pedido", "Cliente", "Cédula/NIT", "Teléfono", "Email", "Ciudad", "Dirección", "Marca", "Tipo", "Producto", "Unidades", "Método de pago", "Valor total", "Abono", "Saldo pendiente", "Costo envío", "Observaciones"];
+  const headers = ["N° Pedido", "Cliente", "Cédula/NIT", "Teléfono", "Email", "Ciudad", "Dirección", "Marca", "Tipo", "Producto", "Unidades", "Entregadas", "Pendientes por entregar", "Método de pago", "Valor total", "Abono", "Saldo pendiente", "Costo envío", "Observaciones"];
   const rows = orders.map((o) => {
     const total = Number(o.total_amount) || 0;
     const abono = getOrderPaidAmount(o);
@@ -62,6 +62,8 @@ function exportOrdersToCSV(orders: Order[], brandLabel: (b: string) => string, s
       saleLabel(o.sale_type),
       o.product,
       o.quantity,
+      Number(o.delivered_quantity) || 0,
+      Math.max((Number(o.quantity) || 0) - (Number(o.delivered_quantity) || 0), 0),
       metodo,
       total ? `$${total.toLocaleString("es-CO")}` : "—",
       abono ? `$${abono.toLocaleString("es-CO")}` : "—",
