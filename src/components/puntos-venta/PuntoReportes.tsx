@@ -11,6 +11,8 @@ import { PuntoRetiros } from "./PuntoRetiros";
 import { PuntoContabilidadExport } from "./PuntoContabilidadExport";
 import type { InvoiceLocation } from "@/lib/posInvoicePdf";
 import { useAuth } from "@/contexts/AuthContext";
+import { computePosCash } from "@/lib/pettyCash";
+import { useSedePettyExpenses, useSedeCashCounts } from "@/hooks/usePosPettyCash";
 
 type Props = {
   sales: PosSale[];
