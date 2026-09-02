@@ -256,6 +256,14 @@ export interface CommissionLine {
   returned: boolean;
   /** Valor total del pedido con IVA */
   totalWithVat: number;
+  /** Flete incluido en el total (no comisiona) */
+  shippingCost: number;
+  /** Cargos adicionales del pedido (no comisionan) */
+  extraCharges: number;
+  /** Total menos flete y cargos: la parte que sí comisiona */
+  netTotalWithVat: number;
+  /** El pedido aún no tiene factura emitida */
+  pendingInvoice: boolean;
   /** Valor con IVA que causa comisión (abono si es parcial) */
   commissionableWithVat: number;
   /** Base sin IVA sobre la que se aplica el % */
