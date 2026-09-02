@@ -241,7 +241,7 @@ export default function CajaMenor() {
           <CardContent className="space-y-2">
             {pendingPos.map((e) => (
               <div key={e.id} className="flex items-center gap-2 flex-wrap rounded border p-2 text-sm">
-                <Badge variant="outline">{sedeLabel(e.sede)}</Badge>
+                <SedeBadge sede={e.sede} />
                 <span className="font-semibold text-destructive">-{formatCOP(Number(e.amount))}</span>
                 <span className="flex-1 min-w-[160px]">{e.description}</span>
                 <span className="text-xs text-muted-foreground">{e.recorded_by_name}</span>
@@ -321,6 +321,34 @@ export default function CajaMenor() {
 
       {/* Libro de movimientos unificado */}
       <div className="space-y-3">
+        {/* Filtro de sede: botones segmentados, grandes y diferenciados por color */}
+        <div className="flex items-center gap-1 rounded-lg border bg-muted/40 p-1 w-fit">
+          {([{ value: "todas" as const, label: "Todas las sedes" }, ...SEDES.map((s) => ({ value: s.value as Sede, label: s.label }))]).map((opt) => {
+            const active = sedeFilter === opt.value;
+            const colorCls =
+              opt.value === "chico"
+                ? active
+                  ? "bg-violet-600 text-white shadow"
+                  : "text-violet-700 dark:text-violet-300 hover:bg-violet-500/10"
+                : opt.value === "toberin"
+                  ? active
+                    ? "bg-blue-600 text-white shadow"
+                    : "text-blue-700 dark:text-blue-300 hover:bg-blue-500/10"
+                  : active
+                    ? "bg-foreground text-background shadow"
+                    : "text-muted-foreground hover:bg-muted";
+            return (
+              <button
+                key={opt.value}
+                onClick={() => setSedeFilter(opt.value as any)}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${colorCls}`}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <h3 className="text-sm font-semibold text-foreground">
             Movimientos de caja menor ({visible.length})
