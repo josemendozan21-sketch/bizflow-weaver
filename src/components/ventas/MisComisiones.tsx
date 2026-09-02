@@ -21,7 +21,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import OrderDisputeDialog from "@/components/ventas/OrderDisputeDialog";
 import DisputesPanel from "@/components/contabilidad/DisputesPanel";
-import { Loader2, Info, TrendingUp, Clock, CheckCircle2, ChevronLeft, ChevronRight, ChevronDown, Download, AlertTriangle } from "lucide-react";
+import { Loader2, Info, TrendingUp, Clock, CheckCircle2, ChevronLeft, ChevronRight, Download, AlertTriangle } from "lucide-react";
+import { CommissionExpandButton } from "@/components/commissions/CommissionExpandButton";
+import { CommissionStatusBadge } from "@/components/commissions/CommissionStatusBadge";
 
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -31,7 +33,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import {
   summarizeAdvisorProgress,
-  STATUS_LABEL,
   BONUS_TIER_1_THRESHOLD,
   BONUS_TIER_1_AMOUNT,
   BONUS_TIER_2_THRESHOLD,
@@ -518,9 +519,11 @@ El período de liquidación es el <b>mes de la factura</b> (si el pedido aún
                         className="cursor-pointer"
                         onClick={() => setExpandedId(open ? null : l.order.id)}
                       >
-                        <TableCell className="w-8 pr-0">
-                          <ChevronDown
-                            className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
+                        <TableCell className="w-10 px-1">
+                          <CommissionExpandButton
+                            open={open}
+                            label={(l.order as any).order_code || l.order.client_name}
+                            onClick={() => setExpandedId(open ? null : l.order.id)}
                           />
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-xs">
@@ -539,20 +542,8 @@ El período de liquidación es el <b>mes de la factura</b> (si el pedido aún
                         <TableCell className="text-right font-medium whitespace-nowrap">
                           {fmt(l.netCommission)}
                         </TableCell>
-                        <TableCell>
-                          <Badge
-                            className={`whitespace-nowrap ${
-                              l.status === "total"
-                                ? "bg-emerald-600"
-                                : l.status === "parcial"
-                                  ? "bg-sky-600"
-                                  : l.status === "pendiente"
-                                    ? "bg-amber-500"
-                                    : "bg-muted text-muted-foreground"
-                            }`}
-                          >
-                            {STATUS_LABEL[l.status]}
-                          </Badge>
+                        <TableCell className="w-[126px] px-2">
+                          <CommissionStatusBadge status={l.status} />
                         </TableCell>
                         <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                           <OrderDisputeDialog
