@@ -670,7 +670,11 @@ const WholesaleOrdersInbox = () => {
                 )}
                 {isDelivered && <Badge variant="secondary">Entregado</Badge>}
               </div>
-              <h3 className="font-semibold mt-1.5">{o.client_name}</h3>
+              <p className="mt-1.5 text-[11px] font-mono text-muted-foreground">
+                {o.order_code || "—"}
+                {(o.line_count ?? 1) > 1 ? ` · línea ${o.line_index}/${o.line_count}` : ""}
+              </p>
+              <h3 className="font-semibold">{o.client_name}</h3>
               <p className="text-sm text-muted-foreground">
                 {o.quantity.toLocaleString("es-CO")} × {o.product}
               </p>
