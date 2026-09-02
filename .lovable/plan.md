@@ -1,58 +1,43 @@
-# Corrección de duplicación en cuerpos producidos y solicitudes que desaparecen
+# Diferenciar producto marcado (con logo) y sin marcar en inventario
 
-## Qué encontré (verificado en código y datos)
+## Situación actual (verificada)
 
-**1. La duplicación NO viene de reservas. Viene de la confirmación de recepción.**
-
-Cuando Inventarios confirma la recepción de los cuerpos fabricados, el sistema suma la cantidad dos veces:
-
-```text
-Inventarios confirma 1000 gafas
-  -> el código suma 1000 al inventario de productos (stock_items)
-  -> un automatismo de la base de datos copia ese valor a cuerpos (body_stock)  = ya quedó sumado
-  -> el código vuelve a sumar 1000 a cuerpos (body_stock)                        = 2000
-  -> el automatismo copia de vuelta cuerpos -> productos                         = 2000
-```
-
-Resultado: 1000 producidas quedan como 2000 en ambos lados. Coincide con lo que reportan los usuarios y con la evidencia: existe un ajuste manual registrado el 27/08 con el motivo literal "se duplico cuando se confirmo de producción" (-200 uds de Máscara).
-
-**2. Los dos inventarios de cuerpos están desincronizados hoy.** Ejemplos actuales: Handy (Frío) 14.995 en cuerpos vs 12.995 en productos; Máscara (Frío) 418 vs 167; Muela (Frío) 2.296 vs 2.236; Gafas pequeñas 2.293 vs 2.302. Son secuelas de la doble suma y de salidas que no se reflejaron en ambos lados.
-
-**3. El botón de confirmar recepción no está protegido.** Si se hace doble clic o se confirma dos veces antes de que refresque, vuelve a sumar. No hay verificación de "esta entrada ya fue recibida".
-
-**4. Existe una segunda vía de finalización que también suma stock**, en paralelo a la vía oficial (finalizar -> pendiente de recepción -> Inventarios confirma). Esa vía antigua escribe directo en cuerpos sin pasar por recepción; si se dispara, duplica.
-
-**5. Por qué "desaparecen" las solicitudes en producción:**
-- La tabla de tareas de cuerpos no guarda la marca. La pantalla de tareas solo existe en el flujo de Magical Warmers, así que una solicitud creada con marca Sweatspot se guarda pero nadie la ve nunca.
-- La tarjeta tiene una "X" de eliminar sin confirmación registrada en ningún historial: si alguien la borra, desaparece sin rastro.
-- Al finalizar, la tarea se mueve a la sección de finalizadas; si el registro de entrada a inventario falla, la tarea igual queda finalizada y el usuario cree que se perdió.
+- La base de datos ya tiene un campo `logo` en los productos, pero solo se usa a medias:
+  - Sweatspot producto terminado: 52 referencias marcadas y 26 sin marcar. La tabla agrupa "Sin logo / Con logo", pero **no se puede cambiar** el estado de una referencia ya creada, ni crear la contraparte desde la misma fila.
+  - Magical Warmers producto terminado: las 87 referencias están sin ese dato. No hay forma de indicar si están marcadas.
+- El "Historial de cambios" nuevo **no registra** cambios en el marcado: el registro automático solo vigila disponible, en proceso, nombre, marca, categoría, tipo, mínimo, unidad y color.
+- Los movimientos de entrada/salida no guardan si lo que entró o salió estaba marcado, así que la trazabilidad no lo distingue.
+- El formulario de movimientos rápidos sí filtra "Con logo / Sin logo", pero solo para Sweatspot.
 
 ## Qué voy a hacer
 
-### A. Eliminar la doble suma (causa raíz)
-- La confirmación de recepción sumará la cantidad **una sola vez**, en un solo lugar, dejando que la sincronización automática entre cuerpos y productos haga el resto. Se elimina la segunda suma manual.
-- Se conserva el descuento de "en proceso" y la creación de la referencia cuando no existe.
+### A. El marcado como atributo real del producto (Magical y Sweatspot)
+- En crear y editar referencia aparece el campo **Marcado**: "Sin marcar" o "Marcado (con logo)". Disponible para producto terminado de ambas marcas.
+- Se puede **cambiar el marcado de una referencia existente** desde el botón de editar, sin tener que borrarla y volverla a crear.
+- Etiqueta visible en la tabla (badge "Marcado" / "Sin marcar") y filtro para ver solo marcados, solo sin marcar o todo.
+- En la vista de Sweatspot, desde una fila que solo tiene una de las dos variantes, un botón crea la variante faltante con la misma referencia, color y origen.
+- El buscador reconoce "marcado", "con logo" y "sin logo".
 
-### B. Hacer la confirmación a prueba de doble clic
-- Antes de sumar, se verifica que el movimiento siga marcado como pendiente; si ya fue recibido, se muestra un aviso y no suma nada.
-- El botón se bloquea mientras se procesa.
+### B. Pasar unidades de "sin marcar" a "marcado"
+Como el producto se marca físicamente (estampación), se agrega la acción **Marcar unidades**: se indica cuántas unidades pasan de la variante sin marcar a la marcada. El sistema descuenta de una y suma a la otra en un solo paso, con validación de que haya stock suficiente. Queda registrado como movimiento y en el historial de cambios.
 
-### C. Cerrar la vía duplicada de finalización
-- Se deshabilita la ruta antigua que escribía stock directo desde producción. Queda una única ruta: Producción finaliza -> queda pendiente de recepción -> Inventarios confirma -> entra al inventario.
+### C. Trazabilidad completa
+- El registro automático e inmutable pasa a vigilar también el campo de marcado: quién lo cambió, de qué a qué, y cuándo.
+- El "Historial de cambios" muestra una columna de marcado y permite filtrar por marcado / sin marcar; se incluye en el Excel.
+- Los movimientos de inventario guardan el estado de marcado del ítem, y la pestaña de Trazabilidad lo muestra y lo filtra, además de incluirlo en su exportación.
+- Las entradas y salidas rápidas muestran el marcado en el nombre del ítem para ambas marcas (hoy solo Sweatspot).
 
-### D. Que las solicitudes no se pierdan
-- Agregar marca a las tareas de cuerpos, para que las solicitudes de Sweatspot también se vean en su área y no queden invisibles.
-- La eliminación de una tarea quedará registrada en el historial de cambios (quién, cuándo, qué referencia y cantidad) y se restringe a Inventarios/Admin.
-- Si al finalizar no se logra registrar la entrada a inventario, la tarea vuelve a quedar pendiente en vez de darse por finalizada.
-
-### E. Corregir los saldos actuales
-- Antes de tocar nada, generar un comparativo cuerpos vs productos de todas las referencias de Magical y presentarlo. **No ajusto ninguna cantidad sin tu visto bueno referencia por referencia**, porque parte de la diferencia puede ser salida real no registrada.
+### D. Consistencia de datos
+- Los valores existentes se respetan: cualquier valor guardado hoy sigue contando como "marcado". Las nuevas escrituras usan un valor único y consistente para evitar variantes de texto.
+- No se crean ni se borran referencias automáticamente; los 87 productos de Magical quedan como "Sin marcar" y el equipo de Inventarios ajusta los que correspondan (cada ajuste queda auditado).
 
 ## Detalles técnicos
 
-- Confirmación de recepción: `src/components/inventory/MovementHistoryTable.tsx` (líneas ~76-121) — quitar el bloque que actualiza `body_stock` manualmente; los triggers `mirror_stock_items_to_body_stock` / `mirror_body_stock_to_stock_items` ya propagan el valor. Añadir relectura de `reception_confirmed` con guardia previa.
-- Vía duplicada: `useProductionOrders.ts` `updateBodyTaskStatus` (líneas 749-783) — retirar el upsert a `body_stock`.
-- Marca en tareas: migración para añadir `brand text not null default 'magical'` a `body_production_tasks`; ajustar `RequestBodyProductionDialog.tsx` y el filtro de `useProductionOrders`.
-- Borrado auditado: registrar la eliminación en `inventory_audit_log` y condicionar el botón al rol.
-- Finalización: en `MagicalWarmersWorkflow.tsx` (líneas 545-611), revertir el estado de la tarea a `pendiente` si falla el insert del movimiento.
-- No se modifica la lógica de reservas en backend (sigue oculta en el frontend).
+- Migración: añadir columna `logo` a `inventory_audit_log` y `logo` a `inventory_movements`; extender el array de campos vigilados de `log_inventory_change()` con `logo` y `sweatspot_category`, e incluir el valor de marcado como contexto en cada fila del log. Sin cambios de RLS (se reutilizan las políticas actuales).
+- Frontend:
+  - `CategorizedInventoryPanel.tsx`: campo Marcado en alta y edición, badge, filtro tri-estado, búsqueda.
+  - `SweatspotFinishedProducts.tsx`: edición del marcado, creación de la variante faltante y acción "Marcar unidades".
+  - `QuickMovementForm.tsx` / `RegisterMovementDialog.tsx`: filtro y etiqueta de marcado para ambas marcas; persistir `logo` en el movimiento.
+  - `InventoryChangeLogPanel.tsx` e `InventoryTraceabilityPanel.tsx`: columna, filtro y columna en Excel.
+  - `useInventory.ts`: normalizar el valor escrito (`'marcado'` o `null`) y exponerlo en los tipos.
+- No se toca la lógica de pedidos ni el flujo de estampación existente; "Marcar unidades" es un ajuste de inventario, no un pedido.
