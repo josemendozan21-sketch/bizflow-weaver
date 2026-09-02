@@ -14,6 +14,7 @@ import { useMemo } from "react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import DebouncedSearchInput from "@/components/inventory/DebouncedSearchInput";
+import FeriaShipmentsSummary from "@/components/ferias/FeriaShipmentsSummary";
 
 export function FeriaInventoryTab({ feriaId }: { feriaId: string }) {
   const { data: inventory = [] } = useFeriaInventory(feriaId);
