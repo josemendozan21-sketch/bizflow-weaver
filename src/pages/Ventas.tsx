@@ -2429,6 +2429,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
 /* ---- Generic form (retail / al por menor) ---- */
 
+const MAGICAL_TIPOS = ["Frío", "Térmico"] as const;
+
 interface RetailProductLine {
   id: string;
   selectedRef: string;
@@ -2570,7 +2572,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
         setIsSubmitting(false);
         return;
       }
-      if (brand === "magical" && (magicalRefTypes[line.selectedRef]?.length ?? 0) > 0 && !line.tipo) {
+      if (brand === "magical" && !line.tipo) {
         toast.error("Tipo requerido", { description: "Seleccione Frío o Térmico en todas las líneas." });
         setIsSubmitting(false);
         return;
@@ -2823,8 +2825,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
                     <Select
                       value={line.selectedRef || undefined}
                       onValueChange={(v) => {
-                        const types = brand === "magical" ? (magicalRefTypes[v] || []) : [];
-                        updateProductLine(line.id, { selectedRef: v, tipo: types.length === 1 ? types[0] : "" });
+                        updateProductLine(line.id, { selectedRef: v });
                       }}
                     >
                       <SelectTrigger>
@@ -2849,7 +2850,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
                           <SelectValue placeholder={line.selectedRef ? "Frío / Térmico" : "Seleccione referencia"} />
                         </SelectTrigger>
                         <SelectContent>
-                          {(magicalRefTypes[line.selectedRef] || ["Frío", "Térmico"]).map((t) => (
+                          {MAGICAL_TIPOS.map((t) => (
                             <SelectItem key={t} value={t}>{t}</SelectItem>
                           ))}
                         </SelectContent>
