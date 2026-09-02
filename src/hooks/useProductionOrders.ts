@@ -554,10 +554,20 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
         nextStage = stages[nextIdx];
       }
 
+      // Nunca avanzar a una etapa vacía/indefinida: si no hay siguiente, la orden termina.
+      if (!nextStage) {
+        nextStage = "listo";
+      }
+
       const { error } = await supabase
         .from("production_orders")
-        .update({ current_stage: nextStage, stage_status: "pendiente" })
+        .update({
+          current_stage: nextStage,
+          stage_status: "pendiente",
+          ...(stagesNeedFix ? { stages } : {}),
+        })
         .eq("id", orderId);
+
       if (error) throw error;
 
       // Update parent order status
