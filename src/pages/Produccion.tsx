@@ -72,6 +72,7 @@ const Produccion = () => {
             <TabsTrigger value="marcas">Marcas</TabsTrigger>
             <TabsTrigger value="rollos">Corte de Rollos</TabsTrigger>
             <TabsTrigger value="historial">Historial</TabsTrigger>
+            <TabsTrigger value="cambios">Historial de cambios</TabsTrigger>
           </TabsList>
           <TabsContent value="marcas" className="mt-4">
             <ProductionBrandSelector selectedBrand={selectedBrand} onSelectBrand={setSelectedBrand} />
@@ -82,7 +83,11 @@ const Produccion = () => {
           <TabsContent value="historial" className="mt-4">
             <ProductionMovementHistory />
           </TabsContent>
+          <TabsContent value="cambios" className="mt-4">
+            <ProcessChangeLogPanel area="produccion" />
+          </TabsContent>
         </Tabs>
+
       )}
     </div>
   );
