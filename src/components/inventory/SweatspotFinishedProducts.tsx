@@ -201,10 +201,10 @@ const SweatspotFinishedProducts = ({ originFilter = "todos" }: SweatspotFinished
             onChange={(e) => setEditForm({ ...editForm, available: e.target.value })}
             className="h-7 w-16 text-right"
           />
-          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => saveEdit(item.id)}>
+          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => saveEdit(item.id)} title="Guardar cambios" aria-label={`Guardar cambios de ${item.name}`}>
             <Check className="h-4 w-4 text-primary" />
           </Button>
-          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)}>
+          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)} title="Cancelar edición" aria-label={`Cancelar edición de ${item.name}`}>
             <X className="h-4 w-4 text-destructive" />
           </Button>
         </div>
@@ -217,13 +217,13 @@ const SweatspotFinishedProducts = ({ originFilter = "todos" }: SweatspotFinished
         </span>
         {canManage && (
           <>
-            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => startEdit(item)}>
+            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => startEdit(item)} title="Editar existencias" aria-label={`Editar existencias de ${item.name}`}>
               <Pencil className="h-3.5 w-3.5" />
             </Button>
-            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleRename(item)} title="Renombrar referencia">
+            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleRename(item)} title="Renombrar referencia" aria-label={`Renombrar ${item.name}`}>
               <TextCursorInput className="h-3.5 w-3.5" />
             </Button>
-            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleDelete(item)} title="Eliminar referencia">
+            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleDelete(item)} title="Eliminar referencia" aria-label={`Eliminar ${item.name}`}>
               <Trash2 className="h-3.5 w-3.5 text-destructive" />
             </Button>
           </>
