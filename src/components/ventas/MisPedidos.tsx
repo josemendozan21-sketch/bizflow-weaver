@@ -23,6 +23,10 @@ import { PaymentsList } from "./PaymentsList";
 import { AddPaymentDialog } from "./AddPaymentDialog";
 import { PendingProofPanel } from "./PendingProofPanel";
 
+/** Compara códigos de pedido ignorando guiones y mayúsculas (SW-VM-00123 → swvm00123). */
+const normalizeCode = (v: string) => (v || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+
 const STAGE_ORDER = [
   "pendiente",
   "diseno",

@@ -26,6 +26,10 @@ import { toast } from "sonner";
 import { formatDistanceToNow, format } from "date-fns";
 import { es } from "date-fns/locale";
 
+/** Compara códigos de pedido ignorando guiones y mayúsculas (SW-VM-00123 → swvm00123). */
+const normalizeCode = (v: string) => (v || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+
 interface MayorOrder {
   id: string;
   order_code?: string | null;
