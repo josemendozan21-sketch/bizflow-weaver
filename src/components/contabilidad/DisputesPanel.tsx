@@ -11,6 +11,7 @@ import { useOrderDisputes, useResolveOrderDispute, type DisputeStatus } from "@/
 import type { Order } from "@/hooks/useOrders";
 import { useAuth } from "@/contexts/AuthContext";
 import { openSignedUrl } from "@/lib/signedUrl";
+import OrderDisputeDialog from "@/components/ventas/OrderDisputeDialog";
 
 interface Props {
   orders: Order[];
@@ -26,8 +27,60 @@ function fmt(n: number) {
   return `$${Math.round(n || 0).toLocaleString("es-CO")}`;
 }
 
+
+interface Candidate {
+  order: Order;
+  issue: string;
+}
+
+function buildCandidates(orders: Order[], disputedIds: Set<string>): Candidate[] {
+  const out: Candidate[] = [];
+  const groups = new Map<string, Order[]>();
+
+  for (const o of orders) {
+    const total = Number((o as any).total_amount) || 0;
+    const abono = Number((o as any).abono) || 0;
+    const gift = String((o as any).payment_method || "").toLowerCase() === "obsequio";
+    if (disputedIds.has(o.id)) continue;
+
+    if (total <= 0 && !gift) {
+      out.push({ order: o, issue: "Pedido en $0 sin marcar como obsequio" });
+      continue;
+    }
+    if (abono > total + 1) {
+      out.push({ order: o, issue: "Abono mayor al valor del pedido" });
+      continue;
+    }
+    if (
+      total > 0 &&
+      (o as any).invoice_status === "facturado" &&
+      !(o as any).invoice_date
+    ) {
+      out.push({ order: o, issue: "Facturado sin fecha de factura" });
+      continue;
+    }
+    const g = (o as any).group_number;
+    if (g) {
+      const key = `${g}|${(o as any).client_name || ""}|${total}`;
+      const arr = groups.get(key) || [];
+      arr.push(o);
+      groups.set(key, arr);
+    }
+  }
+
+  for (const arr of groups.values()) {
+    if (arr.length > 1 && Number((arr[0] as any).total_amount) > 0) {
+      for (const o of arr) {
+        out.push({ order: o, issue: "Posible pedido duplicado (mismo grupo, cliente y valor)" });
+      }
+    }
+  }
+
+  return out;
+}
+
 export default function DisputesPanel({ orders }: Props) {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const canResolve = role === "admin" || role === "contabilidad";
   const { data: disputes = [], isLoading } = useOrderDisputes();
   const resolve = useResolveOrderDispute();
@@ -35,6 +88,39 @@ export default function DisputesPanel({ orders }: Props) {
   const [notes, setNotes] = useState<Record<string, string>>({});
 
   const orderMap = useMemo(() => new Map(orders.map((o) => [o.id, o])), [orders]);
+
+  const disputedIds = useMemo(
+    () => new Set(disputes.filter((d) => d.status !== "rechazada").map((d) => d.order_id)),
+    [disputes]
+  );
+
+  const myOrders = useMemo(
+    () => (canResolve ? orders : orders.filter((o) => o.advisor_id === user?.id)),
+    [orders, canResolve, user?.id]
+  );
+
+  const candidates = useMemo(
+    () => buildCandidates(myOrders, disputedIds),
+    [myOrders, disputedIds]
+  );
+
+  const [search, setSearch] = useState("");
+  const searchResults = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return myOrders
+      .filter((o) =>
+        [
+          (o as any).order_code,
+          o.client_name,
+          (o as any).product,
+          o.advisor_name,
+        ]
+          .filter(Boolean)
+          .some((v) => String(v).toLowerCase().includes(q))
+      )
+      .slice(0, 25);
+  }, [myOrders, search]);
 
   const list = useMemo(
     () => (tab === "todas" ? disputes : disputes.filter((d) => d.status === tab)),
@@ -51,6 +137,7 @@ export default function DisputesPanel({ orders }: Props) {
   );
 
   return (
+    <div className="space-y-4">
     <Card>
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -213,5 +300,108 @@ export default function DisputesPanel({ orders }: Props) {
         )}
       </CardContent>
     </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Pedidos por conciliar</CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            Pedidos detectados con posibles inconsistencias de valor. Envía la solicitud
+            de corrección para que quede registrada y contabilidad la apruebe.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {candidates.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No hay pedidos con inconsistencias detectadas.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Pedido</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Asesor</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
+                    <TableHead>Inconsistencia</TableHead>
+                    <TableHead className="text-right">Acción</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {candidates.slice(0, 100).map((c) => (
+                    <TableRow key={`${c.order.id}-${c.issue}`}>
+                      <TableCell className="text-xs font-mono">
+                        {(c.order as any).order_code || "—"}
+                      </TableCell>
+                      <TableCell className="max-w-[180px] truncate">
+                        {c.order.client_name}
+                      </TableCell>
+                      <TableCell className="max-w-[160px] truncate text-xs text-muted-foreground">
+                        {c.order.advisor_name}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {fmt(Number((c.order as any).total_amount) || 0)}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        <Badge variant="outline">{c.issue}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <OrderDisputeDialog
+                          orderId={c.order.id}
+                          orderCode={(c.order as any).order_code}
+                          clientName={c.order.client_name}
+                          currentAmount={Number((c.order as any).total_amount) || 0}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          <div className="space-y-2 border-t pt-4">
+            <p className="text-xs text-muted-foreground">
+              ¿No aparece el pedido? Búscalo por número, cliente o producto y envía la
+              solicitud de corrección.
+            </p>
+            <Input
+              placeholder="Buscar pedido por N°, cliente o producto..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="max-w-md"
+            />
+            {searchResults.length > 0 && (
+              <div className="rounded-md border divide-y">
+                {searchResults.map((o) => (
+                  <div
+                    key={o.id}
+                    className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate">
+                        <span className="font-mono text-xs mr-2">
+                          {(o as any).order_code || "—"}
+                        </span>
+                        {o.client_name}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {(o as any).product} · {fmt(Number((o as any).total_amount) || 0)}
+                      </p>
+                    </div>
+                    <OrderDisputeDialog
+                      orderId={o.id}
+                      orderCode={(o as any).order_code}
+                      clientName={o.client_name}
+                      currentAmount={Number((o as any).total_amount) || 0}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
