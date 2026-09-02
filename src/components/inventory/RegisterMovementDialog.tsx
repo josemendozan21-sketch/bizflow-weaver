@@ -188,9 +188,10 @@ const RegisterMovementDialog = () => {
               <SelectContent>
                 {itemsForBrand.map((it) => (
                   <SelectItem key={it.id} value={it.id}>
-                    {it.name} <span className="text-muted-foreground">· disp. {it.available}</span>
+                    {formatStockOptionLabel(it as any)}
                   </SelectItem>
                 ))}
+
               </SelectContent>
             </Select>
             {selectedItem && (
