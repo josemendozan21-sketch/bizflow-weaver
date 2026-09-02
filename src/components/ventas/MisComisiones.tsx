@@ -510,6 +510,7 @@ export default function MisComisiones() {
                     <TableHead className="text-right">%</TableHead>
                     <TableHead className="text-right">Comisión</TableHead>
                     <TableHead>Estado / motivo</TableHead>
+                    <TableHead className="text-right">Acción</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
