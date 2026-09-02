@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import OrderDisputeDialog from "@/components/ventas/OrderDisputeDialog";
+import DisputesPanel from "@/components/contabilidad/DisputesPanel";
 import { Loader2, Info, TrendingUp, Clock, CheckCircle2, ChevronLeft, ChevronRight, Download, AlertTriangle } from "lucide-react";
 
 import { format } from "date-fns";
@@ -575,14 +576,12 @@ El período de liquidación es el <b>mes de la factura</b> (si el pedido aún
                         </p>
                       </TableCell>
                       <TableCell className="text-right">
-                        {!(Number(l.order.total_amount) > 0) && (
-                          <OrderDisputeDialog
+                        <OrderDisputeDialog
                             orderId={l.order.id}
                             orderCode={(l.order as any).order_code}
                             clientName={l.order.client_name}
                             currentAmount={Number(l.order.total_amount) || 0}
-                          />
-                        )}
+                        />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -593,6 +592,8 @@ El período de liquidación es el <b>mes de la factura</b> (si el pedido aún
           )}
         </CardContent>
       </Card>
+
+      <DisputesPanel orders={orders} />
 
       {history.length > 0 && (
         <Card>
