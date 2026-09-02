@@ -30,9 +30,9 @@ const NON_PREVIEW_EXTENSIONS = new Set(["ai", "eps", "psd", "cdr"]);
 
 function PdfThumbnail({ url, name, alt }: { url: string; name: string; alt: string }) {
   const hostRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [visible, setVisible] = useState(false);
   const [state, setState] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [thumbnail, setThumbnail] = useState<string | null>(null);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -72,14 +72,17 @@ function PdfThumbnail({ url, name, alt }: { url: string; name: string; alt: stri
         const initialViewport = page.getViewport({ scale: 1 });
         const scale = Math.min(1.5, 520 / initialViewport.width);
         const viewport = page.getViewport({ scale });
-        const canvas = canvasRef.current;
-        if (!canvas || cancelled) return;
+        if (cancelled) return;
+        const canvas = document.createElement("canvas");
         const context = canvas.getContext("2d", { alpha: false });
         if (!context) throw new Error("Canvas unavailable");
         canvas.width = Math.ceil(viewport.width);
         canvas.height = Math.ceil(viewport.height);
         await page.render({ canvas, canvasContext: context, viewport }).promise;
-        if (!cancelled) setState("ready");
+        if (!cancelled) {
+          setThumbnail(canvas.toDataURL("image/png"));
+          setState("ready");
+        }
       } catch {
         if (!cancelled) setState("error");
       }
@@ -97,12 +100,13 @@ function PdfThumbnail({ url, name, alt }: { url: string; name: string; alt: stri
       {state !== "error" && (
         <div className="relative flex min-h-20 w-full items-center justify-center overflow-hidden rounded border bg-background">
           {state !== "ready" && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
-          <canvas
-            ref={canvasRef}
-            role="img"
-            aria-label={`${alt}, primera página del PDF`}
-            className={`${state === "ready" ? "block" : "hidden"} max-h-40 max-w-full object-contain`}
-          />
+          {thumbnail && (
+            <img
+              src={thumbnail}
+              alt={`${alt}, primera página del PDF`}
+              className="block max-h-40 max-w-full object-contain"
+            />
+          )}
         </div>
       )}
       {state === "error" && <FileText className="h-9 w-9 text-destructive" />}
