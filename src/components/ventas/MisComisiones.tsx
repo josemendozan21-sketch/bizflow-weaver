@@ -575,7 +575,7 @@ El período de liquidación es el <b>mes de la factura</b> (si el pedido aún
                         </p>
                       </TableCell>
                       <TableCell className="text-right">
-                        {!(Number(l.order.total_amount) > 0) && (
+                        {true && (
                           <OrderDisputeDialog
                             orderId={l.order.id}
                             orderCode={(l.order as any).order_code}
