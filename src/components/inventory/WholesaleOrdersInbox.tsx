@@ -1074,7 +1074,19 @@ const WholesaleOrdersInbox = () => {
                           }
                         />
                       </div>
+                      {selected && (
+                        <p className="text-[11px] text-muted-foreground">
+                          Se descontará de: <strong>{cleanReferenceName(selected.name)}</strong>
+                          {stockOptionParts(selected).length > 0 ? ` · ${stockOptionParts(selected).join(" · ")}` : ""}
+                          {Number(r.qty) > Number(selected.available || 0) && (
+                            <span className="text-destructive font-medium">
+                              {" "}— stock insuficiente ({selected.available} disp.)
+                            </span>
+                          )}
+                        </p>
+                      )}
                     </div>
+
                   );
                 })}
               </div>
