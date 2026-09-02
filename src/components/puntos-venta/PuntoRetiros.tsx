@@ -17,6 +17,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { openSignedUrl } from "@/lib/signedUrl";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { computePosCash, isCashMethod } from "@/lib/pettyCash";
+import {
+  useSedePettyExpenses,
+  useSedeCashCounts,
+  useCreateSedePettyExpense,
+  useCreateSedeCashCount,
+} from "@/hooks/usePosPettyCash";
 
 type Props = { locationId: string; cashBase?: number };
 
@@ -27,16 +34,23 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
 
   const { data: withdrawals = [] } = usePosCashWithdrawals(locationId);
   const { data: sales = [] } = usePosSales(locationId);
+  const { data: posExpenses = [] } = useSedePettyExpenses("chico");
+  const { data: counts = [] } = useSedeCashCounts("chico");
   const create = useCreateCashWithdrawal(locationId);
   const decide = useDecideCashWithdrawal(locationId);
+  const createExpense = useCreateSedePettyExpense("chico");
+  const createCount = useCreateSedeCashCount("chico");
 
   const [showForm, setShowForm] = useState(false);
-  const [movementType, setMovementType] = useState<"retiro" | "consignacion">("retiro");
+  const [movementType, setMovementType] = useState<"retiro" | "consignacion" | "gasto">("retiro");
   const [amount, setAmount] = useState("");
   const [concept, setConcept] = useState("");
   const [notes, setNotes] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [showCount, setShowCount] = useState(false);
+  const [countedAmount, setCountedAmount] = useState("");
+  const [countNotes, setCountNotes] = useState("");
 
   const today = new Date().toISOString().slice(0, 10);
   const isCash = isCashMethod;
