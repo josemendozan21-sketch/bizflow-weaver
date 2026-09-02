@@ -14,6 +14,10 @@ import InventoryDashboardSummary from "@/components/inventory/InventoryDashboard
 import Punto92WarehousePanel from "@/components/inventory/Punto92WarehousePanel";
 import FeriasWarehousePanel from "@/components/inventory/FeriasWarehousePanel";
 import InventoryTraceabilityPanel from "@/components/inventory/InventoryTraceabilityPanel";
+import OrderRequirementsPanel from "@/components/inventory/OrderRequirementsPanel";
+import BatchReceptionPanel from "@/components/inventory/BatchReceptionPanel";
+import ProductionBatchesPanel from "@/components/production/ProductionBatchesPanel";
+
 
 type WarehouseKey = "principal" | "punto92" | "ferias";
 
