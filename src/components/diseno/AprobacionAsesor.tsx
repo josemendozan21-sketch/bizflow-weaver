@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { LogoPreview } from "./LogoPreview";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
+import { DesignerCard } from "./TrabajoDisenador";
 
 interface Props {
   requests: LogoRequest[];
@@ -20,9 +21,29 @@ interface Props {
 export function AprobacionAsesor({ requests }: Props) {
   const { role } = useAuth();
   const filtered = requests.filter((r) => r.status === "aprobado");
+  const pending = requests.filter((r) => r.status === "listo_aprobacion");
+  const canApprove = role === "asesor_comercial" || role === "admin";
 
   return (
     <div className="space-y-4">
+      {canApprove && pending.length > 0 && (
+        <div className="space-y-3">
+          <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-3">
+            <h2 className="text-base font-semibold text-indigo-900">
+              Pendientes de tu aprobación ({pending.length})
+            </h2>
+            <p className="text-xs text-indigo-800">
+              El diseñador ya publicó estos diseños. Apruébalos o solicita modificaciones.
+            </p>
+          </div>
+          <div className="grid gap-4">
+            {pending.map((req) => (
+              <DesignerCard key={req.id} request={req} />
+            ))}
+          </div>
+        </div>
+      )}
+
       <div>
         <h2 className="text-lg font-semibold text-foreground">Logos aprobados — Listos para estampado</h2>
         <p className="text-sm text-muted-foreground">{filtered.length} diseño(s) aprobado(s)</p>
