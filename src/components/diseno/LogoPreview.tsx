@@ -78,7 +78,7 @@ function PdfThumbnail({ url, name, alt }: { url: string; name: string; alt: stri
         if (!context) throw new Error("Canvas unavailable");
         canvas.width = Math.ceil(viewport.width);
         canvas.height = Math.ceil(viewport.height);
-        await page.render({ canvasContext: context, viewport }).promise;
+        await page.render({ canvas, canvasContext: context, viewport }).promise;
         if (!cancelled) setState("ready");
       } catch {
         if (!cancelled) setState("error");
