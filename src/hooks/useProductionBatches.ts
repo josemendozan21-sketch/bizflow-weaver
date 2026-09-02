@@ -107,7 +107,18 @@ export function useProductionBatches() {
     [call],
   );
 
+  const revertReception = useCallback(
+    (id: string, reason: string) =>
+      call(
+        "revert_production_batch_reception",
+        { _batch_id: id, _reason: reason },
+        "Lote devuelto a producción",
+      ),
+    [call],
+  );
+
   const itemsOf = useCallback((batchId: string) => items.filter((i) => i.batch_id === batchId), [items]);
 
-  return { batches, items, itemsOf, isLoading, refetch: fetchAll, startBatch, finishBatch, receiveBatch };
+  return { batches, items, itemsOf, isLoading, refetch: fetchAll, startBatch, finishBatch, receiveBatch, revertReception };
 }
+
