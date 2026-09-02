@@ -1251,9 +1251,13 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       "ventas:mw:noLogo","ventas:mw:needsLogoAdjustment","ventas:mw:costoAdicional",
       "ventas:mw:cobroLogo","ventas:mw:costoLogo",
       "ventas:mw:moldeNuevo","ventas:mw:moldeNombre","ventas:mw:moldeCosto","ventas:mw:moldeModo",
-      "ventas:mw:fields",
+      "ventas:mw:fields","ventas:mw:logoCount","ventas:mw:clientName","ventas:mw:recompraLogoUrl",
     ].forEach(clearFormDraft);
     setLogoFileState(null);
+    setLogoFile2State(null);
+    setLogoCount(1);
+    setClientName("");
+    setRecompraLogoUrl("");
     setRutFileState(null);
     setPaymentProofFile(null);
     setMoldeNuevo(false);
