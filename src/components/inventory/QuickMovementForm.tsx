@@ -308,18 +308,10 @@ export default function QuickMovementForm() {
             <SelectContent>
               {items.map((it) => (
                 <SelectItem key={it.id} value={it.id}>
-                  {it.name}
-                  {it.brand === "magical" && it.product_type
-                    ? ` · ${/calor|t[eé]rmico/i.test(it.product_type) ? "Térmico" : it.product_type}`
-                    : ""}
-                  {it.brand === "sweatspot"
-                    ? ` · ${it.logo ? `Con logo${typeof it.logo === "string" && it.logo.toLowerCase() !== "sweatspot" ? ` (${it.logo})` : ""}` : "Sin logo"}`
-                    : ""}
-                  {it.color ? ` · ${it.color}` : ""}
-                  {" · disp. "}{it.available}
-                  {Number((it as any).in_process || 0) > 0 ? ` · en proceso ${(it as any).in_process}` : ""}
+                  {formatStockOptionLabel(it as any)}
                 </SelectItem>
               ))}
+
             </SelectContent>
           </Select>
           {selected && (
