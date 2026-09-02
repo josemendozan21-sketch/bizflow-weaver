@@ -212,27 +212,55 @@ const MateriaPrimaPanel = () => {
   };
 
   const startEdit = (it: SupabaseStockItem) => {
-    setEditingId(it.id);
-    setEditForm({ available: String(it.available), minStock: String(it.min_stock) });
+    setEditTarget(it);
+    setEditForm({
+      name: it.name,
+      brand: (it.brand || "ambas").toLowerCase(),
+      unit: it.unit || "unidades",
+      available: String(it.available),
+      minStock: String(it.min_stock),
+    });
   };
 
-  const saveEdit = async (id: string) => {
-    const res = await updateStockItem(id, {
-      available: Number(editForm.available),
-      min_stock: Number(editForm.minStock),
+  const saveEdit = async () => {
+    if (!editTarget) return;
+    if (!editForm.name.trim()) {
+      toast.error("El nombre es obligatorio");
+      return;
+    }
+    setSavingEdit(true);
+    const res = await updateStockItem(editTarget.id, {
+      name: editForm.name.trim(),
+      brand: editForm.brand,
+      unit: editForm.unit,
+      available: Number(editForm.available) || 0,
+      min_stock: Number(editForm.minStock) || 0,
     });
+    setSavingEdit(false);
     if (res.success) {
-      toast.success("Actualizado");
-      setEditingId(null);
+      toast.success("Materia prima actualizada");
+      setEditTarget(null);
     } else toast.error(res.message);
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`¿Eliminar "${name}"?`)) return;
-    const res = await deleteStockItem(id);
-    if (res.success) toast.success("Eliminado");
-    else toast.error(res.message);
+  const askDelete = async (it: SupabaseStockItem) => {
+    setDeleteTarget(it);
+    setDeleteMovements(null);
+    const { count } = await supabase
+      .from("inventory_movements")
+      .select("id", { count: "exact", head: true })
+      .eq("stock_item_id", it.id);
+    setDeleteMovements(count ?? 0);
   };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const res = await deleteStockItem(deleteTarget.id);
+    if (res.success) toast.success("Materia prima eliminada");
+    else toast.error(res.message);
+    setDeleteTarget(null);
+  };
+
 
   return (
     <Card>
