@@ -33,6 +33,9 @@ import { useFormDraft, clearFormDraft, usePersistedState } from "@/hooks/useForm
 import OrderLogosField, { makeLogoEntry, type LogoEntry } from "@/components/ventas/OrderLogosField";
 import { OrderConfirmationDialog, type OrderSummary } from "@/components/ventas/OrderConfirmationDialog";
 import { buildStages } from "@/lib/orderFlow";
+import { LogoSearchDialog } from "@/components/ventas/LogoSearchDialog";
+import { notifyLogoFlow, type LogoSource } from "@/lib/recompraLogoFlow";
+import { LogoPreview } from "@/components/diseno/LogoPreview";
 type Brand = "sweatspot" | "magical";
 type SaleType = "mayor" | "menor";
 
@@ -626,6 +629,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [mwLogos, setMwLogos] = useState<LogoEntry[]>(() => [makeLogoEntry()]);
   const [clientName, setClientName] = usePersistedState<string>("ventas:mw:clientName", "");
   const [recompraLogoUrl, setRecompraLogoUrl] = usePersistedState<string>("ventas:mw:recompraLogoUrl", "");
+  const [recompraMismoLogo, setRecompraMismoLogo] = usePersistedState<"si" | "no">("ventas:mw:recompraMismoLogo", "si");
   const [rutFileState, setRutFileState] = useState<File | null>(null);
   // Molde nuevo (sólo Magical)
   const [moldeNuevo, setMoldeNuevo] = usePersistedState("ventas:mw:moldeNuevo", false);
@@ -825,9 +829,12 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
     // Cada logo agregado necesita archivo y nombre (excepto recompras, donde
     // el primer logo puede reutilizarse del histórico del cliente).
-    const incompleteIdx = activeLogos.findIndex(
-      (l, i) => (!l.file || l.file.size === 0 ? !(i === 0 && isRecompra) : false) || !l.name.trim(),
-    );
+    const reusaLogoAnterior = isRecompra && !noLogo && recompraMismoLogo === "si";
+    const incompleteIdx = reusaLogoAnterior
+      ? -1
+      : activeLogos.findIndex(
+          (l) => !l.file || l.file.size === 0 || !l.name.trim(),
+        );
     if (!noLogo && incompleteIdx >= 0) {
       toast.error(`Logo ${incompleteIdx + 1} incompleto`, {
         description: "Adjunte el archivo del logo y escriba su nombre de referencia.",
@@ -837,16 +844,23 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     }
 
     // Recompra: el logo debe quedar registrado (archivo nuevo o logo anterior)
-    if (isRecompra && !noLogo && !(logoFile && logoFile.size > 0) && !recompraLogoUrl) {
-      toast.error("Logo de la recompra requerido", {
-        description: "Seleccione un logo anterior del cliente o adjunte el archivo del logo.",
+    if (reusaLogoAnterior && !recompraLogoUrl) {
+      toast.error("Seleccione el logo anterior", {
+        description: "Use el buscador para elegir el logo ya trabajado con este cliente.",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+    if (isRecompra && !noLogo && recompraMismoLogo === "no" && !(logoFile && logoFile.size > 0)) {
+      toast.error("Adjunte el logo actualizado", {
+        description: "El cliente cambió el logo: adjunte el archivo nuevo para que Diseño y Estampación lo reciban.",
       });
       setIsSubmitting(false);
       return;
     }
 
     // Nombre/referencia del logo OBLIGATORIO para pedidos mayor con logo
-    if (!noLogo && !logoNombre) {
+    if (!noLogo && !reusaLogoAnterior && !logoNombre) {
       toast.error("Referencia del logo requerida", {
         description: "Escriba un nombre claro para identificar el logo (ej: Logo Coca-Cola v2).",
       });
@@ -940,7 +954,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     let firstOrderIdForLogo: string | null = null;
     const hasLogoFile = !!(logoFile && logoFile.size > 0);
     const hasPersonalization = !!(personalizacion && personalizacion.trim());
-    if ((hasLogoFile || hasPersonalization) && user && !isRecompra && !noLogo) {
+    if ((hasLogoFile || hasPersonalization) && user && !reusaLogoAnterior && !noLogo) {
       const firstLine = orderLines[0];
       const referencia = `${firstLine.product} (${firstLine.type})`;
       const result = await createLogoRequestFromOrder({
@@ -956,6 +970,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         extraLogos: activeLogos.slice(2).map((l) => ({ file: l.file, name: l.name.trim() })),
         clientComments: observaciones || undefined,
         additionalInstructions: personalizacion || undefined,
+        fromRecompra: isRecompra,
       });
       if (result.success) {
         toast.success("Diseño de logo", { description: result.message });
@@ -968,33 +983,19 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         if (result.logoUrl2) logoUrl2 = result.logoUrl2;
       }
       extraLogoUrls = result.extraLogoUrls || [];
-    } else if (logoFile && logoFile.size > 0 && isRecompra) {
-      // Recompra: subir el logo directamente para conservar la URL real.
-      const ext = logoFile.name.split(".").pop();
-      const path = `originals/${crypto.randomUUID()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("logo-files").upload(path, logoFile);
-      if (!upErr) {
-        const { data: urlData } = supabase.storage.from("logo-files").getPublicUrl(path);
-        logoUrl = urlData.publicUrl;
-      } else {
-        logoUrl = "logo-uploaded";
-      }
-      for (let i = 1; i < activeLogos.length; i++) {
-        const extra = activeLogos[i].file;
-        if (!extra || extra.size === 0) continue;
-        const extExtra = extra.name.split(".").pop();
-        const pathExtra = `originals/${crypto.randomUUID()}.${extExtra}`;
-        const { error: upErrExtra } = await supabase.storage.from("logo-files").upload(pathExtra, extra);
-        if (upErrExtra) continue;
-        const { data: urlExtra } = supabase.storage.from("logo-files").getPublicUrl(pathExtra);
-        if (i === 1) logoUrl2 = urlExtra.publicUrl;
-        else extraLogoUrls.push(urlExtra.publicUrl);
-      }
-    } else if (isRecompra && !noLogo && recompraLogoUrl) {
+    } else if (reusaLogoAnterior && recompraLogoUrl) {
       // Recompra sin archivo nuevo: se reutiliza el logo aprobado anteriormente.
       logoUrl = recompraLogoUrl;
     }
-    if (isRecompra && !logoUrl && recompraLogoUrl) logoUrl = recompraLogoUrl;
+    if (reusaLogoAnterior && !logoUrl && recompraLogoUrl) logoUrl = recompraLogoUrl;
+
+    const logoSource: LogoSource = noLogo ? "sin_logo" : reusaLogoAnterior ? "reutilizado" : "nuevo";
+    const logoSourceMeta = {
+      logo_source: logoSource,
+      logo_source_at: new Date().toISOString(),
+      logo_source_by: user?.id || null,
+      logo_source_by_name: user?.email || null,
+    };
 
     const buildMagicalStages = (isThermic: boolean) => {
       const base = noLogo
@@ -1195,11 +1196,14 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           gel_color: gelColor,
           logo_url: logoUrl,
           logo_url_2: logoUrl2,
-          logo_count: logosCount,
+          ...logoSourceMeta,
+          logo_count: reusaLogoAnterior ? 1 : logosCount,
           logo_name: logoNombre || null,
           logo_name_2: logosCount >= 2 ? (logoNombre2 || null) : null,
           logos: noLogo
             ? []
+            : reusaLogoAnterior
+            ? [{ name: logoNombre || "Logo anterior del cliente", url: logoUrl }]
             : activeLogos.map((l, i) => ({
                 name: l.name.trim() || null,
                 url: i === 0 ? logoUrl : i === 1 ? logoUrl2 : (extraLogoUrls[i - 2] ?? null),
@@ -1251,13 +1255,28 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         clientName: clientNameValue,
         needsCuerpos: false,
         shortage: 0,
-        hasLogo: !!logoFile,
+        hasLogo: logoSource === "nuevo",
         advisorId: user?.id || "",
       });
     }
 
     if (logoRequestId && firstOrderIdForLogo) {
       await supabase.from("logo_requests").update({ order_id: firstOrderIdForLogo }).eq("id", logoRequestId);
+    }
+
+    if (firstOrderIdForLogo && logoSource !== "sin_logo") {
+      await notifyLogoFlow({
+        orderId: firstOrderIdForLogo,
+        orderCode: createdCodes[0] ?? null,
+        clientName: clientNameValue,
+        brandLabel: "Magical Warmers",
+        product: `${orderLines[0]?.product ?? ""} (${orderLines[0]?.type ?? ""})`.trim(),
+        logoUrl,
+        logoSource,
+        isRecompra,
+        userId: user?.id ?? null,
+        userName: user?.email ?? null,
+      });
     }
 
     queryClient.invalidateQueries({ queryKey: ["production-orders"] });
@@ -1293,7 +1312,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       "ventas:mw:noLogo","ventas:mw:needsLogoAdjustment","ventas:mw:costoAdicional",
       "ventas:mw:cobroLogo","ventas:mw:costoLogo",
       "ventas:mw:moldeNuevo","ventas:mw:moldeNombre","ventas:mw:moldeCosto","ventas:mw:moldeModo",
-      "ventas:mw:fields","ventas:mw:clientName","ventas:mw:recompraLogoUrl",
+      "ventas:mw:fields","ventas:mw:clientName","ventas:mw:recompraLogoUrl","ventas:mw:recompraMismoLogo",
     ].forEach(clearFormDraft);
     setMwLogos([makeLogoEntry()]);
     setClientName("");
@@ -1631,10 +1650,33 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 <Switch id="mw_cobroLogo" checked={cobroLogo} onCheckedChange={setCobroLogo} />
               </div>
             </div>
-            {isRecompra && (
-              <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3">
-                ✓ Recompra: El logo ya existe, no se generará solicitud de diseño automática.
-              </p>
+            {isRecompra && !noLogo && (
+              <div className="space-y-2 rounded-md border border-primary/40 bg-primary/5 p-3">
+                <Label className="text-sm font-semibold">¿El cliente utilizará el mismo logo?</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={recompraMismoLogo === "si" ? "default" : "outline"}
+                    onClick={() => setRecompraMismoLogo("si")}
+                  >
+                    Sí, el mismo logo
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={recompraMismoLogo === "no" ? "default" : "outline"}
+                    onClick={() => setRecompraMismoLogo("no")}
+                  >
+                    No, logo actualizado
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {recompraMismoLogo === "si"
+                    ? "Se reutiliza el logo aprobado anteriormente y se notifica a Estampación."
+                    : "Se creará una solicitud de diseño y se notificará a Diseño y Estampación del logo nuevo."}
+                </p>
+              </div>
             )}
             {noLogo && (
               <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3">
@@ -1742,39 +1784,37 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
             {!noLogo && (
               <div className="rounded-lg border border-input p-4 space-y-4">
-                {isRecompra && (
-                  <div className="space-y-1.5 rounded-md border border-input bg-muted/30 p-3">
+                {isRecompra && recompraMismoLogo === "si" && (
+                  <div className="space-y-2 rounded-md border border-input bg-muted/30 p-3">
                     <Label>Logo anterior del cliente *</Label>
-                    <Select value={recompraLogoUrl || undefined} onValueChange={setRecompraLogoUrl}>
-                      <SelectTrigger>
-                        <SelectValue
-                          placeholder={
-                            clientName.trim().length < 3
-                              ? "Escriba primero el nombre del cliente"
-                              : previousLogos.length
-                                ? "Seleccionar logo ya trabajado"
-                                : "Sin logos previos — adjunte el archivo"
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {previousLogos.map((l: any) => {
-                          const url = l.adjusted_logo_url || l.original_logo_url;
-                          return (
-                            <SelectItem key={l.id} value={url}>
-                              {(l.logo_name || l.product || "Logo") + " — " + new Date(l.created_at).toLocaleDateString("es-CO")}
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      En recompras el logo no se genera de nuevo: selecciónelo aquí o adjunte el archivo para que Estampación lo reciba.
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <LogoSearchDialog
+                        clientName={clientName}
+                        brand="Magical"
+                        selectedUrl={recompraLogoUrl}
+                        onSelect={setRecompraLogoUrl}
+                      />
+                      {recompraLogoUrl && (
+                        <Button type="button" variant="ghost" size="sm" onClick={() => setRecompraLogoUrl("")}>
+                          Quitar selección
+                        </Button>
+                      )}
+                    </div>
+                    {recompraLogoUrl ? (
+                      <div className="max-w-[220px]">
+                        <LogoPreview url={recompraLogoUrl} alt="Logo seleccionado" />
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Busque por cliente, marca, producto o nombre del logo. Si no lo encuentra, elija "No, logo actualizado" y adjunte el archivo.
+                      </p>
+                    )}
                   </div>
                 )}
 
-                <OrderLogosField logos={mwLogos} onChange={setMwLogos} />
+                {!(isRecompra && recompraMismoLogo === "si") && (
+                  <OrderLogosField logos={mwLogos} onChange={setMwLogos} />
+                )}
               </div>
             )}
 
@@ -1907,6 +1947,9 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const [ssPaymentDate, setSsPaymentDate] = usePersistedState<string>("ventas:ss:paymentDate", new Date().toISOString().slice(0, 10));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ssIsRecompra, setSsIsRecompra] = usePersistedState("ventas:ss:isRecompra", false);
+  const [ssRecompraMismoLogo, setSsRecompraMismoLogo] = usePersistedState<"si" | "no">("ventas:ss:recompraMismoLogo", "si");
+  const [ssRecompraLogoUrl, setSsRecompraLogoUrl] = usePersistedState<string>("ventas:ss:recompraLogoUrl", "");
+  const [ssClientName, setSsClientName] = usePersistedState<string>("ventas:ss:clientName", "");
   const [ssNoLogo, setSsNoLogo] = usePersistedState("ventas:ss:noLogo", false);
   const [ssNeedsLogoAdjustment, setSsNeedsLogoAdjustment] = usePersistedState("ventas:ss:needsLogoAdjustment", false);
   const [ssCobroLogo, setSsCobroLogo] = usePersistedState("ventas:ss:cobroLogo", false);
@@ -1975,8 +2018,24 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     const logoNombre = ((fd.get("ss_logo_nombre") as string) || "").trim();
     const fechaRequerida = fd.get("ss_fechaRequerida") as string;
 
+    const ssReusaLogoAnterior = ssIsRecompra && !ssNoLogo && ssRecompraMismoLogo === "si";
+    if (ssReusaLogoAnterior && !ssRecompraLogoUrl) {
+      toast.error("Seleccione el logo anterior", {
+        description: "Use el buscador para elegir el logo ya trabajado con este cliente.",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+    if (ssIsRecompra && !ssNoLogo && ssRecompraMismoLogo === "no" && !(logoFile && logoFile.size > 0)) {
+      toast.error("Adjunte el logo actualizado", {
+        description: "El cliente cambió el logo: adjunte el archivo nuevo para que Diseño y Estampación lo reciban.",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
     // Nombre/referencia del logo OBLIGATORIO para pedidos mayor con logo
-    if (!ssNoLogo && !logoNombre) {
+    if (!ssNoLogo && !ssReusaLogoAnterior && !logoNombre) {
       toast.error("Referencia del logo requerida", {
         description: "Escriba un nombre claro para identificar el logo (ej: Logo Coca-Cola v2).",
       });
@@ -2032,7 +2091,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     let ssFirstOrderIdForLogo: string | null = null;
     const ssHasLogoFile = !!(logoFile && logoFile.size > 0);
     const ssHasPersonalization = !!(personalizacion && personalizacion.trim());
-    if ((ssHasLogoFile || ssHasPersonalization) && user && !ssIsRecompra && !ssNoLogo) {
+    if ((ssHasLogoFile || ssHasPersonalization) && user && !ssReusaLogoAnterior && !ssNoLogo) {
       const firstRef = ssLines[0].referencia;
       const result = await createLogoRequestFromOrder({
         brand: "Sweatspot",
@@ -2044,6 +2103,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         logoFile: ssHasLogoFile ? logoFile : null,
         clientComments: observaciones || undefined,
         additionalInstructions: personalizacion || undefined,
+        fromRecompra: ssIsRecompra,
       });
       if (result.success) {
         toast.success("Diseño de logo", { description: result.message });
@@ -2053,7 +2113,17 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         toast.error("Diseño de logo", { description: result.message });
         if (result.logoUrl) logoUrl = result.logoUrl;
       }
+    } else if (ssReusaLogoAnterior && ssRecompraLogoUrl) {
+      logoUrl = ssRecompraLogoUrl;
     }
+
+    const ssLogoSource: LogoSource = ssNoLogo ? "sin_logo" : ssReusaLogoAnterior ? "reutilizado" : "nuevo";
+    const ssLogoSourceMeta = {
+      logo_source: ssLogoSource,
+      logo_source_at: new Date().toISOString(),
+      logo_source_by: user?.id || null,
+      logo_source_by_name: user?.email || null,
+    };
 
     const ssShortStages = buildStages("sweatspot", { hasLogo: !ssNoLogo, needsCuerpos: false, product: "" });
     const ssFullStagesFor = (product: string) =>
@@ -2145,6 +2215,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
           ink_color: inkColor,
           silicone_color: siliconeColor,
           logo_url: logoUrl,
+          ...ssLogoSourceMeta,
           observations: [observaciones, lineIdx === 0 ? ssLogoNote : ""].filter(Boolean).join(" | ") || null,
           personalization: personalizacion || null,
           advisor_id: user?.id || "",
@@ -2204,13 +2275,27 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         clientName,
         needsCuerpos: false,
         shortage: 0,
-        hasLogo: !!logoFile,
+        hasLogo: ssLogoSource === "nuevo",
         advisorId: user?.id || "",
       });
     }
 
     if (ssLogoRequestId && ssFirstOrderIdForLogo) {
       await supabase.from("logo_requests").update({ order_id: ssFirstOrderIdForLogo }).eq("id", ssLogoRequestId);
+    }
+
+    if (ssFirstOrderIdForLogo && ssLogoSource !== "sin_logo") {
+      await notifyLogoFlow({
+        orderId: ssFirstOrderIdForLogo,
+        clientName,
+        brandLabel: "Sweatspot",
+        product: ssLines[0]?.referencia ?? "",
+        logoUrl,
+        logoSource: ssLogoSource,
+        isRecompra: ssIsRecompra,
+        userId: user?.id ?? null,
+        userName: user?.email ?? null,
+      });
     }
 
     queryClient.invalidateQueries({ queryKey: ["production-orders"] });
@@ -2238,11 +2323,13 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
     [
       "ventas:ss:lines","ventas:ss:abono","ventas:ss:estadoPago",
-      "ventas:ss:isRecompra","ventas:ss:noLogo","ventas:ss:needsLogoAdjustment",
+      "ventas:ss:isRecompra","ventas:ss:recompraMismoLogo","ventas:ss:recompraLogoUrl","ventas:ss:clientName","ventas:ss:noLogo","ventas:ss:needsLogoAdjustment",
       "ventas:ss:cobroLogo","ventas:ss:costoLogo",
       "ventas:ss:fields",
     ].forEach(clearFormDraft);
     setSsLogoFileState(null);
+    setSsRecompraLogoUrl("");
+    setSsClientName("");
     setSsRutFileState(null);
     setSsPaymentProofFile(null);
     onReset();
@@ -2323,6 +2410,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
               <ClientNameAutocomplete
                 name="ss_nombre"
                 required
+                value={ssClientName}
+                onValueChange={setSsClientName}
                 onSelect={(c) => {
                   const f = ssFormRef.current;
                   if (!f) return;
@@ -2483,10 +2572,23 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                 <Switch id="ss_cobroLogo" checked={ssCobroLogo} onCheckedChange={setSsCobroLogo} />
               </div>
             </div>
-            {ssIsRecompra && (
-              <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3 max-w-md">
-                ✓ Recompra: El logo ya existe, no se generará solicitud de diseño automática.
-              </p>
+            {ssIsRecompra && !ssNoLogo && (
+              <div className="space-y-2 rounded-md border border-primary/40 bg-primary/5 p-3 max-w-md">
+                <Label className="text-sm font-semibold">¿El cliente utilizará el mismo logo?</Label>
+                <div className="flex gap-2">
+                  <Button type="button" size="sm" variant={ssRecompraMismoLogo === "si" ? "default" : "outline"} onClick={() => setSsRecompraMismoLogo("si")}>
+                    Sí, el mismo logo
+                  </Button>
+                  <Button type="button" size="sm" variant={ssRecompraMismoLogo === "no" ? "default" : "outline"} onClick={() => setSsRecompraMismoLogo("no")}>
+                    No, logo actualizado
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {ssRecompraMismoLogo === "si"
+                    ? "Se reutiliza el logo aprobado anteriormente y se notifica a Estampación."
+                    : "Se creará una solicitud de diseño y se notificará a Diseño y Estampación del logo nuevo."}
+                </p>
+              </div>
             )}
             {ssNoLogo && (
               <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3 max-w-md">
@@ -2515,8 +2617,37 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Archivos adjuntos</legend>
+            {ssIsRecompra && !ssNoLogo && ssRecompraMismoLogo === "si" && (
+              <div className="space-y-2 rounded-md border border-input bg-muted/30 p-3 max-w-md">
+                <Label>Logo anterior del cliente *</Label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <LogoSearchDialog
+                    clientName={ssClientName}
+                    brand="Sweatspot"
+                    selectedUrl={ssRecompraLogoUrl}
+                    onSelect={setSsRecompraLogoUrl}
+                  />
+                  {ssRecompraLogoUrl && (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setSsRecompraLogoUrl("")}>
+                      Quitar selección
+                    </Button>
+                  )}
+                </div>
+                {ssRecompraLogoUrl ? (
+                  <div className="max-w-[220px]">
+                    <LogoPreview url={ssRecompraLogoUrl} alt="Logo seleccionado" />
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Busque por cliente, marca, producto o nombre del logo. Si no lo encuentra, elija "No, logo actualizado" y adjunte el archivo.
+                  </p>
+                )}
+              </div>
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
-              <FileField label="Adjuntar logo" name="ss_logo" value={ssLogoFileState} onChange={setSsLogoFileState} accept="image/*,.pdf,.svg,.ai" />
+              {!(ssIsRecompra && ssRecompraMismoLogo === "si") && (
+                <FileField label="Adjuntar logo" name="ss_logo" value={ssLogoFileState} onChange={setSsLogoFileState} accept="image/*,.pdf,.svg,.ai" />
+              )}
               <FileField label="Adjuntar RUT de la empresa (opcional)" name="ss_rut" value={ssRutFileState} onChange={setSsRutFileState} accept="image/*,.pdf" />
             </div>
             <div className="space-y-1.5">
