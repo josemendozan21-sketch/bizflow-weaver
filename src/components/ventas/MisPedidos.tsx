@@ -1227,6 +1227,7 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
               <p className="text-muted-foreground">
                 {quantity || 0} uds × ${(unitPrice || 0).toLocaleString("es-CO")}
                 {extraCost > 0 ? ` + $${extraCost.toLocaleString("es-CO")}` : ""}
+                {chargesTotal > 0 ? ` + $${chargesTotal.toLocaleString("es-CO")} en cargos` : ""}
                 {newTotalPreview !== (Number(order.total_amount) || 0) && (
                   <> · Diferencia: {newTotalPreview > (Number(order.total_amount) || 0) ? "+" : "-"}$
                     {Math.abs(newTotalPreview - (Number(order.total_amount) || 0)).toLocaleString("es-CO")}</>
@@ -1249,6 +1250,8 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
               />
             </div>
           </fieldset>
+
+          <OrderChangeLogPanel orderId={order.id} />
 
           {!isLocked && (
             <Button className="w-full" onClick={handleSave} disabled={saving}>
