@@ -309,6 +309,7 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
                     <th className="text-right p-2">Ventas efectivo</th>
                     <th className="text-right p-2">Retiros</th>
                     <th className="text-right p-2">Consignaciones</th>
+                    <th className="text-right p-2">Gastos</th>
                     <th className="text-right p-2">Saldo</th>
                   </tr>
                 </thead>
