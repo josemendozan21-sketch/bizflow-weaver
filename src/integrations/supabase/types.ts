@@ -1676,6 +1676,7 @@ export type Database = {
           design_notes: string | null
           designer_id: string | null
           designer_name: string | null
+          extra_logos: Json
           id: string
           logo_name: string | null
           order_id: string | null
@@ -1699,6 +1700,7 @@ export type Database = {
           design_notes?: string | null
           designer_id?: string | null
           designer_name?: string | null
+          extra_logos?: Json
           id?: string
           logo_name?: string | null
           order_id?: string | null
@@ -1722,6 +1724,7 @@ export type Database = {
           design_notes?: string | null
           designer_id?: string | null
           designer_name?: string | null
+          extra_logos?: Json
           id?: string
           logo_name?: string | null
           order_id?: string | null
@@ -2241,6 +2244,7 @@ export type Database = {
           logo_name_2: string | null
           logo_url: string | null
           logo_url_2: string | null
+          logos: Json
           numero_guia: string | null
           observations: string | null
           order_code: string | null
@@ -2314,6 +2318,7 @@ export type Database = {
           logo_name_2?: string | null
           logo_url?: string | null
           logo_url_2?: string | null
+          logos?: Json
           numero_guia?: string | null
           observations?: string | null
           order_code?: string | null
@@ -2387,6 +2392,7 @@ export type Database = {
           logo_name_2?: string | null
           logo_url?: string | null
           logo_url_2?: string | null
+          logos?: Json
           numero_guia?: string | null
           observations?: string | null
           order_code?: string | null
