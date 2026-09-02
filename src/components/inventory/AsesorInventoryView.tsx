@@ -10,8 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { useInventory } from "@/hooks/useInventory";
+import { useReferenceCatalog } from "@/hooks/useReferenceCatalog";
+import ReferenceLabel from "@/components/inventory/ReferenceLabel";
+import { normalizeText } from "@/lib/referenceCatalog";
 import type { InventoryBrand } from "@/stores/inventoryStore";
+
 
 const StockIndicator = ({ available, minStock }: { available: number; minStock?: number }) => {
   if (minStock !== undefined) {
