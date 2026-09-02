@@ -395,7 +395,8 @@ export function summarizeAdvisorMonth(
   overrides: OrderOverrides,
   year: number,
   month: number,
-  basis: PeriodBasis = "venta"
+  charges?: ChargesMap,
+  basis: PeriodBasis = PERIOD_BASIS
 ): AdvisorMonthSummary[] {
   const start = startOfMonth(new Date(year, month, 1));
   const end = endOfMonth(new Date(year, month, 1));
@@ -423,7 +424,7 @@ export function summarizeAdvisorMonth(
 
     // Paso 1: total causado CON IVA para decidir desbloqueo y bonos.
     const totalWithVat = advisorOrders.reduce(
-      (s, o) => s + classifyOrderForCommission(o).base,
+      (s, o) => s + classifyOrderForCommission(o, charges).base,
       0
     );
     const weekendUnlocked = totalWithVat >= UNLOCK_THRESHOLD;
@@ -431,7 +432,7 @@ export function summarizeAdvisorMonth(
     // Paso 2: calcular cada línea con tasa final.
     const allLines = advisorOrders.map((o) => {
       const ctx = { ...defaultCtx, ...(overrides[o.id] || {}) };
-      return buildLine(o, ctx.paymentMode, weekendUnlocked, basis);
+      return buildLine(o, ctx.paymentMode, weekendUnlocked, basis, charges);
     });
 
     const lines = allLines.filter(
