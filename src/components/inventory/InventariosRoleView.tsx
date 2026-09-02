@@ -125,6 +125,13 @@ const InventariosRoleView = () => {
           <WholesaleOrdersInbox />
         </TabsContent>
 
+        <TabsContent value="abastecimiento" className="mt-4 space-y-4">
+          <OrderRequirementsPanel />
+          <BatchReceptionPanel />
+          <ProductionBatchesPanel readOnly />
+        </TabsContent>
+
+
         <TabsContent value="trazabilidad" className="mt-4">
           <InventoryTraceabilityPanel />
         </TabsContent>
