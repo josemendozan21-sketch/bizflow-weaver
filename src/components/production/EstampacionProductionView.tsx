@@ -35,6 +35,7 @@ import { matchesQuery } from "@/lib/search";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import DeliveryProgressBadge from "@/components/common/DeliveryProgressBadge";
 import { LogoPreview } from "@/components/diseno/LogoPreview";
+import { useOrderLineContext, type OrderLineContext } from "@/hooks/useOrderLineContext";
 
 interface BodyStockItem {
   id: string;
@@ -161,6 +162,9 @@ export const EstampacionProductionView = () => {
       )
     : estampacionOrders;
 
+  // Contexto de producto (Producto N de M dentro del mismo pedido del cliente)
+  const { contextById: lineContext } = useOrderLineContext(allOrders.map((o) => o.order_id));
+
   const bodyStockQuery = useQuery({
     queryKey: ["body_stock_estampacion"],
     queryFn: async () => {
@@ -258,18 +262,56 @@ export const EstampacionProductionView = () => {
             {q ? "No se encontraron órdenes con ese criterio." : "No hay órdenes en etapa de estampación actualmente."}
           </p>
         ) : (
-          <div className="grid gap-4">
-            {filteredOrders.map((order) => (
-              <EstampacionOrderCard
-                key={order.id}
-                order={order}
-                stageLogs={stageLogs.filter((l) => l.production_order_id === order.id)}
-                logoRequests={logoRequests}
-                onStart={() => setOperatorPrompt({ mode: "start", orderId: order.id, clientName: order.client_name })}
-                onFinish={() => setOperatorPrompt({ mode: "finish", orderId: order.id, clientName: order.client_name })}
-                finishing={completeStamping.isPending && completeStamping.variables?.orderId === order.id}
-              />
-            ))}
+          <div className="space-y-6">
+            {groupOrdersByPedido(filteredOrders, lineContext).map((group) => {
+              const multi = group.orders.length > 1;
+              const withSizePhoto = group.orders.filter((o) => !!o.stamp_size_photo_url).length;
+              return (
+                <div key={group.key} className={multi ? "rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3" : "space-y-3"}>
+                  {multi && (
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Badge variant="outline" className="whitespace-nowrap">Pedido con {group.orders.length} productos</Badge>
+                        <span className="text-sm font-medium truncate">{group.orders[0].client_name}</span>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={
+                          withSizePhoto === group.orders.length
+                            ? "whitespace-nowrap border-emerald-300 bg-emerald-50 text-emerald-700"
+                            : "whitespace-nowrap border-amber-300 bg-amber-50 text-amber-800"
+                        }
+                      >
+                        Fotos cargadas {withSizePhoto}/{group.orders.length}
+                      </Badge>
+                    </div>
+                  )}
+                  {multi && withSizePhoto < group.orders.length && (
+                    <Alert className="border-amber-300 bg-amber-50 text-amber-800">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription className="text-xs">
+                        Este pedido tiene varios productos. Sube una foto por cada producto para que el asesor
+                        pueda aprobarlos uno a uno.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  <div className="grid gap-4">
+                    {group.orders.map((order) => (
+                      <EstampacionOrderCard
+                        key={order.id}
+                        order={order}
+                        lineCtx={order.order_id ? lineContext[order.order_id] : undefined}
+                        stageLogs={stageLogs.filter((l) => l.production_order_id === order.id)}
+                        logoRequests={logoRequests}
+                        onStart={() => setOperatorPrompt({ mode: "start", orderId: order.id, clientName: order.client_name })}
+                        onFinish={() => setOperatorPrompt({ mode: "finish", orderId: order.id, clientName: order.client_name })}
+                        finishing={completeStamping.isPending && completeStamping.variables?.orderId === order.id}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </TabsContent>
@@ -452,8 +494,31 @@ function BodyStockGrid({ items, title }: { items: BodyStockItem[]; title: string
   );
 }
 
+function groupOrdersByPedido(
+  orders: ProductionOrder[],
+  ctxById: Record<string, OrderLineContext>,
+): { key: string; orders: ProductionOrder[] }[] {
+  const groups = new Map<string, ProductionOrder[]>();
+  for (const o of orders) {
+    const ctx = o.order_id ? ctxById[o.order_id] : undefined;
+    const key = ctx?.groupKey ?? o.id;
+    const arr = groups.get(key) ?? [];
+    arr.push(o);
+    groups.set(key, arr);
+  }
+  for (const [, arr] of groups) {
+    arr.sort((a, b) => {
+      const ai = a.order_id ? ctxById[a.order_id]?.productIndex ?? 99 : 99;
+      const bi = b.order_id ? ctxById[b.order_id]?.productIndex ?? 99 : 99;
+      return ai - bi;
+    });
+  }
+  return Array.from(groups.entries()).map(([key, list]) => ({ key, orders: list }));
+}
+
 function EstampacionOrderCard({
   order,
+  lineCtx,
   stageLogs,
   logoRequests,
   onStart,
@@ -461,6 +526,7 @@ function EstampacionOrderCard({
   finishing,
 }: {
   order: ProductionOrder;
+  lineCtx?: OrderLineContext;
   stageLogs: import("@/hooks/useProductionOrders").ProductionStageLog[];
   logoRequests: LogoRequestInfo[];
   onStart: () => void;
@@ -485,6 +551,11 @@ function EstampacionOrderCard({
     matchingLogo.status === "aprobado" ||
     matchingLogo.status === "finalizado";
   const logoUrl = matchingLogo?.adjusted_logo_url || matchingLogo?.original_logo_url;
+
+  const productSuffix =
+    lineCtx && lineCtx.productCount > 1
+      ? ` · Producto ${lineCtx.productIndex} de ${lineCtx.productCount}${lineCtx.variantLabel ? ` · ${lineCtx.variantLabel}` : ""}`
+      : "";
 
   // Stamping approval status
   const sizeStatus = order.stamp_size_status || "pendiente";
@@ -517,11 +588,22 @@ function EstampacionOrderCard({
             <div className="rounded-lg bg-primary/10 p-2">
               <Paintbrush className="h-5 w-5 text-primary" />
             </div>
-            <div>
-              <CardTitle className="text-base">{order.client_name}</CardTitle>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <OrderCodeBadge code={(order as any).order_code} compact />
+                {lineCtx && lineCtx.productCount > 1 && (
+                  <Badge variant="secondary" className="text-[10px] whitespace-nowrap">
+                    Producto {lineCtx.productIndex} de {lineCtx.productCount}
+                  </Badge>
+                )}
+              </div>
+              <CardTitle className="text-base mt-1">{order.client_name}</CardTitle>
               <p className="text-xs text-muted-foreground">
                 {order.brand === "magical" ? "Magical Warmers" : "Sweatspot"}
               </p>
+              {lineCtx?.variantLabel && (
+                <p className="text-xs font-medium text-foreground">{lineCtx.variantLabel}</p>
+              )}
               <p className="text-xs text-muted-foreground">Asesor: {order.advisor_name || "—"}</p>
             </div>
           </div>
@@ -608,7 +690,7 @@ function EstampacionOrderCard({
             <StampApprovalStep
               orderId={order.id}
               step="size"
-              label="Paso 1: Aprobación de tamaño de logo"
+              label={`Paso 1: Aprobación de tamaño de logo${productSuffix}`}
               status={sizeStatus}
               photoUrl={order.stamp_size_photo_url}
               needsUpload={needsSizeUpload || sizeRejected}
@@ -621,7 +703,7 @@ function EstampacionOrderCard({
               <StampApprovalStep
                 orderId={order.id}
                 step="inkgel"
-                label={order.brand === "sweatspot" ? "Paso 2: Aprobación de tinta" : "Paso 2: Aprobación de tinta y gel"}
+                label={`${order.brand === "sweatspot" ? "Paso 2: Aprobación de tinta" : "Paso 2: Aprobación de tinta y gel"}${productSuffix}`}
                 status={inkgelStatus}
                 photoUrl={order.stamp_inkgel_photo_url}
                 needsUpload={needsInkgelUpload || inkgelRejected}
