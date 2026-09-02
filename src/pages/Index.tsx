@@ -15,6 +15,7 @@ import { useInventory, getStockStatus } from "@/hooks/useInventory";
 import { differenceInDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { totalsBySede, PettyFund, PettyExpense } from "@/lib/pettyCash";
 import { AdminTodayDashboard } from "@/components/dashboard/AdminTodayDashboard";
 
 const LOCATION_92 = "73050f3b-1c8e-44f1-9d0d-94772216c100";
