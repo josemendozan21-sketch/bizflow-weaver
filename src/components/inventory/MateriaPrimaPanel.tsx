@@ -65,7 +65,7 @@ const STATUS_CONFIG = {
   critico: { label: "Crítico", variant: "destructive" as const, icon: AlertCircle },
 };
 
-const MateriaPrimaPanel = () => {
+const MateriaPrimaList = () => {
   const { stockItems, addStockItem, updateStockItem, deleteStockItem, refetch } = useInventory();
   const { role } = useAuth();
   // Inventarios gestiona el catálogo igual que en referencias/productos.
@@ -573,5 +573,24 @@ const MateriaPrimaPanel = () => {
   );
 
 };
+
+const MateriaPrimaPanel = () => (
+  <Tabs defaultValue="listado" className="space-y-4">
+    <TabsList>
+      <TabsTrigger value="listado" className="gap-1.5">
+        <Beaker className="h-4 w-4" />Listado
+      </TabsTrigger>
+      <TabsTrigger value="historial" className="gap-1.5">
+        <History className="h-4 w-4" />Historial de cambios
+      </TabsTrigger>
+    </TabsList>
+    <TabsContent value="listado">
+      <MateriaPrimaList />
+    </TabsContent>
+    <TabsContent value="historial">
+      <InventoryChangeLogPanel category="materia_prima" />
+    </TabsContent>
+  </Tabs>
+);
 
 export default MateriaPrimaPanel;
