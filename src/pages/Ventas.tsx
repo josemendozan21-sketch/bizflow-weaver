@@ -623,26 +623,32 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   }, [inventoryStockItems]);
 
   const productOptions = useMemo(() => {
-    const tiroidesDirectOptions = TIROIDES_TYPES.map((type) => ({
-      value: `${TIROIDES_OPTION_PREFIX}${type}`,
-      label: `Tiroides (${type})`,
-      product: "Tiroides",
-      type,
-    }));
-    const herbologyDirectOptions = HERBOLOGY_TYPES.map((type) => ({
-      value: `${HERBOLOGY_OPTION_PREFIX}${type}`,
-      label: `Herbology (${type})`,
-      product: "Herbology",
-      type,
-    }));
+    const hasTiroides = productNames.includes("Tiroides");
+    const hasHerbology = productNames.includes("Herbology");
+    const tiroidesDirectOptions = hasTiroides
+      ? TIROIDES_TYPES.map((type) => ({
+          value: `${TIROIDES_OPTION_PREFIX}${type}`,
+          label: `Tiroides (${type})`,
+          product: "Tiroides",
+          type,
+        }))
+      : [];
+    const herbologyDirectOptions = hasHerbology
+      ? HERBOLOGY_TYPES.map((type) => ({
+          value: `${HERBOLOGY_OPTION_PREFIX}${type}`,
+          label: `Herbology (${type})`,
+          product: "Herbology",
+          type,
+        }))
+      : [];
     const regularOptions = productNames
       .filter((name) => name !== "Tiroides" && name !== "Herbology")
       .map((name) => ({ value: name, label: name, product: name, type: "" }));
     return [
       ...tiroidesDirectOptions,
-      { value: "Tiroides", label: "Tiroides", product: "Tiroides", type: "" },
+      ...(hasTiroides ? [{ value: "Tiroides", label: "Tiroides", product: "Tiroides", type: "" }] : []),
       ...herbologyDirectOptions,
-      { value: "Herbology", label: "Herbology", product: "Herbology", type: "" },
+      ...(hasHerbology ? [{ value: "Herbology", label: "Herbology", product: "Herbology", type: "" }] : []),
       ...regularOptions,
     ];
   }, [productNames]);
