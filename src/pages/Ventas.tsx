@@ -416,6 +416,10 @@ function buildMagicalMayorSummary(args: {
     productos: orderLines.map((line, idx) => {
       const gel = resolveColorVal(line.gelColor, line.gelCustom);
       const tinta = resolveColorVal(line.inkColor, line.inkCustom);
+      const tinta2 = resolveColorVal(line.inkColor2 || "", line.inkCustom2 || "");
+      const tinta3 = resolveColorVal(line.inkColor3 || "", line.inkCustom3 || "");
+      const escarcha = resolveColorVal(line.glitterColor || "", line.glitterCustom || "");
+      const nTintas = line.inkCount ?? 1;
       const qty = parseInt(line.units, 10) || 0;
       const total = parseFloat(line.valorTotal) || 0;
       const unit = parseFloat(line.valorUnitario) || 0;
