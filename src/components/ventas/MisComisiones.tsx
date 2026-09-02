@@ -55,6 +55,7 @@ type Filter = "todos" | "facturado" | "pendiente" | "excluido" | "cero";
 export default function MisComisiones() {
   const { user } = useAuth();
   const { data: orders = [], isLoading } = useOrders();
+  const { data: charges = {} } = useAllOrderCharges();
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
@@ -62,11 +63,10 @@ export default function MisComisiones() {
   const [search, setSearch] = useState("");
   const [minAmount, setMinAmount] = useState("");
   const [maxAmount, setMaxAmount] = useState("");
-  const [basis, setBasis] = useState<PeriodBasis>("venta");
 
   const summary = useMemo(
-    () => summarizeAdvisorProgress(orders, year, month, user?.id, basis),
-    [orders, year, month, user?.id, basis]
+    () => summarizeAdvisorProgress(orders, year, month, user?.id, charges),
+    [orders, year, month, user?.id, charges]
   );
 
 
