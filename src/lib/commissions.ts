@@ -515,6 +515,10 @@ export interface AdvisorProgressSummary {
   pendingCommission: number;
   excludedCount: number;
   excludedWithVat: number;
+  /** Flete + cargos adicionales del período que no comisionan */
+  nonCommissionableWithVat: number;
+  /** Pedidos del período que aún no tienen factura emitida */
+  pendingInvoiceCount: number;
   bonusInvoiced: number;
   bonusProjected: number;
   toPayInvoiced: number;
