@@ -1118,6 +1118,12 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
                   onChange={(e) => setUnitPrice(Number(e.target.value) || 0)}
                   placeholder="0"
                 />
+                {!hasStoredUnitPrice && (
+                  <p className="text-[11px] text-amber-700">
+                    Este pedido no tenía valor unitario guardado. Se estimó en $
+                    {derivedUnitPrice.toLocaleString("es-CO")} a partir del total; verifícalo antes de guardar.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -1208,6 +1214,9 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
                 />
               </div>
             </div>
+
+            <OrderChargesEditor orderId={order.id} disabled={isLocked || saving} />
+
             <div className="rounded-lg border bg-muted/40 p-3 text-xs space-y-1">
               <p className="text-muted-foreground">
                 Total anterior: ${(Number(order.total_amount) || 0).toLocaleString("es-CO")}
