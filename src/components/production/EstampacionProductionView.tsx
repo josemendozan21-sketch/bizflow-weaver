@@ -465,7 +465,10 @@ function EstampacionOrderCard({
           )}
           <Row label="Molde / Referencia" value={order.molde || order.thermo_size || "-"} />
           <Row label="Cantidad" value={`${order.quantity} uds`} />
-          <Row label="Color de tinta" value={order.ink_color || "-"} />
+          <Row label={(order.ink_count ?? 1) > 1 ? "Color de tinta 1" : "Color de tinta"} value={order.ink_color || "-"} />
+          {order.ink_color_2 && <Row label="Color de tinta 2" value={order.ink_color_2} />}
+          {order.ink_color_3 && <Row label="Color de tinta 3" value={order.ink_color_3} />}
+          {order.glitter_color && <Row label="Color de escarcha" value={order.glitter_color} />}
           {order.brand === "sweatspot" ? (
             <Row label="Color de silicona" value={(order as any).silicone_color || "-"} />
           ) : (

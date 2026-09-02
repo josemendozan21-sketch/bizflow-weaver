@@ -17,6 +17,10 @@ export interface ProductionOrder {
   stages: string[];
   gel_color: string | null;
   ink_color: string | null;
+  ink_count: number | null;
+  ink_color_2: string | null;
+  ink_color_3: string | null;
+  glitter_color: string | null;
   logo_file: string | null;
   thermo_size: string | null;
   silicone_color: string | null;

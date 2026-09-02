@@ -741,7 +741,10 @@ function OrderCard({ order, stageLogs, role, isAdmin, selected, onToggleSelect, 
         {order.current_stage === "estampacion" && (
           <div className="rounded-md border p-3 text-xs space-y-1">
             <Row label="Color de gel" value={order.gel_color || "-"} />
-            <Row label="Color de tinta" value={order.ink_color || "-"} />
+            <Row label={(order.ink_count ?? 1) > 1 ? "Color de tinta 1" : "Color de tinta"} value={order.ink_color || "-"} />
+            {order.ink_color_2 && <Row label="Color de tinta 2" value={order.ink_color_2} />}
+            {order.ink_color_3 && <Row label="Color de tinta 3" value={order.ink_color_3} />}
+            {order.glitter_color && <Row label="Color de escarcha" value={order.glitter_color} />}
             <Row label="Molde / Referencia" value={order.molde || "-"} />
             {order.logo_file && <Row label="Logo" value={order.logo_file} />}
           </div>
