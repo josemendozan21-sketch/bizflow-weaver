@@ -79,9 +79,11 @@ const Produccion = () => {
             <TabsTrigger value="historial">Historial</TabsTrigger>
             <TabsTrigger value="cambios">Historial de cambios</TabsTrigger>
           </TabsList>
-          <TabsContent value="marcas" className="mt-4">
+          <TabsContent value="marcas" className="mt-4 space-y-4">
+            <UnroutedOrdersPanel readOnly />
             <ProductionBrandSelector selectedBrand={selectedBrand} onSelectBrand={setSelectedBrand} />
           </TabsContent>
+
           <TabsContent value="lotes" className="mt-4">
             <ProductionBatchesPanel readOnly={isReadOnly} />
           </TabsContent>
