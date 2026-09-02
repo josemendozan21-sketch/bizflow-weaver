@@ -277,12 +277,14 @@ export default function AsesorInventoryView() {
                       search={search} setSearch={setSearch}
                       typeFilter={typeFilter} setTypeFilter={setTypeFilter}
                       sortDir={sortDir} setSortDir={setSortDir}
+                      resultCount={filteredMagicalFinished.length}
                     />
                     {filteredMagicalFinished.length === 0 ? <EmptyMessage /> : (
                       <Table>
                         <TableHeader>
                           <TableRow>
                             <TableHead>Producto</TableHead>
+                            <TableHead>Tipo</TableHead>
                             <TableHead className="text-right">Disponible</TableHead>
                             <TableHead>Unidad</TableHead>
                             <TableHead>Estado</TableHead>
@@ -291,12 +293,14 @@ export default function AsesorInventoryView() {
                         <TableBody>
                           {filteredMagicalFinished.map((item) => (
                             <TableRow key={item.id}>
-                              <TableCell className="font-medium">{item.name}</TableCell>
+                              <TableCell className="font-medium"><ReferenceLabel name={item.name} /></TableCell>
+                              <TableCell><TypeBadge tipo={item.tipo} /></TableCell>
                               <TableCell className="text-right">{item.available}</TableCell>
                               <TableCell>{item.unit}</TableCell>
                               <TableCell><StockIndicator available={item.available} /></TableCell>
                             </TableRow>
                           ))}
+
                         </TableBody>
                       </Table>
                     )}
