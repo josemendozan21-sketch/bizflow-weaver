@@ -15,72 +15,47 @@ function addSheet(wb: XLSX.WorkBook, name: string, headers: string[], rows: Row[
 
 const dt = (s: string) => new Date(s).toLocaleString("es-CO");
 
-export interface PettyFundRow {
-  id: string;
-  amount: number;
-  set_by: string;
-  notes: string | null;
-  created_at: string;
-}
-export interface PettyExpenseRow {
-  id: string;
-  fund_id: string;
-  amount: number;
-  description: string;
-  requested_by: string;
-  recorded_by_name: string;
-  proof_url: string | null;
-  created_at: string;
-}
+export type PettyFundRow = PettyFund;
+export type PettyExpenseRow = PettyExpense;
 
-/** Caja menor: movimientos (ingresos y gastos) en un solo Excel. */
+/** Caja menor: movimientos (ingresos y gastos) por sede en un solo Excel. */
 export function exportPettyCashXlsx(
-  funds: PettyFundRow[],
-  expenses: PettyExpenseRow[],
+  funds: PettyFund[],
+  expenses: PettyExpense[],
   filename?: string
 ) {
-  const movements = [
-    ...funds.map((f) => ({
-      date: f.created_at,
-      tipo: "Ingreso",
-      concepto: f.notes || "Fondo / ingreso de caja menor",
-      solicita: "",
-      registra: f.set_by,
-      ingreso: Number(f.amount),
-      gasto: 0,
-      soporte: "",
-    })),
-    ...expenses.map((e) => ({
-      date: e.created_at,
-      tipo: "Gasto",
-      concepto: e.description,
-      solicita: e.requested_by,
-      registra: e.recorded_by_name,
-      ingreso: 0,
-      gasto: Number(e.amount),
-      soporte: e.proof_url ? "Sí" : "No",
-    })),
-  ].sort((a, b) => a.date.localeCompare(b.date));
-
-  let saldo = 0;
-  const rows: Row[] = movements.map((m) => {
-    saldo += m.ingreso - m.gasto;
-    return [
-      dt(m.date), m.tipo, m.concepto, m.solicita, m.registra,
-      m.ingreso, m.gasto, saldo, m.soporte,
-    ];
-  });
-
-  const totalIngresos = movements.reduce((a, m) => a + m.ingreso, 0);
-  const totalGastos = movements.reduce((a, m) => a + m.gasto, 0);
-  rows.push(["TOTALES", "", "", "", "", totalIngresos, totalGastos, totalIngresos - totalGastos, ""]);
-
+  const all = buildMovements(funds, expenses);
   const wb = XLSX.utils.book_new();
-  addSheet(
-    wb, "Caja menor",
-    ["Fecha", "Tipo", "Concepto", "Solicitó", "Registró", "Ingreso", "Gasto", "Saldo", "Soporte"],
-    rows
-  );
+  const headers = [
+    "Fecha", "Sede", "Tipo", "Concepto", "Solicitó", "Registró",
+    "Ingreso", "Gasto", "Saldo", "Estado", "Soporte",
+  ];
+
+  const sheetFor = (label: string, list: ReturnType<typeof buildMovements>) => {
+    const withBal = withRunningBalance(list);
+    const rows: Row[] = withBal.map((m) => [
+      dt(m.date),
+      sedeLabel(m.sede),
+      m.kind === "saldo_inicial" ? "Saldo inicial / arqueo" : m.kind === "traslado" ? "Traslado" : m.signedAmount > 0 ? "Ingreso" : "Gasto",
+      m.description,
+      m.requestedBy ?? "",
+      m.recordedBy ?? "",
+      m.signedAmount > 0 ? m.amount : 0,
+      m.signedAmount < 0 ? m.amount : 0,
+      m.balance,
+      m.status === "aprobado" ? "Aprobado" : m.status === "pendiente" ? "Por aprobar" : "Rechazado",
+      m.proofUrl ? "Sí" : "No",
+    ]);
+    const totalIngresos = withBal.filter((m) => m.signedAmount > 0).reduce((a, m) => a + m.amount, 0);
+    const totalGastos = withBal.filter((m) => m.signedAmount < 0).reduce((a, m) => a + m.amount, 0);
+    const saldoFinal = withBal.length ? withBal[withBal.length - 1].balance : 0;
+    rows.push(["TOTALES", "", "", "", "", "", totalIngresos, totalGastos, saldoFinal, "", ""]);
+    addSheet(wb, label, headers, rows);
+  };
+
+  sheetFor("Consolidado", all);
+  SEDES.forEach((s) => sheetFor(s.short, all.filter((m) => m.sede === s.value)));
+
   XLSX.writeFile(wb, filename || `caja_menor_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
