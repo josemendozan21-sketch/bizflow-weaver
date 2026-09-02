@@ -429,7 +429,11 @@ function buildMagicalMayorSummary(args: {
         details: [
           { label: "Unidades", value: qty ? String(qty) : "—" },
           { label: "Color gel", value: gel || "—" },
-          { label: "Color tinta", value: tinta || "—" },
+          { label: "N° de tintas", value: String(nTintas) },
+          { label: nTintas > 1 ? "Color tinta 1" : "Color tinta", value: tinta || "—" },
+          ...(nTintas >= 2 ? [{ label: "Color tinta 2", value: tinta2 || "—" }] : []),
+          ...(nTintas >= 3 ? [{ label: "Color tinta 3", value: tinta3 || "—" }] : []),
+          ...(escarcha ? [{ label: "Color escarcha", value: escarcha }] : []),
           ...(line.isGift ? [] : [
             { label: "Valor unitario", value: unit ? formatMoney(unit) : "—" },
             { label: "Valor total", value: total ? formatMoney(total) : "—" },
