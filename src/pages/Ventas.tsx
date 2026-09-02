@@ -574,6 +574,7 @@ function buildGenericRetailSummary(args: {
         title: line.isGift ? `Obsequio: ${line.selectedRef || "—"}` : `Producto ${idx + 1}: ${line.selectedRef || "—"}`,
         isGift: line.isGift,
         details: [
+          ...(line.tipo ? [{ label: "Tipo", value: line.tipo }] : []),
           { label: "Cantidad", value: qty ? String(qty) : "—" },
           ...(brand === "sweatspot" ? [{ label: "Color", value: line.colorProducto || "—" }] : []),
           ...(line.isGift ? [] : [{ label: "Precio venta", value: price ? formatMoney(price) : "—" }]),
@@ -2431,6 +2432,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 interface RetailProductLine {
   id: string;
   selectedRef: string;
+  tipo: string;
   cantidad: string;
   retailPrice: string;
   colorProducto: string;
@@ -2441,6 +2443,7 @@ function createEmptyRetailLine(isGift = false): RetailProductLine {
   return {
     id: crypto.randomUUID(),
     selectedRef: "",
+    tipo: "",
     cantidad: "1",
     retailPrice: isGift ? "0" : "",
     colorProducto: "",
@@ -2525,6 +2528,23 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
     return [...new Set(refs)].sort();
   }, [stockItems, brand]);
 
+  // Magical: referencias unificadas (sin sufijo de tipo) + tipos disponibles por referencia
+  const magicalRefTypes = useMemo(() => {
+    if (brand !== "magical") return {} as Record<string, string[]>;
+    const map: Record<string, Set<string>> = {};
+    stockItems
+      .filter((s) => s.brand === "magical" && s.category === "producto_terminado")
+      .forEach((s) => {
+        const base = s.name.replace(/\s*\((fr[ií]o|t[eé]rmico)\)\s*$/i, "").trim();
+        if (!map[base]) map[base] = new Set<string>();
+        const inferred = s.product_type || (/fr[ií]o/i.test(s.name) ? "Frío" : /t[eé]rmico/i.test(s.name) ? "Térmico" : "");
+        if (inferred) map[base].add(inferred.trim());
+      });
+    return Object.fromEntries(Object.entries(map).map(([k, v]) => [k, [...v].sort()]));
+  }, [stockItems, brand]);
+
+  const magicalBaseRefs = useMemo(() => Object.keys(magicalRefTypes).sort(), [magicalRefTypes]);
+
   // Grand total across all non-gift lines
   const grandTotal = useMemo(() => {
     return productLines.reduce((sum, line) => {
@@ -2547,6 +2567,11 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
     for (const line of productLines) {
       if (!line.selectedRef) {
         toast.error("Producto requerido", { description: "Seleccione un producto en todas las líneas." });
+        setIsSubmitting(false);
+        return;
+      }
+      if (brand === "magical" && (magicalRefTypes[line.selectedRef]?.length ?? 0) > 0 && !line.tipo) {
+        toast.error("Tipo requerido", { description: "Seleccione Frío o Térmico en todas las líneas." });
         setIsSubmitting(false);
         return;
       }
@@ -2581,7 +2606,9 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
 
       // Process each product line as a separate order
       for (const line of productLines) {
-        const referencia = line.selectedRef;
+        const referencia = brand === "magical" && line.tipo
+          ? `${line.selectedRef} (${line.tipo})`
+          : line.selectedRef;
         const quantity = parseInt(line.cantidad, 10) || 1;
         const totalAmount = line.isGift ? 0 : (parseFloat(line.retailPrice) || 0);
 
@@ -2790,20 +2817,45 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
                     </Button>
                   )}
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className={`grid gap-3 ${brand === "magical" ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
                   <div className="space-y-1.5">
                     <Label>Referencia / Producto</Label>
-                    <Select value={line.selectedRef || undefined} onValueChange={(v) => updateProductLine(line.id, { selectedRef: v })}>
+                    <Select
+                      value={line.selectedRef || undefined}
+                      onValueChange={(v) => {
+                        const types = brand === "magical" ? (magicalRefTypes[v] || []) : [];
+                        updateProductLine(line.id, { selectedRef: v, tipo: types.length === 1 ? types[0] : "" });
+                      }}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar producto" />
                       </SelectTrigger>
                       <SelectContent>
-                        {finishedRefs.map((ref) => (
+                        {(brand === "magical" ? magicalBaseRefs : finishedRefs).map((ref) => (
                           <SelectItem key={ref} value={ref}>{ref}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
+                  {brand === "magical" && (
+                    <div className="space-y-1.5">
+                      <Label>Tipo</Label>
+                      <Select
+                        value={line.tipo || undefined}
+                        onValueChange={(v) => updateProductLine(line.id, { tipo: v })}
+                        disabled={!line.selectedRef}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={line.selectedRef ? "Frío / Térmico" : "Seleccione referencia"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(magicalRefTypes[line.selectedRef] || ["Frío", "Térmico"]).map((t) => (
+                            <SelectItem key={t} value={t}>{t}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <div className="space-y-1.5">
                     <Label>Cantidad</Label>
                     <Input type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()} min="1" required value={line.cantidad} onChange={(e) => updateProductLine(line.id, { cantidad: e.target.value })} />
