@@ -74,7 +74,7 @@ export const SweatspotWorkflow = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
   const stageRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const activeOrdersAll = orders.filter((o) => o.current_stage !== "listo");
+  const activeOrdersAll = orders.filter((o) => !TERMINAL_STAGES.includes(o.current_stage));
   const completedOrders = orders.filter((o) => o.current_stage === "listo");
   const activeOrders = useMemo(() => {
     const q = searchTerm.trim();
@@ -86,6 +86,11 @@ export const SweatspotWorkflow = () => {
       ),
     );
   }, [activeOrdersAll, searchTerm]);
+  const otherStageOrders = useMemo(
+    () => activeOrders.filter((o) => !FULL_STAGE_ORDER.includes(o.current_stage)),
+    [activeOrders],
+  );
+
   const stageCounts = useMemo(() => {
     const m: Record<string, number> = {};
     activeOrdersAll.forEach((o) => { m[o.current_stage] = (m[o.current_stage] || 0) + 1; });
