@@ -227,8 +227,9 @@ export default function AsesorInventoryView() {
                         <TableBody>
                           {filteredMagicalBodies.map((item) => (
                             <TableRow key={item.id}>
-                              <TableCell className="font-medium">{item.referencia}</TableCell>
-                              <TableCell>{classifyType(item.referencia)}</TableCell>
+                              <TableCell className="font-medium"><ReferenceLabel name={item.name} /></TableCell>
+                              <TableCell>{item.tipo || "—"}</TableCell>
+
                               <TableCell className="text-right">{item.available}</TableCell>
                               <TableCell><StockIndicator available={item.available} /></TableCell>
                             </TableRow>
