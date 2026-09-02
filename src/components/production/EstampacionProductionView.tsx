@@ -377,6 +377,12 @@ export const EstampacionProductionView = () => {
         <BodyStockGrid items={thermalStock} title="Productos Térmicos" />
       </TabsContent>
 
+      <TabsContent value="cambios">
+        <ProcessChangeLogPanel area="estampacion" title="Historial de cambios — Estampación" />
+      </TabsContent>
+
+
+
       <OperatorPromptDialog
         open={!!operatorPrompt}
         title={operatorPrompt?.mode === "start" ? "Iniciar estampación" : "Finalizar estampación"}
