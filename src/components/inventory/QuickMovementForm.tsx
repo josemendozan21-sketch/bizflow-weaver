@@ -14,6 +14,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { RESERVATIONS_ENABLED } from "@/lib/featureFlags";
 import { matchesQuery } from "@/lib/search";
 import { useFerias } from "@/hooks/useFerias";
+import { formatStockOptionLabel } from "@/lib/referenceCatalog";
+
 
 type ActionKind = MovementKind | "solicitud";
 
