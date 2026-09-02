@@ -132,6 +132,10 @@ export const SweatspotWorkflow = () => {
         </div>
       </div>
 
+      <SweatspotBodyTasksPanel />
+
+
+
       <div className="flex flex-wrap gap-2">
         {FULL_STAGE_ORDER.filter((s) => s !== "listo").map((stage) => {
           const Icon = STAGE_ICONS[stage];
