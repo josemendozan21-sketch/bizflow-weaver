@@ -653,6 +653,14 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     [productNames],
   );
 
+  // Colores de escarcha administrados desde Inventarios (materia prima "Escarcha ...")
+  const glitterOptions = useMemo(() => {
+    const names = inventoryStockItems
+      .filter((s) => /^escarcha\b/i.test(s.name || ""))
+      .map((s) => s.name.replace(/^escarcha\s*/i, "").trim() || s.name);
+    return ["No aplica", ...[...new Set(names)].sort((a, b) => a.localeCompare(b, "es"))];
+  }, [inventoryStockItems]);
+
   const getProductSelectValue = (line: OrderLine) => line.product;
 
   const handleProductSelect = (lineId: string, value: string) => {
