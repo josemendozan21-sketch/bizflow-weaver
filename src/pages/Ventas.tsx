@@ -1325,6 +1325,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
               <ClientNameAutocomplete
                 name="mw_nombre"
                 required
+                value={clientName}
+                onValueChange={setClientName}
                 onSelect={(c) => {
                   const f = formRef.current;
                   if (!f) return;
