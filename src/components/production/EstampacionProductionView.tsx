@@ -129,14 +129,23 @@ export const EstampacionProductionView = () => {
     | null
   >(null);
 
-  // Include orders in estampacion AND orders still waiting bodies (produccion_cuerpos)
-  // so stamping team can start preparing/logo work even if bodies aren't ready.
+  // Estampación solo debe ver pedidos cuyo flujo incluya estampación (es decir, con logo).
+  // Incluye los que están en producción de cuerpos para poder adelantar la muestra, y
+  // los que ya avanzaron con la estampación finalizada (para que no desaparezcan sin rastro).
+  const belongsToStamping = (o: ProductionOrder) => {
+    const stages = normalizeStages(o as any);
+    return stages.includes("estampacion") || o.current_stage === "estampacion";
+  };
   const estampacionOrders = allOrders.filter(
     (o) =>
-      o.current_stage === "estampacion" ||
-      (o.current_stage === "produccion_cuerpos" &&
-        !(o.stamp_size_status === "finalizado" && o.stamp_inkgel_status === "finalizado"))
+      !TERMINAL_STAGES.includes(o.current_stage) &&
+      belongsToStamping(o) &&
+      (o.current_stage === "estampacion" ||
+        (o.current_stage === "produccion_cuerpos" &&
+          !(o.stamp_size_status === "finalizado" && o.stamp_inkgel_status === "finalizado")) ||
+        (o.stamp_size_status === "finalizado" && o.stamp_inkgel_status === "finalizado"))
   );
+
 
   const q = searchQuery.trim();
   const filteredOrders = q
