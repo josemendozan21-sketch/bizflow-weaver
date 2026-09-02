@@ -61,6 +61,8 @@ export interface BodyTask {
   updated_at: string;
   completed_at: string | null;
   fabricated_by?: string | null;
+  brand?: string | null;
+
 }
 
 export interface ProductionStageLog {
