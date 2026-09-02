@@ -217,6 +217,35 @@ export function MisPedidos() {
     },
   });
 
+  // Estado de estampación por producto (línea) para mostrar avance por producto
+  const { data: stampingRows = [] } = useQuery({
+    queryKey: ["stamping_status_for_advisor", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("production_orders")
+        .select(
+          "order_id, stamp_size_photo_url, stamp_size_status, stamp_inkgel_photo_url, stamp_inkgel_status"
+        );
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const stampingMap = new Map(
+    stampingRows
+      .filter((r: any) => r.order_id)
+      .map((r: any) => [
+        r.order_id as string,
+        {
+          sizePhotoUrl: r.stamp_size_photo_url as string | null,
+          sizeStatus: (r.stamp_size_status as string | null) || "pendiente",
+          inkgelPhotoUrl: r.stamp_inkgel_photo_url as string | null,
+          inkgelStatus: (r.stamp_inkgel_status as string | null) || "pendiente",
+        },
+      ])
+  );
+
   // Map order_id -> completion info
   const completionMap = new Map(
     productionOrders
@@ -415,7 +444,7 @@ export function MisPedidos() {
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
                       {stageGroups.map((g) => (
-                        <OrderGroupCard key={g.key} group={g} completionMap={completionMap} />
+                        <OrderGroupCard key={g.key} group={g} completionMap={completionMap} stampingMap={stampingMap} />
                       ))}
                     </div>
                   </div>
@@ -436,7 +465,7 @@ export function MisPedidos() {
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
                       {others.map((g) => (
-                        <OrderGroupCard key={g.key} group={g} completionMap={completionMap} />
+                        <OrderGroupCard key={g.key} group={g} completionMap={completionMap} stampingMap={stampingMap} />
                       ))}
                     </div>
                   </div>
@@ -446,7 +475,7 @@ export function MisPedidos() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               {visibleGroups.map((g) => (
-                <OrderGroupCard key={g.key} group={g} completionMap={completionMap} />
+                <OrderGroupCard key={g.key} group={g} completionMap={completionMap} stampingMap={stampingMap} />
               ))}
             </div>
           )}
@@ -462,9 +491,11 @@ export function MisPedidos() {
 function OrderGroupCard({
   group,
   completionMap,
+  stampingMap,
 }: {
   group: OrderGroup;
   completionMap: Map<string, { photoUrl: string | null; packagerName: string | null; finalCount: number | null }>;
+  stampingMap: Map<string, StampingLineStatus>;
 }) {
   const { role } = useAuth();
   const queryClient = useQueryClient();
@@ -592,6 +623,9 @@ function OrderGroupCard({
             </a>
           </div>
         )}
+
+        {/* Estado de estampación por producto */}
+        <StampingByProduct items={group.items} stampingMap={stampingMap} />
 
         {/* Foto(s) producto finalizado */}
         {completionInfos.length > 0 && completionInfos[0].photoUrl && (
@@ -1262,5 +1296,85 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+
+export interface StampingLineStatus {
+  sizePhotoUrl: string | null;
+  sizeStatus: string;
+  inkgelPhotoUrl: string | null;
+  inkgelStatus: string;
+}
+
+function stampLabel(photoUrl: string | null, status: string) {
+  if (status === "aprobado" || status === "finalizado")
+    return { text: "Aprobada", className: "bg-emerald-100 text-emerald-800 border-emerald-200" };
+  if (status === "rechazado")
+    return { text: "Rechazada", className: "bg-red-100 text-red-800 border-red-200" };
+  if (photoUrl) return { text: "Esperando tu aprobación", className: "bg-amber-100 text-amber-800 border-amber-200" };
+  return { text: "Foto pendiente", className: "bg-muted text-muted-foreground" };
+}
+
+function StampingByProduct({
+  items,
+  stampingMap,
+}: {
+  items: Array<{ id: string; product: string; quantity: number; gel_color?: string | null; ink_color?: string | null; order_code?: string | null }>;
+  stampingMap: Map<string, StampingLineStatus>;
+}) {
+  const rows = items
+    .map((it) => ({ item: it, st: stampingMap.get(it.id) }))
+    .filter((r) => !!r.st) as Array<{ item: (typeof items)[number]; st: StampingLineStatus }>;
+
+  if (rows.length === 0) return null;
+  const anyActivity = rows.some((r) => r.st.sizePhotoUrl || r.st.inkgelPhotoUrl || r.st.sizeStatus !== "pendiente");
+  if (!anyActivity) return null;
+
+  return (
+    <div className="rounded-lg border p-3 space-y-2">
+      <div className="flex items-center gap-2 text-sm font-medium">
+        <Camera className="h-4 w-4 text-primary" />
+        Estampación por producto ({rows.length})
+      </div>
+      <div className="space-y-2">
+        {rows.map(({ item, st }, idx) => {
+          const size = stampLabel(st.sizePhotoUrl, st.sizeStatus);
+          const inkgel = stampLabel(st.inkgelPhotoUrl, st.inkgelStatus);
+          const variant = [item.product, item.gel_color ? `Gel ${item.gel_color}` : null, item.ink_color ? `Tinta ${item.ink_color}` : null]
+            .filter(Boolean)
+            .join(" · ");
+          return (
+            <div key={item.id} className="rounded-md border p-2 space-y-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Badge variant="secondary" className="text-[10px] whitespace-nowrap">
+                  Producto {idx + 1} de {rows.length}
+                </Badge>
+                <OrderCodeBadge code={item.order_code ?? null} compact />
+                <span className="text-xs text-muted-foreground truncate">{variant} · {item.quantity} uds</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className={`text-[10px] whitespace-nowrap ${size.className}`}>
+                  Tamaño: {size.text}
+                </Badge>
+                <Badge variant="outline" className={`text-[10px] whitespace-nowrap ${inkgel.className}`}>
+                  Tinta/gel: {inkgel.text}
+                </Badge>
+                {st.sizePhotoUrl && (
+                  <a href={st.sizePhotoUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] underline text-primary">
+                    Ver foto tamaño
+                  </a>
+                )}
+                {st.inkgelPhotoUrl && (
+                  <a href={st.inkgelPhotoUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] underline text-primary">
+                    Ver foto tinta/gel
+                  </a>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
