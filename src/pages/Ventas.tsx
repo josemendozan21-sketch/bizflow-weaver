@@ -30,6 +30,7 @@ import { createOrderNotifications } from "@/hooks/useNotifications";
 import SmartPasteField, { type ParsedOrderData } from "@/components/ventas/SmartPasteField";
 import ClientNameAutocomplete from "@/components/ventas/ClientNameAutocomplete";
 import { useFormDraft, clearFormDraft, usePersistedState } from "@/hooks/useFormDraft";
+import OrderLogosField, { makeLogoEntry, type LogoEntry } from "@/components/ventas/OrderLogosField";
 import { OrderConfirmationDialog, type OrderSummary } from "@/components/ventas/OrderConfirmationDialog";
 import { buildStages } from "@/lib/orderFlow";
 type Brand = "sweatspot" | "magical";
@@ -375,8 +376,9 @@ function buildMagicalMayorSummary(args: {
   moldeNombre?: string;
   moldeCosto?: string;
   moldeModo?: "con_pedido" | "separado" | "solo_molde";
+  logos?: Array<{ file: File | null; name: string }>;
 }): OrderSummary {
-  const { form, orderLines, grandTotal, abono, estadoPago, isRecompra, noLogo, dobleTinta, escarcha, costoAdicional, paymentProofFile, cobroLogo, costoLogo, moldeNuevo, moldeNombre, moldeCosto, moldeModo } = args;
+  const { logos = [], form, orderLines, grandTotal, abono, estadoPago, isRecompra, noLogo, dobleTinta, escarcha, costoAdicional, paymentProofFile, cobroLogo, costoLogo, moldeNuevo, moldeNombre, moldeCosto, moldeModo } = args;
   const abonoNum = estadoPago === "pago_total" ? grandTotal : (parseFloat(abono) || 0);
   const saldo = Math.max(grandTotal - abonoNum, 0);
   const estadoPagoLabel =
@@ -457,8 +459,14 @@ function buildMagicalMayorSummary(args: {
     ],
     opciones,
     archivos: [
-      { label: "Logo", value: getFileName(form, "mw_logo") || (noLogo ? "No requiere" : "No adjuntado") },
-      { label: "Nombre del logo", value: getFieldVal(form, "mw_logo_nombre") || "—" },
+      ...(noLogo
+        ? [{ label: "Logo", value: "No requiere" }]
+        : logos.length
+          ? logos.map((l, i) => ({
+              label: `Logo ${i + 1}`,
+              value: `${l.name || "Sin nombre"} — ${l.file ? l.file.name : "No adjuntado"}`,
+            }))
+          : [{ label: "Logo", value: "No adjuntado" }]),
       { label: "RUT", value: getFileName(form, "mw_rut") || "No adjuntado" },
     ],
     observaciones: [getFieldVal(form, "mw_personalizacion"), getFieldVal(form, "mw_observaciones")].filter(Boolean).join("\n\n"),
@@ -615,9 +623,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [costoAdicional, setCostoAdicional] = usePersistedState("ventas:mw:costoAdicional", "");
   const [cobroLogo, setCobroLogo] = usePersistedState("ventas:mw:cobroLogo", false);
   const [costoLogo, setCostoLogo] = usePersistedState("ventas:mw:costoLogo", "");
-  const [logoFileState, setLogoFileState] = useState<File | null>(null);
-  const [logoFile2State, setLogoFile2State] = useState<File | null>(null);
-  const [logoCount, setLogoCount] = usePersistedState<number>("ventas:mw:logoCount", 1);
+  const [mwLogos, setMwLogos] = useState<LogoEntry[]>(() => [makeLogoEntry()]);
   const [clientName, setClientName] = usePersistedState<string>("ventas:mw:clientName", "");
   const [recompraLogoUrl, setRecompraLogoUrl] = usePersistedState<string>("ventas:mw:recompraLogoUrl", "");
   const [rutFileState, setRutFileState] = useState<File | null>(null);
@@ -807,17 +813,24 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       ? `Medio de pago: ${paymentChannel}${observacionesRaw ? ` | ${observacionesRaw}` : ""}`
       : observacionesRaw;
     const rutFile = rutFileState;
-    const logoFile = logoFileState;
-    const logoFile2 = logoFile2State;
-    const logoNombre = ((fd.get("mw_logo_nombre") as string) || "").trim();
-    const logoNombre2 = ((fd.get("mw_logo_nombre_2") as string) || "").trim();
-    const logosCount = noLogo ? 0 : logoCount;
+    const activeLogos = noLogo
+      ? []
+      : mwLogos.filter((l) => (l.file && l.file.size > 0) || l.name.trim());
+    const logoFile = activeLogos[0]?.file || null;
+    const logoFile2 = activeLogos[1]?.file || null;
+    const logoNombre = (activeLogos[0]?.name || "").trim();
+    const logoNombre2 = (activeLogos[1]?.name || "").trim();
+    const logosCount = activeLogos.length;
     const fechaRequerida = fd.get("mw_fechaRequerida") as string;
 
-    // Segundo logo: archivo y nombre obligatorios
-    if (logosCount >= 2 && (!logoFile2 || logoFile2.size === 0 || !logoNombre2)) {
-      toast.error("Segundo logo incompleto", {
-        description: "Adjunte el archivo del logo 2 y escriba su nombre de referencia.",
+    // Cada logo agregado necesita archivo y nombre (excepto recompras, donde
+    // el primer logo puede reutilizarse del histórico del cliente).
+    const incompleteIdx = activeLogos.findIndex(
+      (l, i) => (!l.file || l.file.size === 0 ? !(i === 0 && isRecompra) : false) || !l.name.trim(),
+    );
+    if (!noLogo && incompleteIdx >= 0) {
+      toast.error(`Logo ${incompleteIdx + 1} incompleto`, {
+        description: "Adjunte el archivo del logo y escriba su nombre de referencia.",
       });
       setIsSubmitting(false);
       return;
@@ -923,6 +936,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     let logoUrl: string | null = null;
     let logoUrl2: string | null = null;
     let logoRequestId: string | null = null;
+    let extraLogoUrls: string[] = [];
     let firstOrderIdForLogo: string | null = null;
     const hasLogoFile = !!(logoFile && logoFile.size > 0);
     const hasPersonalization = !!(personalizacion && personalizacion.trim());
@@ -939,6 +953,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         logoFile: hasLogoFile ? logoFile : null,
         logoFile2: logosCount >= 2 ? logoFile2 : null,
         logoName2: logosCount >= 2 ? logoNombre2 : undefined,
+        extraLogos: activeLogos.slice(2).map((l) => ({ file: l.file, name: l.name.trim() })),
         clientComments: observaciones || undefined,
         additionalInstructions: personalizacion || undefined,
       });
@@ -952,6 +967,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         if (result.logoUrl) logoUrl = result.logoUrl;
         if (result.logoUrl2) logoUrl2 = result.logoUrl2;
       }
+      extraLogoUrls = result.extraLogoUrls || [];
     } else if (logoFile && logoFile.size > 0 && isRecompra) {
       // Recompra: subir el logo directamente para conservar la URL real.
       const ext = logoFile.name.split(".").pop();
@@ -963,14 +979,16 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       } else {
         logoUrl = "logo-uploaded";
       }
-      if (logosCount >= 2 && logoFile2 && logoFile2.size > 0) {
-        const ext2 = logoFile2.name.split(".").pop();
-        const path2 = `originals/${crypto.randomUUID()}.${ext2}`;
-        const { error: upErr2 } = await supabase.storage.from("logo-files").upload(path2, logoFile2);
-        if (!upErr2) {
-          const { data: urlData2 } = supabase.storage.from("logo-files").getPublicUrl(path2);
-          logoUrl2 = urlData2.publicUrl;
-        }
+      for (let i = 1; i < activeLogos.length; i++) {
+        const extra = activeLogos[i].file;
+        if (!extra || extra.size === 0) continue;
+        const extExtra = extra.name.split(".").pop();
+        const pathExtra = `originals/${crypto.randomUUID()}.${extExtra}`;
+        const { error: upErrExtra } = await supabase.storage.from("logo-files").upload(pathExtra, extra);
+        if (upErrExtra) continue;
+        const { data: urlExtra } = supabase.storage.from("logo-files").getPublicUrl(pathExtra);
+        if (i === 1) logoUrl2 = urlExtra.publicUrl;
+        else extraLogoUrls.push(urlExtra.publicUrl);
       }
     } else if (isRecompra && !noLogo && recompraLogoUrl) {
       // Recompra sin archivo nuevo: se reutiliza el logo aprobado anteriormente.
@@ -1033,7 +1051,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             "ventas:mw:moldeNuevo","ventas:mw:moldeNombre","ventas:mw:moldeCosto","ventas:mw:moldeModo",
             "ventas:mw:fields",
           ].forEach(clearFormDraft);
-          setLogoFileState(null);
+          setMwLogos([makeLogoEntry()]);
           setRutFileState(null);
           setPaymentProofFile(null);
           setMoldeNuevo(false);
@@ -1180,6 +1198,12 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           logo_count: logosCount,
           logo_name: logoNombre || null,
           logo_name_2: logosCount >= 2 ? (logoNombre2 || null) : null,
+          logos: noLogo
+            ? []
+            : activeLogos.map((l, i) => ({
+                name: l.name.trim() || null,
+                url: i === 0 ? logoUrl : i === 1 ? logoUrl2 : (extraLogoUrls[i - 2] ?? null),
+              })),
           line_index: lineIdx + 1,
           line_count: linesToSubmit.length,
           observations: [observaciones, line.isGift ? "🎁 OBSEQUIO" : "", isFirstLine ? extraNote : ""].filter(Boolean).join(" | ") || null,
@@ -1269,11 +1293,9 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       "ventas:mw:noLogo","ventas:mw:needsLogoAdjustment","ventas:mw:costoAdicional",
       "ventas:mw:cobroLogo","ventas:mw:costoLogo",
       "ventas:mw:moldeNuevo","ventas:mw:moldeNombre","ventas:mw:moldeCosto","ventas:mw:moldeModo",
-      "ventas:mw:fields","ventas:mw:logoCount","ventas:mw:clientName","ventas:mw:recompraLogoUrl",
+      "ventas:mw:fields","ventas:mw:clientName","ventas:mw:recompraLogoUrl",
     ].forEach(clearFormDraft);
-    setLogoFileState(null);
-    setLogoFile2State(null);
-    setLogoCount(1);
+    setMwLogos([makeLogoEntry()]);
     setClientName("");
     setRecompraLogoUrl("");
     setRutFileState(null);
@@ -1720,30 +1742,6 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
             {!noLogo && (
               <div className="rounded-lg border border-input p-4 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Logos del pedido</p>
-                    <p className="text-xs text-muted-foreground">Indique cuántos logos lleva la marcación.</p>
-                  </div>
-                  <div className="flex items-center gap-1 rounded-md border border-input p-1">
-                    {[1, 2].map((n) => (
-                      <Button
-                        key={n}
-                        type="button"
-                        size="sm"
-                        variant={logoCount === n ? "default" : "ghost"}
-                        className="h-8 px-3"
-                        onClick={() => {
-                          setLogoCount(n);
-                          if (n === 1) setLogoFile2State(null);
-                        }}
-                      >
-                        {n} logo{n > 1 ? "s" : ""}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
                 {isRecompra && (
                   <div className="space-y-1.5 rounded-md border border-input bg-muted/30 p-3">
                     <Label>Logo anterior del cliente *</Label>
@@ -1776,37 +1774,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                   </div>
                 )}
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <FileField label="Logo 1" name="mw_logo" value={logoFileState} onChange={setLogoFileState} accept="image/*,.pdf,.svg,.ai" />
-                  <div className="space-y-1.5">
-                    <Label htmlFor="mw_logo_nombre">Nombre o referencia del logo 1 *</Label>
-                    <Input
-                      id="mw_logo_nombre"
-                      name="mw_logo_nombre"
-                      placeholder="Ej: Logo Coca-Cola v2"
-                    />
-                  </div>
-                </div>
-
-                <div className={`grid gap-4 sm:grid-cols-2 ${logoCount < 2 ? "opacity-50" : ""}`}>
-                  <FileField
-                    label="Logo 2"
-                    name="mw_logo_2"
-                    value={logoFile2State}
-                    onChange={setLogoFile2State}
-                    accept="image/*,.pdf,.svg,.ai"
-                    disabled={logoCount < 2}
-                  />
-                  <div className="space-y-1.5">
-                    <Label htmlFor="mw_logo_nombre_2">Nombre o referencia del logo 2{logoCount >= 2 ? " *" : ""}</Label>
-                    <Input
-                      id="mw_logo_nombre_2"
-                      name="mw_logo_nombre_2"
-                      disabled={logoCount < 2}
-                      placeholder="Ej: Escudo del colegio"
-                    />
-                  </div>
-                </div>
+                <OrderLogosField logos={mwLogos} onChange={setMwLogos} />
               </div>
             )}
 
@@ -1872,6 +1840,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             moldeNombre,
             moldeCosto,
             moldeModo,
+            logos: mwLogos,
           })}
         />
       </CardContent>

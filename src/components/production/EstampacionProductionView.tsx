@@ -69,6 +69,7 @@ interface PendingIntakeOrder {
   silicone_color?: string | null;
   logo_url?: string | null;
   logo_url_2?: string | null;
+  logos?: Array<{ name?: string | null; url?: string | null }> | null;
   logo_count?: number | null;
   logo_name?: string | null;
   logo_name_2?: string | null;
@@ -194,7 +195,7 @@ export const EstampacionProductionView = () => {
       const { data, error } = await supabase
         .from("orders")
         .select(
-          "id, order_code, client_name, brand, product, quantity, advisor_name, delivery_date, created_at, production_status, ink_color, ink_count, ink_color_2, ink_color_3, glitter_color, gel_color, silicone_color, logo_url, logo_url_2, logo_count, logo_name, logo_name_2, line_index, line_count, is_recompra, observations, advisor_id, delivered_quantity"
+          "id, order_code, client_name, brand, product, quantity, advisor_name, delivery_date, created_at, production_status, ink_color, ink_count, ink_color_2, ink_color_3, glitter_color, gel_color, silicone_color, logo_url, logo_url_2, logos, logo_count, logo_name, logo_name_2, line_index, line_count, is_recompra, observations, advisor_id, delivered_quantity"
         )
         .eq("production_status", "pendiente")
         .is("inventory_archived_at", null)
@@ -341,7 +342,23 @@ export const EstampacionProductionView = () => {
                   ) : (
                     <p className="text-[11px] text-muted-foreground mt-2">Sin archivo de logo disponible.</p>
                   )}
-                  {o.logo_url_2 && (
+                  {(o.logos || [])
+                    .slice(1)
+                    .filter((l) => l?.url)
+                    .map((l, i) => (
+                      <div key={`${o.id}-logo-${i}`} className="rounded-md border p-2 space-y-2 mt-2">
+                        <p className="text-[11px] font-medium text-muted-foreground">
+                          Logo {i + 2} {l?.name ? `— ${l.name}` : ""}
+                        </p>
+                        <LogoPreview url={l!.url!} alt={`Logo ${i + 2} ${o.client_name}`} maxHeightClass="max-h-24" />
+                        <a href={l!.url!} download target="_blank" rel="noopener noreferrer">
+                          <Button size="sm" variant="outline" className="w-full">
+                            <Download className="h-3 w-3 mr-1" /> Descargar logo {i + 2}
+                          </Button>
+                        </a>
+                      </div>
+                    ))}
+                  {!(o.logos || []).length && o.logo_url_2 && (
                     <div className="rounded-md border p-2 space-y-2 mt-2">
                       <p className="text-[11px] font-medium text-muted-foreground">
                         Logo 2 {o.logo_name_2 ? `— ${o.logo_name_2}` : ""}
