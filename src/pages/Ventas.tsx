@@ -1947,6 +1947,9 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const [ssPaymentDate, setSsPaymentDate] = usePersistedState<string>("ventas:ss:paymentDate", new Date().toISOString().slice(0, 10));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ssIsRecompra, setSsIsRecompra] = usePersistedState("ventas:ss:isRecompra", false);
+  const [ssRecompraMismoLogo, setSsRecompraMismoLogo] = usePersistedState<"si" | "no">("ventas:ss:recompraMismoLogo", "si");
+  const [ssRecompraLogoUrl, setSsRecompraLogoUrl] = usePersistedState<string>("ventas:ss:recompraLogoUrl", "");
+  const [ssClientName, setSsClientName] = usePersistedState<string>("ventas:ss:clientName", "");
   const [ssNoLogo, setSsNoLogo] = usePersistedState("ventas:ss:noLogo", false);
   const [ssNeedsLogoAdjustment, setSsNeedsLogoAdjustment] = usePersistedState("ventas:ss:needsLogoAdjustment", false);
   const [ssCobroLogo, setSsCobroLogo] = usePersistedState("ventas:ss:cobroLogo", false);
@@ -2015,8 +2018,24 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     const logoNombre = ((fd.get("ss_logo_nombre") as string) || "").trim();
     const fechaRequerida = fd.get("ss_fechaRequerida") as string;
 
+    const ssReusaLogoAnterior = ssIsRecompra && !ssNoLogo && ssRecompraMismoLogo === "si";
+    if (ssReusaLogoAnterior && !ssRecompraLogoUrl) {
+      toast.error("Seleccione el logo anterior", {
+        description: "Use el buscador para elegir el logo ya trabajado con este cliente.",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+    if (ssIsRecompra && !ssNoLogo && ssRecompraMismoLogo === "no" && !(logoFile && logoFile.size > 0)) {
+      toast.error("Adjunte el logo actualizado", {
+        description: "El cliente cambió el logo: adjunte el archivo nuevo para que Diseño y Estampación lo reciban.",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
     // Nombre/referencia del logo OBLIGATORIO para pedidos mayor con logo
-    if (!ssNoLogo && !logoNombre) {
+    if (!ssNoLogo && !ssReusaLogoAnterior && !logoNombre) {
       toast.error("Referencia del logo requerida", {
         description: "Escriba un nombre claro para identificar el logo (ej: Logo Coca-Cola v2).",
       });
@@ -2072,7 +2091,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     let ssFirstOrderIdForLogo: string | null = null;
     const ssHasLogoFile = !!(logoFile && logoFile.size > 0);
     const ssHasPersonalization = !!(personalizacion && personalizacion.trim());
-    if ((ssHasLogoFile || ssHasPersonalization) && user && !ssIsRecompra && !ssNoLogo) {
+    if ((ssHasLogoFile || ssHasPersonalization) && user && !ssReusaLogoAnterior && !ssNoLogo) {
       const firstRef = ssLines[0].referencia;
       const result = await createLogoRequestFromOrder({
         brand: "Sweatspot",
@@ -2084,6 +2103,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         logoFile: ssHasLogoFile ? logoFile : null,
         clientComments: observaciones || undefined,
         additionalInstructions: personalizacion || undefined,
+        fromRecompra: ssIsRecompra,
       });
       if (result.success) {
         toast.success("Diseño de logo", { description: result.message });
@@ -2093,7 +2113,17 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         toast.error("Diseño de logo", { description: result.message });
         if (result.logoUrl) logoUrl = result.logoUrl;
       }
+    } else if (ssReusaLogoAnterior && ssRecompraLogoUrl) {
+      logoUrl = ssRecompraLogoUrl;
     }
+
+    const ssLogoSource: LogoSource = ssNoLogo ? "sin_logo" : ssReusaLogoAnterior ? "reutilizado" : "nuevo";
+    const ssLogoSourceMeta = {
+      logo_source: ssLogoSource,
+      logo_source_at: new Date().toISOString(),
+      logo_source_by: user?.id || null,
+      logo_source_by_name: user?.email || null,
+    };
 
     const ssShortStages = buildStages("sweatspot", { hasLogo: !ssNoLogo, needsCuerpos: false, product: "" });
     const ssFullStagesFor = (product: string) =>
@@ -2185,6 +2215,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
           ink_color: inkColor,
           silicone_color: siliconeColor,
           logo_url: logoUrl,
+          ...ssLogoSourceMeta,
           observations: [observaciones, lineIdx === 0 ? ssLogoNote : ""].filter(Boolean).join(" | ") || null,
           personalization: personalizacion || null,
           advisor_id: user?.id || "",
@@ -2244,13 +2275,27 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         clientName,
         needsCuerpos: false,
         shortage: 0,
-        hasLogo: !!logoFile,
+        hasLogo: ssLogoSource === "nuevo",
         advisorId: user?.id || "",
       });
     }
 
     if (ssLogoRequestId && ssFirstOrderIdForLogo) {
       await supabase.from("logo_requests").update({ order_id: ssFirstOrderIdForLogo }).eq("id", ssLogoRequestId);
+    }
+
+    if (ssFirstOrderIdForLogo && ssLogoSource !== "sin_logo") {
+      await notifyLogoFlow({
+        orderId: ssFirstOrderIdForLogo,
+        clientName,
+        brandLabel: "Sweatspot",
+        product: ssLines[0]?.referencia ?? "",
+        logoUrl,
+        logoSource: ssLogoSource,
+        isRecompra: ssIsRecompra,
+        userId: user?.id ?? null,
+        userName: user?.email ?? null,
+      });
     }
 
     queryClient.invalidateQueries({ queryKey: ["production-orders"] });
@@ -2278,7 +2323,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
     [
       "ventas:ss:lines","ventas:ss:abono","ventas:ss:estadoPago",
-      "ventas:ss:isRecompra","ventas:ss:noLogo","ventas:ss:needsLogoAdjustment",
+      "ventas:ss:isRecompra","ventas:ss:recompraMismoLogo","ventas:ss:recompraLogoUrl","ventas:ss:noLogo","ventas:ss:needsLogoAdjustment",
       "ventas:ss:cobroLogo","ventas:ss:costoLogo",
       "ventas:ss:fields",
     ].forEach(clearFormDraft);
@@ -2523,10 +2568,23 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                 <Switch id="ss_cobroLogo" checked={ssCobroLogo} onCheckedChange={setSsCobroLogo} />
               </div>
             </div>
-            {ssIsRecompra && (
-              <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3 max-w-md">
-                ✓ Recompra: El logo ya existe, no se generará solicitud de diseño automática.
-              </p>
+            {ssIsRecompra && !ssNoLogo && (
+              <div className="space-y-2 rounded-md border border-primary/40 bg-primary/5 p-3 max-w-md">
+                <Label className="text-sm font-semibold">¿El cliente utilizará el mismo logo?</Label>
+                <div className="flex gap-2">
+                  <Button type="button" size="sm" variant={ssRecompraMismoLogo === "si" ? "default" : "outline"} onClick={() => setSsRecompraMismoLogo("si")}>
+                    Sí, el mismo logo
+                  </Button>
+                  <Button type="button" size="sm" variant={ssRecompraMismoLogo === "no" ? "default" : "outline"} onClick={() => setSsRecompraMismoLogo("no")}>
+                    No, logo actualizado
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {ssRecompraMismoLogo === "si"
+                    ? "Se reutiliza el logo aprobado anteriormente y se notifica a Estampación."
+                    : "Se creará una solicitud de diseño y se notificará a Diseño y Estampación del logo nuevo."}
+                </p>
+              </div>
             )}
             {ssNoLogo && (
               <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3 max-w-md">
@@ -2555,8 +2613,37 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Archivos adjuntos</legend>
+            {ssIsRecompra && !ssNoLogo && ssRecompraMismoLogo === "si" && (
+              <div className="space-y-2 rounded-md border border-input bg-muted/30 p-3 max-w-md">
+                <Label>Logo anterior del cliente *</Label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <LogoSearchDialog
+                    clientName={ssClientName}
+                    brand="Sweatspot"
+                    selectedUrl={ssRecompraLogoUrl}
+                    onSelect={setSsRecompraLogoUrl}
+                  />
+                  {ssRecompraLogoUrl && (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setSsRecompraLogoUrl("")}>
+                      Quitar selección
+                    </Button>
+                  )}
+                </div>
+                {ssRecompraLogoUrl ? (
+                  <div className="max-w-[220px]">
+                    <LogoPreview url={ssRecompraLogoUrl} alt="Logo seleccionado" />
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Busque por cliente, marca, producto o nombre del logo. Si no lo encuentra, elija "No, logo actualizado" y adjunte el archivo.
+                  </p>
+                )}
+              </div>
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
-              <FileField label="Adjuntar logo" name="ss_logo" value={ssLogoFileState} onChange={setSsLogoFileState} accept="image/*,.pdf,.svg,.ai" />
+              {!(ssIsRecompra && ssRecompraMismoLogo === "si") && (
+                <FileField label="Adjuntar logo" name="ss_logo" value={ssLogoFileState} onChange={setSsLogoFileState} accept="image/*,.pdf,.svg,.ai" />
+              )}
               <FileField label="Adjuntar RUT de la empresa (opcional)" name="ss_rut" value={ssRutFileState} onChange={setSsRutFileState} accept="image/*,.pdf" />
             </div>
             <div className="space-y-1.5">
