@@ -128,7 +128,7 @@ export const MagicalWarmersWorkflow = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
   const stageRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const activeOrdersAll = orders.filter((o) => o.current_stage !== "listo");
+  const activeOrdersAll = orders.filter((o) => !TERMINAL_STAGES.includes(o.current_stage));
   const completedOrders = orders.filter((o) => o.current_stage === "listo");
   const activeOrders = useMemo(() => {
     const q = searchTerm.trim();
@@ -140,11 +140,17 @@ export const MagicalWarmersWorkflow = () => {
       ),
     );
   }, [activeOrdersAll, searchTerm]);
+  // Órdenes activas cuya etapa no pertenece al tablero: antes desaparecían de la vista.
+  const otherStageOrders = useMemo(
+    () => activeOrders.filter((o) => !STAGE_ORDER.includes(o.current_stage as MagicalStage)),
+    [activeOrders],
+  );
   const stageCounts = useMemo(() => {
     const m: Record<string, number> = {};
     activeOrdersAll.forEach((o) => { m[o.current_stage] = (m[o.current_stage] || 0) + 1; });
     return m;
   }, [activeOrdersAll]);
+
   const scrollToStage = (stage: string) => {
     const el = stageRefs.current[stage];
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
