@@ -125,9 +125,11 @@ const InventariosRoleView = () => {
           />
         </TabsContent>
 
-        <TabsContent value="bandeja" className="mt-4">
+        <TabsContent value="bandeja" className="mt-4 space-y-4">
+          <UnroutedOrdersPanel />
           <WholesaleOrdersInbox />
         </TabsContent>
+
 
         <TabsContent value="abastecimiento" className="mt-4 space-y-4">
           <OrderRequirementsPanel />
