@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { baseRefName } from "@/lib/canonicalBodyRef";
 import DebouncedSearchInput from "./DebouncedSearchInput";
+import { matchesQuery } from "@/lib/search";
 
 type StockStatus = "ok" | "bajo" | "critico";
 
@@ -130,7 +131,7 @@ const CategorizedInventoryPanel = ({
   const search = normalize(searchTerm.trim());
   const filteredItems = baseItems
     .filter((i) => {
-      if (search && !normalize(i.name).includes(search)) return false;
+      if (searchTerm && !matchesQuery([i.name, i.brand, (i as any).product_type, (i as any).color, (i as any).logo], searchTerm)) return false;
       if (typeFilter === "termico") return i.product_type === "Térmico";
       if (typeFilter === "frio") return i.product_type === "Frío";
       if (typeFilter === "otros") return !i.product_type;
