@@ -87,31 +87,40 @@ const FiltersBar = ({
 
 export default function AsesorInventoryView() {
   const [selectedBrand, setSelectedBrand] = useState<InventoryBrand | null>(null);
-  const { bodyStock, stockItems, isLoading } = useInventory();
+  const { catalog, isLoading } = useReferenceCatalog();
+
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("todos");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [onlySinLogo, setOnlySinLogo] = useState(false);
 
-  const magicalBodies = bodyStock.filter((b) => b.brand.toLowerCase() === "magical");
-  const magicalFinished = stockItems.filter((s) => s.brand.toLowerCase() === "magical" && s.category === "producto_terminado");
-  const sweatspotFinished = stockItems.filter((s) => s.brand.toLowerCase() === "sweatspot" && s.category === "producto_terminado");
+  const magicalBodies = useMemo(
+    () => catalog.filter((i) => i.brandKey === "magical" && i.category === "cuerpos_referencias"),
+    [catalog],
+  );
+  const magicalFinished = useMemo(
+    () => catalog.filter((i) => i.brandKey === "magical" && i.category === "producto_terminado"),
+    [catalog],
+  );
+  const sweatspotFinished = useMemo(
+    () => catalog.filter((i) => i.brandKey === "sweatspot" && i.category === "producto_terminado"),
+    [catalog],
+  );
 
   const q = normalize(search.trim());
 
   const filteredMagicalBodies = useMemo(() => {
     return magicalBodies
       .filter((b) => {
-        if (q && !normalize(b.referencia).includes(q)) return false;
-        const tipo = classifyType(b.referencia);
-        if (typeFilter === "termico") return tipo === "Térmico";
-        if (typeFilter === "frio") return tipo === "Frío";
+        if (q && !normalize(`${b.name} ${b.tipo || ""}`).includes(q)) return false;
+        if (typeFilter === "termico") return b.tipo === "Térmico";
+        if (typeFilter === "frio") return b.tipo === "Frío";
         return true;
       })
       .sort((a, b) =>
         sortDir === "asc"
-          ? a.referencia.localeCompare(b.referencia, "es", { sensitivity: "base" })
-          : b.referencia.localeCompare(a.referencia, "es", { sensitivity: "base" })
+          ? a.name.localeCompare(b.name, "es", { sensitivity: "base" })
+          : b.name.localeCompare(a.name, "es", { sensitivity: "base" })
       );
   }, [magicalBodies, q, typeFilter, sortDir]);
 
@@ -119,8 +128,8 @@ export default function AsesorInventoryView() {
     return magicalFinished
       .filter((i) => {
         if (q && !normalize(i.name).includes(q)) return false;
-        if (typeFilter === "termico") return i.product_type === "Térmico";
-        if (typeFilter === "frio") return i.product_type === "Frío";
+        if (typeFilter === "termico") return i.tipo === "Térmico";
+        if (typeFilter === "frio") return i.tipo === "Frío";
         return true;
       })
       .sort((a, b) =>
@@ -129,6 +138,7 @@ export default function AsesorInventoryView() {
           : b.name.localeCompare(a.name, "es", { sensitivity: "base" })
       );
   }, [magicalFinished, q, typeFilter, sortDir]);
+
 
   const filteredSweatspotFinished = useMemo(() => {
     return sweatspotFinished
