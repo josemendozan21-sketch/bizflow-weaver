@@ -100,7 +100,7 @@ export function PuntoReportes({ sales, movements, products, locationId, location
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <Stat icon={<Banknote className="h-4 w-4" />} label="Efectivo en caja"
           value={`$${totals.cashOnHand.toLocaleString()}`}
-          sub={`Base $${cashBase.toLocaleString()} + Ventas efectivo $${totals.cashSalesAll.toLocaleString()} − Retiros $${(totals.approvedWithdrawalsAll + totals.pendingWithdrawalsAll).toLocaleString()}${totals.pendingWithdrawalsAll > 0 ? ` (incl. $${totals.pendingWithdrawalsAll.toLocaleString()} pendientes)` : ""}`} />
+          sub={`${totals.cash.baseFromCount ? "Arqueo" : "Base"} $${totals.cash.base.toLocaleString()} + Ventas efectivo $${totals.cashSalesAll.toLocaleString()} − Salidas $${totals.salidasAll.toLocaleString()}${totals.pendingAll > 0 ? ` (incl. $${totals.pendingAll.toLocaleString()} pendientes)` : ""}`} />
         <Stat icon={<DollarSign className="h-4 w-4" />} label="Tarjeta hoy"
           value={`$${totals.tarjeta.toLocaleString()}`} />
         <Stat icon={<DollarSign className="h-4 w-4" />} label="Nequi / Transf hoy"
