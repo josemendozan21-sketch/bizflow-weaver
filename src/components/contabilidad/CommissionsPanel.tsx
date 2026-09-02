@@ -229,10 +229,18 @@ export default function CommissionsPanel({ orders }: Props) {
                     <div className="space-y-1">
                       <CardTitle className="text-base">{a.advisorName}</CardTitle>
                       <div className="flex flex-wrap gap-2">
-                        <Badge variant="outline">{a.ordersCount} pedidos</Badge>
+                        <Badge variant="outline">{a.ordersCount} pedidos considerados</Badge>
                         <Badge variant="outline">
-                          Vendido: {fmt(a.totalWithVat)}
+                          Base comisión: {fmt(a.totalWithVat)}
                         </Badge>
+                        <Badge variant="outline">
+                          Ventas del período: {fmt(a.grossSalesWithVat)} ({a.grossOrdersCount})
+                        </Badge>
+                        {a.excludedCount > 0 && (
+                          <Badge className="bg-amber-500">
+                            {a.excludedCount} excluidos · {fmt(a.excludedWithVat)}
+                          </Badge>
+                        )}
                         {a.weekendUnlocked ? (
                           <Badge className="bg-emerald-600">FDS desbloqueado</Badge>
                         ) : (
@@ -243,15 +251,34 @@ export default function CommissionsPanel({ orders }: Props) {
                         )}
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right space-y-2">
                       <p className="text-2xl font-bold text-emerald-600">
                         {fmt(a.totalToPay)}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Comisión {fmt(a.rawCommission)} + Bono {fmt(a.bonus)}
                       </p>
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1"
+                          onClick={() => exportCommissionsXlsx(buildExport(a))}
+                        >
+                          <Download className="h-3.5 w-3.5" /> Excel
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1"
+                          onClick={() => exportCommissionsCsv(buildExport(a))}
+                        >
+                          <Download className="h-3.5 w-3.5" /> CSV
+                        </Button>
+                      </div>
                     </div>
                   </div>
+
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {/* KPIs */}
