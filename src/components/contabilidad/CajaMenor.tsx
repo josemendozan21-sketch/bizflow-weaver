@@ -52,6 +52,23 @@ import {
   formatCOP,
 } from "@/lib/pettyCash";
 
+/** Badge de sede bien diferenciable: Toberín azul, Chicó violeta. */
+function SedeBadge({ sede }: { sede: string | null | undefined }) {
+  const isChico = sede === "chico";
+  return (
+    <Badge
+      variant="outline"
+      className={`text-[10px] font-bold uppercase tracking-wide border-2 ${
+        isChico
+          ? "bg-violet-500/10 text-violet-700 border-violet-500/50 dark:text-violet-300"
+          : "bg-blue-500/10 text-blue-700 border-blue-500/50 dark:text-blue-300"
+      }`}
+    >
+      {sedeLabel(sede)}
+    </Badge>
+  );
+}
+
 export default function CajaMenor() {
   const { user, role } = useAuth();
   const queryClient = useQueryClient();
@@ -59,6 +76,7 @@ export default function CajaMenor() {
   const [showExpenseDialog, setShowExpenseDialog] = useState(false);
   const [showCountDialog, setShowCountDialog] = useState(false);
   const [editingFund, setEditingFund] = useState<PettyFund | null>(null);
+  const [editingExpense, setEditingExpense] = useState<PettyExpense | null>(null);
   const [monthFilter, setMonthFilter] = useState<string>("todos");
   const [sedeFilter, setSedeFilter] = useState<"todas" | Sede>("todas");
   const canManage = role === "admin" || role === "contabilidad";
@@ -308,17 +326,6 @@ export default function CajaMenor() {
             Movimientos de caja menor ({visible.length})
           </h3>
           <div className="flex items-center gap-2 flex-wrap">
-            <Select value={sedeFilter} onValueChange={(v) => setSedeFilter(v as any)}>
-              <SelectTrigger className="h-8 w-[190px]">
-                <SelectValue placeholder="Sede" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todas">Todas las sedes</SelectItem>
-                {SEDES.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <Select value={monthFilter} onValueChange={setMonthFilter}>
               <SelectTrigger className="h-8 w-[190px]">
                 <SelectValue placeholder="Mes" />
