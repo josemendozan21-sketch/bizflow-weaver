@@ -117,13 +117,39 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
       setUploading(true);
       let proof_url: string | null = null;
       if (file) proof_url = await uploadPosCashProof(file, locationId);
-      await create.mutateAsync({ amount: amt, concept, notes, proof_url, movement_type: movementType });
-      toast.success(`${movementType === "retiro" ? "Retiro" : "Consignación"} registrado, pendiente de aprobación`);
+      if (movementType === "gasto") {
+        await createExpense.mutateAsync({
+          amount: amt,
+          description: notes ? `${concept} — ${notes}` : concept,
+          requested_by: "Punto 92",
+          proof_url,
+        });
+        toast.success("Gasto registrado, pendiente de aprobación de contabilidad");
+      } else {
+        await create.mutateAsync({ amount: amt, concept, notes, proof_url, movement_type: movementType });
+        toast.success(`${movementType === "retiro" ? "Retiro" : "Consignación"} registrado, pendiente de aprobación`);
+      }
       reset();
     } catch (e: any) {
-      toast.error(e.message ?? "Error al registrar retiro");
+      toast.error(e.message ?? "Error al registrar el movimiento");
     } finally {
       setUploading(false);
+    }
+  };
+
+  const submitCount = async () => {
+    const counted = parseFloat(countedAmount);
+    if (isNaN(counted) || counted < 0) { toast.error("Monto contado inválido"); return; }
+    try {
+      await createCount.mutateAsync({
+        expected_amount: cashOnHand,
+        counted_amount: counted,
+        notes: countNotes || null,
+      });
+      toast.success("Arqueo registrado. El saldo queda cuadrado desde este momento.");
+      setShowCount(false); setCountedAmount(""); setCountNotes("");
+    } catch (e: any) {
+      toast.error(e.message ?? "Error al registrar arqueo");
     }
   };
 
