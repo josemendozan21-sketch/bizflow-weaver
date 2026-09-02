@@ -25,6 +25,7 @@ import { Loader2, Info, TrendingUp, Clock, CheckCircle2, ChevronLeft, ChevronRig
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useOrders } from "@/hooks/useOrders";
+import { useAllOrderCharges } from "@/hooks/useOrderCharges";
 import { useAuth } from "@/contexts/AuthContext";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import {
@@ -35,7 +36,6 @@ import {
   BONUS_TIER_2_THRESHOLD,
   BONUS_TIER_2_AMOUNT,
   UNLOCK_THRESHOLD,
-  type PeriodBasis,
 } from "@/lib/commissions";
 import {
   exportCommissionsCsv,
@@ -55,6 +55,7 @@ type Filter = "todos" | "facturado" | "pendiente" | "excluido" | "cero";
 export default function MisComisiones() {
   const { user } = useAuth();
   const { data: orders = [], isLoading } = useOrders();
+  const { data: charges = {} } = useAllOrderCharges();
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
@@ -62,11 +63,10 @@ export default function MisComisiones() {
   const [search, setSearch] = useState("");
   const [minAmount, setMinAmount] = useState("");
   const [maxAmount, setMaxAmount] = useState("");
-  const [basis, setBasis] = useState<PeriodBasis>("venta");
 
   const summary = useMemo(
-    () => summarizeAdvisorProgress(orders, year, month, user?.id, basis),
-    [orders, year, month, user?.id, basis]
+    () => summarizeAdvisorProgress(orders, year, month, user?.id, charges),
+    [orders, year, month, user?.id, charges]
   );
 
 
@@ -102,7 +102,7 @@ export default function MisComisiones() {
     const out: { label: string; total: number; commission: number; count: number }[] = [];
     for (let i = 0; i < 12; i++) {
       const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-      const s = summarizeAdvisorProgress(orders, d.getFullYear(), d.getMonth(), user?.id, basis);
+      const s = summarizeAdvisorProgress(orders, d.getFullYear(), d.getMonth(), user?.id, charges);
       if (s.ordersCount === 0) continue;
       out.push({
         label: `${MONTHS[d.getMonth()]} ${d.getFullYear()}`,
@@ -112,7 +112,7 @@ export default function MisComisiones() {
       });
     }
     return out;
-  }, [orders, user?.id, basis]);
+  }, [orders, user?.id, charges]);
 
   const lines = useMemo(() => {
     let list = summary.lines;
@@ -168,9 +168,14 @@ export default function MisComisiones() {
       { Concepto: "Periodo", Valor: `${MONTHS[month]} ${year}` },
       {
         Concepto: "Criterio del período",
-        Valor: basis === "venta" ? "Fecha de venta" : "Fecha de factura",
+        Valor: "Fecha de factura (si no hay factura, fecha de venta)",
       },
       { Concepto: "Pedidos del período", Valor: summary.ordersCount },
+      {
+        Concepto: "Flete y cargos excluidos de la base",
+        Valor: Math.round(summary.nonCommissionableWithVat),
+      },
+      { Concepto: "Pedidos sin factura emitida", Valor: summary.pendingInvoiceCount },
       { Concepto: "Ventas totales (con IVA)", Valor: Math.round(summary.totalWithVat) },
       { Concepto: "Pedidos considerados para comisión", Valor: summary.invoicedCount },
       { Concepto: "Valor considerado (con IVA)", Valor: Math.round(summary.invoicedWithVat) },
@@ -262,13 +267,6 @@ export default function MisComisiones() {
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
-          <Select value={basis} onValueChange={(v) => setBasis(v as PeriodBasis)}>
-            <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="venta">Por fecha de venta</SelectItem>
-              <SelectItem value="factura">Por fecha de factura</SelectItem>
-            </SelectContent>
-          </Select>
           <Button
             onClick={handleExportXlsx}
             disabled={exporting || summary.lines.length === 0}
@@ -362,7 +360,7 @@ export default function MisComisiones() {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
             <Info className="h-4 w-4" /> Resumen del período —{" "}
-            {MONTHS[month]} {year} ({basis === "venta" ? "por fecha de venta" : "por fecha de factura"})
+            {MONTHS[month]} {year} (por fecha de factura)
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -427,10 +425,11 @@ export default function MisComisiones() {
           </div>
           <p className="text-xs text-muted-foreground flex items-start gap-1.5">
             <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-            La comisión se causa cuando el pedido está pagado o facturado. Si el
-            pedido tiene un abono parcial, se causa comisión proporcional a lo
-            abonado y el saldo queda como comisión por causar. Se calcula siempre
-            sobre el valor sin IVA.
+El período de liquidación es el <b>mes de la factura</b> (si el pedido aún
+            no tiene factura, se muestra en su mes de venta y queda pendiente de
+            facturar). La comisión se causa cuando el pedido está pagado o
+            facturado; con abono parcial se causa proporcional a lo abonado. La
+            base <b>excluye flete y cargos adicionales</b> y se calcula sin IVA.
           </p>
 
         </CardContent>
@@ -505,6 +504,8 @@ export default function MisComisiones() {
                     <TableHead>Cliente</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
+                    <TableHead className="text-right">Flete + cargos</TableHead>
+                    <TableHead className="text-right">Base comisionable</TableHead>
                     <TableHead className="text-right">Abono</TableHead>
                     <TableHead className="text-right">Base sin IVA</TableHead>
                     <TableHead className="text-right">%</TableHead>
@@ -537,6 +538,12 @@ export default function MisComisiones() {
                         {l.clientKind === "recompra" ? "Recompra" : "Nuevo"}
                       </TableCell>
                       <TableCell className="text-right">{fmt(l.totalWithVat)}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {l.shippingCost + l.extraCharges > 0
+                          ? `-${fmt(l.shippingCost + l.extraCharges)}`
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-right">{fmt(l.netTotalWithVat)}</TableCell>
                       <TableCell className="text-right text-muted-foreground">
                         {fmt(Number(l.order.abono) || 0)}
                       </TableCell>

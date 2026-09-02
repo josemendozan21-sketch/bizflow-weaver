@@ -30,6 +30,29 @@ export function useOrderCharges(orderId: string | undefined) {
   });
 }
 
+/**
+ * Suma de cargos adicionales por pedido (mapa order_id -> total).
+ * Se usa para descontarlos de la base de comisión.
+ */
+export function useAllOrderCharges() {
+  return useQuery({
+    queryKey: ["order_charges", "all"],
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("order_charges" as any)
+        .select("order_id, amount")
+        .range(0, 19999);
+      if (error) throw error;
+      const map: Record<string, number> = {};
+      for (const row of (data as unknown as { order_id: string; amount: number }[]) || []) {
+        map[row.order_id] = (map[row.order_id] || 0) + (Number(row.amount) || 0);
+      }
+      return map;
+    },
+  });
+}
+
 export function useAddOrderCharge() {
   const qc = useQueryClient();
   return useMutation({
