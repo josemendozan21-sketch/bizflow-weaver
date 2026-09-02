@@ -332,10 +332,13 @@ export default function CommissionsPanel({ orders }: Props) {
                               <TableHead>Forma de pago</TableHead>
                               <TableHead>Devuelto</TableHead>
                               <TableHead className="text-right">Total c/IVA</TableHead>
+                              <TableHead className="text-right">Base usada c/IVA</TableHead>
                               <TableHead className="text-right">Base s/IVA</TableHead>
                               <TableHead className="text-right">%</TableHead>
                               <TableHead className="text-right">Comisión</TableHead>
+                              <TableHead>Causación</TableHead>
                             </TableRow>
+
                           </TableHeader>
                           <TableBody>
                             {a.lines.map((l) => (
