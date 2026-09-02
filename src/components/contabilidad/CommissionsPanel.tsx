@@ -27,12 +27,15 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronDown, Info, TrendingUp, AlertCircle } from "lucide-react";
+import { ChevronDown, Info, TrendingUp, AlertCircle, Download } from "lucide-react";
 import type { Order } from "@/hooks/useOrders";
 import {
   summarizeAdvisorMonth,
+  STATUS_LABEL,
   type OrderOverrides,
   type PaymentMode,
+  type PeriodBasis,
+  type AdvisorMonthSummary,
   BONUS_TIER_1_THRESHOLD,
   BONUS_TIER_1_AMOUNT,
   UNLOCK_THRESHOLD,
@@ -42,6 +45,11 @@ import {
   MIN_TICKET_DETAL,
   RETURN_PENALTY,
 } from "@/lib/commissions";
+import {
+  exportCommissionsCsv,
+  exportCommissionsXlsx,
+} from "@/lib/commissionExports";
+
 
 const MONTHS = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
