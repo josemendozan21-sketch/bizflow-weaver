@@ -25,6 +25,7 @@ interface UserWithRole {
   email: string | null;
   display_name: string | null;
   role: AppRole | null;
+  advisor_code: string | null;
   created_at: string;
 }
 
@@ -75,6 +76,7 @@ const AdminUsuarios = () => {
         email: p.email,
         display_name: p.display_name,
         role: (userRole?.role as AppRole) ?? null,
+        advisor_code: (p as any).advisor_code ?? null,
         created_at: p.created_at,
       };
     });
@@ -135,6 +137,22 @@ const AdminUsuarios = () => {
     fetchUsers();
   };
 
+  const saveAdvisorCode = async (userId: string, raw: string) => {
+    const code = raw.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
+    const current = users.find((u) => u.user_id === userId)?.advisor_code ?? "";
+    if (code === (current ?? "")) return;
+    const { error } = await supabase
+      .from("profiles")
+      .update({ advisor_code: code || null } as any)
+      .eq("user_id", userId);
+    if (error) {
+      toast.error(error.message.includes("duplicate") ? "Esa sigla ya está en uso" : "No se pudo guardar la sigla");
+      return;
+    }
+    toast.success("Sigla actualizada");
+    fetchUsers();
+  };
+
   const roleBadgeVariant = (r: AppRole | null) => {
     if (!r) return "outline" as const;
     return r === "admin" ? "destructive" as const : "default" as const;
@@ -146,7 +164,9 @@ const AdminUsuarios = () => {
         <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
           <Shield className="h-6 w-6" /> Administración de usuarios
         </h1>
-        <p className="text-muted-foreground">Gestiona los usuarios y sus roles de acceso</p>
+        <p className="text-muted-foreground">
+          Gestiona los usuarios, sus roles y la sigla con la que se identifican sus pedidos (ej. MW-PB-00123).
+        </p>
       </div>
 
       <Card>
@@ -201,6 +221,7 @@ const AdminUsuarios = () => {
                 <TableRow>
                   <TableHead>Correo</TableHead>
                   <TableHead>Nombre</TableHead>
+                  <TableHead>Sigla</TableHead>
                   <TableHead>Rol actual</TableHead>
                   <TableHead>Cambiar rol</TableHead>
                   <TableHead>Registro</TableHead>
@@ -211,6 +232,17 @@ const AdminUsuarios = () => {
                   <TableRow key={u.user_id}>
                     <TableCell className="font-medium">{u.email}</TableCell>
                     <TableCell>{u.display_name || "—"}</TableCell>
+                    <TableCell>
+                      <Input
+                        defaultValue={u.advisor_code ?? ""}
+                        maxLength={4}
+                        placeholder="Ej: PB"
+                        aria-label={`Sigla de ${u.display_name || u.email}`}
+                        className="w-20 h-8 uppercase font-mono"
+                        onBlur={(e) => saveAdvisorCode(u.user_id, e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                      />
+                    </TableCell>
                     <TableCell>
                       <Badge variant={roleBadgeVariant(u.role)}>
                         {u.role ? getRoleLabel(u.role) : "Sin rol"}

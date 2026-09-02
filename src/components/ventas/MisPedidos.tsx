@@ -23,6 +23,10 @@ import { PaymentsList } from "./PaymentsList";
 import { AddPaymentDialog } from "./AddPaymentDialog";
 import { PendingProofPanel } from "./PendingProofPanel";
 
+/** Compara códigos de pedido ignorando guiones y mayúsculas (SW-VM-00123 → swvm00123). */
+const normalizeCode = (v: string) => (v || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+
 const STAGE_ORDER = [
   "pendiente",
   "diseno",
@@ -235,7 +239,7 @@ export function MisPedidos() {
       }
       if (!q) return true;
       return (
-        (o.order_code || "").toLowerCase().includes(q) ||
+        normalizeCode(o.order_code || "").includes(normalizeCode(q)) ||
         (o.client_name || "").toLowerCase().includes(q) ||
         (o.client_nit || "").toLowerCase().includes(q) ||
         (o.product || "").toLowerCase().includes(q) ||
