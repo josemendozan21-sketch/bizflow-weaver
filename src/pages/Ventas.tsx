@@ -3232,12 +3232,14 @@ function FileField({
   value,
   onChange,
   accept,
+  disabled,
 }: {
   label: string;
   name: string;
   value?: File | null;
   onChange?: (file: File | null) => void;
   accept?: string;
+  disabled?: boolean;
 }) {
   return (
     <div className="space-y-1.5">
@@ -3248,6 +3250,7 @@ function FileField({
           name={name}
           type="file"
           accept={accept}
+          disabled={disabled}
           onChange={(e) => onChange?.(e.target.files?.[0] || null)}
           className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary"
         />
