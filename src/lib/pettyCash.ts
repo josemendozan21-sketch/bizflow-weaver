@@ -195,3 +195,71 @@ export function totalsBySede(funds: PettyFund[], expenses: PettyExpense[]) {
 }
 
 export const formatCOP = (n: number) => `$${Math.round(n).toLocaleString("es-CO")}`;
+
+/* ------------------ Efectivo en el punto de venta (Chicó) ------------------ */
+
+export interface PosCashInput {
+  /** Base configurada del punto; solo se usa si aún no hay ningún arqueo. */
+  cashBase: number;
+  /** Último arqueo de la sede (efectivo contado y fecha), si existe. */
+  lastCount?: { counted_amount: number; created_at: string } | null;
+  sales: { sale_date: string; payment_method: string | null; total_amount: number }[];
+  withdrawals: {
+    created_at: string;
+    amount: number;
+    status: string;
+    movement_type?: string | null;
+  }[];
+  /** Gastos en efectivo del punto (caja menor sede Chicó). */
+  expenses: PettyExpense[];
+}
+
+export const isCashMethod = (m: string | null | undefined) =>
+  (m ?? "").toLowerCase().split("+").some((p) => p.trim() === "efectivo");
+
+/**
+ * Efectivo en caja del punto = último arqueo (o base) + ventas en efectivo posteriores
+ * − retiros − consignaciones − gastos en efectivo. Los movimientos rechazados se ignoran;
+ * los pendientes sí descuentan porque la plata ya salió físicamente.
+ */
+export function computePosCash({ cashBase, lastCount, sales, withdrawals, expenses }: PosCashInput) {
+  const since = lastCount ? +new Date(lastCount.created_at) : -Infinity;
+  const base = lastCount ? Number(lastCount.counted_amount) : cashBase;
+
+  const after = (d: string) => +new Date(d) > since;
+
+  const cashSales = sales
+    .filter((s) => isCashMethod(s.payment_method) && after(s.sale_date))
+    .reduce((a, s) => a + Number(s.total_amount), 0);
+
+  const live = withdrawals.filter((w) => w.status !== "rechazado" && after(w.created_at));
+  const retiros = live
+    .filter((w) => (w.movement_type ?? "retiro") === "retiro")
+    .reduce((a, w) => a + Number(w.amount), 0);
+  const consignaciones = live
+    .filter((w) => w.movement_type === "consignacion")
+    .reduce((a, w) => a + Number(w.amount), 0);
+  const pending = live
+    .filter((w) => w.status === "pendiente")
+    .reduce((a, w) => a + Number(w.amount), 0);
+
+  const liveExpenses = expenses.filter(
+    (e) => (e.status ?? "aprobado") !== "rechazado" && after(e.created_at),
+  );
+  const gastos = liveExpenses.reduce((a, e) => a + Number(e.amount), 0);
+  const gastosPendientes = liveExpenses
+    .filter((e) => (e.status ?? "aprobado") === "pendiente")
+    .reduce((a, e) => a + Number(e.amount), 0);
+
+  return {
+    base,
+    baseFromCount: !!lastCount,
+    cashSales,
+    retiros,
+    consignaciones,
+    gastos,
+    pending,
+    gastosPendientes,
+    cashOnHand: base + cashSales - retiros - consignaciones - gastos,
+  };
+}
