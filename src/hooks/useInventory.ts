@@ -402,11 +402,14 @@ export function useInventory() {
       id: string,
       updates: {
         name?: string;
+        brand?: string;
+        unit?: string;
         available?: number;
         min_stock?: number;
         logo?: string | null;
         product_type?: string | null;
       }
+
     ): Promise<{ success: boolean; message: string }> => {
       const { error } = await supabase
         .from("stock_items")

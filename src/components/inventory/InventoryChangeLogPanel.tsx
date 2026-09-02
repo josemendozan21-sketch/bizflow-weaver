@@ -34,8 +34,13 @@ const BRAND_LABEL: Record<string, string> = {
 const label = (map: Record<string, string>, v?: string | null) =>
   (v && (map[v] ?? map[v.toLowerCase()])) || v || "—";
 
-export default function InventoryChangeLogPanel() {
-  const { data: entries = [], isLoading } = useInventoryAuditLog();
+export default function InventoryChangeLogPanel({ category }: { category?: string } = {}) {
+  const { data: allEntries = [], isLoading } = useInventoryAuditLog();
+  const entries = useMemo(
+    () => (category ? allEntries.filter((e) => e.category === category) : allEntries),
+    [allEntries, category],
+  );
+
 
   // Una misma edición de cuerpos Magical se registra dos veces (stock_items y su
   // espejo body_stock). Colapsamos esos pares en una sola línea.
@@ -79,13 +84,18 @@ export default function InventoryChangeLogPanel() {
           return b === "magical" ? "magical_warmers" : b;
         },
       },
-      {
-        label: "Categoría",
-        options: CATEGORY_LABEL,
-        get: (r: ChangeLogRow) => byId.get(r.id)?.category,
-      },
+      // Cuando el panel ya está limitado a una categoría, el filtro sobra.
+      ...(category
+        ? []
+        : [
+            {
+              label: "Categoría",
+              options: CATEGORY_LABEL,
+              get: (r: ChangeLogRow) => byId.get(r.id)?.category,
+            },
+          ]),
     ],
-    [byId],
+    [byId, category],
   );
 
   return (
@@ -96,8 +106,9 @@ export default function InventoryChangeLogPanel() {
       entityHeader="Producto"
       contextHeader="Marca / Categoría"
       filters={filters}
-      exportFileName="historial_cambios_inventario"
+      exportFileName={category ? `historial_cambios_${category}` : "historial_cambios_inventario"}
       searchPlaceholder="Ej: Gafas, inventarios1..."
     />
   );
+
 }

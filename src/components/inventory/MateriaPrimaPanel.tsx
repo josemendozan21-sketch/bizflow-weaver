@@ -14,7 +14,12 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  Beaker, Plus, Pencil, Check, X, AlertTriangle, AlertCircle, CheckCircle2, Search, ArrowDownAZ, ArrowUpAZ, Trash2, FlaskConical,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Beaker, Plus, Pencil, Check, X, AlertTriangle, AlertCircle, CheckCircle2, Search, ArrowDownAZ, ArrowUpAZ, Trash2, FlaskConical, History,
 } from "lucide-react";
 import { useInventory, getStockStatus, type SupabaseStockItem } from "@/hooks/useInventory";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,6 +27,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import DebouncedSearchInput from "./DebouncedSearchInput";
 import { matchesQuery } from "@/lib/search";
+import InventoryChangeLogPanel from "./InventoryChangeLogPanel";
+
 
 const UNITS = ["unidades", "gramos", "kilos", "tarros", "metros", "litros"];
 
@@ -58,23 +65,30 @@ const STATUS_CONFIG = {
   critico: { label: "Crítico", variant: "destructive" as const, icon: AlertCircle },
 };
 
-const MateriaPrimaPanel = () => {
+const MateriaPrimaList = () => {
   const { stockItems, addStockItem, updateStockItem, deleteStockItem, refetch } = useInventory();
   const { role } = useAuth();
-  const isReadOnly = role !== "admin";
+  // Inventarios gestiona el catálogo igual que en referencias/productos.
+  const isReadOnly = role !== "admin" && role !== "inventarios";
 
   const [brandFilter, setBrandFilter] = useState<BrandFilter>("todas");
   const [search, setSearch] = useState("");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [addOpen, setAddOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ available: "", minStock: "" });
+  const [editTarget, setEditTarget] = useState<SupabaseStockItem | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: "", brand: "ambas", unit: "unidades", available: "", minStock: "",
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<SupabaseStockItem | null>(null);
+  const [deleteMovements, setDeleteMovements] = useState<number | null>(null);
   const [newForm, setNewForm] = useState({
     name: "", brand: "ambas", available: "", unit: "unidades", minStock: "",
   });
   const [produceOpen, setProduceOpen] = useState(false);
   const [batches, setBatches] = useState("1");
   const [producing, setProducing] = useState(false);
+
 
   const items = useMemo(() => {
     const q = normalize(search.trim());
@@ -198,27 +212,55 @@ const MateriaPrimaPanel = () => {
   };
 
   const startEdit = (it: SupabaseStockItem) => {
-    setEditingId(it.id);
-    setEditForm({ available: String(it.available), minStock: String(it.min_stock) });
+    setEditTarget(it);
+    setEditForm({
+      name: it.name,
+      brand: (it.brand || "ambas").toLowerCase(),
+      unit: it.unit || "unidades",
+      available: String(it.available),
+      minStock: String(it.min_stock),
+    });
   };
 
-  const saveEdit = async (id: string) => {
-    const res = await updateStockItem(id, {
-      available: Number(editForm.available),
-      min_stock: Number(editForm.minStock),
+  const saveEdit = async () => {
+    if (!editTarget) return;
+    if (!editForm.name.trim()) {
+      toast.error("El nombre es obligatorio");
+      return;
+    }
+    setSavingEdit(true);
+    const res = await updateStockItem(editTarget.id, {
+      name: editForm.name.trim(),
+      brand: editForm.brand,
+      unit: editForm.unit,
+      available: Number(editForm.available) || 0,
+      min_stock: Number(editForm.minStock) || 0,
     });
+    setSavingEdit(false);
     if (res.success) {
-      toast.success("Actualizado");
-      setEditingId(null);
+      toast.success("Materia prima actualizada");
+      setEditTarget(null);
     } else toast.error(res.message);
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`¿Eliminar "${name}"?`)) return;
-    const res = await deleteStockItem(id);
-    if (res.success) toast.success("Eliminado");
-    else toast.error(res.message);
+  const askDelete = async (it: SupabaseStockItem) => {
+    setDeleteTarget(it);
+    setDeleteMovements(null);
+    const { count } = await supabase
+      .from("inventory_movements")
+      .select("id", { count: "exact", head: true })
+      .eq("stock_item_id", it.id);
+    setDeleteMovements(count ?? 0);
   };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const res = await deleteStockItem(deleteTarget.id);
+    if (res.success) toast.success("Materia prima eliminada");
+    else toast.error(res.message);
+    setDeleteTarget(null);
+  };
+
 
   return (
     <Card>
@@ -407,7 +449,6 @@ const MateriaPrimaPanel = () => {
                 const status = getStockStatus(it);
                 const sc = STATUS_CONFIG[status];
                 const StatusIcon = sc.icon;
-                const isEditing = editingId === it.id;
                 const brandKey = (it.brand || "").toLowerCase();
                 return (
                   <TableRow key={it.id} className={
@@ -420,28 +461,12 @@ const MateriaPrimaPanel = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      {isEditing ? (
-                        <Input type="number" min={0} value={editForm.available}
-                          onChange={(e) => setEditForm({ ...editForm, available: e.target.value })}
-                          className="h-7 w-24 ml-auto text-right" />
-                      ) : (
-                        <span>
-                          <span className="font-semibold">{it.available.toLocaleString("es-CO")}</span>
-                          <span className="text-muted-foreground ml-1 text-xs">{it.unit}</span>
-                        </span>
-                      )}
+                      <span className="font-semibold">{it.available.toLocaleString("es-CO")}</span>
+                      <span className="text-muted-foreground ml-1 text-xs">{it.unit}</span>
                     </TableCell>
                     <TableCell className="text-right">
-                      {isEditing ? (
-                        <Input type="number" min={0} value={editForm.minStock}
-                          onChange={(e) => setEditForm({ ...editForm, minStock: e.target.value })}
-                          className="h-7 w-24 ml-auto text-right" />
-                      ) : (
-                        <span>
-                          <span>{it.min_stock.toLocaleString("es-CO")}</span>
-                          <span className="text-muted-foreground ml-1 text-xs">{it.unit}</span>
-                        </span>
-                      )}
+                      <span>{it.min_stock.toLocaleString("es-CO")}</span>
+                      <span className="text-muted-foreground ml-1 text-xs">{it.unit}</span>
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge variant={sc.variant} className="text-xs gap-1">
@@ -451,36 +476,121 @@ const MateriaPrimaPanel = () => {
                     </TableCell>
                     {!isReadOnly && (
                       <TableCell className="text-right space-x-1">
-                        {isEditing ? (
-                          <>
-                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => saveEdit(it.id)}>
-                              <Check className="h-4 w-4 text-primary" />
-                            </Button>
-                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)}>
-                              <X className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(it)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleDelete(it.id, it.name)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </>
-                        )}
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(it)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => askDelete(it)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                       </TableCell>
                     )}
                   </TableRow>
                 );
               })}
+
             </TableBody>
           </Table>
         )}
+
+        {/* Edición completa de materia prima */}
+        <Dialog open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Editar materia prima</DialogTitle>
+              <DialogDescription>Actualiza los datos del insumo.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <div className="grid gap-1.5">
+                <Label>Nombre</Label>
+                <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-1.5">
+                  <Label>Marca</Label>
+                  <Select value={editForm.brand} onValueChange={(v) => setEditForm({ ...editForm, brand: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ambas">Ambas</SelectItem>
+                      <SelectItem value="magical">Magical</SelectItem>
+                      <SelectItem value="sweatspot">Sweatspot</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-1.5">
+                  <Label>Unidad</Label>
+                  <Select value={editForm.unit} onValueChange={(v) => setEditForm({ ...editForm, unit: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-1.5">
+                  <Label>Disponible</Label>
+                  <Input type="number" min={0} value={editForm.available}
+                    onChange={(e) => setEditForm({ ...editForm, available: e.target.value })} />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label>Mínimo</Label>
+                  <Input type="number" min={0} value={editForm.minStock}
+                    onChange={(e) => setEditForm({ ...editForm, minStock: e.target.value })} />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditTarget(null)}>Cancelar</Button>
+              <Button onClick={saveEdit} disabled={savingEdit}>
+                <Check className="h-4 w-4 mr-1" />Guardar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Confirmación de eliminación */}
+        <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Eliminar "{deleteTarget?.name}"?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta acción no se puede deshacer y el insumo dejará de estar disponible en inventario.
+                {deleteMovements === null
+                  ? " Verificando movimientos asociados..."
+                  : deleteMovements > 0
+                    ? ` Atención: este insumo tiene ${deleteMovements} movimiento(s) de inventario registrados.`
+                    : " No tiene movimientos de inventario asociados."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                <X className="h-4 w-4 mr-1" />Eliminar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );
+
 };
+
+const MateriaPrimaPanel = () => (
+  <Tabs defaultValue="listado" className="space-y-4">
+    <TabsList>
+      <TabsTrigger value="listado" className="gap-1.5">
+        <Beaker className="h-4 w-4" />Listado
+      </TabsTrigger>
+      <TabsTrigger value="historial" className="gap-1.5">
+        <History className="h-4 w-4" />Historial de cambios
+      </TabsTrigger>
+    </TabsList>
+    <TabsContent value="listado">
+      <MateriaPrimaList />
+    </TabsContent>
+    <TabsContent value="historial">
+      <InventoryChangeLogPanel category="materia_prima" />
+    </TabsContent>
+  </Tabs>
+);
 
 export default MateriaPrimaPanel;
