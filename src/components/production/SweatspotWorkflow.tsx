@@ -27,6 +27,8 @@ import { useProductionOrders, type ProductionOrder, type ProductionStageLog } fr
 import { useAuth } from "@/contexts/AuthContext";
 import { OperatorPromptDialog } from "./OperatorPromptDialog";
 import { StageLogsList } from "./StageLogsList";
+import OrderCodeBadge from "@/components/common/OrderCodeBadge";
+import { matchesQuery } from "@/lib/search";
 
 const STAGE_ICONS: Record<string, React.ElementType> = {
   produccion_cuerpos: Package,
@@ -74,17 +76,13 @@ export const SweatspotWorkflow = () => {
   const activeOrdersAll = orders.filter((o) => o.current_stage !== "listo");
   const completedOrders = orders.filter((o) => o.current_stage === "listo");
   const activeOrders = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase();
+    const q = searchTerm.trim();
     if (!q) return activeOrdersAll;
     return activeOrdersAll.filter((o) =>
-      (o.client_name || "").toLowerCase().includes(q) ||
-      (o.advisor_name || "").toLowerCase().includes(q) ||
-      (o.logo_file || "").toLowerCase().includes(q) ||
-      (o.thermo_size || "").toLowerCase().includes(q) ||
-      (o.molde || "").toLowerCase().includes(q) ||
-      (o.ink_color || "").toLowerCase().includes(q) ||
-      (o.gel_color || "").toLowerCase().includes(q) ||
-      (o.observations || "").toLowerCase().includes(q)
+      matchesQuery(
+        [o.order_code, o.client_name, o.advisor_name, o.logo_file, o.molde, o.thermo_size, o.ink_color, o.gel_color, o.observations],
+        q,
+      ),
     );
   }, [activeOrdersAll, searchTerm]);
   const stageCounts = useMemo(() => {
@@ -233,6 +231,7 @@ export const SweatspotWorkflow = () => {
                 <CardContent className="pt-4">
                   <div className="flex items-center justify-between">
                     <div>
+                      <OrderCodeBadge code={order.order_code} compact />
                       <p className="font-medium text-sm">{order.client_name}</p>
                       <p className="text-xs text-muted-foreground">Termo {order.thermo_size} — {order.quantity} uds</p>
                       <p className="text-xs text-muted-foreground">Asesor: {order.advisor_name || "—"}</p>
@@ -303,6 +302,7 @@ function OrderCard({ order, stageLogs, role, isAdmin, selected, onToggleSelect, 
               <Icon className="h-5 w-5 text-primary" />
             </div>
             <div>
+              <OrderCodeBadge code={order.order_code} />
               <CardTitle className="text-base">{order.client_name}</CardTitle>
               <p className="text-xs text-muted-foreground">Termo {order.thermo_size} — {order.quantity} uds</p>
               <p className="text-xs text-muted-foreground">Asesor: {order.advisor_name || "—"}</p>

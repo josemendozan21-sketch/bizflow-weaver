@@ -5,6 +5,7 @@ import { StatusBadge } from "./StatusBadge";
 import { Download, User, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 
 interface Props {
   requests: LogoRequest[];
@@ -38,6 +39,7 @@ export function DisenosFinalizados({ requests }: Props) {
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <CardTitle className="text-base">{req.client_name}</CardTitle>
+                  {req.order_code && <div className="mt-1"><OrderCodeBadge code={req.order_code} compact /></div>}
                   <StatusBadge status={req.status} />
                 </div>
                 <p className="text-sm text-muted-foreground">{req.brand} · {req.product}</p>

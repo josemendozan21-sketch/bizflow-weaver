@@ -11,6 +11,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { LogoPreview } from "./LogoPreview";
+import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 
 interface Props {
   requests: LogoRequest[];
@@ -90,7 +91,7 @@ function ApprovedCard({ request: req, role }: { request: LogoRequest; role: stri
         <html lang="es">
         <head>
           <meta charset="UTF-8">
-          <title>Orden de Estampado — ${esc(req.client_name)}</title>
+          <title>Orden de Estampado — ${esc(prod?.order_code || req.client_name)}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
@@ -117,6 +118,7 @@ function ApprovedCard({ request: req, role }: { request: LogoRequest; role: stri
           </div>
           <p class="section-title">Información del pedido</p>
           <table>
+            <tr><th>N° de pedido</th><td><b>${esc(prod?.order_code || "—")}</b></td></tr>
             <tr><th>Cliente</th><td>${esc(req.client_name)}</td></tr>
             <tr><th>Marca</th><td>${esc(req.brand)}</td></tr>
             <tr><th>Producto</th><td>${esc(req.product)}</td></tr>
@@ -159,6 +161,7 @@ function ApprovedCard({ request: req, role }: { request: LogoRequest; role: stri
               )}
             </CardTitle>
             <p className="text-sm text-muted-foreground">{req.brand} · {req.product}</p>
+            {req.order_code && <div className="mt-1"><OrderCodeBadge code={req.order_code} compact /></div>}
           </div>
           <Badge className="bg-green-100 text-green-800 border-green-200">
             <CheckCircle2 className="h-3 w-3 mr-1" /> Aprobado — Listo para estampar

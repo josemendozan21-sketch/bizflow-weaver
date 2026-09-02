@@ -28,6 +28,7 @@ import { OperatorPromptDialog } from "./OperatorPromptDialog";
 import { StageLogsList } from "./StageLogsList";
 import { ensureProductionOrder } from "@/lib/orderFlow";
 import { matchesQuery } from "@/lib/search";
+import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 
 interface BodyStockItem {
   id: string;
@@ -280,10 +281,7 @@ export const EstampacionProductionView = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-semibold text-sm">{o.client_name}</p>
-                      <p className="text-[11px] font-mono text-muted-foreground">
-                        {o.order_code || "—"}
-                        {(o.line_count ?? 1) > 1 ? ` · línea ${o.line_index}/${o.line_count}` : ""}
-                      </p>
+                      <OrderCodeBadge code={o.order_code} lineIndex={o.line_index} lineCount={o.line_count} compact />
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <Badge variant="secondary">Esperando Inventarios</Badge>

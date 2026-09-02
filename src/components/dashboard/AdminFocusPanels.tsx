@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { Wallet, Trophy, CalendarClock } from "lucide-react";
+import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 
 function fmt(n: number) {
   return `$ ${Math.round(n).toLocaleString("es-CO")}`;
@@ -12,6 +13,7 @@ function fmt(n: number) {
 
 interface Receivable {
   id: string;
+  order_code?: string | null;
   client_name: string;
   saldo: number;
   days: number;
@@ -51,7 +53,7 @@ export function AdminFocusPanels() {
         await Promise.all([
           supabase
             .from("orders")
-            .select("id, client_name, total_amount, abono, advisor_name, created_at, invoice_date")
+            .select("id, order_code, client_name, total_amount, abono, advisor_name, created_at, invoice_date")
             .eq("payment_complete", false),
           supabase
             .from("orders")
@@ -72,6 +74,7 @@ export function AdminFocusPanels() {
           const base = r.invoice_date ? new Date(r.invoice_date) : new Date(r.created_at);
           return {
             id: r.id,
+            order_code: r.order_code,
             client_name: r.client_name,
             saldo,
             days: Math.max(0, differenceInDays(new Date(), base)),
@@ -132,7 +135,10 @@ export function AdminFocusPanels() {
               {receivables.map((r) => (
                 <li key={r.id} className="py-2 flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="font-medium text-sm truncate">{r.client_name}</p>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <OrderCodeBadge code={r.order_code} compact />
+                      <p className="font-medium text-sm truncate">{r.client_name}</p>
+                    </div>
                     <p className="text-[11px] text-muted-foreground truncate">
                       {r.advisor_name ?? "—"} · {r.days} días
                     </p>

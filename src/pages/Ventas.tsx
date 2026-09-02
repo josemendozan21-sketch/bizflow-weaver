@@ -912,6 +912,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     // de diseño automática (el logo ya existe y fue aprobado antes).
     let logoUrl: string | null = null;
     let logoUrl2: string | null = null;
+    let logoRequestId: string | null = null;
+    let firstOrderIdForLogo: string | null = null;
     const hasLogoFile = !!(logoFile && logoFile.size > 0);
     const hasPersonalization = !!(personalizacion && personalizacion.trim());
     if ((hasLogoFile || hasPersonalization) && user && !isRecompra && !noLogo) {
@@ -934,6 +936,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         toast.success("Diseño de logo", { description: result.message });
         logoUrl = result.logoUrl || "logo-uploaded";
         logoUrl2 = result.logoUrl2 || null;
+        logoRequestId = result.requestId || null;
       } else {
         toast.error("Diseño de logo", { description: result.message });
         if (result.logoUrl) logoUrl = result.logoUrl;
@@ -1201,6 +1204,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       }
 
       if (orderData.order_code) createdCodes.push(orderData.order_code);
+      if (!firstOrderIdForLogo) firstOrderIdForLogo = orderData.id;
 
       // El pedido queda pendiente de revisión de Inventarios.
       // Ni se reserva stock ni se crea orden de producción desde Ventas:
@@ -1216,6 +1220,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         hasLogo: !!logoFile,
         advisorId: user?.id || "",
       });
+    }
+
+    if (logoRequestId && firstOrderIdForLogo) {
+      await supabase.from("logo_requests").update({ order_id: firstOrderIdForLogo }).eq("id", logoRequestId);
     }
 
     queryClient.invalidateQueries({ queryKey: ["production-orders"] });
@@ -2034,6 +2042,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     // Auto-create design request once if logo was uploaded.
     // En recompras NO se crea solicitud de diseño automática.
     let logoUrl: string | null = null;
+    let ssLogoRequestId: string | null = null;
+    let ssFirstOrderIdForLogo: string | null = null;
     const ssHasLogoFile = !!(logoFile && logoFile.size > 0);
     const ssHasPersonalization = !!(personalizacion && personalizacion.trim());
     if ((ssHasLogoFile || ssHasPersonalization) && user && !ssIsRecompra && !ssNoLogo) {
@@ -2052,6 +2062,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       if (result.success) {
         toast.success("Diseño de logo", { description: result.message });
         logoUrl = result.logoUrl || "logo-uploaded";
+        ssLogoRequestId = result.requestId || null;
       } else {
         toast.error("Diseño de logo", { description: result.message });
         if (result.logoUrl) logoUrl = result.logoUrl;
@@ -2181,6 +2192,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         continue;
       }
 
+      if (!ssFirstOrderIdForLogo) ssFirstOrderIdForLogo = orderData.id;
+
       // Productos importados: saltan producción y van directo a logística
       if (isImportedProduct) {
         await createOrderNotifications({
@@ -2210,6 +2223,10 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         hasLogo: !!logoFile,
         advisorId: user?.id || "",
       });
+    }
+
+    if (ssLogoRequestId && ssFirstOrderIdForLogo) {
+      await supabase.from("logo_requests").update({ order_id: ssFirstOrderIdForLogo }).eq("id", ssLogoRequestId);
     }
 
     queryClient.invalidateQueries({ queryKey: ["production-orders"] });

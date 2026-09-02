@@ -1397,6 +1397,7 @@ export type Database = {
           designer_name: string | null
           id: string
           logo_name: string | null
+          order_id: string | null
           original_logo_url: string
           original_logo_url_2: string | null
           product: string
@@ -1419,6 +1420,7 @@ export type Database = {
           designer_name?: string | null
           id?: string
           logo_name?: string | null
+          order_id?: string | null
           original_logo_url: string
           original_logo_url_2?: string | null
           product: string
@@ -1441,13 +1443,22 @@ export type Database = {
           designer_name?: string | null
           id?: string
           logo_name?: string | null
+          order_id?: string | null
           original_logo_url?: string
           original_logo_url_2?: string | null
           product?: string
           status?: Database["public"]["Enums"]["logo_request_status"]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "logo_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       loyalty_tiers: {
         Row: {

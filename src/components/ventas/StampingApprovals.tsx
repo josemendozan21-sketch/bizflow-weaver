@@ -9,9 +9,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, XCircle, Camera, Loader2, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 
 interface StampApproval {
   id: string;
+  order_code?: string | null;
   client_name: string;
   brand: string;
   molde: string | null;
@@ -38,7 +40,7 @@ export function StampingApprovals() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("production_orders")
-        .select("id, client_name, brand, molde, quantity, ink_color, gel_color, stamp_size_photo_url, stamp_size_status, stamp_inkgel_photo_url, stamp_inkgel_status, stamp_advisor_feedback, advisor_id")
+        .select("id, order_code, client_name, brand, molde, quantity, ink_color, gel_color, stamp_size_photo_url, stamp_size_status, stamp_inkgel_photo_url, stamp_inkgel_status, stamp_advisor_feedback, advisor_id")
         .or("stamp_size_status.eq.pendiente,stamp_inkgel_status.eq.pendiente");
       if (error) throw error;
       // Filter to only those with photos uploaded (waiting approval)
@@ -125,7 +127,10 @@ export function StampingApprovals() {
             <Card key={g.key} className="ring-2 ring-amber-300">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm">{order.client_name}</CardTitle>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <OrderCodeBadge code={order.order_code} compact />
+                    <CardTitle className="text-sm truncate">{order.client_name}</CardTitle>
+                  </div>
                   <Badge variant="outline" className="text-xs bg-amber-50 text-amber-800 border-amber-200">
                     {isSize ? "Tamaño de logo" : "Tinta y gel"}
                   </Badge>

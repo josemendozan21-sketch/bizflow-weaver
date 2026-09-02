@@ -8,6 +8,7 @@ import { baseRefName } from "@/lib/canonicalBodyRef";
 export interface ProductionOrder {
   id: string;
   order_id: string | null;
+  order_code?: string | null;
   brand: string;
   client_name: string;
   quantity: number;

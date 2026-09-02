@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { AlertTriangle, CheckCircle2, Trash2, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { isOrderFullyPaid, type Order } from "@/hooks/useOrders";
+import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 
 export function PendingProofPanel({ orders, isAdmin }: { orders: Order[]; isAdmin: boolean }) {
   const qc = useQueryClient();
@@ -106,7 +107,10 @@ export function PendingProofPanel({ orders, isAdmin }: { orders: Order[]; isAdmi
               <label key={o.id} className="flex items-center gap-3 p-2.5 text-sm cursor-pointer hover:bg-muted/50">
                 <Checkbox checked={selected.has(o.id)} onCheckedChange={() => toggle(o.id)} />
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{o.client_name}</p>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <OrderCodeBadge code={(o as any).order_code} compact />
+                    <p className="font-medium truncate">{o.client_name}</p>
+                  </div>
                   <p className="text-xs text-muted-foreground truncate">
                     {o.product} — {o.quantity} uds · {format(new Date(o.created_at), "d MMM yyyy", { locale: es })}
                     {isAdmin && o.advisor_name ? ` · ${o.advisor_name}` : ""}

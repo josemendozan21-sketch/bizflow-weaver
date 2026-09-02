@@ -22,9 +22,22 @@ import ShippingLabelDialog from "@/components/logistics/ShippingLabelDialog";
 import CreateInventoryRequestDialog from "@/components/inventory/CreateInventoryRequestDialog";
 import InventoryRequestsPanel from "@/components/inventory/InventoryRequestsPanel";
 import { MissingFinishedPhotoButton } from "@/components/logistics/MissingFinishedPhotoButton";
+import OrderCodeBadge from "@/components/common/OrderCodeBadge";
+
+function OrderCodeList({ items }: { items: Order[] }) {
+  const codes = items.slice(0, 3);
+  return (
+    <span className="flex flex-wrap items-center gap-1">
+      {codes.map((it) => (
+        <OrderCodeBadge key={it.id} code={it.order_code} lineIndex={it.line_index} lineCount={it.line_count} compact />
+      ))}
+      {items.length > 3 && <span className="text-[10px] text-muted-foreground">+{items.length - 3}</span>}
+    </span>
+  );
+}
 
 function exportOrdersToCSV(orders: Order[], brandLabel: (b: string) => string, saleLabel: (t: string) => string) {
-  const headers = ["Cliente", "Cédula/NIT", "Teléfono", "Email", "Ciudad", "Dirección", "Marca", "Tipo", "Producto", "Unidades", "Método de pago", "Valor total", "Abono", "Saldo pendiente", "Costo envío", "Observaciones"];
+  const headers = ["N° Pedido", "Cliente", "Cédula/NIT", "Teléfono", "Email", "Ciudad", "Dirección", "Marca", "Tipo", "Producto", "Unidades", "Método de pago", "Valor total", "Abono", "Saldo pendiente", "Costo envío", "Observaciones"];
   const rows = orders.map((o) => {
     const total = Number(o.total_amount) || 0;
     const abono = getOrderPaidAmount(o);
@@ -37,6 +50,7 @@ function exportOrdersToCSV(orders: Order[], brandLabel: (b: string) => string, s
       metodo = saldo <= 0 ? "Pago completo" : `Saldo: $${saldo.toLocaleString("es-CO")}`;
     }
     return [
+      o.order_code || "—",
       o.client_name,
       o.client_nit || "—",
       o.client_phone || "—",
@@ -950,6 +964,7 @@ function ShipmentGroupCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center flex-wrap gap-2">
             <h3 className="font-semibold text-foreground truncate">{group.clientName}</h3>
+            <OrderCodeList items={group.items} />
             {group.city && (
               <span className="flex items-center gap-1 text-xs text-muted-foreground">
                 <MapPin className="h-3 w-3" /> {group.city}
@@ -994,6 +1009,7 @@ function ShipmentGroupCard({
           <div key={it.id} className="space-y-0.5">
             <div className="flex items-center justify-between gap-3 text-sm">
               <span className="text-foreground truncate flex items-center gap-2 min-w-0">
+                <OrderCodeBadge code={it.order_code} lineIndex={it.line_index} lineCount={it.line_count} compact />
                 <span className="truncate">• {it.product}</span>
                 <AdvisorTag order={it} />
               </span>
@@ -1079,6 +1095,7 @@ function PendingGroupCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center flex-wrap gap-2">
             <h3 className="font-semibold text-foreground truncate">{group.clientName}</h3>
+            <OrderCodeList items={group.items} />
             {group.city && (
               <span className="flex items-center gap-1 text-xs text-muted-foreground">
                 <MapPin className="h-3 w-3" /> {group.city}
@@ -1179,6 +1196,7 @@ function DispatchedGroupCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center flex-wrap gap-2">
             <h3 className="font-semibold text-foreground truncate">{group.clientName}</h3>
+            <OrderCodeList items={group.items} />
             {group.city && (
               <span className="flex items-center gap-1 text-xs text-muted-foreground">
                 <MapPin className="h-3 w-3" /> {group.city}
@@ -1208,6 +1226,7 @@ function DispatchedGroupCard({
           <div key={it.id} className="space-y-0.5">
             <div className="flex items-center justify-between gap-3 text-sm">
               <span className="text-foreground truncate flex items-center gap-2 min-w-0">
+                <OrderCodeBadge code={it.order_code} lineIndex={it.line_index} lineCount={it.line_count} compact />
                 <span className="truncate">• {it.product}</span>
                 <AdvisorTag order={it} />
                 {it.returned_at && (
@@ -1498,6 +1517,7 @@ function ReturnOrderButton({ order }: { order: Order }) {
         </DialogHeader>
         <div className="space-y-3">
           <div className="text-sm space-y-1 rounded-md border p-3 bg-muted/30">
+            <p><b>Pedido:</b> <span className="font-mono">{order.order_code || "—"}</span></p>
             <p><b>Cliente:</b> {order.client_name}</p>
             <p><b>Producto:</b> {order.product} — {order.quantity} und</p>
             <p><b>Asesor:</b> {order.advisor_name}</p>

@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { LogoPreview } from "./LogoPreview";
+import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 
 interface Props {
   requests: LogoRequest[];
@@ -172,6 +173,7 @@ function DesignerCard({ request: req }: { request: LogoRequest }) {
               )}
             </CardTitle>
             <p className="text-sm text-muted-foreground">{req.brand} · {req.product}</p>
+            {req.order_code && <div className="mt-1"><OrderCodeBadge code={req.order_code} compact /></div>}
           </div>
           <StatusBadge status={req.status} />
         </div>
