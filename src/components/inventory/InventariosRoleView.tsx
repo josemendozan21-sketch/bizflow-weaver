@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Boxes, ShoppingBag, History, Beaker, Sparkles, Warehouse, Store, Tent, PackageSearch, Route } from "lucide-react";
+import { Boxes, ShoppingBag, History, Beaker, Sparkles, Warehouse, Store, Tent, PackageSearch, Route, PackageCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
 import MateriaPrimaPanel from "@/components/inventory/MateriaPrimaPanel";
