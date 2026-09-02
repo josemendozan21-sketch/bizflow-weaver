@@ -276,7 +276,14 @@ const MateriaPrimaList = () => {
             {totals.critico > 0 && <Badge variant="destructive" className="text-xs">{totals.critico} crítico{totals.critico > 1 ? "s" : ""}</Badge>}
             {totals.bajo > 0 && <Badge className="text-xs">{totals.bajo} bajo</Badge>}
           </CardTitle>
+          {isReadOnly && (
+            <Badge variant="outline" className="text-xs gap-1 text-muted-foreground">
+              <AlertCircle className="h-3 w-3" />
+              Tu rol no permite editar materia prima
+            </Badge>
+          )}
           {!isReadOnly && (
+
             <div className="flex items-center gap-2">
             <Dialog open={produceOpen} onOpenChange={setProduceOpen}>
               <DialogTrigger asChild>
