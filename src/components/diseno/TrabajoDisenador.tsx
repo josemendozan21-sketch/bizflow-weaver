@@ -25,7 +25,7 @@ const DESIGNER_STATUSES: { value: LogoRequestStatus; label: string }[] = [
 
 export function TrabajoDisenador({ requests }: Props) {
   const filtered = requests.filter((r) =>
-    ["pendiente_diseno", "en_revision", "ajustado", "ajustes_solicitados"].includes(r.status)
+    ["pendiente_diseno", "en_revision", "ajustado", "ajustes_solicitados", "listo_aprobacion"].includes(r.status)
   );
 
   return (
