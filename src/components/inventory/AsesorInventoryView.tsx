@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Package, Search, ArrowDownAZ, ArrowUpAZ } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -31,7 +31,16 @@ const EmptyMessage = () => (
   <p className="text-sm text-muted-foreground py-4 text-center">No hay registros en esta categoría.</p>
 );
 
+const TypeBadge = ({ tipo }: { tipo: string | null }) => {
+  if (tipo === "Frío")
+    return <Badge className="bg-sky-100 text-sky-800 hover:bg-sky-100 border-sky-200">❄️ Frío</Badge>;
+  if (tipo === "Térmico")
+    return <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100 border-orange-200">🔥 Térmico</Badge>;
+  return <span className="text-muted-foreground">—</span>;
+};
+
 const normalize = normalizeText;
+
 
 
 type TypeFilter = "todos" | "termico" | "frio";
@@ -45,32 +54,43 @@ interface FiltersBarProps {
   sortDir: SortDir;
   setSortDir: (v: SortDir) => void;
   showTypeFilter?: boolean;
+  resultCount?: number;
 }
 
+const TYPE_OPTIONS: { value: TypeFilter; label: string }[] = [
+  { value: "todos", label: "Todos" },
+  { value: "frio", label: "❄️ Frío" },
+  { value: "termico", label: "🔥 Térmico" },
+];
+
 const FiltersBar = ({
-  search, setSearch, typeFilter, setTypeFilter, sortDir, setSortDir, showTypeFilter = true,
+  search, setSearch, typeFilter, setTypeFilter, sortDir, setSortDir, showTypeFilter = true, resultCount,
 }: FiltersBarProps) => (
   <div className="flex flex-wrap items-center gap-2 mb-4">
     <div className="relative flex-1 min-w-[180px]">
       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
       <Input
-        placeholder="Buscar producto..."
+        placeholder="Buscar producto o tipo (ej. pocket frío)..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="pl-8 h-9"
       />
     </div>
     {showTypeFilter && (
-      <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as TypeFilter)}>
-        <SelectTrigger className="h-9 w-[140px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="todos">Todos</SelectItem>
-          <SelectItem value="termico">🔥 Térmico</SelectItem>
-          <SelectItem value="frio">❄️ Frío</SelectItem>
-        </SelectContent>
-      </Select>
+      <div className="inline-flex rounded-md border p-0.5 gap-0.5">
+        {TYPE_OPTIONS.map((opt) => (
+          <Button
+            key={opt.value}
+            type="button"
+            size="sm"
+            variant={typeFilter === opt.value ? "default" : "ghost"}
+            className="h-8 px-3"
+            onClick={() => setTypeFilter(opt.value)}
+          >
+            {opt.label}
+          </Button>
+        ))}
+      </div>
     )}
     <Button
       type="button"
@@ -82,8 +102,14 @@ const FiltersBar = ({
       {sortDir === "asc" ? <ArrowDownAZ className="h-4 w-4" /> : <ArrowUpAZ className="h-4 w-4" />}
       {sortDir === "asc" ? "A-Z" : "Z-A"}
     </Button>
+    {resultCount !== undefined && (
+      <span className="text-xs text-muted-foreground ml-auto">
+        {resultCount} resultado{resultCount === 1 ? "" : "s"}
+      </span>
+    )}
   </div>
 );
+
 
 export default function AsesorInventoryView() {
   const [selectedBrand, setSelectedBrand] = useState<InventoryBrand | null>(null);
@@ -127,7 +153,7 @@ export default function AsesorInventoryView() {
   const filteredMagicalFinished = useMemo(() => {
     return magicalFinished
       .filter((i) => {
-        if (q && !normalize(i.name).includes(q)) return false;
+        if (q && !normalize(`${i.name} ${i.tipo || ""}`).includes(q)) return false;
         if (typeFilter === "termico") return i.tipo === "Térmico";
         if (typeFilter === "frio") return i.tipo === "Frío";
         return true;
@@ -213,6 +239,7 @@ export default function AsesorInventoryView() {
                       search={search} setSearch={setSearch}
                       typeFilter={typeFilter} setTypeFilter={setTypeFilter}
                       sortDir={sortDir} setSortDir={setSortDir}
+                      resultCount={filteredMagicalBodies.length}
                     />
                     {filteredMagicalBodies.length === 0 ? <EmptyMessage /> : (
                       <Table>
@@ -228,7 +255,8 @@ export default function AsesorInventoryView() {
                           {filteredMagicalBodies.map((item) => (
                             <TableRow key={item.id}>
                               <TableCell className="font-medium"><ReferenceLabel name={item.name} /></TableCell>
-                              <TableCell>{item.tipo || "—"}</TableCell>
+                              <TableCell><TypeBadge tipo={item.tipo} /></TableCell>
+
 
                               <TableCell className="text-right">{item.available}</TableCell>
                               <TableCell><StockIndicator available={item.available} /></TableCell>
@@ -249,12 +277,14 @@ export default function AsesorInventoryView() {
                       search={search} setSearch={setSearch}
                       typeFilter={typeFilter} setTypeFilter={setTypeFilter}
                       sortDir={sortDir} setSortDir={setSortDir}
+                      resultCount={filteredMagicalFinished.length}
                     />
                     {filteredMagicalFinished.length === 0 ? <EmptyMessage /> : (
                       <Table>
                         <TableHeader>
                           <TableRow>
                             <TableHead>Producto</TableHead>
+                            <TableHead>Tipo</TableHead>
                             <TableHead className="text-right">Disponible</TableHead>
                             <TableHead>Unidad</TableHead>
                             <TableHead>Estado</TableHead>
@@ -263,12 +293,14 @@ export default function AsesorInventoryView() {
                         <TableBody>
                           {filteredMagicalFinished.map((item) => (
                             <TableRow key={item.id}>
-                              <TableCell className="font-medium">{item.name}</TableCell>
+                              <TableCell className="font-medium"><ReferenceLabel name={item.name} /></TableCell>
+                              <TableCell><TypeBadge tipo={item.tipo} /></TableCell>
                               <TableCell className="text-right">{item.available}</TableCell>
                               <TableCell>{item.unit}</TableCell>
                               <TableCell><StockIndicator available={item.available} /></TableCell>
                             </TableRow>
                           ))}
+
                         </TableBody>
                       </Table>
                     )}
