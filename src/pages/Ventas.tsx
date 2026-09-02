@@ -246,7 +246,10 @@ function consolidateMagicalLines(lines: OrderLine[]): OrderLine[] {
   for (const line of lines) {
     const key = [
       line.product, line.type, line.gelColor, line.gelCustom,
-      line.inkColor, line.inkCustom, line.valorUnitario, line.isGift,
+      line.inkColor, line.inkCustom, line.inkCount ?? 1,
+      line.inkColor2, line.inkCustom2, line.inkColor3, line.inkCustom3,
+      line.glitterColor, line.glitterCustom,
+      line.valorUnitario, line.isGift,
     ].join("|");
     const existing = consolidated.get(key);
     if (!existing) {
