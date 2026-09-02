@@ -9,6 +9,8 @@ import { SweatspotWorkflow } from "@/components/production/SweatspotWorkflow";
 import { EstampacionProductionView } from "@/components/production/EstampacionProductionView";
 import { RollCutsView } from "@/components/production/RollCutsView";
 import ProductionMovementHistory from "@/components/production/ProductionMovementHistory";
+import ProcessChangeLogPanel from "@/components/production/ProcessChangeLogPanel";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProductionAlerts } from "@/hooks/useProductionAlerts";
 
