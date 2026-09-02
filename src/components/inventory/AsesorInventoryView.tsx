@@ -27,18 +27,12 @@ const StockIndicator = ({ available, minStock }: { available: number; minStock?:
   return <Badge className="bg-green-500 hover:bg-green-600 text-white">Disponible</Badge>;
 };
 
-const classifyType = (referencia: string): string => {
-  const lower = referencia.toLowerCase();
-  if (lower.includes("frio") || lower.includes("frío") || lower.includes("cold")) return "Frío";
-  return "Térmico";
-};
-
 const EmptyMessage = () => (
   <p className="text-sm text-muted-foreground py-4 text-center">No hay registros en esta categoría.</p>
 );
 
-const normalize = (s: string) =>
-  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const normalize = normalizeText;
+
 
 type TypeFilter = "todos" | "termico" | "frio";
 type SortDir = "asc" | "desc";
