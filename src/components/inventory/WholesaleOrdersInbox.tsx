@@ -26,8 +26,7 @@ import { toast } from "sonner";
 import { formatDistanceToNow, format } from "date-fns";
 import { es } from "date-fns/locale";
 
-/** Compara códigos de pedido ignorando guiones y mayúsculas (SW-VM-00123 → swvm00123). */
-const normalizeCode = (v: string) => (v || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+import { matchesQuery } from "@/lib/search";
 
 
 interface MayorOrder {
@@ -237,13 +236,8 @@ const WholesaleOrdersInbox = () => {
 
   const filterOrders = (list: MayorOrder[]) => {
     if (!searchQuery.trim()) return list;
-    const q = searchQuery.toLowerCase();
-    return list.filter(
-      (o) =>
-        normalizeCode(o.order_code || "").includes(normalizeCode(q)) ||
-        o.client_name.toLowerCase().includes(q) ||
-        o.product.toLowerCase().includes(q) ||
-        o.advisor_name.toLowerCase().includes(q)
+    return list.filter((o) =>
+      matchesQuery([o.order_code, o.client_name, o.product, o.advisor_name, o.brand], searchQuery),
     );
   };
 
