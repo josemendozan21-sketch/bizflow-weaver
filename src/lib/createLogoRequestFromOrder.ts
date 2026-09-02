@@ -21,7 +21,7 @@ interface OrderLogoData {
  */
 export async function createLogoRequestFromOrder(
   data: OrderLogoData,
-): Promise<{ success: boolean; message: string; logoUrl?: string; logoUrl2?: string }> {
+): Promise<{ success: boolean; message: string; logoUrl?: string; logoUrl2?: string; requestId?: string }> {
   try {
     // 1. Upload logo to storage if a file was provided.
     // If only personalization text exists (no file), we still create a design
