@@ -64,6 +64,7 @@ const getDeliveryPhase = (rawStatus: string): DeliveryPhase => {
     rawStatus === "pendiente" ||
     rawStatus === "produccion_cuerpos" ||
     rawStatus === "produccion_tubos" ||
+    rawStatus === "elaboracion_esquinas" ||
     rawStatus === "estampacion"
   ) {
     return "pre_estampado";

@@ -31,6 +31,7 @@ const stageToKanban: Record<string, string> = {
   recorte: "dosificacion",
   empaque: "dosificacion",
   produccion_tubos: "estampacion",
+  elaboracion_esquinas: "estampacion",
   ensamble_cuello: "estampacion",
   sello_base: "dosificacion",
   refile: "dosificacion",
