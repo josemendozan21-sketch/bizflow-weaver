@@ -324,6 +324,9 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
                       <td className="p-2 text-right text-destructive">
                         {r.consignaciones ? `-$${r.consignaciones.toLocaleString()}` : "—"}
                       </td>
+                      <td className="p-2 text-right text-destructive">
+                        {r.gastos ? `-$${r.gastos.toLocaleString()}` : "—"}
+                      </td>
                       <td className="p-2 text-right font-semibold">${r.balance.toLocaleString()}</td>
                     </tr>
                   ))}
