@@ -47,9 +47,38 @@ export interface CommissionClassification {
  */
 export const PARTIAL_PAYMENT_ACCRUES = true;
 
+/** Mapa order_id -> suma de cargos adicionales del pedido. */
+export type ChargesMap = Record<string, number>;
+
 function num(v: unknown): number {
   const n = Number(v ?? 0);
   return Number.isFinite(n) ? n : 0;
+}
+
+/** Flete cobrado en el pedido (ya viene incluido dentro de total_amount). */
+export function getShippingCost(o: Order): number {
+  return num((o as any).shipping_cost);
+}
+
+/** Cargos adicionales (marcación, escarcha, etc.) del pedido. */
+export function getExtraCharges(o: Order, charges?: ChargesMap): number {
+  return num(charges?.[o.id]);
+}
+
+/**
+ * Valor del pedido que sí comisiona: total menos flete y menos cargos
+ * adicionales. La comisión se paga sobre producto.
+ */
+export function getCommissionableTotal(o: Order, charges?: ChargesMap): number {
+  const total = num(o.total_amount);
+  if (total <= 0) return 0;
+  const net = total - getShippingCost(o) - getExtraCharges(o, charges);
+  return Math.max(Math.min(net, total), 0);
+}
+
+/** ¿El pedido es un obsequio / muestra? No genera comisión y no es un error. */
+export function isGiftOrder(o: Order): boolean {
+  return String((o as any).payment_method || "").toLowerCase() === "obsequio";
 }
 
 /**
@@ -57,8 +86,19 @@ function num(v: unknown): number {
  * Maneja nulos explícitamente: antes un `payment_complete` nulo hacía que el
  * pedido desapareciera silenciosamente del cálculo.
  */
-export function classifyOrderForCommission(o: Order): CommissionClassification {
+export function classifyOrderForCommission(
+  o: Order,
+  charges?: ChargesMap
+): CommissionClassification {
   const total = num(o.total_amount);
+
+  if (isGiftOrder(o)) {
+    return {
+      status: "excluido",
+      base: 0,
+      reason: "Obsequio / muestra — no genera comisión",
+    };
+  }
 
   if (total <= 0) {
     return {
@@ -68,24 +108,33 @@ export function classifyOrderForCommission(o: Order): CommissionClassification {
     };
   }
 
+  const net = getCommissionableTotal(o, charges);
+  const noComisionable = total - net; // flete + cargos
+  const nota =
+    noComisionable > 0
+      ? ` (se descuentan ${Math.round(noComisionable).toLocaleString("es-CO")} de flete/cargos)`
+      : "";
+
   if (isOrderFullyPaid(o)) {
-    return { status: "total", base: total, reason: "Pago completo registrado" };
+    return { status: "total", base: net, reason: `Pago completo registrado${nota}` };
   }
 
   if (o.invoice_status === "facturado") {
-    return { status: "total", base: total, reason: "Pedido facturado" };
+    return { status: "total", base: net, reason: `Pedido facturado${nota}` };
   }
 
   const abono = Math.min(num(o.abono), total);
   const hasProof = Boolean(o.payment_proof_url);
 
   if (abono > 0 && PARTIAL_PAYMENT_ACCRUES) {
+    // El abono se prorratea sobre la parte comisionable del pedido.
+    const baseAbono = total > 0 ? (abono * net) / total : 0;
     return {
       status: "parcial",
-      base: abono,
+      base: baseAbono,
       reason: hasProof
-        ? "Abono parcial con soporte de pago — comisión proporcional a lo abonado"
-        : "Abono parcial registrado — comisión proporcional a lo abonado",
+        ? `Abono parcial con soporte de pago — comisión proporcional a lo abonado${nota}`
+        : `Abono parcial registrado — comisión proporcional a lo abonado${nota}`,
     };
   }
 
@@ -113,8 +162,8 @@ export function classifyOrderForCommission(o: Order): CommissionClassification {
 }
 
 /** Compatibilidad: el pedido causa comisión (total o parcial). */
-export function isCommissionable(o: Order): boolean {
-  const c = classifyOrderForCommission(o);
+export function isCommissionable(o: Order, charges?: ChargesMap): boolean {
+  const c = classifyOrderForCommission(o, charges);
   return c.status === "total" || c.status === "parcial";
 }
 
