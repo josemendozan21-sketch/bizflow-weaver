@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import {
   Card,
   CardContent,
@@ -69,6 +69,7 @@ export default function CommissionsPanel({ orders }: Props) {
   const [month, setMonth] = useState(today.getMonth());
   const [overrides, setOverrides] = useState<OrderOverrides>({});
   const [openAdvisor, setOpenAdvisor] = useState<string | null>(null);
+  const [expandedLine, setExpandedLine] = useState<string | null>(null);
   const { data: charges = {} } = useAllOrderCharges();
 
   const summaries = useMemo(
