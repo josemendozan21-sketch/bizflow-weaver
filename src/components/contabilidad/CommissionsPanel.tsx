@@ -27,12 +27,15 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronDown, Info, TrendingUp, AlertCircle } from "lucide-react";
+import { ChevronDown, Info, TrendingUp, AlertCircle, Download } from "lucide-react";
 import type { Order } from "@/hooks/useOrders";
 import {
   summarizeAdvisorMonth,
+  STATUS_LABEL,
   type OrderOverrides,
   type PaymentMode,
+  type PeriodBasis,
+  type AdvisorMonthSummary,
   BONUS_TIER_1_THRESHOLD,
   BONUS_TIER_1_AMOUNT,
   UNLOCK_THRESHOLD,
@@ -42,6 +45,11 @@ import {
   MIN_TICKET_DETAL,
   RETURN_PENALTY,
 } from "@/lib/commissions";
+import {
+  exportCommissionsCsv,
+  exportCommissionsXlsx,
+} from "@/lib/commissionExports";
+
 
 const MONTHS = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -61,10 +69,11 @@ export default function CommissionsPanel({ orders }: Props) {
   const [month, setMonth] = useState(today.getMonth());
   const [overrides, setOverrides] = useState<OrderOverrides>({});
   const [openAdvisor, setOpenAdvisor] = useState<string | null>(null);
+  const [basis, setBasis] = useState<PeriodBasis>("venta");
 
   const summaries = useMemo(
-    () => summarizeAdvisorMonth(orders, overrides, year, month),
-    [orders, overrides, year, month]
+    () => summarizeAdvisorMonth(orders, overrides, year, month, basis),
+    [orders, overrides, year, month, basis]
   );
 
   const setLineOverride = (
@@ -77,7 +86,46 @@ export default function CommissionsPanel({ orders }: Props) {
     }));
   };
 
+  const buildExport = (a: AdvisorMonthSummary) => {
+    const motivos = new Map<string, { count: number; value: number }>();
+    for (const l of a.excludedLines) {
+      const prev = motivos.get(l.reason) || { count: 0, value: 0 };
+      motivos.set(l.reason, {
+        count: prev.count + 1,
+        value: prev.value + l.totalWithVat,
+      });
+    }
+    return {
+      fileBase: `comisiones_${a.advisorName.replace(/[^a-z0-9]+/gi, "_").toLowerCase()}_${MONTHS[month].toLowerCase()}_${year}`,
+      summary: [
+        { Concepto: "Asesor", Valor: a.advisorName },
+        { Concepto: "Periodo", Valor: `${MONTHS[month]} ${year}` },
+        {
+          Concepto: "Criterio del período",
+          Valor: basis === "venta" ? "Fecha de venta" : "Fecha de factura",
+        },
+        { Concepto: "Pedidos del período", Valor: a.grossOrdersCount },
+        { Concepto: "Ventas totales (con IVA)", Valor: Math.round(a.grossSalesWithVat) },
+        { Concepto: "Pedidos considerados", Valor: a.ordersCount },
+        { Concepto: "Valor considerado (con IVA)", Valor: Math.round(a.totalWithVat) },
+        { Concepto: "Base sin IVA", Valor: Math.round(a.totalSinIva) },
+        { Concepto: "Pedidos excluidos", Valor: a.excludedCount },
+        { Concepto: "Valor excluido (con IVA)", Valor: Math.round(a.excludedWithVat) },
+        { Concepto: "Comisión calculada", Valor: Math.round(a.rawCommission) },
+        { Concepto: "Bono", Valor: Math.round(a.bonus) },
+        { Concepto: "Total a pagar", Valor: Math.round(a.totalToPay) },
+        ...Array.from(motivos.entries()).map(([reason, v]) => ({
+          Concepto: `Motivo exclusión: ${reason}`,
+          Valor: `${v.count} pedido(s) · ${fmt(v.value)}`,
+        })),
+      ],
+      lines: a.lines,
+      excluded: a.excludedLines,
+    };
+  };
+
   const grandTotal = summaries.reduce((s, a) => s + a.totalToPay, 0);
+
 
   return (
     <div className="space-y-6">
@@ -108,7 +156,15 @@ export default function CommissionsPanel({ orders }: Props) {
               )}
             </SelectContent>
           </Select>
+          <Select value={basis} onValueChange={(v) => setBasis(v as PeriodBasis)}>
+            <SelectTrigger className="w-[190px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="venta">Por fecha de venta</SelectItem>
+              <SelectItem value="factura">Por fecha de factura</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
+
       </div>
 
       {/* Resumen política */}
@@ -173,10 +229,18 @@ export default function CommissionsPanel({ orders }: Props) {
                     <div className="space-y-1">
                       <CardTitle className="text-base">{a.advisorName}</CardTitle>
                       <div className="flex flex-wrap gap-2">
-                        <Badge variant="outline">{a.ordersCount} pedidos</Badge>
+                        <Badge variant="outline">{a.ordersCount} pedidos considerados</Badge>
                         <Badge variant="outline">
-                          Vendido: {fmt(a.totalWithVat)}
+                          Base comisión: {fmt(a.totalWithVat)}
                         </Badge>
+                        <Badge variant="outline">
+                          Ventas del período: {fmt(a.grossSalesWithVat)} ({a.grossOrdersCount})
+                        </Badge>
+                        {a.excludedCount > 0 && (
+                          <Badge className="bg-amber-500">
+                            {a.excludedCount} excluidos · {fmt(a.excludedWithVat)}
+                          </Badge>
+                        )}
                         {a.weekendUnlocked ? (
                           <Badge className="bg-emerald-600">FDS desbloqueado</Badge>
                         ) : (
@@ -187,15 +251,34 @@ export default function CommissionsPanel({ orders }: Props) {
                         )}
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right space-y-2">
                       <p className="text-2xl font-bold text-emerald-600">
                         {fmt(a.totalToPay)}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Comisión {fmt(a.rawCommission)} + Bono {fmt(a.bonus)}
                       </p>
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1"
+                          onClick={() => exportCommissionsXlsx(buildExport(a))}
+                        >
+                          <Download className="h-3.5 w-3.5" /> Excel
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1"
+                          onClick={() => exportCommissionsCsv(buildExport(a))}
+                        >
+                          <Download className="h-3.5 w-3.5" /> CSV
+                        </Button>
+                      </div>
                     </div>
                   </div>
+
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {/* KPIs */}
@@ -249,10 +332,13 @@ export default function CommissionsPanel({ orders }: Props) {
                               <TableHead>Forma de pago</TableHead>
                               <TableHead>Devuelto</TableHead>
                               <TableHead className="text-right">Total c/IVA</TableHead>
+                              <TableHead className="text-right">Base usada c/IVA</TableHead>
                               <TableHead className="text-right">Base s/IVA</TableHead>
                               <TableHead className="text-right">%</TableHead>
                               <TableHead className="text-right">Comisión</TableHead>
+                              <TableHead>Causación</TableHead>
                             </TableRow>
+
                           </TableHeader>
                           <TableBody>
                             {a.lines.map((l) => (
@@ -314,6 +400,9 @@ export default function CommissionsPanel({ orders }: Props) {
                                 <TableCell className="text-right">
                                   {fmt(l.totalWithVat)}
                                 </TableCell>
+                                <TableCell className="text-right">
+                                  {fmt(l.commissionableWithVat)}
+                                </TableCell>
                                 <TableCell className="text-right text-muted-foreground">
                                   {fmt(l.baseSinIva)}
                                 </TableCell>
@@ -328,6 +417,20 @@ export default function CommissionsPanel({ orders }: Props) {
                                     </div>
                                   )}
                                 </TableCell>
+                                <TableCell className="max-w-[220px]">
+                                  <Badge
+                                    className={
+                                      l.status === "total"
+                                        ? "bg-emerald-600"
+                                        : "bg-sky-600"
+                                    }
+                                  >
+                                    {STATUS_LABEL[l.status]}
+                                  </Badge>
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                                    {l.reason}
+                                  </p>
+                                </TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -335,6 +438,51 @@ export default function CommissionsPanel({ orders }: Props) {
                       </div>
                     </CollapsibleContent>
                   </Collapsible>
+
+                  {a.excludedLines.length > 0 && (
+                    <div className="rounded-md border border-amber-300 bg-amber-50/40 dark:bg-amber-950/10 p-3 space-y-2">
+                      <p className="text-xs font-semibold flex items-center gap-1.5">
+                        <AlertCircle className="h-3.5 w-3.5 text-amber-600" />
+                        Pedidos excluidos y motivo ({a.excludedLines.length} ·{" "}
+                        {fmt(a.excludedWithVat)})
+                      </p>
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Cliente</TableHead>
+                              <TableHead>N° pedido</TableHead>
+                              <TableHead className="text-right">Total c/IVA</TableHead>
+                              <TableHead className="text-right">Abono</TableHead>
+                              <TableHead>Motivo</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {a.excludedLines.map((l) => (
+                              <TableRow key={l.order.id}>
+                                <TableCell className="font-medium">
+                                  {l.order.client_name}
+                                </TableCell>
+                                <TableCell className="text-xs">
+                                  {(l.order as any).order_code || "—"}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {fmt(l.totalWithVat)}
+                                </TableCell>
+                                <TableCell className="text-right text-muted-foreground">
+                                  {fmt(Number(l.order.abono) || 0)}
+                                </TableCell>
+                                <TableCell className="text-xs text-muted-foreground">
+                                  {l.reason}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  )}
+
                 </CardContent>
               </Card>
             );

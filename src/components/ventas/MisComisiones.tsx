@@ -18,8 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Loader2, Info, TrendingUp, Clock, CheckCircle2, ChevronLeft, ChevronRight, Download } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Loader2, Info, TrendingUp, Clock, CheckCircle2, ChevronLeft, ChevronRight, Download, AlertTriangle } from "lucide-react";
 
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -28,12 +27,18 @@ import { useAuth } from "@/contexts/AuthContext";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import {
   summarizeAdvisorProgress,
+  STATUS_LABEL,
   BONUS_TIER_1_THRESHOLD,
   BONUS_TIER_1_AMOUNT,
   BONUS_TIER_2_THRESHOLD,
   BONUS_TIER_2_AMOUNT,
   UNLOCK_THRESHOLD,
+  type PeriodBasis,
 } from "@/lib/commissions";
+import {
+  exportCommissionsCsv,
+  exportCommissionsXlsx,
+} from "@/lib/commissionExports";
 
 const MONTHS = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -42,7 +47,8 @@ const MONTHS = [
 
 const fmt = (n: number) => `$${Math.round(n).toLocaleString("es-CO")}`;
 
-type Filter = "todos" | "facturado" | "pendiente";
+type Filter = "todos" | "facturado" | "pendiente" | "excluido";
+
 
 export default function MisComisiones() {
   const { user } = useAuth();
@@ -51,11 +57,13 @@ export default function MisComisiones() {
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [filter, setFilter] = useState<Filter>("todos");
+  const [basis, setBasis] = useState<PeriodBasis>("venta");
 
   const summary = useMemo(
-    () => summarizeAdvisorProgress(orders, year, month, user?.id),
-    [orders, year, month, user?.id]
+    () => summarizeAdvisorProgress(orders, year, month, user?.id, basis),
+    [orders, year, month, user?.id, basis]
   );
+
 
   const yearOptions = useMemo(() => {
     const years = new Set<number>([today.getFullYear()]);
@@ -89,7 +97,7 @@ export default function MisComisiones() {
     const out: { label: string; total: number; commission: number; count: number }[] = [];
     for (let i = 0; i < 12; i++) {
       const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-      const s = summarizeAdvisorProgress(orders, d.getFullYear(), d.getMonth(), user?.id);
+      const s = summarizeAdvisorProgress(orders, d.getFullYear(), d.getMonth(), user?.id, basis);
       if (s.ordersCount === 0) continue;
       out.push({
         label: `${MONTHS[d.getMonth()]} ${d.getFullYear()}`,
@@ -99,106 +107,85 @@ export default function MisComisiones() {
       });
     }
     return out;
-  }, [orders, user?.id]);
+  }, [orders, user?.id, basis]);
 
   const lines = useMemo(() => {
     if (filter === "facturado") return summary.lines.filter((l) => l.invoiced);
-    if (filter === "pendiente") return summary.lines.filter((l) => !l.invoiced);
+    if (filter === "pendiente")
+      return summary.lines.filter((l) => l.status === "pendiente");
+    if (filter === "excluido")
+      return summary.lines.filter((l) => l.status === "excluido");
     return summary.lines;
   }, [summary.lines, filter]);
 
+  const causadas = useMemo(
+    () => summary.lines.filter((l) => l.invoiced),
+    [summary.lines]
+  );
+  const noCausadas = useMemo(
+    () => summary.lines.filter((l) => !l.invoiced),
+    [summary.lines]
+  );
+
+  const motivos = useMemo(() => {
+    const m = new Map<string, { count: number; value: number }>();
+    for (const l of noCausadas) {
+      const prev = m.get(l.reason) || { count: 0, value: 0 };
+      m.set(l.reason, { count: prev.count + 1, value: prev.value + l.totalWithVat });
+    }
+    return Array.from(m.entries()).sort((a, b) => b[1].value - a[1].value);
+  }, [noCausadas]);
+
   const [exporting, setExporting] = useState(false);
 
-  const handleExport = async () => {
+  const buildExportInput = () => ({
+    fileBase: `comisiones_${MONTHS[month].toLowerCase()}_${year}`,
+    summary: [
+      { Concepto: "Asesor", Valor: summary.lines[0]?.order.advisor_name || "" },
+      { Concepto: "Periodo", Valor: `${MONTHS[month]} ${year}` },
+      {
+        Concepto: "Criterio del período",
+        Valor: basis === "venta" ? "Fecha de venta" : "Fecha de factura",
+      },
+      { Concepto: "Pedidos del período", Valor: summary.ordersCount },
+      { Concepto: "Ventas totales (con IVA)", Valor: Math.round(summary.totalWithVat) },
+      { Concepto: "Pedidos considerados para comisión", Valor: summary.invoicedCount },
+      { Concepto: "Valor considerado (con IVA)", Valor: Math.round(summary.invoicedWithVat) },
+      { Concepto: "Pedidos pendientes de pago", Valor: summary.pendingCount },
+      { Concepto: "Valor pendiente (con IVA)", Valor: Math.round(summary.pendingWithVat) },
+      { Concepto: "Pedidos excluidos", Valor: summary.excludedCount },
+      { Concepto: "Valor excluido (con IVA)", Valor: Math.round(summary.excludedWithVat) },
+      { Concepto: "Comisión causada", Valor: Math.round(summary.invoicedCommission) },
+      { Concepto: "Bono", Valor: Math.round(summary.bonusInvoiced) },
+      { Concepto: "Total a pagar", Valor: Math.round(summary.toPayInvoiced) },
+      {
+        Concepto: "Comisión por causar (saldos pendientes)",
+        Valor: Math.round(summary.pendingCommission),
+      },
+      ...motivos.map(([reason, v]) => ({
+        Concepto: `Motivo exclusión: ${reason}`,
+        Valor: `${v.count} pedido(s) · ${fmt(v.value)}`,
+      })),
+    ],
+    lines: causadas,
+    excluded: noCausadas,
+  });
+
+  const handleExportXlsx = async () => {
     if (summary.lines.length === 0) return;
     setExporting(true);
     try {
-      const XLSX = await import("xlsx");
-      const ids = summary.lines.map((l) => l.order.id);
-      const payMap = new Map<string, { date: string; where: string }>();
-      for (let i = 0; i < ids.length; i += 100) {
-        const { data } = await supabase
-          .from("order_payments")
-          .select("order_id, payment_date, method, notes")
-          .in("order_id", ids.slice(i, i + 100))
-          .order("payment_date", { ascending: true });
-        for (const p of data || []) {
-          payMap.set(p.order_id, {
-            date: p.payment_date as string,
-            where: (p.method || p.notes || "") as string,
-          });
-        }
-      }
-
-      const rows = summary.lines.map((l) => {
-        const o = l.order;
-        const pay = payMap.get(o.id);
-        return {
-          "N° pedido": (o as any).order_code || "",
-          "Fecha del pedido": format(new Date(o.created_at), "dd/MM/yyyy"),
-          "Fecha soporte de pago": pay?.date
-            ? format(new Date(`${pay.date}T12:00:00`), "dd/MM/yyyy")
-            : o.payment_complete && o.updated_at
-              ? format(new Date(o.updated_at), "dd/MM/yyyy")
-              : "—",
-          Cliente: o.client_name,
-          "Referencia del pedido": o.product,
-          Unidades: Number(o.quantity) || 0,
-          "Dónde pagaron": pay?.where || o.payment_method || "—",
-          "Valor con IVA": Math.round(l.totalWithVat),
-          "Base sin IVA": Math.round(l.baseSinIva),
-          "% comisión": `${(l.ratePct * 100).toFixed(0)}%`,
-          Comisión: Math.round(l.netCommission),
-          Estado: l.returned ? "Devuelto" : l.invoiced ? "Pagado" : "Sin pago",
-        };
-      });
-
-      rows.push({
-        "N° pedido": "",
-        "Fecha del pedido": "",
-        "Fecha soporte de pago": "",
-        Cliente: "TOTAL",
-        "Referencia del pedido": "",
-        Unidades: rows.reduce((s, r) => s + (r.Unidades as number), 0),
-        "Dónde pagaron": "",
-        "Valor con IVA": rows.reduce((s, r) => s + (r["Valor con IVA"] as number), 0),
-        "Base sin IVA": rows.reduce((s, r) => s + (r["Base sin IVA"] as number), 0),
-        "% comisión": "",
-        Comisión: rows.reduce((s, r) => s + (r["Comisión"] as number), 0),
-        Estado: "",
-      } as (typeof rows)[number]);
-
-      const resumen = [
-        { Concepto: "Asesor", Valor: summary.lines[0]?.order.advisor_name || "" },
-        { Concepto: "Periodo", Valor: `${MONTHS[month]} ${year}` },
-        { Concepto: "Pedidos montados", Valor: summary.ordersCount },
-        { Concepto: "Monto montado (con IVA)", Valor: Math.round(summary.totalWithVat) },
-        { Concepto: "Pedidos pagados", Valor: summary.invoicedCount },
-        { Concepto: "Monto pagado (con IVA)", Valor: Math.round(summary.invoicedWithVat) },
-        { Concepto: "Comisión causada", Valor: Math.round(summary.invoicedCommission) },
-        { Concepto: "Bono", Valor: Math.round(summary.bonusInvoiced) },
-        { Concepto: "Total a pagar", Valor: Math.round(summary.toPayInvoiced) },
-        { Concepto: "Comisión pendiente (sin pago)", Valor: Math.round(summary.pendingCommission) },
-      ];
-
-      const wb = XLSX.utils.book_new();
-      const wsResumen = XLSX.utils.json_to_sheet(resumen);
-      wsResumen["!cols"] = [{ wch: 32 }, { wch: 22 }];
-      XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen");
-      const ws = XLSX.utils.json_to_sheet(rows);
-      ws["!cols"] = [
-        { wch: 16 }, { wch: 20 }, { wch: 32 }, { wch: 40 }, { wch: 10 },
-        { wch: 20 }, { wch: 16 }, { wch: 16 }, { wch: 12 }, { wch: 14 }, { wch: 12 },
-      ];
-      XLSX.utils.book_append_sheet(wb, ws, "Ventas y comisiones");
-      XLSX.writeFile(
-        wb,
-        `comisiones_${MONTHS[month].toLowerCase()}_${year}.xlsx`
-      );
+      await exportCommissionsXlsx(buildExportInput());
     } finally {
       setExporting(false);
     }
   };
+
+  const handleExportCsv = () => {
+    if (summary.lines.length === 0) return;
+    exportCommissionsCsv(buildExportInput());
+  };
+
 
 
   if (isLoading) {
@@ -252,8 +239,15 @@ export default function MisComisiones() {
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
+          <Select value={basis} onValueChange={(v) => setBasis(v as PeriodBasis)}>
+            <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="venta">Por fecha de venta</SelectItem>
+              <SelectItem value="factura">Por fecha de factura</SelectItem>
+            </SelectContent>
+          </Select>
           <Button
-            onClick={handleExport}
+            onClick={handleExportXlsx}
             disabled={exporting || summary.lines.length === 0}
             className="gap-2"
           >
@@ -262,8 +256,18 @@ export default function MisComisiones() {
             ) : (
               <Download className="h-4 w-4" />
             )}
-            Descargar Excel
+            Excel
           </Button>
+          <Button
+            variant="outline"
+            onClick={handleExportCsv}
+            disabled={summary.lines.length === 0}
+            className="gap-2"
+          >
+            <Download className="h-4 w-4" />
+            CSV
+          </Button>
+
         </div>
 
       </div>
@@ -333,6 +337,56 @@ export default function MisComisiones() {
 
       <Card>
         <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Info className="h-4 w-4" /> Resumen del período —{" "}
+            {MONTHS[month]} {year} ({basis === "venta" ? "por fecha de venta" : "por fecha de factura"})
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
+            <div className="rounded-md border p-2">
+              <p className="text-xs text-muted-foreground">Ventas totales</p>
+              <p className="font-semibold">{fmt(summary.totalWithVat)}</p>
+              <p className="text-xs text-muted-foreground">{summary.ordersCount} pedido(s)</p>
+            </div>
+            <div className="rounded-md border border-emerald-300 p-2">
+              <p className="text-xs text-muted-foreground">Considerados para comisión</p>
+              <p className="font-semibold text-emerald-600">{fmt(summary.invoicedWithVat)}</p>
+              <p className="text-xs text-muted-foreground">{summary.invoicedCount} pedido(s)</p>
+            </div>
+            <div className="rounded-md border border-amber-300 p-2">
+              <p className="text-xs text-muted-foreground">Pendientes de pago</p>
+              <p className="font-semibold text-amber-600">{fmt(summary.pendingWithVat)}</p>
+              <p className="text-xs text-muted-foreground">{summary.pendingCount} pedido(s)</p>
+            </div>
+            <div className="rounded-md border p-2">
+              <p className="text-xs text-muted-foreground">Excluidos</p>
+              <p className="font-semibold">{fmt(summary.excludedWithVat)}</p>
+              <p className="text-xs text-muted-foreground">{summary.excludedCount} pedido(s)</p>
+            </div>
+          </div>
+
+          {motivos.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium flex items-center gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                Motivos por los que un pedido no causó comisión
+              </p>
+              <ul className="text-xs text-muted-foreground space-y-1">
+                {motivos.map(([reason, v]) => (
+                  <li key={reason}>
+                    • {reason} — <b>{v.count}</b> pedido(s) · {fmt(v.value)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+
+      <Card>
+        <CardHeader className="pb-2">
           <CardTitle className="text-sm">Avance de metas (facturación con IVA)</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -350,10 +404,10 @@ export default function MisComisiones() {
           </div>
           <p className="text-xs text-muted-foreground flex items-start gap-1.5">
             <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-            La comisión se causa cuando el pedido está pagado (soporte de pago cargado)
-            o ya facturado; que contabilidad aún no facture no afecta tu comisión. Solo
-            quedan pendientes los pedidos que el cliente no ha pagado. Se calcula sobre
-            el valor sin IVA.
+            La comisión se causa cuando el pedido está pagado o facturado. Si el
+            pedido tiene un abono parcial, se causa comisión proporcional a lo
+            abonado y el saldo queda como comisión por causar. Se calcula siempre
+            sobre el valor sin IVA.
           </p>
 
         </CardContent>
@@ -366,8 +420,9 @@ export default function MisComisiones() {
             <div className="flex gap-1">
               {([
                 ["todos", "Todos"],
-                ["facturado", "Pagados"],
-                ["pendiente", "Sin pago"],
+                ["facturado", "Causan comisión"],
+                ["pendiente", "Pendientes"],
+                ["excluido", "Excluidos"],
               ] as [Filter, string][]).map(([v, label]) => (
 
                 <Button
@@ -392,25 +447,30 @@ export default function MisComisiones() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Fecha</TableHead>
+                    <TableHead>Fecha venta</TableHead>
+                    <TableHead>Factura</TableHead>
                     <TableHead>N° Pedido</TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
+                    <TableHead className="text-right">Abono</TableHead>
                     <TableHead className="text-right">Base sin IVA</TableHead>
                     <TableHead className="text-right">%</TableHead>
                     <TableHead className="text-right">Comisión</TableHead>
-                    <TableHead>Estado</TableHead>
+                    <TableHead>Estado / motivo</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {lines.map((l) => (
                     <TableRow key={l.order.id}>
                       <TableCell className="whitespace-nowrap text-xs">
-                        {format(l.date, "d MMM", { locale: es })}
+                        {format(l.saleDate, "d MMM", { locale: es })}
                         {l.weekend && (
                           <Badge variant="outline" className="ml-1 text-[10px]">FDS</Badge>
                         )}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                        {l.invoiceDate ? format(l.invoiceDate, "d MMM", { locale: es }) : "—"}
                       </TableCell>
                       <TableCell>
                         <OrderCodeBadge code={(l.order as any).order_code} compact />
@@ -425,6 +485,9 @@ export default function MisComisiones() {
                       </TableCell>
                       <TableCell className="text-right">{fmt(l.totalWithVat)}</TableCell>
                       <TableCell className="text-right text-muted-foreground">
+                        {fmt(Number(l.order.abono) || 0)}
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground">
                         {fmt(l.baseSinIva)}
                       </TableCell>
                       <TableCell className="text-right">
@@ -433,18 +496,27 @@ export default function MisComisiones() {
                       <TableCell className="text-right font-medium">
                         {fmt(l.netCommission)}
                       </TableCell>
-                      <TableCell>
-                        {l.returned ? (
-                          <Badge variant="destructive">Devuelto</Badge>
-                        ) : l.invoiced ? (
-                          <Badge className="bg-emerald-600">Pagado</Badge>
-                        ) : (
-                          <Badge className="bg-amber-500">Sin pago</Badge>
-
-                        )}
+                      <TableCell className="max-w-[240px]">
+                        <Badge
+                          className={
+                            l.status === "total"
+                              ? "bg-emerald-600"
+                              : l.status === "parcial"
+                                ? "bg-sky-600"
+                                : l.status === "pendiente"
+                                  ? "bg-amber-500"
+                                  : "bg-muted text-muted-foreground"
+                          }
+                        >
+                          {STATUS_LABEL[l.status]}
+                        </Badge>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          {l.reason}
+                        </p>
                       </TableCell>
                     </TableRow>
                   ))}
+
                 </TableBody>
               </Table>
             </div>
