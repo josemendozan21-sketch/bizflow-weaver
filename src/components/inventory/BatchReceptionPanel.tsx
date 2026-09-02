@@ -167,6 +167,34 @@ export default function BatchReceptionPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!returnTarget} onOpenChange={(o) => !o && setReturnTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Devolver a producción — lote #{returnTarget?.batch_number}</DialogTitle>
+            <DialogDescription>
+              Se descontarán del inventario las {Number(returnTarget?.received_quantity ?? 0)} uds de "
+              {returnTarget?.item_name}" y el lote volverá a producción para su revisión.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Motivo de la devolución</Label>
+            <Textarea
+              rows={3}
+              value={returnReason}
+              onChange={(e) => setReturnReason(e.target.value)}
+              placeholder="Ej: se confirmó el lote equivocado, cantidad incorrecta, producto no conforme…"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setReturnTarget(null)}>Cancelar</Button>
+            <Button variant="destructive" onClick={doRevert} disabled={busy}>
+              {busy ? "Devolviendo…" : "Devolver a producción"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </Card>
   );
 }
