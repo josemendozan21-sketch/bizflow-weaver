@@ -46,6 +46,8 @@ import { StageLogsList } from "./StageLogsList";
 import { baseRefName } from "@/lib/canonicalBodyRef";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import { matchesQuery } from "@/lib/search";
+import { TERMINAL_STAGES } from "@/lib/orderFlow";
+
 
 type MagicalStage = "produccion_cuerpos" | "estampacion" | "dosificacion" | "sellado" | "descristalizacion" | "recorte" | "empaque" | "listo";
 
