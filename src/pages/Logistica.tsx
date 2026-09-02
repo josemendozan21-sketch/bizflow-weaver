@@ -1129,6 +1129,7 @@ function PendingGroupCard({
                 <AdvisorTag order={it} />
               </span>
               <div className="flex items-center gap-2 shrink-0">
+                <PartialDeliveryControl order={it} showButton={canEdit} />
                 <ProductionStatusBadge status={it.production_status} order={it} />
                 <PaymentBadge order={it} />
               </div>
