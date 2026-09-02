@@ -110,9 +110,10 @@ export function useUpdateLogoRequest() {
       id,
       ...updates
     }: Partial<LogoRequest> & { id: string }) => {
+      const { order_code: _oc, ...rest } = updates as any;
       const { data, error } = await supabase
         .from("logo_requests")
-        .update(updates)
+        .update(rest)
         .eq("id", id)
         .select()
         .maybeSingle();
