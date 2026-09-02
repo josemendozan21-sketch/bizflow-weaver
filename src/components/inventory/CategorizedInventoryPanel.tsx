@@ -332,22 +332,24 @@ const CategorizedInventoryPanel = ({
           <TableCell className="text-right space-x-1">
             {isEditing ? (
               <>
-                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => saveEdit(item.id)}>
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => saveEdit(item.id)} title="Guardar cambios" aria-label={`Guardar cambios de ${item.name}`}>
                   <Check className="h-4 w-4 text-primary" />
                 </Button>
-                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)}>
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)} title="Cancelar edición" aria-label={`Cancelar edición de ${item.name}`}>
                   <X className="h-4 w-4 text-destructive" />
                 </Button>
               </>
             ) : (
               <>
-                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(item)}>
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(item)} title="Editar referencia" aria-label={`Editar ${item.name}`}>
                   <Pencil className="h-4 w-4" />
                 </Button>
                 <Button
                   size="icon"
                   variant="ghost"
                   className="h-7 w-7"
+                  title="Eliminar referencia"
+                  aria-label={`Eliminar ${item.name}`}
                   onClick={async () => {
                     if (!window.confirm(`¿Eliminar la referencia "${item.name}"? Esta acción no se puede deshacer.`)) return;
                     const res = await deleteStockItem(item.id);
@@ -501,11 +503,11 @@ const CategorizedInventoryPanel = ({
                       {!isReadOnly && (
                         <Dialog open={addOpen} onOpenChange={setAddOpen}>
                           <DialogTrigger asChild>
-                            <Button size="sm"><Plus className="h-4 w-4 mr-1" />Agregar ítem</Button>
+                            <Button size="sm"><Plus className="h-4 w-4 mr-1" />Agregar referencia</Button>
                           </DialogTrigger>
                           <DialogContent className="sm:max-w-md">
                             <DialogHeader>
-                              <DialogTitle>Agregar ítem</DialogTitle>
+                              <DialogTitle>Agregar producto o referencia</DialogTitle>
                               <DialogDescription>
                                 {brandLabel} → {CATEGORY_META[(newForm.category as InventoryCategory) || selectedCategory].label}
                               </DialogDescription>

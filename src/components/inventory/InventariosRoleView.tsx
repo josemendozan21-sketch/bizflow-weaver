@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Boxes, ShoppingBag, History, Beaker, Sparkles, Warehouse, Store, Tent, BookmarkCheck } from "lucide-react";
+import { Boxes, ShoppingBag, History, Beaker, Sparkles, Warehouse, Store, Tent, BookmarkCheck, PackageSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
 import MateriaPrimaPanel from "@/components/inventory/MateriaPrimaPanel";
@@ -24,6 +24,7 @@ const WAREHOUSES: { key: WarehouseKey; label: string; icon: typeof Boxes }[] = [
 
 const InventariosRoleView = () => {
   const [warehouse, setWarehouse] = useState<WarehouseKey>("principal");
+  const [catalogBrand, setCatalogBrand] = useState<"magical_warmers" | "sweatspot">("magical_warmers");
 
   return (
     <div className="space-y-6">
@@ -55,8 +56,11 @@ const InventariosRoleView = () => {
       <>
       <InventoryDashboardSummary />
 
-      <Tabs defaultValue="bandeja" className="w-full">
-        <TabsList>
+      <Tabs defaultValue="catalogo" className="w-full">
+        <TabsList className="flex h-auto w-full justify-start overflow-x-auto">
+          <TabsTrigger value="catalogo" className="gap-1.5 whitespace-nowrap">
+            <PackageSearch className="h-4 w-4" /> Productos y referencias
+          </TabsTrigger>
           <TabsTrigger value="bandeja" className="gap-1.5">
             <ShoppingBag className="h-4 w-4" /> Bandeja de pedidos
           </TabsTrigger>
@@ -72,13 +76,42 @@ const InventariosRoleView = () => {
           <TabsTrigger value="materia_prima" className="gap-1.5">
             <Beaker className="h-4 w-4" /> Materia Prima
           </TabsTrigger>
-          <TabsTrigger value="magical_warmers" className="gap-1.5">
-            <Sparkles className="h-4 w-4" /> Magical Warmers
-          </TabsTrigger>
-          <TabsTrigger value="sweatspot" className="gap-1.5">
-            <Boxes className="h-4 w-4" /> Sweatspot
-          </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="catalogo" className="mt-4 space-y-4">
+          <div className="flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+                <PackageSearch className="h-5 w-5 text-primary" />
+                Productos y referencias
+              </h2>
+              <p className="text-sm text-muted-foreground">Crea, edita o elimina las referencias disponibles para Ventas y Producción.</p>
+            </div>
+            <div className="flex gap-2" aria-label="Seleccionar marca del catálogo">
+              <Button
+                type="button"
+                size="sm"
+                variant={catalogBrand === "magical_warmers" ? "default" : "outline"}
+                onClick={() => setCatalogBrand("magical_warmers")}
+              >
+                <Sparkles className="mr-1 h-4 w-4" /> Magical Warmers
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={catalogBrand === "sweatspot" ? "default" : "outline"}
+                onClick={() => setCatalogBrand("sweatspot")}
+              >
+                <Boxes className="mr-1 h-4 w-4" /> Sweatspot
+              </Button>
+            </div>
+          </div>
+          <CategorizedInventoryPanel
+            key={catalogBrand}
+            initialBrand={catalogBrand}
+            initialCategory={catalogBrand === "magical_warmers" ? "cuerpos_referencias" : "producto_terminado"}
+          />
+        </TabsContent>
 
         <TabsContent value="bandeja" className="mt-4">
           <WholesaleOrdersInbox />
@@ -104,13 +137,6 @@ const InventariosRoleView = () => {
           <MateriaPrimaPanel />
         </TabsContent>
 
-        <TabsContent value="magical_warmers" className="mt-4">
-          <CategorizedInventoryPanel initialBrand="magical_warmers" initialCategory="cuerpos_referencias" />
-        </TabsContent>
-
-        <TabsContent value="sweatspot" className="mt-4">
-          <CategorizedInventoryPanel initialBrand="sweatspot" initialCategory="cuerpos_referencias" />
-        </TabsContent>
       </Tabs>
       </>
       )}
