@@ -134,7 +134,7 @@ const CategorizedInventoryPanel = ({
   const search = normalize(searchTerm.trim());
   const filteredItems = baseItems
     .filter((i) => {
-      if (searchTerm && !matchesQuery([i.name, i.brand, (i as any).product_type, (i as any).color, (i as any).logo], searchTerm)) return false;
+      if (searchTerm && !matchesQuery([i.name, i.brand, (i as any).product_type, (i as any).color, (i as any).logo, (i as any).logo ? "marcado con logo" : "sin marcar sin logo"], searchTerm)) return false;
       if (logoFilter === "con" && !(i as any).logo) return false;
       if (logoFilter === "sin" && (i as any).logo) return false;
       if (typeFilter === "termico") return i.product_type === "Térmico";
@@ -297,13 +297,31 @@ const CategorizedInventoryPanel = ({
       >
         <TableCell className="font-medium">
           {isEditing ? (
-            <Input
-              value={editForm.name}
-              onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-              className="h-7 w-56"
-            />
+            <div className="flex items-center gap-2">
+              <Input
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                className="h-7 w-56"
+              />
+              {item.category === "producto_terminado" && (
+                <Select value={editForm.logo} onValueChange={(v) => setEditForm({ ...editForm, logo: v as "con" | "sin" })}>
+                  <SelectTrigger className="h-7 w-36"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sin">Sin marcar</SelectItem>
+                    <SelectItem value="con">Marcado (logo)</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           ) : (
-            item.name
+            <span className="flex items-center gap-2">
+              {item.name}
+              {item.category === "producto_terminado" && (
+                <Badge variant="outline" className="text-[10px]">
+                  {(item as any).logo ? "Marcado" : "Sin marcar"}
+                </Badge>
+              )}
+            </span>
           )}
         </TableCell>
         <TableCell className="text-right">
