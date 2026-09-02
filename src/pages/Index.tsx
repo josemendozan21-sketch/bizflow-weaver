@@ -99,10 +99,10 @@ const Index = () => {
             .select("total_amount, abono")
             .eq("payment_complete", false),
           canSeeCaja
-            ? supabase.from("petty_cash_funds").select("amount")
+            ? supabase.from("petty_cash_funds").select("*")
             : Promise.resolve({ data: [] as any[] }),
           canSeeCaja
-            ? supabase.from("petty_cash_expenses").select("amount")
+            ? supabase.from("petty_cash_expenses").select("*")
             : Promise.resolve({ data: [] as any[] }),
         ]);
 
@@ -119,15 +119,12 @@ const Index = () => {
           s + Math.max(0, Number(r.total_amount || 0) - Number(r.abono || 0)),
         0,
       );
-      const totalFunds = ((fundsRes as any).data ?? []).reduce(
-        (s: number, r: any) => s + Number(r.amount || 0),
-        0,
-      );
-      const totalExpenses = ((expensesRes as any).data ?? []).reduce(
-        (s: number, r: any) => s + Number(r.amount || 0),
-        0,
-      );
-      const cajaEmpresa = canSeeCaja ? totalFunds - totalExpenses : undefined;
+      const cajaEmpresa = canSeeCaja
+        ? totalsBySede(
+            (((fundsRes as any).data ?? []) as PettyFund[]),
+            (((expensesRes as any).data ?? []) as PettyExpense[]),
+          ).total
+        : undefined;
       setSalesKpis({ ventasDelDia, pendienteAbono, ventasMes92, cajaEmpresa });
     })();
   }, [role]);
