@@ -68,20 +68,27 @@ const STATUS_CONFIG = {
 const MateriaPrimaPanel = () => {
   const { stockItems, addStockItem, updateStockItem, deleteStockItem, refetch } = useInventory();
   const { role } = useAuth();
-  const isReadOnly = role !== "admin";
+  // Inventarios gestiona el catálogo igual que en referencias/productos.
+  const isReadOnly = role !== "admin" && role !== "inventarios";
 
   const [brandFilter, setBrandFilter] = useState<BrandFilter>("todas");
   const [search, setSearch] = useState("");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [addOpen, setAddOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ available: "", minStock: "" });
+  const [editTarget, setEditTarget] = useState<SupabaseStockItem | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: "", brand: "ambas", unit: "unidades", available: "", minStock: "",
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<SupabaseStockItem | null>(null);
+  const [deleteMovements, setDeleteMovements] = useState<number | null>(null);
   const [newForm, setNewForm] = useState({
     name: "", brand: "ambas", available: "", unit: "unidades", minStock: "",
   });
   const [produceOpen, setProduceOpen] = useState(false);
   const [batches, setBatches] = useState("1");
   const [producing, setProducing] = useState(false);
+
 
   const items = useMemo(() => {
     const q = normalize(search.trim());
