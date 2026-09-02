@@ -980,28 +980,6 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         if (result.logoUrl2) logoUrl2 = result.logoUrl2;
       }
       extraLogoUrls = result.extraLogoUrls || [];
-    } else if (false && logoFile && logoFile.size > 0 && isRecompra) {
-      // Recompra: subir el logo directamente para conservar la URL real.
-      const ext = logoFile.name.split(".").pop();
-      const path = `originals/${crypto.randomUUID()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("logo-files").upload(path, logoFile);
-      if (!upErr) {
-        const { data: urlData } = supabase.storage.from("logo-files").getPublicUrl(path);
-        logoUrl = urlData.publicUrl;
-      } else {
-        logoUrl = "logo-uploaded";
-      }
-      for (let i = 1; i < activeLogos.length; i++) {
-        const extra = activeLogos[i].file;
-        if (!extra || extra.size === 0) continue;
-        const extExtra = extra.name.split(".").pop();
-        const pathExtra = `originals/${crypto.randomUUID()}.${extExtra}`;
-        const { error: upErrExtra } = await supabase.storage.from("logo-files").upload(pathExtra, extra);
-        if (upErrExtra) continue;
-        const { data: urlExtra } = supabase.storage.from("logo-files").getPublicUrl(pathExtra);
-        if (i === 1) logoUrl2 = urlExtra.publicUrl;
-        else extraLogoUrls.push(urlExtra.publicUrl);
-      }
     } else if (reusaLogoAnterior && recompraLogoUrl) {
       // Recompra sin archivo nuevo: se reutiliza el logo aprobado anteriormente.
       logoUrl = recompraLogoUrl;
@@ -1274,13 +1252,28 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         clientName: clientNameValue,
         needsCuerpos: false,
         shortage: 0,
-        hasLogo: !!logoFile,
+        hasLogo: logoSource === "nuevo",
         advisorId: user?.id || "",
       });
     }
 
     if (logoRequestId && firstOrderIdForLogo) {
       await supabase.from("logo_requests").update({ order_id: firstOrderIdForLogo }).eq("id", logoRequestId);
+    }
+
+    if (firstOrderIdForLogo && logoSource !== "sin_logo") {
+      await notifyLogoFlow({
+        orderId: firstOrderIdForLogo,
+        orderCode: createdCodes[0] ?? null,
+        clientName: clientNameValue,
+        brandLabel: "Magical Warmers",
+        product: `${orderLines[0]?.product ?? ""} (${orderLines[0]?.type ?? ""})`.trim(),
+        logoUrl,
+        logoSource,
+        isRecompra,
+        userId: user?.id ?? null,
+        userName: user?.email ?? null,
+      });
     }
 
     queryClient.invalidateQueries({ queryKey: ["production-orders"] });
@@ -1316,7 +1309,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       "ventas:mw:noLogo","ventas:mw:needsLogoAdjustment","ventas:mw:costoAdicional",
       "ventas:mw:cobroLogo","ventas:mw:costoLogo",
       "ventas:mw:moldeNuevo","ventas:mw:moldeNombre","ventas:mw:moldeCosto","ventas:mw:moldeModo",
-      "ventas:mw:fields","ventas:mw:clientName","ventas:mw:recompraLogoUrl",
+      "ventas:mw:fields","ventas:mw:clientName","ventas:mw:recompraLogoUrl","ventas:mw:recompraMismoLogo",
     ].forEach(clearFormDraft);
     setMwLogos([makeLogoEntry()]);
     setClientName("");
