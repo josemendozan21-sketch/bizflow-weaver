@@ -39,14 +39,28 @@ const thermoSizeOf = (product: string) => {
   return m ? `${m[1]} ml` : null;
 };
 
+/**
+ * "Elaboración de esquinas" aplica solo a termos de 500 ml (con y sin correa)
+ * y a los termos mini de 250 ml.
+ */
+export function needsEsquinas(product: string): boolean {
+  const p = (product || "").toLowerCase();
+  const size = thermoSizeOf(p);
+  if (size === "500 ml") return true;
+  if (size === "250 ml") return true;
+  if (/\bmini\b/.test(p) && !size) return true;
+  return false;
+}
+
 export function buildStages(
   brand: string,
   opts: { hasLogo: boolean; needsCuerpos: boolean; product: string }
 ): string[] {
   if (brand === "sweatspot") {
+    const esquinas = needsEsquinas(opts.product) ? ["elaboracion_esquinas"] : [];
     const full = opts.hasLogo
-      ? ["estampacion", "produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"]
-      : ["produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"];
+      ? ["estampacion", "produccion_tubos", ...esquinas, "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"]
+      : ["produccion_tubos", ...esquinas, "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"];
     const short = opts.hasLogo
       ? ["estampacion", "colocacion_boquilla", "listo"]
       : ["colocacion_boquilla", "listo"];
