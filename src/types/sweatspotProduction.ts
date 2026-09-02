@@ -1,6 +1,7 @@
 export type SweatspotProductionStage =
   | "estampacion"
   | "produccion_tubos"
+  | "elaboracion_esquinas"
   | "ensamble_cuello"
   | "sello_base"
   | "refile"
@@ -15,6 +16,7 @@ export type SweatspotLogoType = "impresion_full" | "impresion_basica";
 export const FULL_STAGE_ORDER: SweatspotProductionStage[] = [
   "estampacion",
   "produccion_tubos",
+  "elaboracion_esquinas",
   "ensamble_cuello",
   "sello_base",
   "refile",
@@ -32,6 +34,7 @@ export const SHORT_STAGE_ORDER: SweatspotProductionStage[] = [
 export const SS_STAGE_LABELS: Record<SweatspotProductionStage, string> = {
   estampacion: "Estampación",
   produccion_tubos: "Producción de tubos",
+  elaboracion_esquinas: "Elaboración de esquinas",
   ensamble_cuello: "Ensamble de cuello",
   sello_base: "Sello de base",
   refile: "Refile",
