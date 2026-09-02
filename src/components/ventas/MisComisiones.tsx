@@ -425,10 +425,11 @@ export default function MisComisiones() {
           </div>
           <p className="text-xs text-muted-foreground flex items-start gap-1.5">
             <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-            La comisión se causa cuando el pedido está pagado o facturado. Si el
-            pedido tiene un abono parcial, se causa comisión proporcional a lo
-            abonado y el saldo queda como comisión por causar. Se calcula siempre
-            sobre el valor sin IVA.
+El período de liquidación es el <b>mes de la factura</b> (si el pedido aún
+            no tiene factura, se muestra en su mes de venta y queda pendiente de
+            facturar). La comisión se causa cuando el pedido está pagado o
+            facturado; con abono parcial se causa proporcional a lo abonado. La
+            base <b>excluye flete y cargos adicionales</b> y se calcula sin IVA.
           </p>
 
         </CardContent>
@@ -503,6 +504,8 @@ export default function MisComisiones() {
                     <TableHead>Cliente</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
+                    <TableHead className="text-right">Flete + cargos</TableHead>
+                    <TableHead className="text-right">Base comisionable</TableHead>
                     <TableHead className="text-right">Abono</TableHead>
                     <TableHead className="text-right">Base sin IVA</TableHead>
                     <TableHead className="text-right">%</TableHead>
@@ -535,6 +538,12 @@ export default function MisComisiones() {
                         {l.clientKind === "recompra" ? "Recompra" : "Nuevo"}
                       </TableCell>
                       <TableCell className="text-right">{fmt(l.totalWithVat)}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {l.shippingCost + l.extraCharges > 0
+                          ? `-${fmt(l.shippingCost + l.extraCharges)}`
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-right">{fmt(l.netTotalWithVat)}</TableCell>
                       <TableCell className="text-right text-muted-foreground">
                         {fmt(Number(l.order.abono) || 0)}
                       </TableCell>
