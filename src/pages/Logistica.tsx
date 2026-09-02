@@ -1015,6 +1015,7 @@ function ShipmentGroupCard({
               </span>
               <div className="flex items-center gap-3 shrink-0">
                 <span className="text-muted-foreground">{it.quantity} und</span>
+                <PartialDeliveryControl order={it} showButton={canEdit} />
                 <PaymentBadge order={it} />
               </div>
             </div>
