@@ -805,8 +805,29 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       : observacionesRaw;
     const rutFile = rutFileState;
     const logoFile = logoFileState;
+    const logoFile2 = logoFile2State;
     const logoNombre = ((fd.get("mw_logo_nombre") as string) || "").trim();
+    const logoNombre2 = ((fd.get("mw_logo_nombre_2") as string) || "").trim();
+    const logosCount = noLogo ? 0 : logoCount;
     const fechaRequerida = fd.get("mw_fechaRequerida") as string;
+
+    // Segundo logo: archivo y nombre obligatorios
+    if (logosCount >= 2 && (!logoFile2 || logoFile2.size === 0 || !logoNombre2)) {
+      toast.error("Segundo logo incompleto", {
+        description: "Adjunte el archivo del logo 2 y escriba su nombre de referencia.",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Recompra: el logo debe quedar registrado (archivo nuevo o logo anterior)
+    if (isRecompra && !noLogo && !(logoFile && logoFile.size > 0) && !recompraLogoUrl) {
+      toast.error("Logo de la recompra requerido", {
+        description: "Seleccione un logo anterior del cliente o adjunte el archivo del logo.",
+      });
+      setIsSubmitting(false);
+      return;
+    }
 
     // Nombre/referencia del logo OBLIGATORIO para pedidos mayor con logo
     if (!noLogo && !logoNombre) {
@@ -890,6 +911,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     // Upload logo once if provided. En recompras NO se crea solicitud
     // de diseño automática (el logo ya existe y fue aprobado antes).
     let logoUrl: string | null = null;
+    let logoUrl2: string | null = null;
     const hasLogoFile = !!(logoFile && logoFile.size > 0);
     const hasPersonalization = !!(personalizacion && personalizacion.trim());
     if ((hasLogoFile || hasPersonalization) && user && !isRecompra && !noLogo) {
@@ -903,15 +925,19 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         advisorId: user.id,
         advisorName: user.email || "Asesor",
         logoFile: hasLogoFile ? logoFile : null,
+        logoFile2: logosCount >= 2 ? logoFile2 : null,
+        logoName2: logosCount >= 2 ? logoNombre2 : undefined,
         clientComments: observaciones || undefined,
         additionalInstructions: personalizacion || undefined,
       });
       if (result.success) {
         toast.success("Diseño de logo", { description: result.message });
         logoUrl = result.logoUrl || "logo-uploaded";
+        logoUrl2 = result.logoUrl2 || null;
       } else {
         toast.error("Diseño de logo", { description: result.message });
         if (result.logoUrl) logoUrl = result.logoUrl;
+        if (result.logoUrl2) logoUrl2 = result.logoUrl2;
       }
     } else if (logoFile && logoFile.size > 0 && isRecompra) {
       // Recompra: subir el logo directamente para conservar la URL real.
@@ -924,7 +950,20 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       } else {
         logoUrl = "logo-uploaded";
       }
+      if (logosCount >= 2 && logoFile2 && logoFile2.size > 0) {
+        const ext2 = logoFile2.name.split(".").pop();
+        const path2 = `originals/${crypto.randomUUID()}.${ext2}`;
+        const { error: upErr2 } = await supabase.storage.from("logo-files").upload(path2, logoFile2);
+        if (!upErr2) {
+          const { data: urlData2 } = supabase.storage.from("logo-files").getPublicUrl(path2);
+          logoUrl2 = urlData2.publicUrl;
+        }
+      }
+    } else if (isRecompra && !noLogo && recompraLogoUrl) {
+      // Recompra sin archivo nuevo: se reutiliza el logo aprobado anteriormente.
+      logoUrl = recompraLogoUrl;
     }
+    if (isRecompra && !logoUrl && recompraLogoUrl) logoUrl = recompraLogoUrl;
 
     const buildMagicalStages = (isThermic: boolean) => {
       const base = noLogo
