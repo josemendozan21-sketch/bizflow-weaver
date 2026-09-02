@@ -31,7 +31,16 @@ const EmptyMessage = () => (
   <p className="text-sm text-muted-foreground py-4 text-center">No hay registros en esta categoría.</p>
 );
 
+const TypeBadge = ({ tipo }: { tipo: string | null }) => {
+  if (tipo === "Frío")
+    return <Badge className="bg-sky-100 text-sky-800 hover:bg-sky-100 border-sky-200">❄️ Frío</Badge>;
+  if (tipo === "Térmico")
+    return <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100 border-orange-200">🔥 Térmico</Badge>;
+  return <span className="text-muted-foreground">—</span>;
+};
+
 const normalize = normalizeText;
+
 
 
 type TypeFilter = "todos" | "termico" | "frio";
