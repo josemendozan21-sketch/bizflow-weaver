@@ -29,12 +29,12 @@ import {
 } from "@/components/ui/collapsible";
 import { ChevronDown, Info, TrendingUp, AlertCircle, Download } from "lucide-react";
 import type { Order } from "@/hooks/useOrders";
+import { useAllOrderCharges } from "@/hooks/useOrderCharges";
 import {
   summarizeAdvisorMonth,
   STATUS_LABEL,
   type OrderOverrides,
   type PaymentMode,
-  type PeriodBasis,
   type AdvisorMonthSummary,
   BONUS_TIER_1_THRESHOLD,
   BONUS_TIER_1_AMOUNT,
@@ -69,11 +69,11 @@ export default function CommissionsPanel({ orders }: Props) {
   const [month, setMonth] = useState(today.getMonth());
   const [overrides, setOverrides] = useState<OrderOverrides>({});
   const [openAdvisor, setOpenAdvisor] = useState<string | null>(null);
-  const [basis, setBasis] = useState<PeriodBasis>("venta");
+  const { data: charges = {} } = useAllOrderCharges();
 
   const summaries = useMemo(
-    () => summarizeAdvisorMonth(orders, overrides, year, month, basis),
-    [orders, overrides, year, month, basis]
+    () => summarizeAdvisorMonth(orders, overrides, year, month, charges),
+    [orders, overrides, year, month, charges]
   );
 
   const setLineOverride = (
@@ -102,7 +102,7 @@ export default function CommissionsPanel({ orders }: Props) {
         { Concepto: "Periodo", Valor: `${MONTHS[month]} ${year}` },
         {
           Concepto: "Criterio del período",
-          Valor: basis === "venta" ? "Fecha de venta" : "Fecha de factura",
+          Valor: "Fecha de factura (si no hay factura, fecha de venta)",
         },
         { Concepto: "Pedidos del período", Valor: a.grossOrdersCount },
         { Concepto: "Ventas totales (con IVA)", Valor: Math.round(a.grossSalesWithVat) },
@@ -134,7 +134,8 @@ export default function CommissionsPanel({ orders }: Props) {
         <div>
           <h2 className="text-xl font-bold">Comisiones de asesores</h2>
           <p className="text-sm text-muted-foreground">
-            Cálculo automático según política oficial 2026.
+            Cálculo automático según política oficial 2026. Período por fecha de
+            factura; la base excluye flete y cargos adicionales.
           </p>
         </div>
         <div className="flex gap-2">
@@ -154,13 +155,6 @@ export default function CommissionsPanel({ orders }: Props) {
                   <SelectItem key={y} value={String(y)}>{y}</SelectItem>
                 )
               )}
-            </SelectContent>
-          </Select>
-          <Select value={basis} onValueChange={(v) => setBasis(v as PeriodBasis)}>
-            <SelectTrigger className="w-[190px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="venta">Por fecha de venta</SelectItem>
-              <SelectItem value="factura">Por fecha de factura</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -190,7 +184,8 @@ export default function CommissionsPanel({ orders }: Props) {
           </p>
           <p>
             <b>Penalización:</b> {fmt(RETURN_PENALTY)} por pedido devuelto contraentrega.
-            Comisión sobre valor SIN IVA (19%).
+            Comisión sobre valor SIN IVA (19%), descontando flete y cargos
+            adicionales del pedido.
           </p>
         </CardContent>
       </Card>
@@ -332,6 +327,7 @@ export default function CommissionsPanel({ orders }: Props) {
                               <TableHead>Forma de pago</TableHead>
                               <TableHead>Devuelto</TableHead>
                               <TableHead className="text-right">Total c/IVA</TableHead>
+                              <TableHead className="text-right">Flete + cargos</TableHead>
                               <TableHead className="text-right">Base usada c/IVA</TableHead>
                               <TableHead className="text-right">Base s/IVA</TableHead>
                               <TableHead className="text-right">%</TableHead>
@@ -399,6 +395,11 @@ export default function CommissionsPanel({ orders }: Props) {
                                 </TableCell>
                                 <TableCell className="text-right">
                                   {fmt(l.totalWithVat)}
+                                </TableCell>
+                                <TableCell className="text-right text-muted-foreground">
+                                  {l.shippingCost + l.extraCharges > 0
+                                    ? `-${fmt(l.shippingCost + l.extraCharges)}`
+                                    : "—"}
                                 </TableCell>
                                 <TableCell className="text-right">
                                   {fmt(l.commissionableWithVat)}
