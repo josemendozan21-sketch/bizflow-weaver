@@ -29,6 +29,8 @@ import { OperatorPromptDialog } from "./OperatorPromptDialog";
 import { StageLogsList } from "./StageLogsList";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import { matchesQuery } from "@/lib/search";
+import { TERMINAL_STAGES } from "@/lib/orderFlow";
+
 
 const STAGE_ICONS: Record<string, React.ElementType> = {
   produccion_cuerpos: Package,
