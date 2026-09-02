@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAccountingAlerts } from "@/hooks/useAccountingAlerts";
 import type { AccountingOrder } from "@/stores/accountingStore";
+import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 
 function toAccountingOrder(o: Order): AccountingOrder {
   return {
@@ -256,6 +257,7 @@ const OrderCard = ({ order, actionSlot }: { order: Order; actionSlot?: React.Rea
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="space-y-1">
+            <OrderCodeBadge code={order.order_code} lineIndex={order.line_index} lineCount={order.line_count} />
             <CardTitle className="text-base">{order.client_name}</CardTitle>
             <div className="flex items-center gap-2 flex-wrap">
               <Badge variant={order.brand === "magical" ? "default" : "secondary"}>
@@ -644,6 +646,7 @@ const Contabilidad = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-10"></TableHead>
+                      <TableHead>N° Pedido</TableHead>
                       <TableHead>Cliente</TableHead>
                       <TableHead>Tipo</TableHead>
                       <TableHead>Monto</TableHead>
@@ -658,6 +661,7 @@ const Contabilidad = () => {
                     {invoiced.map((order) => (
                       <TableRow key={order.id}>
                         <TableCell><Checkbox checked={selectedInvoiced.has(order.id)} onCheckedChange={() => toggleSelection(order.id, selectedInvoiced, setSelectedInvoiced)} /></TableCell>
+                        <TableCell><OrderCodeBadge code={order.order_code} lineIndex={order.line_index} lineCount={order.line_count} compact /></TableCell>
                         <TableCell className="font-medium">{order.client_name}</TableCell>
                         <TableCell>
                           <Badge variant={order.sale_type === "mayor" ? "default" : "outline"}>

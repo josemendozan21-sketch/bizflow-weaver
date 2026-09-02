@@ -27,6 +27,7 @@ import { formatDistanceToNow, format } from "date-fns";
 import { es } from "date-fns/locale";
 
 import { matchesQuery } from "@/lib/search";
+import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 
 
 interface MayorOrder {
@@ -668,10 +669,9 @@ const WholesaleOrdersInbox = () => {
                 )}
                 {isDelivered && <Badge variant="secondary">Entregado</Badge>}
               </div>
-              <p className="mt-1.5 text-[11px] font-mono text-muted-foreground">
-                {o.order_code || "—"}
-                {(o.line_count ?? 1) > 1 ? ` · línea ${o.line_index}/${o.line_count}` : ""}
-              </p>
+              <div className="mt-1.5">
+                <OrderCodeBadge code={o.order_code} lineIndex={o.line_index} lineCount={o.line_count} compact />
+              </div>
               <h3 className="font-semibold">{o.client_name}</h3>
               <p className="text-sm text-muted-foreground">
                 {o.quantity.toLocaleString("es-CO")} × {o.product}

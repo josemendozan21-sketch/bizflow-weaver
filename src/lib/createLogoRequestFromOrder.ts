@@ -65,7 +65,7 @@ export async function createLogoRequestFromOrder(
     }
 
     // 2. Create logo request
-    const { error: insertError } = await supabase.from("logo_requests").insert({
+    const { data: insertedReq, error: insertError } = await supabase.from("logo_requests").insert({
       brand: data.brand,
       client_name: data.clientName,
       logo_name: [data.logoName, data.logoName2].filter(Boolean).join(" + ") || null,
@@ -77,7 +77,7 @@ export async function createLogoRequestFromOrder(
       client_comments: [data.orderCode ? `Pedido ${data.orderCode}` : "", data.clientComments || ""].filter(Boolean).join(" | ") || null,
       additional_instructions: data.additionalInstructions || null,
       status: "pendiente_diseno",
-    });
+    }).select("id").single();
 
     if (insertError) {
       console.error("Error creating logo request:", insertError);
@@ -87,7 +87,7 @@ export async function createLogoRequestFromOrder(
     const message = data.logoFile && data.logoFile.size > 0
       ? "Solicitud de diseño creada automáticamente."
       : "Solicitud de diseño creada (sin logo: el equipo lo construirá desde la personalización).";
-    return { success: true, message, logoUrl: publicUrl, logoUrl2: publicUrl2 || undefined };
+    return { success: true, message, logoUrl: publicUrl, logoUrl2: publicUrl2 || undefined, requestId: insertedReq?.id as string | undefined };
   } catch (err: any) {
     console.error("Unexpected error creating logo request:", err);
     return { success: false, message: err.message || "Error inesperado" };

@@ -24,6 +24,7 @@ import { AddPaymentDialog } from "./AddPaymentDialog";
 import { PendingProofPanel } from "./PendingProofPanel";
 
 import { matchesQuery } from "@/lib/search";
+import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 
 
 const STAGE_ORDER = [
@@ -499,6 +500,20 @@ function OrderGroupCard({
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div>
+            <div className="flex flex-wrap items-center gap-1 mb-1">
+              {group.items.slice(0, 4).map((it) => (
+                <OrderCodeBadge
+                  key={it.id}
+                  code={it.order_code}
+                  lineIndex={it.line_index}
+                  lineCount={it.line_count}
+                  compact
+                />
+              ))}
+              {group.items.length > 4 && (
+                <span className="text-[10px] text-muted-foreground">+{group.items.length - 4} más</span>
+              )}
+            </div>
             <CardTitle className="text-base">{group.clientName}</CardTitle>
             <p className="text-sm text-muted-foreground">
               {group.brand === "magical" ? "Magical Warmers" : "Sweatspot"} · {group.saleType === "mayor" ? "Al por mayor" : "Al por menor"}

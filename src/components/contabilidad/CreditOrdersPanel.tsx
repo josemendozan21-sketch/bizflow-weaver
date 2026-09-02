@@ -9,6 +9,7 @@ import { AddPaymentDialog } from "@/components/ventas/AddPaymentDialog";
 import { differenceInCalendarDays, format } from "date-fns";
 import { es } from "date-fns/locale";
 import { AlertTriangle, CreditCard } from "lucide-react";
+import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 
 function dueColor(dueDate: string | null | undefined): { label: string; cls: string } {
   if (!dueDate) return { label: "Sin fecha", cls: "bg-muted text-muted-foreground" };
@@ -71,6 +72,7 @@ export function CreditOrdersPanel() {
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
+                      <OrderCodeBadge code={o.order_code} lineIndex={o.line_index} lineCount={o.line_count} compact />
                       <span className="font-medium text-foreground">{o.client_name}</span>
                       <Badge className={`${due.cls} hover:${due.cls}`}>{due.label}</Badge>
                       {o.payment_due_date && (
@@ -97,7 +99,7 @@ export function CreditOrdersPanel() {
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-lg">
                       <DialogHeader>
-                        <DialogTitle>{o.client_name} — {o.product}</DialogTitle>
+                        <DialogTitle>{o.order_code ? `${o.order_code} · ` : ""}{o.client_name} — {o.product}</DialogTitle>
                       </DialogHeader>
                       <div className="space-y-3">
                         <div className="grid grid-cols-3 gap-2 text-sm">

@@ -1,0 +1,2 @@
+ALTER TABLE public.logo_requests ADD COLUMN IF NOT EXISTS order_id uuid REFERENCES public.orders(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_logo_requests_order_id ON public.logo_requests(order_id);

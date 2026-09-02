@@ -25,6 +25,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useOrders } from "@/hooks/useOrders";
 import { useAuth } from "@/contexts/AuthContext";
+import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import {
   summarizeAdvisorProgress,
   BONUS_TIER_1_THRESHOLD,
@@ -392,6 +393,7 @@ export default function MisComisiones() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Fecha</TableHead>
+                    <TableHead>N° Pedido</TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
@@ -409,6 +411,9 @@ export default function MisComisiones() {
                         {l.weekend && (
                           <Badge variant="outline" className="ml-1 text-[10px]">FDS</Badge>
                         )}
+                      </TableCell>
+                      <TableCell>
+                        <OrderCodeBadge code={(l.order as any).order_code} compact />
                       </TableCell>
                       <TableCell className="max-w-[200px] truncate">
                         {l.order.client_name}
