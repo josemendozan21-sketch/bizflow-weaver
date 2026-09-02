@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { useInventory } from "@/hooks/useInventory";
 import { useFerias } from "@/hooks/useFerias";
 import { useInventoryMovements, type MovementArea, type MovementDirection } from "@/hooks/useInventoryMovements";
+import { formatStockOptionLabel } from "@/lib/referenceCatalog";
+
 
 const AREAS: { value: MovementArea; label: string }[] = [
   { value: "produccion", label: "Producción" },
@@ -188,9 +190,10 @@ const RegisterMovementDialog = () => {
               <SelectContent>
                 {itemsForBrand.map((it) => (
                   <SelectItem key={it.id} value={it.id}>
-                    {it.name} <span className="text-muted-foreground">· disp. {it.available}</span>
+                    {formatStockOptionLabel(it as any)}
                   </SelectItem>
                 ))}
+
               </SelectContent>
             </Select>
             {selectedItem && (

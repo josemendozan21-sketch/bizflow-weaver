@@ -12,6 +12,8 @@ import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 import { useInventory } from "@/hooks/useInventory";
 import { matchesQuery } from "@/lib/search";
+import { formatStockOptionLabel } from "@/lib/referenceCatalog";
+
 
 interface TraceMovement {
   id: string;
@@ -234,10 +236,10 @@ export default function InventoryTraceabilityPanel() {
                   )}
                   {filteredItems.map((it) => (
                     <SelectItem key={it.id} value={it.id}>
-                      {it.name} · {it.brand}
-                      {(it as any).product_type ? ` · ${(it as any).product_type}` : ""} · disp. {it.available}
+                      {formatStockOptionLabel(it as any)} · {it.brand}
                     </SelectItem>
                   ))}
+
                 </SelectContent>
               </Select>
             </div>

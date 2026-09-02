@@ -29,6 +29,8 @@ import { es } from "date-fns/locale";
 import { matchesQuery } from "@/lib/search";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import PartialDeliveryControl from "@/components/common/PartialDeliveryControl";
+import { findStockMatch, sortStockOptions, stockOptionParts, cleanReferenceName } from "@/lib/referenceCatalog";
+
 
 
 interface MayorOrder {
@@ -463,14 +465,10 @@ const WholesaleOrdersInbox = () => {
       const parsed = parseOrderLines(order.product, order.quantity);
       const cat = "producto_terminado";
       const rows = parsed.map((p) => {
-        const guess = stockItems.find(
-          (s) =>
-            s.brand === order.brand &&
-            s.category === cat &&
-            s.name.trim().toLowerCase() === p.name.trim().toLowerCase()
-        );
+        const guess = findStockMatch(stockItems as any[], p.name, { brand: order.brand, category: cat });
         return { name: p.name, qty: String(p.qty), stockItemId: guess?.id ?? "" };
       });
+
       setLineRows(rows);
     } else {
       setLineRows([]);
@@ -1018,9 +1016,13 @@ const WholesaleOrdersInbox = () => {
                   Mapea cada línea del pedido a su producto en inventario. Las cantidades se descontarán al confirmar.
                 </p>
                 {lineRows.map((r, idx) => {
-                  const options = stockItems
-                    .filter((s) => s.brand === delivering?.order.brand && s.category === "producto_terminado")
-                    .sort((a, b) => a.name.localeCompare(b.name));
+                  const options = sortStockOptions(
+                    stockItems.filter(
+                      (s) => s.brand === delivering?.order.brand && s.category === "producto_terminado",
+                    ) as any[],
+                    r.name,
+                  );
+                  const selected = options.find((s: any) => s.id === r.stockItemId);
                   return (
                     <div key={idx} className="border rounded-md p-2 space-y-2">
                       <div className="text-xs font-medium">{r.name}</div>
@@ -1034,14 +1036,35 @@ const WholesaleOrdersInbox = () => {
                           <SelectTrigger>
                             <SelectValue placeholder="Selecciona producto en inventario" />
                           </SelectTrigger>
-                          <SelectContent>
-                            {options.map((s) => (
-                              <SelectItem key={s.id} value={s.id}>
-                                {s.name} · disp. {s.available}
-                              </SelectItem>
-                            ))}
+                          <SelectContent className="max-h-72">
+                            {options.map((s: any) => {
+                              const parts = stockOptionParts(s);
+                              const sinStock = Number(s.available || 0) <= 0;
+                              return (
+                                <SelectItem key={s.id} value={s.id}>
+                                  <span className="flex flex-wrap items-center gap-1.5">
+                                    <span className="font-medium">{cleanReferenceName(s.name)}</span>
+                                    {parts.map((p) => (
+                                      <Badge key={p} variant="outline" className="px-1.5 py-0 text-[10px]">
+                                        {p}
+                                      </Badge>
+                                    ))}
+                                    <span
+                                      className={
+                                        sinStock
+                                          ? "text-[11px] text-destructive font-medium"
+                                          : "text-[11px] text-muted-foreground"
+                                      }
+                                    >
+                                      {sinStock ? "sin stock" : `disp. ${s.available}`}
+                                    </span>
+                                  </span>
+                                </SelectItem>
+                              );
+                            })}
                           </SelectContent>
                         </Select>
+
                         <Input
                           type="number"
                           min="1"
@@ -1051,7 +1074,19 @@ const WholesaleOrdersInbox = () => {
                           }
                         />
                       </div>
+                      {selected && (
+                        <p className="text-[11px] text-muted-foreground">
+                          Se descontará de: <strong>{cleanReferenceName(selected.name)}</strong>
+                          {stockOptionParts(selected).length > 0 ? ` · ${stockOptionParts(selected).join(" · ")}` : ""}
+                          {Number(r.qty) > Number(selected.available || 0) && (
+                            <span className="text-destructive font-medium">
+                              {" "}— stock insuficiente ({selected.available} disp.)
+                            </span>
+                          )}
+                        </p>
+                      )}
                     </div>
+
                   );
                 })}
               </div>
