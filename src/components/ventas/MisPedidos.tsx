@@ -974,7 +974,7 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
       // El asesor puede ajustar unidades y valor unitario: el total se recalcula siempre.
       const qty = Math.max(Number(quantity) || 0, 1);
       const price = Number(unitPrice) || 0;
-      const newTotal = price * qty + (Number(extraCost) || 0);
+      const newTotal = price * qty + (Number(extraCost) || 0) + chargesTotal;
 
       // Only update production-spec fields for wholesale orders (they go through producción).
       // Retail orders are sold from finished stock and shouldn't overwrite these specs.
