@@ -14,6 +14,7 @@ interface OrderLogoData {
   orderCode?: string;
   clientComments?: string;
   additionalInstructions?: string;
+  fromRecompra?: boolean;
 }
 
 /**
@@ -94,6 +95,7 @@ export async function createLogoRequestFromOrder(
       client_comments: [data.orderCode ? `Pedido ${data.orderCode}` : "", data.clientComments || ""].filter(Boolean).join(" | ") || null,
       additional_instructions: data.additionalInstructions || null,
       status: "pendiente_diseno",
+      from_recompra: !!data.fromRecompra,
     }).select("id").single();
 
     if (insertError) {
