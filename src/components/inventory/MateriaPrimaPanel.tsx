@@ -14,7 +14,12 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  Beaker, Plus, Pencil, Check, X, AlertTriangle, AlertCircle, CheckCircle2, Search, ArrowDownAZ, ArrowUpAZ, Trash2, FlaskConical,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Beaker, Plus, Pencil, Check, X, AlertTriangle, AlertCircle, CheckCircle2, Search, ArrowDownAZ, ArrowUpAZ, Trash2, FlaskConical, History,
 } from "lucide-react";
 import { useInventory, getStockStatus, type SupabaseStockItem } from "@/hooks/useInventory";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,6 +27,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import DebouncedSearchInput from "./DebouncedSearchInput";
 import { matchesQuery } from "@/lib/search";
+import InventoryChangeLogPanel from "./InventoryChangeLogPanel";
+
 
 const UNITS = ["unidades", "gramos", "kilos", "tarros", "metros", "litros"];
 
