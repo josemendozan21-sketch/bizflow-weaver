@@ -337,6 +337,56 @@ export default function MisComisiones() {
 
       <Card>
         <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Info className="h-4 w-4" /> Resumen del período —{" "}
+            {MONTHS[month]} {year} ({basis === "venta" ? "por fecha de venta" : "por fecha de factura"})
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
+            <div className="rounded-md border p-2">
+              <p className="text-xs text-muted-foreground">Ventas totales</p>
+              <p className="font-semibold">{fmt(summary.totalWithVat)}</p>
+              <p className="text-xs text-muted-foreground">{summary.ordersCount} pedido(s)</p>
+            </div>
+            <div className="rounded-md border border-emerald-300 p-2">
+              <p className="text-xs text-muted-foreground">Considerados para comisión</p>
+              <p className="font-semibold text-emerald-600">{fmt(summary.invoicedWithVat)}</p>
+              <p className="text-xs text-muted-foreground">{summary.invoicedCount} pedido(s)</p>
+            </div>
+            <div className="rounded-md border border-amber-300 p-2">
+              <p className="text-xs text-muted-foreground">Pendientes de pago</p>
+              <p className="font-semibold text-amber-600">{fmt(summary.pendingWithVat)}</p>
+              <p className="text-xs text-muted-foreground">{summary.pendingCount} pedido(s)</p>
+            </div>
+            <div className="rounded-md border p-2">
+              <p className="text-xs text-muted-foreground">Excluidos</p>
+              <p className="font-semibold">{fmt(summary.excludedWithVat)}</p>
+              <p className="text-xs text-muted-foreground">{summary.excludedCount} pedido(s)</p>
+            </div>
+          </div>
+
+          {motivos.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium flex items-center gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                Motivos por los que un pedido no causó comisión
+              </p>
+              <ul className="text-xs text-muted-foreground space-y-1">
+                {motivos.map(([reason, v]) => (
+                  <li key={reason}>
+                    • {reason} — <b>{v.count}</b> pedido(s) · {fmt(v.value)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+
+      <Card>
+        <CardHeader className="pb-2">
           <CardTitle className="text-sm">Avance de metas (facturación con IVA)</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
