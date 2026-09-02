@@ -103,25 +103,24 @@ export default function MovementHistoryTable() {
         .eq("id", targetId);
       if (updErr) throw updErr;
 
-      // For magical body references, mirror into body_stock so production views stay in sync
+      // NOTE: do NOT touch body_stock here. The DB triggers
+      // (mirror_stock_items_to_body_stock / mirror_body_stock_to_stock_items)
+      // already propagate the new value. Adding it again duplicated the units.
+      // Only create the body_stock row when it does not exist yet.
       if (m.category === "cuerpos_referencias" && m.brand === "magical") {
         const { data: bs } = await supabase
           .from("body_stock")
-          .select("id, available")
+          .select("id")
           .eq("brand", "magical")
           .ilike("referencia", m.item_name)
           .maybeSingle();
-        if (bs) {
+        if (!bs) {
           await supabase
             .from("body_stock")
-            .update({ available: Number(bs.available || 0) + Number(m.quantity) })
-            .eq("id", bs.id);
-        } else {
-          await supabase
-            .from("body_stock")
-            .insert({ brand: "magical", referencia: m.item_name, available: Number(m.quantity) });
+            .insert({ brand: "magical", referencia: m.item_name, available: newAvailable });
         }
       }
+
 
       const { error: confErr } = await supabase
         .from("inventory_movements")
