@@ -218,10 +218,6 @@ const PREDEFINED_COLORS = [
   "Aguamarina", "Azul claro", "Verde lima", "Verde militar",
 ];
 
-const TIROIDES_TYPES = ["Frío", "Térmico"] as const;
-const TIROIDES_OPTION_PREFIX = "Tiroides__";
-const HERBOLOGY_TYPES = ["Frío", "Térmico"] as const;
-const HERBOLOGY_OPTION_PREFIX = "Herbology__";
 
 interface OrderLine {
   id: string;
@@ -622,46 +618,13 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     return names.sort((a, b) => a.localeCompare(b, "es"));
   }, [inventoryStockItems]);
 
-  const productOptions = useMemo(() => {
-    const hasTiroides = productNames.includes("Tiroides");
-    const hasHerbology = productNames.includes("Herbology");
-    const tiroidesDirectOptions = hasTiroides
-      ? TIROIDES_TYPES.map((type) => ({
-          value: `${TIROIDES_OPTION_PREFIX}${type}`,
-          label: `Tiroides (${type})`,
-          product: "Tiroides",
-          type,
-        }))
-      : [];
-    const herbologyDirectOptions = hasHerbology
-      ? HERBOLOGY_TYPES.map((type) => ({
-          value: `${HERBOLOGY_OPTION_PREFIX}${type}`,
-          label: `Herbology (${type})`,
-          product: "Herbology",
-          type,
-        }))
-      : [];
-    const regularOptions = productNames
-      .filter((name) => name !== "Tiroides" && name !== "Herbology")
-      .map((name) => ({ value: name, label: name, product: name, type: "" }));
-    return [
-      ...tiroidesDirectOptions,
-      ...(hasTiroides ? [{ value: "Tiroides", label: "Tiroides", product: "Tiroides", type: "" }] : []),
-      ...herbologyDirectOptions,
-      ...(hasHerbology ? [{ value: "Herbology", label: "Herbology", product: "Herbology", type: "" }] : []),
-      ...regularOptions,
-    ];
-  }, [productNames]);
+  // Una sola opción por referencia: el tipo (Frío/Térmico) se elige en el campo "Tipo".
+  const productOptions = useMemo(
+    () => productNames.map((name) => ({ value: name, label: name, product: name, type: "" })),
+    [productNames],
+  );
 
-  const getProductSelectValue = (line: OrderLine) => {
-    if (line.product === "Tiroides" && TIROIDES_TYPES.includes(line.type as (typeof TIROIDES_TYPES)[number])) {
-      return `${TIROIDES_OPTION_PREFIX}${line.type}`;
-    }
-    if (line.product === "Herbology" && HERBOLOGY_TYPES.includes(line.type as (typeof HERBOLOGY_TYPES)[number])) {
-      return `${HERBOLOGY_OPTION_PREFIX}${line.type}`;
-    }
-    return line.product;
-  };
+  const getProductSelectValue = (line: OrderLine) => line.product;
 
   const handleProductSelect = (lineId: string, value: string) => {
     const selectedOption = productOptions.find((option) => option.value === value);
@@ -732,15 +695,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           s.product_type
       )
       .map((s) => s.product_type as string);
-    const merged = [...new Set([...fromConfig, ...fromDB])];
-    // Reliable fallback for known references without local config (e.g. Tiroides)
-    if (productName === "Tiroides") {
-      return [...new Set([...TIROIDES_TYPES, ...merged])];
-    }
-    if (productName === "Herbology") {
-      return [...new Set([...HERBOLOGY_TYPES, ...merged])];
-    }
-    return merged;
+    return [...new Set([...fromConfig, ...fromDB])];
   };
 
   const getMatchedConfig = (productName: string, productType: string) => {
