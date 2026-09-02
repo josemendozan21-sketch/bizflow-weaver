@@ -606,9 +606,15 @@ export const MagicalWarmersWorkflow = () => {
                   reception_confirmed: false,
                 } as any);
                 if (movErr) {
-                  toast.error(`La producción quedó finalizada, pero no llegó a Inventarios: ${movErr.message}. Avisa al administrador.`);
+                  // Revert the task so it does not "disappear" from production.
+                  await supabase
+                    .from("body_production_tasks")
+                    .update({ status: "pendiente", completed_at: null })
+                    .eq("id", finalizeTask.id);
+                  toast.error(`No se pudo enviar a Inventarios: ${movErr.message}. La tarea sigue pendiente, vuelve a intentarlo.`);
                   return;
                 }
+
                 // Notify inventarios so they can confirm reception
                 await supabase.from("notifications").insert({
                   target_role: "inventarios",
