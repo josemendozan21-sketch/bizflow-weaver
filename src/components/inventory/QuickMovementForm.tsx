@@ -162,7 +162,9 @@ export default function QuickMovementForm() {
         referencia: `${selected.name} (${tipoLabel})`,
         unidades: qty,
         status: "pendiente",
+        brand: selected.brand,
       } as any);
+
       if (error) {
         setSubmitting(false);
         return toast.error(`No se pudo crear la solicitud: ${error.message}`);

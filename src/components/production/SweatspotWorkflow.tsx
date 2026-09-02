@@ -59,6 +59,7 @@ const STATUS_BADGE: Record<string, { label: string; variant: "secondary" | "defa
   en_proceso: { label: "En proceso", variant: "default" },
   finalizado: { label: "Finalizado", variant: "outline" },
 };
+import { SweatspotBodyTasksPanel } from "@/components/production/SweatspotBodyTasksPanel";
 
 export const SweatspotWorkflow = () => {
   const { orders, stageLogs, isLoading, updateStageStatus, advanceStage, forceCompleteOrder } = useProductionOrders("sweatspot");
@@ -131,6 +132,10 @@ export const SweatspotWorkflow = () => {
           </div>
         </div>
       </div>
+
+      <SweatspotBodyTasksPanel />
+
+
 
       <div className="flex flex-wrap gap-2">
         {FULL_STAGE_ORDER.filter((s) => s !== "listo").map((stage) => {

@@ -91,7 +91,7 @@ const CategorizedInventoryPanel = ({
   const [sweatspotOrigin, setSweatspotOrigin] = useState<"todos" | "IMPORTADO" | "NACIONAL">("todos");
   const [addOpen, setAddOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", available: "", minStock: "" });
+  const [editForm, setEditForm] = useState({ name: "", available: "", minStock: "", logo: "sin" as "sin" | "con" });
   const [newForm, setNewForm] = useState({
     name: "",
     available: "",
@@ -99,12 +99,15 @@ const CategorizedInventoryPanel = ({
     minStock: "",
     tipo: "" as "" | "Frío" | "Térmico" | "Ambos",
     category: "" as InventoryCategory | "",
+    logo: "sin" as "sin" | "con",
   });
   const [activeHighlights, setActiveHighlights] = useState<string[]>(highlightItemNames);
   const highlightRef = useRef<HTMLTableRowElement>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<"todos" | "termico" | "frio" | "otros">("todos");
+  const [logoFilter, setLogoFilter] = useState<"todos" | "con" | "sin">("todos");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
 
   useEffect(() => {
     if (activeHighlights.length > 0 && highlightRef.current) {
@@ -131,7 +134,9 @@ const CategorizedInventoryPanel = ({
   const search = normalize(searchTerm.trim());
   const filteredItems = baseItems
     .filter((i) => {
-      if (searchTerm && !matchesQuery([i.name, i.brand, (i as any).product_type, (i as any).color, (i as any).logo], searchTerm)) return false;
+      if (searchTerm && !matchesQuery([i.name, i.brand, (i as any).product_type, (i as any).color, (i as any).logo, (i as any).logo ? "marcado con logo" : "sin marcar sin logo"], searchTerm)) return false;
+      if (logoFilter === "con" && !(i as any).logo) return false;
+      if (logoFilter === "sin" && (i as any).logo) return false;
       if (typeFilter === "termico") return i.product_type === "Térmico";
       if (typeFilter === "frio") return i.product_type === "Frío";
       if (typeFilter === "otros") return !i.product_type;
@@ -181,7 +186,8 @@ const CategorizedInventoryPanel = ({
         unit: newForm.unit,
         min_stock: Number(newForm.minStock),
         product_type: tipo,
-      });
+        logo: targetCategory === "producto_terminado" && newForm.logo === "con" ? "marcado" : null,
+      } as any);
       if (!result.success) return { ok: false, msg: result.message };
 
       if (isMagical && targetCategory === "cuerpos_referencias" && tipo) {
@@ -224,13 +230,13 @@ const CategorizedInventoryPanel = ({
       );
       if (errs.length) toast.warning(errs.join(" • "));
     }
-    setNewForm({ name: "", available: "", unit: "unidades", minStock: "", tipo: "", category: "" });
+    setNewForm({ name: "", available: "", unit: "unidades", minStock: "", tipo: "", category: "", logo: "sin" });
     setAddOpen(false);
   };
 
   const startEdit = (item: SupabaseStockItem) => {
     setEditingId(item.id);
-    setEditForm({ name: item.name, available: String(item.available), minStock: String(item.min_stock) });
+    setEditForm({ name: item.name, available: String(item.available), minStock: String(item.min_stock), logo: item.logo ? "con" : "sin" });
   };
 
   const saveEdit = async (id: string) => {
@@ -243,7 +249,8 @@ const CategorizedInventoryPanel = ({
       name: trimmedName,
       available: Number(editForm.available),
       min_stock: Number(editForm.minStock),
-    });
+      logo: editForm.logo === "con" ? "marcado" : null,
+    } as any);
     if (result.success) {
       setEditingId(null);
       toast.success("Inventario actualizado");
@@ -290,13 +297,31 @@ const CategorizedInventoryPanel = ({
       >
         <TableCell className="font-medium">
           {isEditing ? (
-            <Input
-              value={editForm.name}
-              onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-              className="h-7 w-56"
-            />
+            <div className="flex items-center gap-2">
+              <Input
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                className="h-7 w-56"
+              />
+              {item.category === "producto_terminado" && (
+                <Select value={editForm.logo} onValueChange={(v) => setEditForm({ ...editForm, logo: v as "con" | "sin" })}>
+                  <SelectTrigger className="h-7 w-36"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sin">Sin marcar</SelectItem>
+                    <SelectItem value="con">Marcado (logo)</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           ) : (
-            item.name
+            <span className="flex items-center gap-2">
+              {item.name}
+              {item.category === "producto_terminado" && (
+                <Badge variant="outline" className="text-[10px]">
+                  {(item as any).logo ? "Marcado" : "Sin marcar"}
+                </Badge>
+              )}
+            </span>
           )}
         </TableCell>
         <TableCell className="text-right">
@@ -616,7 +641,20 @@ const CategorizedInventoryPanel = ({
                                   <Input type="number" min={0} value={newForm.minStock} onChange={(e) => setNewForm({ ...newForm, minStock: e.target.value })} />
                                 </div>
                               </div>
+                              {((newForm.category || selectedCategory) === "producto_terminado") && (
+                                <div className="grid gap-1.5">
+                                  <Label>Marcado</Label>
+                                  <Select value={newForm.logo} onValueChange={(v) => setNewForm({ ...newForm, logo: v as "con" | "sin" })}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="sin">Sin marcar</SelectItem>
+                                      <SelectItem value="con">Marcado (con logo)</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
                             </div>
+
                             <DialogFooter>
                               <Button variant="outline" onClick={() => setAddOpen(false)}>Cancelar</Button>
                               <Button onClick={handleAdd}>Guardar</Button>
@@ -644,6 +682,19 @@ const CategorizedInventoryPanel = ({
                           <SelectItem value="otros">Otros</SelectItem>
                         </SelectContent>
                       </Select>
+                      {cat === "producto_terminado" && (
+                        <Select value={logoFilter} onValueChange={(v) => setLogoFilter(v as typeof logoFilter)}>
+                          <SelectTrigger className="h-9 w-[150px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="todos">Marcado: todos</SelectItem>
+                            <SelectItem value="con">Marcado (con logo)</SelectItem>
+                            <SelectItem value="sin">Sin marcar</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+
                       <Button
                         type="button"
                         variant="outline"

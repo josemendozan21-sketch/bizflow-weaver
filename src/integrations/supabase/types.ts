@@ -138,6 +138,7 @@ export type Database = {
       }
       body_production_tasks: {
         Row: {
+          brand: string
           completed_at: string | null
           created_at: string
           fabricated_by: string | null
@@ -151,6 +152,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          brand?: string
           completed_at?: string | null
           created_at?: string
           fabricated_by?: string | null
@@ -164,6 +166,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          brand?: string
           completed_at?: string | null
           created_at?: string
           fabricated_by?: string | null
@@ -1221,6 +1224,7 @@ export type Database = {
           field: string | null
           id: string
           item_name: string | null
+          logo: string | null
           new_value: string | null
           old_value: string | null
           product_type: string | null
@@ -1237,6 +1241,7 @@ export type Database = {
           field?: string | null
           id?: string
           item_name?: string | null
+          logo?: string | null
           new_value?: string | null
           old_value?: string | null
           product_type?: string | null
@@ -1253,6 +1258,7 @@ export type Database = {
           field?: string | null
           id?: string
           item_name?: string | null
+          logo?: string | null
           new_value?: string | null
           old_value?: string | null
           product_type?: string | null
@@ -1272,6 +1278,7 @@ export type Database = {
           feria_id: string | null
           id: string
           item_name: string
+          logo: string | null
           movement_kind: string
           order_id: string | null
           proof_url: string | null
@@ -1299,6 +1306,7 @@ export type Database = {
           feria_id?: string | null
           id?: string
           item_name: string
+          logo?: string | null
           movement_kind?: string
           order_id?: string | null
           proof_url?: string | null
@@ -1326,6 +1334,7 @@ export type Database = {
           feria_id?: string | null
           id?: string
           item_name?: string
+          logo?: string | null
           movement_kind?: string
           order_id?: string | null
           proof_url?: string | null

@@ -149,7 +149,9 @@ export const MagicalWarmersWorkflow = () => {
     const el = stageRefs.current[stage];
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
-  const producibleTasks = bodyTasks;
+  // Only Magical body tasks belong to this view (legacy rows without brand are magical)
+  const producibleTasks = bodyTasks.filter((t) => !t.brand || t.brand === "magical");
+
   const completedBodyTasks = producibleTasks.filter((t) => t.status === "finalizado");
   const inProgressBodyTasks = producibleTasks.filter((t) => t.status !== "finalizado");
 
@@ -606,9 +608,15 @@ export const MagicalWarmersWorkflow = () => {
                   reception_confirmed: false,
                 } as any);
                 if (movErr) {
-                  toast.error(`La producción quedó finalizada, pero no llegó a Inventarios: ${movErr.message}. Avisa al administrador.`);
+                  // Revert the task so it does not "disappear" from production.
+                  await supabase
+                    .from("body_production_tasks")
+                    .update({ status: "pendiente", completed_at: null })
+                    .eq("id", finalizeTask.id);
+                  toast.error(`No se pudo enviar a Inventarios: ${movErr.message}. La tarea sigue pendiente, vuelve a intentarlo.`);
                   return;
                 }
+
                 // Notify inventarios so they can confirm reception
                 await supabase.from("notifications").insert({
                   target_role: "inventarios",

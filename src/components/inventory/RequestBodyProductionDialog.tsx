@@ -45,7 +45,9 @@ const RequestBodyProductionDialog = () => {
       referencia: `${referencia} (${tipoLabel})`,
       unidades: Number(unidades),
       status: "pendiente",
+      brand,
     } as any);
+
 
     if (error) {
       toast.error(`No se pudo crear la solicitud: ${error.message}`);

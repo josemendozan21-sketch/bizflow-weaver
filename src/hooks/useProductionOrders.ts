@@ -61,6 +61,8 @@ export interface BodyTask {
   updated_at: string;
   completed_at: string | null;
   fabricated_by?: string | null;
+  brand?: string | null;
+
 }
 
 export interface ProductionStageLog {
@@ -746,41 +748,10 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
       const { error } = await supabase.from("body_production_tasks").update(updates).eq("id", taskId);
       if (error) throw error;
 
-      // When finalizing, upsert body_stock with the actual quantity produced
-      if (status === "finalizado" && actualQuantity !== undefined && actualQuantity > 0) {
-        // Get the task to know referencia and tipo_plastico
-        const { data: task } = await supabase
-          .from("body_production_tasks")
-          .select("*")
-          .eq("id", taskId)
-          .single();
+      // NOTE: stock is NOT added here anymore. The single official route is:
+      // Producción finaliza -> movimiento "pendiente de recepción" -> Inventarios confirma.
+      // Writing body_stock from here duplicated the produced units.
 
-        if (task) {
-          const { resolveCanonicalBodyRef } = await import("@/lib/canonicalBodyRef");
-          const refName = await resolveCanonicalBodyRef(
-            "magical",
-            task.referencia,
-            (task as any).tipo_plastico,
-          );
-          const { data: existing } = await supabase
-            .from("body_stock")
-            .select("*")
-            .eq("brand", "magical")
-            .ilike("referencia", refName)
-            .maybeSingle();
-
-          if (existing) {
-            await supabase
-              .from("body_stock")
-              .update({ available: existing.available + actualQuantity })
-              .eq("id", existing.id);
-          } else {
-            await supabase
-              .from("body_stock")
-              .insert({ brand: "magical", referencia: refName, available: actualQuantity });
-          }
-        }
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["body_production_tasks"] });

@@ -217,7 +217,9 @@ export async function requestProductionForOrder(params: {
         status: "pendiente",
         order_id: order.id,
         production_order_id: po.id,
+        brand: order.brand,
       } as never);
+
       if (error) throw error;
     }
   }
