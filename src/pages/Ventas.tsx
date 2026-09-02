@@ -948,7 +948,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         const { data } = await supabase.from("orders").insert({
           brand: "magical",
           sale_type: "mayor",
-          client_name: clientName: clientNameValue,
+          client_name: clientNameValue,
           client_nit: (fd.get("mw_cedulaNit") as string) || null,
           client_phone: (fd.get("mw_contacto") as string) || null,
           client_email: (fd.get("mw_email") as string) || null,
@@ -1104,7 +1104,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         const { data, error } = await supabase.from("orders").insert({
           brand: "magical",
           sale_type: "mayor",
-          client_name: clientName: clientNameValue,
+          client_name: clientNameValue,
           client_nit: (fd.get("mw_cedulaNit") as string) || null,
           client_phone: (fd.get("mw_contacto") as string) || null,
           client_email: (fd.get("mw_email") as string) || null,
