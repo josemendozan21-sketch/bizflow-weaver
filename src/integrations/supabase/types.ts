@@ -2960,6 +2960,11 @@ export type Database = {
           received_by_name: string | null
           received_quantity: number | null
           ref_key: string
+          return_count: number
+          return_reason: string | null
+          returned_at: string | null
+          returned_by: string | null
+          returned_by_name: string | null
           started_at: string | null
           started_by: string | null
           started_by_name: string | null
@@ -2988,6 +2993,11 @@ export type Database = {
           received_by_name?: string | null
           received_quantity?: number | null
           ref_key: string
+          return_count?: number
+          return_reason?: string | null
+          returned_at?: string | null
+          returned_by?: string | null
+          returned_by_name?: string | null
           started_at?: string | null
           started_by?: string | null
           started_by_name?: string | null
@@ -3016,6 +3026,11 @@ export type Database = {
           received_by_name?: string | null
           received_quantity?: number | null
           ref_key?: string
+          return_count?: number
+          return_reason?: string | null
+          returned_at?: string | null
+          returned_by?: string | null
+          returned_by_name?: string | null
           started_at?: string | null
           started_by?: string | null
           started_by_name?: string | null
@@ -3824,6 +3839,10 @@ export type Database = {
       }
       receive_production_batch: {
         Args: { _batch_id: string; _received: number }
+        Returns: Json
+      }
+      revert_production_batch_reception: {
+        Args: { _batch_id: string; _reason: string }
         Returns: Json
       }
       start_production_batch: { Args: { _batch_id: string }; Returns: Json }

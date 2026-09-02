@@ -24,8 +24,13 @@ export interface ProductionBatch {
   finished_by_name: string | null;
   received_at: string | null;
   received_by_name: string | null;
+  return_reason: string | null;
+  returned_at: string | null;
+  returned_by_name: string | null;
+  return_count: number | null;
   created_at: string;
 }
+
 
 export interface ProductionBatchItem {
   id: string;
@@ -102,7 +107,18 @@ export function useProductionBatches() {
     [call],
   );
 
+  const revertReception = useCallback(
+    (id: string, reason: string) =>
+      call(
+        "revert_production_batch_reception",
+        { _batch_id: id, _reason: reason },
+        "Lote devuelto a producción",
+      ),
+    [call],
+  );
+
   const itemsOf = useCallback((batchId: string) => items.filter((i) => i.batch_id === batchId), [items]);
 
-  return { batches, items, itemsOf, isLoading, refetch: fetchAll, startBatch, finishBatch, receiveBatch };
+  return { batches, items, itemsOf, isLoading, refetch: fetchAll, startBatch, finishBatch, receiveBatch, revertReception };
 }
+

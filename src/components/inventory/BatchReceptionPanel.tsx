@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { PackagePlus } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { PackagePlus, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import { useProductionBatches, type ProductionBatch } from "@/hooks/useProductionBatches";
@@ -16,10 +17,13 @@ const brandLabel = (b: string) =>
   /sweat/i.test(b) ? "Sweatspot" : /magical/i.test(b) ? "Magical Warmers" : b;
 
 export default function BatchReceptionPanel() {
-  const { batches, itemsOf, isLoading, receiveBatch } = useProductionBatches();
+  const { batches, itemsOf, isLoading, receiveBatch, revertReception } = useProductionBatches();
   const [target, setTarget] = useState<ProductionBatch | null>(null);
   const [qty, setQty] = useState("");
   const [busy, setBusy] = useState(false);
+  const [returnTarget, setReturnTarget] = useState<ProductionBatch | null>(null);
+  const [returnReason, setReturnReason] = useState("");
+
 
   const pending = useMemo(() => batches.filter((b) => b.status === "finalizado"), [batches]);
   const recent = useMemo(
@@ -39,6 +43,25 @@ export default function BatchReceptionPanel() {
       toast.error(res.message);
     }
   };
+
+  const doRevert = async () => {
+    if (!returnTarget) return;
+    if (!returnReason.trim()) {
+      toast.error("Indica el motivo de la devolución");
+      return;
+    }
+    setBusy(true);
+    const res = await revertReception(returnTarget.id, returnReason.trim());
+    setBusy(false);
+    if (res.success) {
+      toast.success("Lote devuelto a producción. Stock revertido.");
+      setReturnTarget(null);
+      setReturnReason("");
+    } else {
+      toast.error(res.message);
+    }
+  };
+
 
   return (
     <Card>
@@ -105,8 +128,20 @@ export default function BatchReceptionPanel() {
                 <span>· {Number(b.received_quantity ?? 0)} uds</span>
                 <span>· {b.received_at ? new Date(b.received_at).toLocaleString("es-CO") : ""}</span>
                 <span>· {b.received_by_name}</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="ml-auto h-7 gap-1 text-[11px]"
+                  onClick={() => {
+                    setReturnTarget(b);
+                    setReturnReason("");
+                  }}
+                >
+                  <Undo2 className="h-3.5 w-3.5" /> Devolver a producción
+                </Button>
               </div>
             ))}
+
           </div>
         )}
       </CardContent>
@@ -132,6 +167,34 @@ export default function BatchReceptionPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!returnTarget} onOpenChange={(o) => !o && setReturnTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Devolver a producción — lote #{returnTarget?.batch_number}</DialogTitle>
+            <DialogDescription>
+              Se descontarán del inventario las {Number(returnTarget?.received_quantity ?? 0)} uds de "
+              {returnTarget?.item_name}" y el lote volverá a producción para su revisión.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Motivo de la devolución</Label>
+            <Textarea
+              rows={3}
+              value={returnReason}
+              onChange={(e) => setReturnReason(e.target.value)}
+              placeholder="Ej: se confirmó el lote equivocado, cantidad incorrecta, producto no conforme…"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setReturnTarget(null)}>Cancelar</Button>
+            <Button variant="destructive" onClick={doRevert} disabled={busy}>
+              {busy ? "Devolviendo…" : "Devolver a producción"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </Card>
   );
 }
