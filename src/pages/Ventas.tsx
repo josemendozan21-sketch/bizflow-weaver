@@ -666,6 +666,21 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     return ["No aplica", ...[...new Set(names)].sort((a, b) => a.localeCompare(b, "es"))];
   }, [inventoryStockItems]);
 
+  // Tintas y gel también salen de Inventarios (materia prima)
+  const inkOptions = useMemo(() => {
+    const names = inventoryStockItems
+      .filter((s) => /^tinta\b/i.test(s.name || ""))
+      .map((s) => s.name.replace(/^tinta\s*(pvc)?\s*/i, "").trim() || s.name);
+    return [...new Set(names)].sort((a, b) => a.localeCompare(b, "es"));
+  }, [inventoryStockItems]);
+
+  const gelOptions = useMemo(() => {
+    const names = inventoryStockItems
+      .filter((s) => /^colorante\b/i.test(s.name || ""))
+      .map((s) => s.name.replace(/^colorante\s*/i, "").trim() || s.name);
+    return ["No aplica", "Transparente", ...[...new Set(names)].sort((a, b) => a.localeCompare(b, "es"))];
+  }, [inventoryStockItems]);
+
   const getProductSelectValue = (line: OrderLine) => line.product;
 
   const handleProductSelect = (lineId: string, value: string) => {
