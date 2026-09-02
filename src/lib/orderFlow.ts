@@ -28,7 +28,9 @@ export interface FlowOrder {
   observations?: string | null;
   advisor_id?: string | null;
   delivery_date?: string | null;
+  order_code?: string | null;
 }
+
 
 const isThermic = (product: string) => /t[eé]rmico|calor/i.test(product || "");
 
