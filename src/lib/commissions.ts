@@ -196,6 +196,13 @@ export type ClientKind = "nuevo" | "recompra";
 /** Criterio de asignación del período: fecha de venta o fecha de factura. */
 export type PeriodBasis = "venta" | "factura";
 
+/**
+ * Criterio ÚNICO y oficial: la comisión pertenece al mes de la FACTURA.
+ * Si el pedido aún no tiene factura se ubica por fecha de venta y se marca
+ * como pendiente de facturar, para que asesor y contabilidad vean lo mismo.
+ */
+export const PERIOD_BASIS: PeriodBasis = "factura";
+
 export interface CommissionContext {
   /** Override manual: forma de pago (default: contado) */
   paymentMode: PaymentMode;
