@@ -54,32 +54,43 @@ interface FiltersBarProps {
   sortDir: SortDir;
   setSortDir: (v: SortDir) => void;
   showTypeFilter?: boolean;
+  resultCount?: number;
 }
 
+const TYPE_OPTIONS: { value: TypeFilter; label: string }[] = [
+  { value: "todos", label: "Todos" },
+  { value: "frio", label: "❄️ Frío" },
+  { value: "termico", label: "🔥 Térmico" },
+];
+
 const FiltersBar = ({
-  search, setSearch, typeFilter, setTypeFilter, sortDir, setSortDir, showTypeFilter = true,
+  search, setSearch, typeFilter, setTypeFilter, sortDir, setSortDir, showTypeFilter = true, resultCount,
 }: FiltersBarProps) => (
   <div className="flex flex-wrap items-center gap-2 mb-4">
     <div className="relative flex-1 min-w-[180px]">
       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
       <Input
-        placeholder="Buscar producto..."
+        placeholder="Buscar producto o tipo (ej. pocket frío)..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="pl-8 h-9"
       />
     </div>
     {showTypeFilter && (
-      <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as TypeFilter)}>
-        <SelectTrigger className="h-9 w-[140px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="todos">Todos</SelectItem>
-          <SelectItem value="termico">🔥 Térmico</SelectItem>
-          <SelectItem value="frio">❄️ Frío</SelectItem>
-        </SelectContent>
-      </Select>
+      <div className="inline-flex rounded-md border p-0.5 gap-0.5">
+        {TYPE_OPTIONS.map((opt) => (
+          <Button
+            key={opt.value}
+            type="button"
+            size="sm"
+            variant={typeFilter === opt.value ? "default" : "ghost"}
+            className="h-8 px-3"
+            onClick={() => setTypeFilter(opt.value)}
+          >
+            {opt.label}
+          </Button>
+        ))}
+      </div>
     )}
     <Button
       type="button"
@@ -91,8 +102,14 @@ const FiltersBar = ({
       {sortDir === "asc" ? <ArrowDownAZ className="h-4 w-4" /> : <ArrowUpAZ className="h-4 w-4" />}
       {sortDir === "asc" ? "A-Z" : "Z-A"}
     </Button>
+    {resultCount !== undefined && (
+      <span className="text-xs text-muted-foreground ml-auto">
+        {resultCount} resultado{resultCount === 1 ? "" : "s"}
+      </span>
+    )}
   </div>
 );
+
 
 export default function AsesorInventoryView() {
   const [selectedBrand, setSelectedBrand] = useState<InventoryBrand | null>(null);
