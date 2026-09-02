@@ -23,6 +23,8 @@ import {
   Search,
 } from "lucide-react";
 import { useProductionOrders, type ProductionOrder } from "@/hooks/useProductionOrders";
+import { normalizeStages, TERMINAL_STAGES } from "@/lib/orderFlow";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -129,14 +131,23 @@ export const EstampacionProductionView = () => {
     | null
   >(null);
 
-  // Include orders in estampacion AND orders still waiting bodies (produccion_cuerpos)
-  // so stamping team can start preparing/logo work even if bodies aren't ready.
+  // Estampación solo debe ver pedidos cuyo flujo incluya estampación (es decir, con logo).
+  // Incluye los que están en producción de cuerpos para poder adelantar la muestra, y
+  // los que ya avanzaron con la estampación finalizada (para que no desaparezcan sin rastro).
+  const belongsToStamping = (o: ProductionOrder) => {
+    const stages = normalizeStages(o as any);
+    return stages.includes("estampacion") || o.current_stage === "estampacion";
+  };
   const estampacionOrders = allOrders.filter(
     (o) =>
-      o.current_stage === "estampacion" ||
-      (o.current_stage === "produccion_cuerpos" &&
-        !(o.stamp_size_status === "finalizado" && o.stamp_inkgel_status === "finalizado"))
+      !TERMINAL_STAGES.includes(o.current_stage) &&
+      belongsToStamping(o) &&
+      (o.current_stage === "estampacion" ||
+        (o.current_stage === "produccion_cuerpos" &&
+          !(o.stamp_size_status === "finalizado" && o.stamp_inkgel_status === "finalizado")) ||
+        (o.stamp_size_status === "finalizado" && o.stamp_inkgel_status === "finalizado"))
   );
+
 
   const q = searchQuery.trim();
   const filteredOrders = q
@@ -504,8 +515,16 @@ function EstampacionOrderCard({
               <p className="text-xs text-muted-foreground">Asesor: {order.advisor_name || "—"}</p>
             </div>
           </div>
-          <Badge variant={badge.variant}>{badge.label}</Badge>
+          <div className="flex items-center gap-2">
+            {order.stamp_size_status === "finalizado" && order.stamp_inkgel_status === "finalizado" && (
+              <Badge variant="outline" className="border-emerald-500 text-emerald-600">
+                Estampación finalizada
+              </Badge>
+            )}
+            <Badge variant={badge.variant}>{badge.label}</Badge>
+          </div>
         </div>
+
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="rounded-md border p-3 text-xs space-y-1">

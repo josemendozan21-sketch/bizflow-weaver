@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
 import MateriaPrimaPanel from "@/components/inventory/MateriaPrimaPanel";
 import WholesaleOrdersInbox from "@/components/inventory/WholesaleOrdersInbox";
+import UnroutedOrdersPanel from "@/components/production/UnroutedOrdersPanel";
+
 import QuickMovementForm from "@/components/inventory/QuickMovementForm";
 import InventoryChangeLogPanel from "@/components/inventory/InventoryChangeLogPanel";
 import MovementHistoryTable from "@/components/inventory/MovementHistoryTable";
@@ -125,9 +127,11 @@ const InventariosRoleView = () => {
           />
         </TabsContent>
 
-        <TabsContent value="bandeja" className="mt-4">
+        <TabsContent value="bandeja" className="mt-4 space-y-4">
+          <UnroutedOrdersPanel />
           <WholesaleOrdersInbox />
         </TabsContent>
+
 
         <TabsContent value="abastecimiento" className="mt-4 space-y-4">
           <OrderRequirementsPanel />

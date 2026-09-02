@@ -29,6 +29,8 @@ import { OperatorPromptDialog } from "./OperatorPromptDialog";
 import { StageLogsList } from "./StageLogsList";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import { matchesQuery } from "@/lib/search";
+import { TERMINAL_STAGES } from "@/lib/orderFlow";
+
 
 const STAGE_ICONS: Record<string, React.ElementType> = {
   produccion_cuerpos: Package,
@@ -74,7 +76,7 @@ export const SweatspotWorkflow = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
   const stageRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const activeOrdersAll = orders.filter((o) => o.current_stage !== "listo");
+  const activeOrdersAll = orders.filter((o) => !TERMINAL_STAGES.includes(o.current_stage));
   const completedOrders = orders.filter((o) => o.current_stage === "listo");
   const activeOrders = useMemo(() => {
     const q = searchTerm.trim();
@@ -86,6 +88,11 @@ export const SweatspotWorkflow = () => {
       ),
     );
   }, [activeOrdersAll, searchTerm]);
+  const otherStageOrders = useMemo(
+    () => activeOrders.filter((o) => !FULL_STAGE_ORDER.includes(o.current_stage)),
+    [activeOrders],
+  );
+
   const stageCounts = useMemo(() => {
     const m: Record<string, number> = {};
     activeOrdersAll.forEach((o) => { m[o.current_stage] = (m[o.current_stage] || 0) + 1; });
@@ -224,7 +231,33 @@ export const SweatspotWorkflow = () => {
             </div>
           );
         })}
+
+        {otherStageOrders.length > 0 && (
+          <div className="space-y-2 scroll-mt-4">
+            <div className="flex items-center gap-2 border-b pb-1.5">
+              <Paintbrush className="h-4 w-4 text-amber-600" />
+              <h4 className="text-sm font-semibold text-foreground">Otras etapas / fuera de flujo</h4>
+              <Badge variant="secondary">{otherStageOrders.length}</Badge>
+            </div>
+            <div className="grid gap-4">
+              {otherStageOrders.map((order) => (
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  stageLogs={stageLogs.filter((l) => l.production_order_id === order.id)}
+                  role={role}
+                  isAdmin={isAdmin}
+                  selected={selected.has(order.id)}
+                  onToggleSelect={() => toggleSelect(order.id)}
+                  onStart={() => setOperatorPrompt({ mode: "start", orderId: order.id, clientName: order.client_name })}
+                  onFinish={() => setOperatorPrompt({ mode: "finish", orderId: order.id, clientName: order.client_name })}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
+
 
       {completedOrders.length > 0 && (
         <>

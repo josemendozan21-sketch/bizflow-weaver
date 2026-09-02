@@ -28,7 +28,9 @@ export interface FlowOrder {
   observations?: string | null;
   advisor_id?: string | null;
   delivery_date?: string | null;
+  order_code?: string | null;
 }
+
 
 const isThermic = (product: string) => /t[eé]rmico|calor/i.test(product || "");
 
@@ -64,6 +66,42 @@ export function buildStages(
   return opts.needsCuerpos ? stages : stages.filter((s) => s !== "produccion_cuerpos");
 }
 
+/** Etapas terminales que no pertenecen al flujo de trabajo por etapas. */
+export const TERMINAL_STAGES = ["listo", "despachado", "entregado", "cancelado"];
+
+/**
+ * Recalcula el flujo válido de una orden de producción a partir de sus datos.
+ * Se usa para reparar órdenes cuyo arreglo `stages` no contiene su etapa actual
+ * (lo que hacía que al finalizar una etapa la orden saltara al inicio del flujo).
+ */
+export function normalizeStages(po: {
+  brand: string;
+  stages?: string[] | null;
+  needs_cuerpos?: boolean | null;
+  logo_file?: string | null;
+  molde?: string | null;
+  current_stage?: string | null;
+}): string[] {
+  const product = po.molde ?? "";
+  const rebuilt = buildStages(po.brand, {
+    hasLogo: !!po.logo_file,
+    needsCuerpos: !!po.needs_cuerpos,
+    product,
+  });
+  const current = po.current_stage ?? "";
+  if (!current || TERMINAL_STAGES.includes(current) || rebuilt.includes(current)) {
+    return rebuilt;
+  }
+  // La etapa actual sigue sin encajar (p. ej. flujo antiguo o etapa manual):
+  // conservamos el arreglo guardado si sí la contiene.
+  const stored = po.stages ?? [];
+  if (stored.includes(current)) return stored;
+  // Último recurso: insertamos la etapa actual al inicio para no perder la orden.
+  return [current, ...rebuilt];
+}
+
+
+
 /** Devuelve la orden de producción existente de un pedido (o null). Garantiza 1 pedido → 1 orden. */
 export async function findProductionOrder(orderId: string) {
   const { data } = await supabase
@@ -93,11 +131,25 @@ export async function ensureProductionOrder(
   });
   const initialStage = stages[0];
 
+  // El número de pedido debe quedar guardado en la orden de producción para que
+  // Producción pueda buscarla por código. Si no viene, lo consultamos.
+  let orderCode = order.order_code ?? null;
+  if (!orderCode) {
+    const { data: parent } = await supabase
+      .from("orders")
+      .select("order_code")
+      .eq("id", order.id)
+      .maybeSingle();
+    orderCode = (parent as { order_code?: string | null } | null)?.order_code ?? null;
+  }
+
   const payload: Record<string, unknown> = {
     order_id: order.id,
+    order_code: orderCode,
     brand: order.brand,
     client_name: order.client_name,
     quantity: order.quantity,
+
     current_stage: initialStage,
     stage_status: "pendiente",
     workflow_type: opts.needsCuerpos ? "full" : "short",

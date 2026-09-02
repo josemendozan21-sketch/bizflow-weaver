@@ -11,6 +11,8 @@ import { RollCutsView } from "@/components/production/RollCutsView";
 import ProductionMovementHistory from "@/components/production/ProductionMovementHistory";
 import ProcessChangeLogPanel from "@/components/production/ProcessChangeLogPanel";
 import ProductionBatchesPanel from "@/components/production/ProductionBatchesPanel";
+import UnroutedOrdersPanel from "@/components/production/UnroutedOrdersPanel";
+
 
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -79,9 +81,11 @@ const Produccion = () => {
             <TabsTrigger value="historial">Historial</TabsTrigger>
             <TabsTrigger value="cambios">Historial de cambios</TabsTrigger>
           </TabsList>
-          <TabsContent value="marcas" className="mt-4">
+          <TabsContent value="marcas" className="mt-4 space-y-4">
+            <UnroutedOrdersPanel readOnly />
             <ProductionBrandSelector selectedBrand={selectedBrand} onSelectBrand={setSelectedBrand} />
           </TabsContent>
+
           <TabsContent value="lotes" className="mt-4">
             <ProductionBatchesPanel readOnly={isReadOnly} />
           </TabsContent>

@@ -46,6 +46,8 @@ import { StageLogsList } from "./StageLogsList";
 import { baseRefName } from "@/lib/canonicalBodyRef";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import { matchesQuery } from "@/lib/search";
+import { TERMINAL_STAGES } from "@/lib/orderFlow";
+
 
 type MagicalStage = "produccion_cuerpos" | "estampacion" | "dosificacion" | "sellado" | "descristalizacion" | "recorte" | "empaque" | "listo";
 
@@ -128,7 +130,7 @@ export const MagicalWarmersWorkflow = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
   const stageRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const activeOrdersAll = orders.filter((o) => o.current_stage !== "listo");
+  const activeOrdersAll = orders.filter((o) => !TERMINAL_STAGES.includes(o.current_stage));
   const completedOrders = orders.filter((o) => o.current_stage === "listo");
   const activeOrders = useMemo(() => {
     const q = searchTerm.trim();
@@ -140,11 +142,17 @@ export const MagicalWarmersWorkflow = () => {
       ),
     );
   }, [activeOrdersAll, searchTerm]);
+  // Órdenes activas cuya etapa no pertenece al tablero: antes desaparecían de la vista.
+  const otherStageOrders = useMemo(
+    () => activeOrders.filter((o) => !STAGE_ORDER.includes(o.current_stage as MagicalStage)),
+    [activeOrders],
+  );
   const stageCounts = useMemo(() => {
     const m: Record<string, number> = {};
     activeOrdersAll.forEach((o) => { m[o.current_stage] = (m[o.current_stage] || 0) + 1; });
     return m;
   }, [activeOrdersAll]);
+
   const scrollToStage = (stage: string) => {
     const el = stageRefs.current[stage];
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -425,7 +433,37 @@ export const MagicalWarmersWorkflow = () => {
             </div>
           );
         })}
+
+        {otherStageOrders.length > 0 && (
+          <div className="space-y-2 scroll-mt-4">
+            <div className="flex items-center gap-2 border-b pb-1.5">
+              <Package className="h-4 w-4 text-amber-600" />
+              <h4 className="text-sm font-semibold text-foreground">Otras etapas / fuera de flujo</h4>
+              <Badge variant="secondary">{otherStageOrders.length}</Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Estas órdenes están en una etapa que no pertenece al tablero. Al finalizar la etapa el sistema
+              reubica la orden en el flujo correcto.
+            </p>
+            <div className="grid gap-4">
+              {otherStageOrders.map((order) => (
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  stageLogs={stageLogs.filter((l) => l.production_order_id === order.id)}
+                  role={role}
+                  isAdmin={isAdmin}
+                  selected={selected.has(order.id)}
+                  onToggleSelect={() => toggleSelect(order.id)}
+                  onStart={() => setOperatorPrompt({ mode: "start", orderId: order.id, clientName: order.client_name })}
+                  onFinish={() => handleFinishOrder(order)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
+
 
       {completedOrders.length > 0 && (
         <>

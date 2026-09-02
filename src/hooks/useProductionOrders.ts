@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLogisticsStore } from "@/stores/logisticsStore";
 import { toast } from "sonner";
 import { baseRefName } from "@/lib/canonicalBodyRef";
+import { normalizeStages, TERMINAL_STAGES } from "@/lib/orderFlow";
+
 
 export interface ProductionOrder {
   id: string;
@@ -331,9 +333,14 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
         await closeOpenStageLog(orderId, stageBeingFinished);
       }
 
-      const stages = po.stages;
+      // Si la etapa actual no está dentro del flujo guardado, reconstruimos el flujo
+      // correcto: de lo contrario indexOf devuelve -1 y la orden saltaba al inicio.
+      const storedStages = po.stages ?? [];
+      const stagesNeedFix = !storedStages.includes(po.current_stage);
+      const stages = stagesNeedFix ? normalizeStages(po as any) : storedStages;
       const currentIdx = stages.indexOf(po.current_stage);
       const lastActionableIdx = stages.length - 2; // before "listo"
+
 
       // If current stage is produccion_cuerpos, add produced quantity to body_stock
       if (po.current_stage === "produccion_cuerpos" && po.molde) {
@@ -547,10 +554,20 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
         nextStage = stages[nextIdx];
       }
 
+      // Nunca avanzar a una etapa vacía/indefinida: si no hay siguiente, la orden termina.
+      if (!nextStage) {
+        nextStage = "listo";
+      }
+
       const { error } = await supabase
         .from("production_orders")
-        .update({ current_stage: nextStage, stage_status: "pendiente" })
+        .update({
+          current_stage: nextStage,
+          stage_status: "pendiente",
+          ...(stagesNeedFix ? { stages } : {}),
+        })
         .eq("id", orderId);
+
       if (error) throw error;
 
       // Update parent order status
