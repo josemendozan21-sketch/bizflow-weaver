@@ -2231,39 +2231,102 @@ export type Database = {
         }
         Relationships: []
       }
+      petty_cash_counts: {
+        Row: {
+          count_date: string
+          counted_amount: number
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          difference: number
+          expected_amount: number
+          id: string
+          notes: string | null
+          sede: string
+          updated_at: string
+        }
+        Insert: {
+          count_date?: string
+          counted_amount?: number
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          difference?: number
+          expected_amount?: number
+          id?: string
+          notes?: string | null
+          sede?: string
+          updated_at?: string
+        }
+        Update: {
+          count_date?: string
+          counted_amount?: number
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          difference?: number
+          expected_amount?: number
+          id?: string
+          notes?: string | null
+          sede?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       petty_cash_expenses: {
         Row: {
           amount: number
           created_at: string
           description: string
-          fund_id: string
+          fund_id: string | null
           id: string
+          origin: string
           proof_url: string | null
           recorded_by: string
           recorded_by_name: string
+          rejection_reason: string | null
           requested_by: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewed_by_name: string | null
+          sede: string
+          status: string
         }
         Insert: {
           amount: number
           created_at?: string
           description: string
-          fund_id: string
+          fund_id?: string | null
           id?: string
+          origin?: string
           proof_url?: string | null
           recorded_by: string
           recorded_by_name: string
+          rejection_reason?: string | null
           requested_by: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_name?: string | null
+          sede?: string
+          status?: string
         }
         Update: {
           amount?: number
           created_at?: string
           description?: string
-          fund_id?: string
+          fund_id?: string | null
           id?: string
+          origin?: string
           proof_url?: string | null
           recorded_by?: string
           recorded_by_name?: string
+          rejection_reason?: string | null
           requested_by?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_name?: string | null
+          sede?: string
+          status?: string
         }
         Relationships: [
           {
@@ -2280,21 +2343,27 @@ export type Database = {
           amount: number
           created_at: string
           id: string
+          movement_kind: string
           notes: string | null
+          sede: string
           set_by: string
         }
         Insert: {
           amount?: number
           created_at?: string
           id?: string
+          movement_kind?: string
           notes?: string | null
+          sede?: string
           set_by: string
         }
         Update: {
           amount?: number
           created_at?: string
           id?: string
+          movement_kind?: string
           notes?: string | null
+          sede?: string
           set_by?: string
         }
         Relationships: []

@@ -17,6 +17,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { openSignedUrl } from "@/lib/signedUrl";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { computePosCash, isCashMethod } from "@/lib/pettyCash";
+import {
+  useSedePettyExpenses,
+  useSedeCashCounts,
+  useCreateSedePettyExpense,
+  useCreateSedeCashCount,
+} from "@/hooks/usePosPettyCash";
 
 type Props = { locationId: string; cashBase?: number };
 
@@ -27,52 +34,56 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
 
   const { data: withdrawals = [] } = usePosCashWithdrawals(locationId);
   const { data: sales = [] } = usePosSales(locationId);
+  const { data: posExpenses = [] } = useSedePettyExpenses("chico");
+  const { data: counts = [] } = useSedeCashCounts("chico");
   const create = useCreateCashWithdrawal(locationId);
   const decide = useDecideCashWithdrawal(locationId);
+  const createExpense = useCreateSedePettyExpense("chico");
+  const createCount = useCreateSedeCashCount("chico");
 
   const [showForm, setShowForm] = useState(false);
-  const [movementType, setMovementType] = useState<"retiro" | "consignacion">("retiro");
+  const [movementType, setMovementType] = useState<"retiro" | "consignacion" | "gasto">("retiro");
   const [amount, setAmount] = useState("");
   const [concept, setConcept] = useState("");
   const [notes, setNotes] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [showCount, setShowCount] = useState(false);
+  const [countedAmount, setCountedAmount] = useState("");
+  const [countNotes, setCountNotes] = useState("");
 
   const today = new Date().toISOString().slice(0, 10);
-  const isCash = (m: string | null | undefined) =>
-    (m ?? "").toLowerCase().split("+").some((p) => p.trim() === "efectivo");
+  const isCash = isCashMethod;
+  const lastCount = counts[0] ?? null;
+  const cash = computePosCash({
+    cashBase,
+    lastCount,
+    sales,
+    withdrawals,
+    expenses: posExpenses,
+  });
   const cashSalesToday = sales
     .filter((s) => s.sale_date.slice(0, 10) === today && isCash(s.payment_method))
     .reduce((a, b) => a + Number(b.total_amount), 0);
-  const cashSalesAll = sales
-    .filter((s) => isCash(s.payment_method))
-    .reduce((a, b) => a + Number(b.total_amount), 0);
-  const approvedRetiros = withdrawals
-    .filter((w) => w.status === "aprobado" && (w.movement_type ?? "retiro") === "retiro")
-    .reduce((a, b) => a + Number(b.amount), 0);
-  const approvedConsignaciones = withdrawals
-    .filter((w) => w.status === "aprobado" && w.movement_type === "consignacion")
-    .reduce((a, b) => a + Number(b.amount), 0);
-  const pendingRetiros = withdrawals
-    .filter((w) => w.status === "pendiente" && (w.movement_type ?? "retiro") === "retiro")
-    .reduce((a, b) => a + Number(b.amount), 0);
-  const pendingConsignaciones = withdrawals
-    .filter((w) => w.status === "pendiente" && w.movement_type === "consignacion")
-    .reduce((a, b) => a + Number(b.amount), 0);
-  const pendingTotal = pendingRetiros + pendingConsignaciones;
+  const cashSalesAll = cash.cashSales;
+  const approvedRetiros = cash.retiros;
+  const approvedConsignaciones = cash.consignaciones;
+  const pendingTotal = cash.pending + cash.gastosPendientes;
 
-  // ---- Movimientos diarios de caja (ventas efectivo vs retiros/consignaciones) ----
-  const dayMap = new Map<string, { sales: number; retiros: number; consignaciones: number }>();
-  const bump = (d: string, key: "sales" | "retiros" | "consignaciones", v: number) => {
-    const row = dayMap.get(d) ?? { sales: 0, retiros: 0, consignaciones: 0 };
+  // ---- Movimientos diarios de caja (ventas efectivo vs salidas) ----
+  const since = lastCount ? +new Date(lastCount.created_at) : -Infinity;
+  const after = (d: string) => +new Date(d) > since;
+  const dayMap = new Map<string, { sales: number; retiros: number; consignaciones: number; gastos: number }>();
+  const bump = (d: string, key: "sales" | "retiros" | "consignaciones" | "gastos", v: number) => {
+    const row = dayMap.get(d) ?? { sales: 0, retiros: 0, consignaciones: 0, gastos: 0 };
     row[key] += v;
     dayMap.set(d, row);
   };
-  sales.filter((s) => isCash(s.payment_method)).forEach((s) =>
-    bump(s.sale_date.slice(0, 10), "sales", Number(s.total_amount))
-  );
+  sales
+    .filter((s) => isCash(s.payment_method) && after(s.sale_date))
+    .forEach((s) => bump(s.sale_date.slice(0, 10), "sales", Number(s.total_amount)));
   withdrawals
-    .filter((w) => w.status !== "rechazado")
+    .filter((w) => w.status !== "rechazado" && after(String(w.created_at)))
     .forEach((w) =>
       bump(
         String(w.created_at).slice(0, 10),
@@ -80,21 +91,19 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
         Number(w.amount)
       )
     );
+  posExpenses
+    .filter((e) => (e.status ?? "aprobado") !== "rechazado" && after(e.created_at))
+    .forEach((e) => bump(e.created_at.slice(0, 10), "gastos", Number(e.amount)));
   const dayRowsAsc = Array.from(dayMap.entries()).sort((a, b) => (a[0] < b[0] ? -1 : 1));
-  let acc = cashBase;
+  let acc = cash.base;
   const dayRows = dayRowsAsc
     .map(([date, r]) => {
-      acc += r.sales - r.retiros - r.consignaciones;
+      acc += r.sales - r.retiros - r.consignaciones - r.gastos;
       return { date, ...r, balance: acc };
     })
     .reverse();
 
-  // Descontamos también los movimientos pendientes: el dinero ya salió físicamente
-  // de la caja aunque contabilidad no los haya aprobado todavía.
-  const cashOnHand =
-    cashBase + cashSalesAll
-    - approvedRetiros - approvedConsignaciones
-    - pendingRetiros - pendingConsignaciones;
+  const cashOnHand = cash.cashOnHand;
 
   const reset = () => {
     setAmount(""); setConcept(""); setNotes(""); setFile(null); setShowForm(false); setMovementType("retiro");
@@ -108,13 +117,39 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
       setUploading(true);
       let proof_url: string | null = null;
       if (file) proof_url = await uploadPosCashProof(file, locationId);
-      await create.mutateAsync({ amount: amt, concept, notes, proof_url, movement_type: movementType });
-      toast.success(`${movementType === "retiro" ? "Retiro" : "Consignación"} registrado, pendiente de aprobación`);
+      if (movementType === "gasto") {
+        await createExpense.mutateAsync({
+          amount: amt,
+          description: notes ? `${concept} — ${notes}` : concept,
+          requested_by: "Punto 92",
+          proof_url,
+        });
+        toast.success("Gasto registrado, pendiente de aprobación de contabilidad");
+      } else {
+        await create.mutateAsync({ amount: amt, concept, notes, proof_url, movement_type: movementType });
+        toast.success(`${movementType === "retiro" ? "Retiro" : "Consignación"} registrado, pendiente de aprobación`);
+      }
       reset();
     } catch (e: any) {
-      toast.error(e.message ?? "Error al registrar retiro");
+      toast.error(e.message ?? "Error al registrar el movimiento");
     } finally {
       setUploading(false);
+    }
+  };
+
+  const submitCount = async () => {
+    const counted = parseFloat(countedAmount);
+    if (isNaN(counted) || counted < 0) { toast.error("Monto contado inválido"); return; }
+    try {
+      await createCount.mutateAsync({
+        expected_amount: cashOnHand,
+        counted_amount: counted,
+        notes: countNotes || null,
+      });
+      toast.success("Arqueo registrado. El saldo queda cuadrado desde este momento.");
+      setShowCount(false); setCountedAmount(""); setCountNotes("");
+    } catch (e: any) {
+      toast.error(e.message ?? "Error al registrar arqueo");
     }
   };
 
@@ -124,10 +159,19 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
         <CardTitle className="text-base flex items-center gap-2">
           <Wallet className="h-5 w-5" /> Caja
         </CardTitle>
-        {(isPos || isAdmin) && !showForm && (
-          <Button size="sm" onClick={() => setShowForm(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Registrar movimiento
-          </Button>
+        {(isPos || isAdmin) && (
+          <div className="flex gap-2">
+            {!showCount && (
+              <Button size="sm" variant="outline" onClick={() => setShowCount(true)}>
+                Arqueo de caja
+              </Button>
+            )}
+            {!showForm && (
+              <Button size="sm" onClick={() => setShowForm(true)}>
+                <Plus className="h-4 w-4 mr-1" /> Registrar movimiento
+              </Button>
+            )}
+          </div>
         )}
       </CardHeader>
       <CardContent className="space-y-4">
@@ -135,7 +179,11 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
           <div className="rounded-lg border p-3">
             <div className="text-xs text-muted-foreground flex items-center gap-1"><Banknote className="h-3 w-3" /> Efectivo en caja</div>
             <div className="text-lg font-bold">${cashOnHand.toLocaleString()}</div>
-            <div className="text-[10px] text-muted-foreground mt-1">Base + ventas efectivo − retiros/consignaciones (aprobados y pendientes)</div>
+            <div className="text-[10px] text-muted-foreground mt-1">
+              {cash.baseFromCount
+                ? "Desde el último arqueo + ventas efectivo − retiros/consignaciones/gastos"
+                : "Base + ventas efectivo − retiros/consignaciones/gastos"}
+            </div>
             {pendingTotal > 0 && (
               <div className="text-[10px] text-amber-600 mt-0.5">
                 ${pendingTotal.toLocaleString()} en movimientos pendientes de aprobación (ya descontados)
@@ -143,8 +191,13 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
             )}
           </div>
           <div className="rounded-lg border p-3">
-            <div className="text-xs text-muted-foreground">Base de caja</div>
-            <div className="text-lg font-bold">${cashBase.toLocaleString()}</div>
+            <div className="text-xs text-muted-foreground">{cash.baseFromCount ? "Último arqueo" : "Base de caja"}</div>
+            <div className="text-lg font-bold">${cash.base.toLocaleString()}</div>
+            {lastCount && (
+              <div className="text-[10px] text-muted-foreground mt-1">
+                {String(lastCount.count_date).slice(0, 10)} · dif. ${Number(lastCount.difference).toLocaleString()}
+              </div>
+            )}
           </div>
           <div className="rounded-lg border p-3">
             <div className="text-xs text-muted-foreground">Ventas efectivo</div>
@@ -152,14 +205,43 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
             <div className="text-[10px] text-muted-foreground mt-1">Hoy: ${cashSalesToday.toLocaleString()}</div>
           </div>
           <div className="rounded-lg border p-3">
-            <div className="text-xs text-muted-foreground flex items-center gap-1"><ArrowUpCircle className="h-3 w-3" /> Retiros aprobados</div>
+            <div className="text-xs text-muted-foreground flex items-center gap-1"><ArrowUpCircle className="h-3 w-3" /> Retiros</div>
             <div className="text-lg font-bold">${approvedRetiros.toLocaleString()}</div>
+            <div className="text-[10px] text-muted-foreground mt-1">Consignaciones: ${approvedConsignaciones.toLocaleString()}</div>
           </div>
           <div className="rounded-lg border p-3">
-            <div className="text-xs text-muted-foreground flex items-center gap-1"><ArrowDownCircle className="h-3 w-3" /> Consignaciones</div>
-            <div className="text-lg font-bold">${approvedConsignaciones.toLocaleString()}</div>
+            <div className="text-xs text-muted-foreground">Gastos en efectivo</div>
+            <div className="text-lg font-bold">${cash.gastos.toLocaleString()}</div>
+            {cash.gastosPendientes > 0 && (
+              <div className="text-[10px] text-amber-600 mt-1">
+                ${cash.gastosPendientes.toLocaleString()} por aprobar
+              </div>
+            )}
           </div>
         </div>
+
+        {showCount && (
+          <div className="rounded-lg border bg-muted/40 p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <Label>Efectivo esperado</Label>
+              <Input value={`$${cashOnHand.toLocaleString()}`} readOnly />
+            </div>
+            <div>
+              <Label>Efectivo contado</Label>
+              <Input type="number" min={0} value={countedAmount} onChange={(e) => setCountedAmount(e.target.value)} />
+            </div>
+            <div className="md:col-span-2">
+              <Label>Observaciones (opcional)</Label>
+              <Textarea value={countNotes} onChange={(e) => setCountNotes(e.target.value)} rows={2} />
+            </div>
+            <div className="md:col-span-2 flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowCount(false)}>Cancelar</Button>
+              <Button onClick={submitCount} disabled={createCount.isPending}>
+                {createCount.isPending ? "Guardando…" : "Registrar arqueo"}
+              </Button>
+            </div>
+          </div>
+        )}
 
         {showForm && (
           <div className="rounded-lg border bg-muted/40 p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -170,6 +252,7 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
                 <SelectContent>
                   <SelectItem value="retiro">Retiro de efectivo</SelectItem>
                   <SelectItem value="consignacion">Consignación</SelectItem>
+                  <SelectItem value="gasto">Gasto en efectivo del punto</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -178,11 +261,19 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
               <Input type="number" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} />
             </div>
             <div>
-              <Label>{movementType === "retiro" ? "Motivo / qué se retira" : "Concepto / banco destino"}</Label>
+              <Label>
+                {movementType === "retiro"
+                  ? "Motivo / qué se retira"
+                  : movementType === "gasto"
+                    ? "Concepto del gasto"
+                    : "Concepto / banco destino"}
+              </Label>
               <Input value={concept} onChange={(e) => setConcept(e.target.value)}
                 placeholder={movementType === "retiro"
-                  ? "Ej: Recogida diaria, gasto papelería"
-                  : "Ej: Consignación Bancolombia cuenta 123"} />
+                  ? "Ej: Recogida diaria"
+                  : movementType === "gasto"
+                    ? "Ej: Domicilio, papelería, aseo"
+                    : "Ej: Consignación Bancolombia cuenta 123"} />
             </div>
             <div className="md:col-span-2">
               <Label>Notas (opcional)</Label>
@@ -195,8 +286,8 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
             </div>
             <div className="md:col-span-2 flex justify-end gap-2">
               <Button variant="outline" onClick={reset} disabled={uploading}>Cancelar</Button>
-              <Button onClick={submit} disabled={uploading || create.isPending}>
-                {uploading || create.isPending ? "Guardando…" : "Registrar"}
+              <Button onClick={submit} disabled={uploading || create.isPending || createExpense.isPending}>
+                {uploading || create.isPending || createExpense.isPending ? "Guardando…" : "Registrar"}
               </Button>
             </div>
           </div>
@@ -218,6 +309,7 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
                     <th className="text-right p-2">Ventas efectivo</th>
                     <th className="text-right p-2">Retiros</th>
                     <th className="text-right p-2">Consignaciones</th>
+                    <th className="text-right p-2">Gastos</th>
                     <th className="text-right p-2">Saldo</th>
                   </tr>
                 </thead>
@@ -231,6 +323,9 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
                       </td>
                       <td className="p-2 text-right text-destructive">
                         {r.consignaciones ? `-$${r.consignaciones.toLocaleString()}` : "—"}
+                      </td>
+                      <td className="p-2 text-right text-destructive">
+                        {r.gastos ? `-$${r.gastos.toLocaleString()}` : "—"}
                       </td>
                       <td className="p-2 text-right font-semibold">${r.balance.toLocaleString()}</td>
                     </tr>
