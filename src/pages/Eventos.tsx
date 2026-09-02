@@ -511,28 +511,28 @@ const Eventos = () => {
                           {entries.map((entry) => {
                             const ac = DELIVERY_PHASE_COLORS[getDeliveryPhase(entry.rawStatus)];
                             return (
-                            <div key={entry.id} className="flex items-center justify-between rounded-lg border border-border p-3">
-                              <div className="flex-1 grid grid-cols-5 gap-4 text-sm">
-                                <div>
+                            <div key={entry.id} className="flex items-start justify-between gap-3 rounded-lg border border-border p-3">
+                              <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-x-4 gap-y-2 text-sm">
+                                <div className="min-w-0">
                                   <span className="text-muted-foreground text-xs">Asesor</span>
-                                  <p className="font-medium text-foreground flex items-center gap-1.5">
+                                  <p className="font-medium text-foreground flex items-center gap-1.5 min-w-0">
                                     <span className={cn("inline-block w-2.5 h-2.5 rounded-full shrink-0", ac.bg)} />
-                                    {entry.advisorName}
+                                    <span className="truncate" title={entry.advisorName}>{displayAdvisor(entry.advisorName)}</span>
                                   </p>
                                 </div>
-                                <div>
+                                <div className="min-w-0">
                                   <span className="text-muted-foreground text-xs">Cliente</span>
-                                  <p className="font-medium text-foreground">{entry.clientName}</p>
+                                  <p className="font-medium text-foreground truncate" title={entry.clientName}>{entry.clientName}</p>
                                 </div>
-                                <div>
+                                <div className="min-w-0">
                                   <span className="text-muted-foreground text-xs">Producto</span>
-                                  <p className="font-medium text-foreground">{entry.product}</p>
+                                  <p className="font-medium text-foreground truncate" title={entry.product}>{entry.product}</p>
                                 </div>
-                                <div>
+                                <div className="min-w-0">
                                   <span className="text-muted-foreground text-xs">Cantidad</span>
                                   <p className="font-medium text-foreground">{entry.quantity} uds</p>
                                 </div>
-                                <div>
+                                <div className="min-w-0">
                                   <span className="text-muted-foreground text-xs">Estado</span>
                                   <div className="mt-0.5">
                                     <Badge className={cn("text-xs", DELIVERY_STATUS_COLORS[entry.status])}>
@@ -541,9 +541,11 @@ const Eventos = () => {
                                   </div>
                                 </div>
                               </div>
-                              <Badge className={cn("ml-2 shrink-0", entry.brand === "magical" ? "bg-primary/10 text-primary" : "bg-secondary text-secondary-foreground")}>
+                              <Badge className={cn("shrink-0", entry.brand === "magical" ? "bg-primary/10 text-primary" : "bg-secondary text-secondary-foreground")}>
                                 {entry.brand === "magical" ? "Magical" : "Sweatspot"}
                               </Badge>
+                            </div>
+
                             </div>
                             );
                           })}
