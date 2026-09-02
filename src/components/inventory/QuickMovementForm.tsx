@@ -11,10 +11,13 @@ import { toast } from "sonner";
 import { useInventory } from "@/hooks/useInventory";
 import { useInventoryMovements, type MovementKind } from "@/hooks/useInventoryMovements";
 import { supabase } from "@/integrations/supabase/client";
+import { RESERVATIONS_ENABLED } from "@/lib/featureFlags";
+import { matchesQuery } from "@/lib/search";
+import { useFerias } from "@/hooks/useFerias";
 
 type ActionKind = MovementKind | "solicitud";
 
-const KIND_OPTIONS: { value: ActionKind; label: string; icon: any; color: string }[] = [
+const ALL_KIND_OPTIONS: { value: ActionKind; label: string; icon: any; color: string }[] = [
   { value: "entrada", label: "Entrada", icon: ArrowDownToLine, color: "text-emerald-600" },
   { value: "salida", label: "Salida", icon: ArrowUpFromLine, color: "text-orange-600" },
   { value: "reserva", label: "Reservar (en proceso)", icon: Clock, color: "text-amber-600" },
