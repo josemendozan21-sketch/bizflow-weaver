@@ -943,15 +943,20 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
   const [extraDesc, setExtraDesc] = useState(initialExtras.extraDesc);
   const [deliveryDate, setDeliveryDate] = useState(order.delivery_date || "");
   const [quantity, setQuantity] = useState<number>(Number(order.quantity) || 1);
-  const initialUnitPrice =
-    Number(order.unit_price) ||
-    (Number(order.quantity) > 0
+  // El valor unitario NUNCA se recalcula solo: si el pedido lo tiene guardado se
+  // respeta tal cual. Solo cuando falta se estima a partir del total (y se avisa).
+  const hasStoredUnitPrice = Number(order.unit_price) > 0;
+  const derivedUnitPrice =
+    Number(order.quantity) > 0
       ? Math.round(((Number(order.total_amount) || 0) - (initialExtras.extraCost || 0)) / Number(order.quantity))
-      : 0);
+      : 0;
+  const initialUnitPrice = hasStoredUnitPrice ? Number(order.unit_price) : derivedUnitPrice;
   const [unitPrice, setUnitPrice] = useState<number>(initialUnitPrice);
+  const { data: charges = [] } = useOrderCharges(order.id);
+  const chargesTotal = charges.reduce((s, c) => s + (Number(c.amount) || 0), 0);
 
   const newBaseTotal = (Number(unitPrice) || 0) * (Number(quantity) || 0);
-  const newTotalPreview = newBaseTotal + (Number(extraCost) || 0);
+  const newTotalPreview = newBaseTotal + (Number(extraCost) || 0) + chargesTotal;
 
   const handleSave = async () => {
     setSaving(true);
