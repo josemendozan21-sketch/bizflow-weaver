@@ -616,4 +616,3 @@ export function summarizeAdvisorProgress(
     lines: lines.sort((a, b) => b.date.getTime() - a.date.getTime()),
   };
 }
-}
