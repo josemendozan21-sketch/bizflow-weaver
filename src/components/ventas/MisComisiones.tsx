@@ -404,10 +404,10 @@ export default function MisComisiones() {
           </div>
           <p className="text-xs text-muted-foreground flex items-start gap-1.5">
             <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-            La comisión se causa cuando el pedido está pagado (soporte de pago cargado)
-            o ya facturado; que contabilidad aún no facture no afecta tu comisión. Solo
-            quedan pendientes los pedidos que el cliente no ha pagado. Se calcula sobre
-            el valor sin IVA.
+            La comisión se causa cuando el pedido está pagado o facturado. Si el
+            pedido tiene un abono parcial, se causa comisión proporcional a lo
+            abonado y el saldo queda como comisión por causar. Se calcula siempre
+            sobre el valor sin IVA.
           </p>
 
         </CardContent>
@@ -420,8 +420,9 @@ export default function MisComisiones() {
             <div className="flex gap-1">
               {([
                 ["todos", "Todos"],
-                ["facturado", "Pagados"],
-                ["pendiente", "Sin pago"],
+                ["facturado", "Causan comisión"],
+                ["pendiente", "Pendientes"],
+                ["excluido", "Excluidos"],
               ] as [Filter, string][]).map(([v, label]) => (
 
                 <Button
@@ -446,25 +447,30 @@ export default function MisComisiones() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Fecha</TableHead>
+                    <TableHead>Fecha venta</TableHead>
+                    <TableHead>Factura</TableHead>
                     <TableHead>N° Pedido</TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
+                    <TableHead className="text-right">Abono</TableHead>
                     <TableHead className="text-right">Base sin IVA</TableHead>
                     <TableHead className="text-right">%</TableHead>
                     <TableHead className="text-right">Comisión</TableHead>
-                    <TableHead>Estado</TableHead>
+                    <TableHead>Estado / motivo</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {lines.map((l) => (
                     <TableRow key={l.order.id}>
                       <TableCell className="whitespace-nowrap text-xs">
-                        {format(l.date, "d MMM", { locale: es })}
+                        {format(l.saleDate, "d MMM", { locale: es })}
                         {l.weekend && (
                           <Badge variant="outline" className="ml-1 text-[10px]">FDS</Badge>
                         )}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                        {l.invoiceDate ? format(l.invoiceDate, "d MMM", { locale: es }) : "—"}
                       </TableCell>
                       <TableCell>
                         <OrderCodeBadge code={(l.order as any).order_code} compact />
@@ -479,6 +485,9 @@ export default function MisComisiones() {
                       </TableCell>
                       <TableCell className="text-right">{fmt(l.totalWithVat)}</TableCell>
                       <TableCell className="text-right text-muted-foreground">
+                        {fmt(Number(l.order.abono) || 0)}
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground">
                         {fmt(l.baseSinIva)}
                       </TableCell>
                       <TableCell className="text-right">
@@ -487,18 +496,27 @@ export default function MisComisiones() {
                       <TableCell className="text-right font-medium">
                         {fmt(l.netCommission)}
                       </TableCell>
-                      <TableCell>
-                        {l.returned ? (
-                          <Badge variant="destructive">Devuelto</Badge>
-                        ) : l.invoiced ? (
-                          <Badge className="bg-emerald-600">Pagado</Badge>
-                        ) : (
-                          <Badge className="bg-amber-500">Sin pago</Badge>
-
-                        )}
+                      <TableCell className="max-w-[240px]">
+                        <Badge
+                          className={
+                            l.status === "total"
+                              ? "bg-emerald-600"
+                              : l.status === "parcial"
+                                ? "bg-sky-600"
+                                : l.status === "pendiente"
+                                  ? "bg-amber-500"
+                                  : "bg-muted text-muted-foreground"
+                          }
+                        >
+                          {STATUS_LABEL[l.status]}
+                        </Badge>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          {l.reason}
+                        </p>
                       </TableCell>
                     </TableRow>
                   ))}
+
                 </TableBody>
               </Table>
             </div>
