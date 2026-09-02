@@ -28,15 +28,16 @@ export const SweatspotBodyTasksPanel = () => {
   const { data: tasks = [] } = useQuery({
     queryKey: ["body_production_tasks", "sweatspot"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("body_production_tasks")
         .select("id, referencia, unidades, status, created_at")
-        .eq("brand" as any, "sweatspot")
+        .eq("brand", "sweatspot")
         .neq("status", "finalizado")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data || []) as unknown as Task[];
+      return (data || []) as Task[];
     },
+
   });
 
   const openFinalize = (t: Task) => {
