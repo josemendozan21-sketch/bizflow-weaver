@@ -29,6 +29,8 @@ import { es } from "date-fns/locale";
 import { matchesQuery } from "@/lib/search";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import PartialDeliveryControl from "@/components/common/PartialDeliveryControl";
+import { findStockMatch, sortStockOptions, stockOptionParts, cleanReferenceName } from "@/lib/referenceCatalog";
+
 
 
 interface MayorOrder {
