@@ -45,7 +45,7 @@ export default function OrderCodeBadge({
       onClick={handleCopy}
       title={hasCode ? "Clic para copiar el número de pedido" : "Pedido sin número asignado"}
       className={cn(
-        "inline-flex items-center gap-1 rounded-md border font-mono tracking-tight",
+        "inline-flex max-w-full items-center gap-1 whitespace-nowrap rounded-md border font-mono tracking-tight",
         compact ? "px-1.5 py-0 text-[10px]" : "px-2 py-0.5 text-xs",
         hasCode
           ? "border-primary/30 bg-primary/10 text-primary cursor-pointer hover:bg-primary/20"

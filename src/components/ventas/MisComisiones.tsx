@@ -501,13 +501,14 @@ El período de liquidación es el <b>mes de la factura</b> (si el pedido aún
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10 px-1" />
-                  <TableHead className="w-[74px] px-2">Fecha</TableHead>
-                  <TableHead className="w-[116px] px-2">N° Pedido</TableHead>
+                  <TableHead className="w-[92px] px-2">Fecha</TableHead>
+                  <TableHead className="w-[146px] px-2">N° Pedido</TableHead>
                   <TableHead className="px-2">Cliente</TableHead>
-                  <TableHead className="w-[112px] px-2 text-right">Valor</TableHead>
-                  <TableHead className="w-[112px] px-2 text-right">Comisión</TableHead>
+                  <TableHead className="w-[110px] px-2 text-right">Valor</TableHead>
+                  <TableHead className="w-[110px] px-2 text-right">Comisión</TableHead>
                   <TableHead className="w-[132px] px-2">Estado</TableHead>
-                  <TableHead className="w-[170px] px-2 text-right">Acción</TableHead>
+                  <TableHead className="w-[128px] px-2 text-right">Acción</TableHead>
+
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -527,14 +528,21 @@ El período de liquidación es el <b>mes de la factura</b> (si el pedido aún
                           />
                         </TableCell>
                         <TableCell className="whitespace-nowrap px-2 text-xs">
-                          {format(l.saleDate, "d MMM", { locale: es })}
-                          {l.weekend && (
-                            <Badge variant="outline" className="ml-1 text-[10px]">FDS</Badge>
-                          )}
+                          <span className="inline-flex items-center gap-1">
+                            {format(l.saleDate, "d MMM", { locale: es })}
+                            {l.weekend && (
+                              <span
+                                title="Venta de fin de semana"
+                                aria-label="Venta de fin de semana"
+                                className="inline-block h-1.5 w-1.5 rounded-full bg-primary"
+                              />
+                            )}
+                          </span>
                         </TableCell>
                         <TableCell className="px-2">
                           <OrderCodeBadge code={(l.order as any).order_code} compact />
                         </TableCell>
+
                         <TableCell className="truncate px-2" title={l.order.client_name}>
                           {l.order.client_name}
                         </TableCell>
