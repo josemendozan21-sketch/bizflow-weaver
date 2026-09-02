@@ -25,6 +25,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAccountingAlerts } from "@/hooks/useAccountingAlerts";
 import type { AccountingOrder } from "@/stores/accountingStore";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
+import OrderDisputeDialog from "@/components/ventas/OrderDisputeDialog";
+import DisputesPanel from "@/components/contabilidad/DisputesPanel";
 
 function toAccountingOrder(o: Order): AccountingOrder {
   return {
@@ -331,6 +333,75 @@ const OrderCard = ({ order, actionSlot }: { order: Order; actionSlot?: React.Rea
   );
 };
 
+type AmountMode = "todos" | "cero" | "conValor" | "rango";
+
+function isZeroValue(o: Order) {
+  return !(Number(o.total_amount) > 0);
+}
+
+function matchesFilters(o: Order, search: string, mode: AmountMode, a: string, b: string) {
+  const q = search.trim().toLowerCase();
+  if (q) {
+    const hay = `${o.order_code || ""} ${o.client_name || ""} ${o.advisor_name || ""} ${o.product || ""}`.toLowerCase();
+    if (!hay.includes(q)) return false;
+  }
+  const total = Number(o.total_amount) || 0;
+  if (mode === "cero") return total <= 0;
+  if (mode === "conValor") return total > 0;
+  if (mode === "rango") {
+    const min = a ? parseFloat(a) : -Infinity;
+    const max = b ? parseFloat(b) : Infinity;
+    if (total < min || total > max) return false;
+  }
+  return true;
+}
+
+function AmountFilterBar({
+  search, setSearch, mode, setMode, a, setA, b, setB, zeroCount,
+}: {
+  search: string; setSearch: (v: string) => void;
+  mode: AmountMode; setMode: (v: AmountMode) => void;
+  a: string; setA: (v: string) => void;
+  b: string; setB: (v: string) => void;
+  zeroCount: number;
+}) {
+  const options: [AmountMode, string][] = [
+    ["todos", "Todos"],
+    ["cero", `En $0 (${zeroCount})`],
+    ["conValor", "Con valor"],
+    ["rango", "Rango"],
+  ];
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-3">
+      <Input
+        placeholder="Buscar por código, cliente, asesor o producto..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="w-[280px] h-9"
+      />
+      <div className="flex gap-1">
+        {options.map(([v, label]) => (
+          <Button
+            key={v}
+            size="sm"
+            variant={mode === v ? "default" : "outline"}
+            onClick={() => setMode(v)}
+            className={v === "cero" && zeroCount > 0 && mode !== v ? "border-amber-500 text-amber-600" : ""}
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
+      {mode === "rango" && (
+        <>
+          <Input type="number" placeholder="Desde" value={a} onChange={(e) => setA(e.target.value)} className="w-[120px] h-9" />
+          <Input type="number" placeholder="Hasta" value={b} onChange={(e) => setB(e.target.value)} className="w-[120px] h-9" />
+        </>
+      )}
+    </div>
+  );
+}
+
 const Contabilidad = () => {
   const { role } = useAuth();
   const isReadOnly = role === "asesor_comercial";
@@ -343,11 +414,36 @@ const Contabilidad = () => {
   useAccountingAlerts();
 
   const READY_STATUSES = ["listo", "despachado", "entregado"];
-  const pendingAll = allOrders.filter((o) => o.invoice_status === "pendiente");
+  const [selectedToInvoice, setSelectedToInvoice] = useState<Set<string>>(new Set());
+
+  // --- Filtros por monto y búsqueda ---
+  const [search, setSearch] = useState("");
+  const [amountMode, setAmountMode] = useState<AmountMode>("todos");
+  const [amountA, setAmountA] = useState("");
+  const [amountB, setAmountB] = useState("");
+
+  const applyFilters = (list: Order[]) =>
+    list.filter((o) => matchesFilters(o, search, amountMode, amountA, amountB));
+
+  const pendingAll = applyFilters(allOrders.filter((o) => o.invoice_status === "pendiente"));
   const toInvoice = pendingAll.filter((o) => READY_STATUSES.includes(o.production_status));
   const pending = pendingAll.filter((o) => !READY_STATUSES.includes(o.production_status));
-  const invoiced = allOrders.filter((o) => o.invoice_status === "facturado");
-  const [selectedToInvoice, setSelectedToInvoice] = useState<Set<string>>(new Set());
+  const invoiced = applyFilters(allOrders.filter((o) => o.invoice_status === "facturado"));
+  const zeroCount = allOrders.filter(isZeroValue).length;
+
+  const filterBar = (
+    <AmountFilterBar
+      search={search}
+      setSearch={setSearch}
+      mode={amountMode}
+      setMode={setAmountMode}
+      a={amountA}
+      setA={setAmountA}
+      b={amountB}
+      setB={setAmountB}
+      zeroCount={zeroCount}
+    />
+  );
 
   const toggleSelection = (id: string, set: Set<string>, setter: React.Dispatch<React.SetStateAction<Set<string>>>) => {
     const next = new Set(set);
@@ -452,6 +548,7 @@ const Contabilidad = () => {
           <TabsTrigger value="pendientes">Pendientes ({pending.length})</TabsTrigger>
           <TabsTrigger value="facturar">Facturar ({toInvoice.length})</TabsTrigger>
           <TabsTrigger value="facturados">Facturados ({invoiced.length})</TabsTrigger>
+          <TabsTrigger value="conciliacion"><AlertTriangle className="h-4 w-4 mr-1" />Conciliación</TabsTrigger>
           {!isReadOnly && <TabsTrigger value="caja_menor"><Wallet className="h-4 w-4 mr-1" />Caja menor</TabsTrigger>}
         </TabsList>
 
@@ -486,6 +583,7 @@ const Contabilidad = () => {
         )}
 
         <TabsContent value="pendientes">
+          {filterBar}
           {pending.length === 0 ? (
             <Card><CardContent className="pt-6"><p className="text-muted-foreground text-center py-8">No hay pedidos pendientes por facturar.</p></CardContent></Card>
           ) : (
@@ -554,6 +652,7 @@ const Contabilidad = () => {
         </TabsContent>
 
         <TabsContent value="facturar">
+          {filterBar}
           {toInvoice.length === 0 ? (
             <Card><CardContent className="pt-6"><p className="text-muted-foreground text-center py-8">No hay pedidos listos para facturar (despachados o listos para entregar).</p></CardContent></Card>
           ) : (
@@ -619,6 +718,7 @@ const Contabilidad = () => {
         </TabsContent>
 
         <TabsContent value="facturados">
+          {filterBar}
           {invoiced.length === 0 ? (
             <Card><CardContent className="pt-6"><p className="text-muted-foreground text-center py-8">No hay pedidos facturados aún.</p></CardContent></Card>
           ) : (
@@ -668,7 +768,13 @@ const Contabilidad = () => {
                             {order.sale_type === "mayor" ? "Mayor" : "Menor"}
                           </Badge>
                         </TableCell>
-                        <TableCell>${order.total_amount?.toLocaleString() ?? "—"}</TableCell>
+                        <TableCell>
+                          {isZeroValue(order) ? (
+                            <Badge variant="outline" className="border-amber-500 text-amber-600">Sin valor</Badge>
+                          ) : (
+                            `$${order.total_amount?.toLocaleString()}`
+                          )}
+                        </TableCell>
                         <TableCell>{order.invoice_date}</TableCell>
                         <TableCell>{order.product}</TableCell>
                         <TableCell>{order.quantity}</TableCell>
@@ -681,6 +787,19 @@ const Contabilidad = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
+                            {isZeroValue(order) && (
+                              <OrderDisputeDialog
+                                orderId={order.id}
+                                orderCode={order.order_code}
+                                clientName={order.client_name}
+                                currentAmount={Number(order.total_amount) || 0}
+                                trigger={
+                                  <Button size="icon" variant="ghost" className="text-amber-600" title="Solicitar corrección de valor">
+                                    <AlertTriangle className="h-4 w-4" />
+                                  </Button>
+                                }
+                              />
+                            )}
                             <Button size="icon" variant="ghost" onClick={() => handleExportSingle(order)} title="Exportar SIIGO">
                               <Download className="h-4 w-4" />
                             </Button>
@@ -699,6 +818,11 @@ const Contabilidad = () => {
             </Card>
           )}
         </TabsContent>
+
+        <TabsContent value="conciliacion">
+          <DisputesPanel orders={allOrders} />
+        </TabsContent>
+
 
         {!isReadOnly && (
           <TabsContent value="caja_menor">

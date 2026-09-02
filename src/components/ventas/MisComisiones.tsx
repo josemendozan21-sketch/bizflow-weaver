@@ -18,6 +18,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import OrderDisputeDialog from "@/components/ventas/OrderDisputeDialog";
 import { Loader2, Info, TrendingUp, Clock, CheckCircle2, ChevronLeft, ChevronRight, Download, AlertTriangle } from "lucide-react";
 
 import { format } from "date-fns";
@@ -47,7 +49,7 @@ const MONTHS = [
 
 const fmt = (n: number) => `$${Math.round(n).toLocaleString("es-CO")}`;
 
-type Filter = "todos" | "facturado" | "pendiente" | "excluido";
+type Filter = "todos" | "facturado" | "pendiente" | "excluido" | "cero";
 
 
 export default function MisComisiones() {
@@ -57,6 +59,9 @@ export default function MisComisiones() {
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [filter, setFilter] = useState<Filter>("todos");
+  const [search, setSearch] = useState("");
+  const [minAmount, setMinAmount] = useState("");
+  const [maxAmount, setMaxAmount] = useState("");
   const [basis, setBasis] = useState<PeriodBasis>("venta");
 
   const summary = useMemo(
@@ -110,13 +115,31 @@ export default function MisComisiones() {
   }, [orders, user?.id, basis]);
 
   const lines = useMemo(() => {
-    if (filter === "facturado") return summary.lines.filter((l) => l.invoiced);
-    if (filter === "pendiente")
-      return summary.lines.filter((l) => l.status === "pendiente");
-    if (filter === "excluido")
-      return summary.lines.filter((l) => l.status === "excluido");
-    return summary.lines;
-  }, [summary.lines, filter]);
+    let list = summary.lines;
+    if (filter === "facturado") list = list.filter((l) => l.invoiced);
+    else if (filter === "pendiente") list = list.filter((l) => l.status === "pendiente");
+    else if (filter === "excluido") list = list.filter((l) => l.status === "excluido");
+    else if (filter === "cero") list = list.filter((l) => !(Number(l.order.total_amount) > 0));
+
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter((l) =>
+        `${(l.order as any).order_code || ""} ${l.order.client_name || ""} ${l.order.product || ""}`
+          .toLowerCase()
+          .includes(q)
+      );
+    }
+    const min = minAmount ? parseFloat(minAmount) : null;
+    const max = maxAmount ? parseFloat(maxAmount) : null;
+    if (min !== null) list = list.filter((l) => l.totalWithVat >= min);
+    if (max !== null) list = list.filter((l) => l.totalWithVat <= max);
+    return list;
+  }, [summary.lines, filter, search, minAmount, maxAmount]);
+
+  const zeroLines = useMemo(
+    () => summary.lines.filter((l) => !(Number(l.order.total_amount) > 0)),
+    [summary.lines]
+  );
 
   const causadas = useMemo(
     () => summary.lines.filter((l) => l.invoiced),
@@ -423,6 +446,7 @@ export default function MisComisiones() {
                 ["facturado", "Causan comisión"],
                 ["pendiente", "Pendientes"],
                 ["excluido", "Excluidos"],
+                ["cero", `En $0 (${zeroLines.length})`],
               ] as [Filter, string][]).map(([v, label]) => (
 
                 <Button
@@ -430,11 +454,39 @@ export default function MisComisiones() {
                   size="sm"
                   variant={filter === v ? "default" : "outline"}
                   onClick={() => setFilter(v)}
+                  className={v === "cero" && zeroLines.length > 0 && filter !== v ? "border-amber-500 text-amber-600" : ""}
                 >
                   {label}
                 </Button>
               ))}
             </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 pt-2">
+            <Input
+              placeholder="Buscar por código, cliente o producto..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-[260px] h-9"
+            />
+            <Input
+              type="number"
+              placeholder="Monto desde"
+              value={minAmount}
+              onChange={(e) => setMinAmount(e.target.value)}
+              className="w-[130px] h-9"
+            />
+            <Input
+              type="number"
+              placeholder="Monto hasta"
+              value={maxAmount}
+              onChange={(e) => setMaxAmount(e.target.value)}
+              className="w-[130px] h-9"
+            />
+            {(search || minAmount || maxAmount) && (
+              <Button size="sm" variant="ghost" onClick={() => { setSearch(""); setMinAmount(""); setMaxAmount(""); }}>
+                Limpiar
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -458,6 +510,7 @@ export default function MisComisiones() {
                     <TableHead className="text-right">%</TableHead>
                     <TableHead className="text-right">Comisión</TableHead>
                     <TableHead>Estado / motivo</TableHead>
+                    <TableHead className="text-right">Acción</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -513,6 +566,16 @@ export default function MisComisiones() {
                         <p className="text-[11px] text-muted-foreground mt-0.5">
                           {l.reason}
                         </p>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {!(Number(l.order.total_amount) > 0) && (
+                          <OrderDisputeDialog
+                            orderId={l.order.id}
+                            orderCode={(l.order as any).order_code}
+                            clientName={l.order.client_name}
+                            currentAmount={Number(l.order.total_amount) || 0}
+                          />
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
