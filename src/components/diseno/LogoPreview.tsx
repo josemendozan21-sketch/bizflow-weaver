@@ -62,6 +62,21 @@ function PdfThumbnail({ url, name, alt }: { url: string; name: string; alt: stri
     const render = async () => {
       setState("loading");
       try {
+        const mapPrototype = Map.prototype as Map<unknown, unknown> & {
+          getOrInsertComputed?: (key: unknown, callback: (key: unknown) => unknown) => unknown;
+        };
+        if (!mapPrototype.getOrInsertComputed) {
+          Object.defineProperty(Map.prototype, "getOrInsertComputed", {
+            configurable: true,
+            writable: true,
+            value(this: Map<unknown, unknown>, key: unknown, callback: (key: unknown) => unknown) {
+              if (this.has(key)) return this.get(key);
+              const value = callback(key);
+              this.set(key, value);
+              return value;
+            },
+          });
+        }
         const pdfjs = await import("pdfjs-dist");
         const workerUrl = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
         pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
@@ -83,11 +98,8 @@ function PdfThumbnail({ url, name, alt }: { url: string; name: string; alt: stri
           setThumbnail(canvas.toDataURL("image/png"));
           setState("ready");
         }
-      } catch (error) {
-        if (!cancelled) {
-          console.error("PDF thumbnail rendering failed", error);
-          setState("error");
-        }
+      } catch {
+        if (!cancelled) setState("error");
       }
     };
 
