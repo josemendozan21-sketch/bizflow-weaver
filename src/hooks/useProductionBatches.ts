@@ -24,8 +24,13 @@ export interface ProductionBatch {
   finished_by_name: string | null;
   received_at: string | null;
   received_by_name: string | null;
+  return_reason: string | null;
+  returned_at: string | null;
+  returned_by_name: string | null;
+  return_count: number | null;
   created_at: string;
 }
+
 
 export interface ProductionBatchItem {
   id: string;
