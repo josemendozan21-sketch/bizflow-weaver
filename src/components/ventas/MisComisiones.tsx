@@ -18,8 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Loader2, Info, TrendingUp, Clock, CheckCircle2, ChevronLeft, ChevronRight, Download } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Loader2, Info, TrendingUp, Clock, CheckCircle2, ChevronLeft, ChevronRight, Download, AlertTriangle } from "lucide-react";
 
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -28,12 +27,18 @@ import { useAuth } from "@/contexts/AuthContext";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import {
   summarizeAdvisorProgress,
+  STATUS_LABEL,
   BONUS_TIER_1_THRESHOLD,
   BONUS_TIER_1_AMOUNT,
   BONUS_TIER_2_THRESHOLD,
   BONUS_TIER_2_AMOUNT,
   UNLOCK_THRESHOLD,
+  type PeriodBasis,
 } from "@/lib/commissions";
+import {
+  exportCommissionsCsv,
+  exportCommissionsXlsx,
+} from "@/lib/commissionExports";
 
 const MONTHS = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -42,7 +47,8 @@ const MONTHS = [
 
 const fmt = (n: number) => `$${Math.round(n).toLocaleString("es-CO")}`;
 
-type Filter = "todos" | "facturado" | "pendiente";
+type Filter = "todos" | "facturado" | "pendiente" | "excluido";
+
 
 export default function MisComisiones() {
   const { user } = useAuth();
