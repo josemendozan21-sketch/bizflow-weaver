@@ -5,6 +5,13 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export interface Order {
   id: string;
+  order_code?: string | null;
+  line_index?: number | null;
+  line_count?: number | null;
+  logo_url_2?: string | null;
+  logo_name?: string | null;
+  logo_name_2?: string | null;
+  logo_count?: number | null;
   brand: string;
   sale_type: string;
   client_name: string;

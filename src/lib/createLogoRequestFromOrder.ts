@@ -8,6 +8,9 @@ interface OrderLogoData {
   advisorId: string;
   advisorName: string;
   logoFile?: File | null;
+  logoFile2?: File | null;
+  logoName2?: string;
+  orderCode?: string;
   clientComments?: string;
   additionalInstructions?: string;
 }
@@ -16,7 +19,9 @@ interface OrderLogoData {
  * Uploads the logo file and creates a design request automatically
  * when a new wholesale order includes a logo.
  */
-export async function createLogoRequestFromOrder(data: OrderLogoData): Promise<{ success: boolean; message: string; logoUrl?: string }> {
+export async function createLogoRequestFromOrder(
+  data: OrderLogoData,
+): Promise<{ success: boolean; message: string; logoUrl?: string; logoUrl2?: string }> {
   try {
     // 1. Upload logo to storage if a file was provided.
     // If only personalization text exists (no file), we still create a design
@@ -43,29 +48,46 @@ export async function createLogoRequestFromOrder(data: OrderLogoData): Promise<{
       publicUrl = "PENDIENTE_DISENO_DESDE_CERO";
     }
 
+    // 1b. Upload second logo if provided
+    let publicUrl2: string | null = null;
+    if (data.logoFile2 && data.logoFile2.size > 0) {
+      const ext2 = data.logoFile2.name.split(".").pop();
+      const path2 = `originals/${crypto.randomUUID()}.${ext2}`;
+      const { error: uploadError2 } = await supabase.storage
+        .from("logo-files")
+        .upload(path2, data.logoFile2);
+      if (uploadError2) {
+        console.error("Error uploading second logo:", uploadError2);
+        return { success: false, message: `Error al subir el segundo logo: ${uploadError2.message}`, logoUrl: publicUrl };
+      }
+      const { data: urlData2 } = supabase.storage.from("logo-files").getPublicUrl(path2);
+      publicUrl2 = urlData2.publicUrl;
+    }
+
     // 2. Create logo request
     const { error: insertError } = await supabase.from("logo_requests").insert({
       brand: data.brand,
       client_name: data.clientName,
-      logo_name: data.logoName || null,
+      logo_name: [data.logoName, data.logoName2].filter(Boolean).join(" + ") || null,
       product: data.product,
       advisor_id: data.advisorId,
       advisor_name: data.advisorName,
       original_logo_url: publicUrl,
-      client_comments: data.clientComments || null,
+      original_logo_url_2: publicUrl2,
+      client_comments: [data.orderCode ? `Pedido ${data.orderCode}` : "", data.clientComments || ""].filter(Boolean).join(" | ") || null,
       additional_instructions: data.additionalInstructions || null,
       status: "pendiente_diseno",
     });
 
     if (insertError) {
       console.error("Error creating logo request:", insertError);
-      return { success: false, message: `Error al crear solicitud de diseño: ${insertError.message}`, logoUrl: publicUrl };
+      return { success: false, message: `Error al crear solicitud de diseño: ${insertError.message}`, logoUrl: publicUrl, logoUrl2: publicUrl2 || undefined };
     }
 
     const message = data.logoFile && data.logoFile.size > 0
       ? "Solicitud de diseño creada automáticamente."
       : "Solicitud de diseño creada (sin logo: el equipo lo construirá desde la personalización).";
-    return { success: true, message, logoUrl: publicUrl };
+    return { success: true, message, logoUrl: publicUrl, logoUrl2: publicUrl2 || undefined };
   } catch (err: any) {
     console.error("Unexpected error creating logo request:", err);
     return { success: false, message: err.message || "Error inesperado" };

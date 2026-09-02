@@ -60,6 +60,14 @@ interface PendingIntakeOrder {
   gel_color?: string | null;
   silicone_color?: string | null;
   logo_url?: string | null;
+  logo_url_2?: string | null;
+  logo_count?: number | null;
+  logo_name?: string | null;
+  logo_name_2?: string | null;
+  order_code?: string | null;
+  line_index?: number | null;
+  line_count?: number | null;
+  is_recompra?: boolean | null;
   observations?: string | null;
   advisor_id?: string | null;
 }
@@ -167,7 +175,7 @@ export const EstampacionProductionView = () => {
       const { data, error } = await supabase
         .from("orders")
         .select(
-          "id, client_name, brand, product, quantity, advisor_name, delivery_date, created_at, production_status, ink_color, ink_count, ink_color_2, ink_color_3, glitter_color, gel_color, silicone_color, logo_url, observations, advisor_id"
+          "id, order_code, client_name, brand, product, quantity, advisor_name, delivery_date, created_at, production_status, ink_color, ink_count, ink_color_2, ink_color_3, glitter_color, gel_color, silicone_color, logo_url, logo_url_2, logo_count, logo_name, logo_name_2, line_index, line_count, is_recompra, observations, advisor_id"
         )
         .eq("production_status", "pendiente")
         .is("inventory_archived_at", null)
@@ -187,7 +195,9 @@ export const EstampacionProductionView = () => {
   );
   const pendingIntake = (pendingIntakeQuery.data ?? []).filter(
     (o) =>
-      approvedLogoClients.has(o.client_name.trim().toLowerCase()) &&
+      // Logo aprobado por diseño, o recompra con logo ya guardado (no genera solicitud nueva)
+      (approvedLogoClients.has(o.client_name.trim().toLowerCase()) ||
+        (Boolean(o.is_recompra) && Boolean(o.logo_url))) &&
       !orderIdsWithProductionOrder.has(o.id)
   );
 
@@ -266,8 +276,17 @@ export const EstampacionProductionView = () => {
               <Card key={o.id}>
                 <CardContent className="p-3 space-y-1 text-xs">
                   <div className="flex items-center justify-between">
-                    <p className="font-semibold text-sm">{o.client_name}</p>
-                    <Badge variant="secondary">Esperando Inventarios</Badge>
+                    <div>
+                      <p className="font-semibold text-sm">{o.client_name}</p>
+                      <p className="text-[11px] font-mono text-muted-foreground">
+                        {o.order_code || "—"}
+                        {(o.line_count ?? 1) > 1 ? ` · línea ${o.line_index}/${o.line_count}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge variant="secondary">Esperando Inventarios</Badge>
+                      {o.is_recompra && <Badge className="bg-green-100 text-green-800">Recompra</Badge>}
+                    </div>
                   </div>
                   <Row label="Producto" value={o.product} />
                   <Row label="Cantidad" value={`${o.quantity} uds`} />
@@ -304,6 +323,23 @@ export const EstampacionProductionView = () => {
                     </div>
                   ) : (
                     <p className="text-[11px] text-muted-foreground mt-2">Sin archivo de logo disponible.</p>
+                  )}
+                  {o.logo_url_2 && (
+                    <div className="rounded-md border p-2 space-y-2 mt-2">
+                      <p className="text-[11px] font-medium text-muted-foreground">
+                        Logo 2 {o.logo_name_2 ? `— ${o.logo_name_2}` : ""}
+                      </p>
+                      <img
+                        src={o.logo_url_2}
+                        alt={`Logo 2 ${o.client_name}`}
+                        className="max-h-24 w-full rounded border object-contain bg-white"
+                      />
+                      <a href={o.logo_url_2} download target="_blank" rel="noopener noreferrer">
+                        <Button size="sm" variant="outline" className="w-full">
+                          <Download className="h-3 w-3 mr-1" /> Descargar logo 2
+                        </Button>
+                      </a>
+                    </div>
                   )}
                   <Button
                     size="sm"

@@ -235,6 +235,7 @@ export function MisPedidos() {
       }
       if (!q) return true;
       return (
+        (o.order_code || "").toLowerCase().includes(q) ||
         (o.client_name || "").toLowerCase().includes(q) ||
         (o.client_nit || "").toLowerCase().includes(q) ||
         (o.product || "").toLowerCase().includes(q) ||
@@ -769,6 +770,7 @@ function PaymentConfirmDialog({ order }: { order: Order }) {
         </DialogHeader>
         <div className="space-y-4">
           <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-1">
+            <p><strong>Pedido:</strong> <span className="font-mono">{order.order_code || "—"}</span>{(order.line_count ?? 1) > 1 ? ` · línea ${order.line_index}/${order.line_count}` : ""}</p>
             <p><strong>Cliente:</strong> {order.client_name}</p>
             <p><strong>Producto:</strong> {order.product} — {order.quantity} uds</p>
             <p><strong>Total:</strong> ${Number(order.total_amount).toLocaleString("es-CO")}</p>
@@ -1019,7 +1021,7 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Detalles del pedido — {order.client_name}</DialogTitle>
+          <DialogTitle>Detalles del pedido {order.order_code ? `${order.order_code} ` : ""}— {order.client_name}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">

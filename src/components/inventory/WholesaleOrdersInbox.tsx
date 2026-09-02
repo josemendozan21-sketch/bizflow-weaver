@@ -28,6 +28,9 @@ import { es } from "date-fns/locale";
 
 interface MayorOrder {
   id: string;
+  order_code?: string | null;
+  line_index?: number | null;
+  line_count?: number | null;
   brand: string;
   client_name: string;
   product: string;
@@ -233,6 +236,7 @@ const WholesaleOrdersInbox = () => {
     const q = searchQuery.toLowerCase();
     return list.filter(
       (o) =>
+        (o.order_code || "").toLowerCase().includes(q) ||
         o.client_name.toLowerCase().includes(q) ||
         o.product.toLowerCase().includes(q) ||
         o.advisor_name.toLowerCase().includes(q)
@@ -265,7 +269,7 @@ const WholesaleOrdersInbox = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color,is_recompra")
+        .select("id,order_code,line_index,line_count,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color,is_recompra")
         .eq("sale_type", "mayor")
         .gte("created_at", "2026-05-15")
         .order("created_at", { ascending: false });
@@ -280,7 +284,7 @@ const WholesaleOrdersInbox = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color,is_recompra")
+        .select("id,order_code,line_index,line_count,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color,is_recompra")
         .in("sale_type", ["menor", "detal"])
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -666,7 +670,11 @@ const WholesaleOrdersInbox = () => {
                 )}
                 {isDelivered && <Badge variant="secondary">Entregado</Badge>}
               </div>
-              <h3 className="font-semibold mt-1.5">{o.client_name}</h3>
+              <p className="mt-1.5 text-[11px] font-mono text-muted-foreground">
+                {o.order_code || "—"}
+                {(o.line_count ?? 1) > 1 ? ` · línea ${o.line_index}/${o.line_count}` : ""}
+              </p>
+              <h3 className="font-semibold">{o.client_name}</h3>
               <p className="text-sm text-muted-foreground">
                 {o.quantity.toLocaleString("es-CO")} × {o.product}
               </p>

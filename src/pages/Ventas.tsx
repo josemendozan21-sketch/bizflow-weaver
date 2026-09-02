@@ -24,7 +24,7 @@ import { SalesCalendar } from "@/components/ventas/SalesCalendar";
 import { createLogoRequestFromOrder } from "@/lib/createLogoRequestFromOrder";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createOrderNotifications } from "@/hooks/useNotifications";
 import SmartPasteField, { type ParsedOrderData } from "@/components/ventas/SmartPasteField";
 import ClientNameAutocomplete from "@/components/ventas/ClientNameAutocomplete";
@@ -614,6 +614,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [cobroLogo, setCobroLogo] = usePersistedState("ventas:mw:cobroLogo", false);
   const [costoLogo, setCostoLogo] = usePersistedState("ventas:mw:costoLogo", "");
   const [logoFileState, setLogoFileState] = useState<File | null>(null);
+  const [logoFile2State, setLogoFile2State] = useState<File | null>(null);
+  const [logoCount, setLogoCount] = usePersistedState<number>("ventas:mw:logoCount", 1);
+  const [clientName, setClientName] = usePersistedState<string>("ventas:mw:clientName", "");
+  const [recompraLogoUrl, setRecompraLogoUrl] = usePersistedState<string>("ventas:mw:recompraLogoUrl", "");
   const [rutFileState, setRutFileState] = useState<File | null>(null);
   // Molde nuevo (sólo Magical)
   const [moldeNuevo, setMoldeNuevo] = usePersistedState("ventas:mw:moldeNuevo", false);
@@ -633,6 +637,25 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   useEffect(() => {
     if (!cobroLogo) setCostoLogo("");
   }, [cobroLogo]);
+
+  // Logos ya trabajados para este cliente (para recompras: el logo no se pierde)
+  const previousLogosQuery = useQuery({
+    queryKey: ["previous-logos", clientName.trim().toLowerCase()],
+    enabled: clientName.trim().length >= 3,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("logo_requests")
+        .select("id, logo_name, product, status, original_logo_url, adjusted_logo_url, created_at")
+        .ilike("client_name", `%${clientName.trim()}%`)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+  const previousLogos = (previousLogosQuery.data ?? []).filter(
+    (l: any) => (l.adjusted_logo_url || l.original_logo_url || "").startsWith("http"),
+  );
 
   const materialConfigs = useInventoryStore((s) => s.materialConfigs);
   const { reserveBodyStock: reserveBodyStockDB, discountStock: discountStockDB, stockItems: inventoryStockItems } = useInventory();
@@ -771,7 +794,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     setIsSubmitting(true);
     const form = e.target as HTMLFormElement;
     const fd = new FormData(form);
-    const clientName = fd.get("mw_nombre") as string;
+    const clientNameValue = (clientName || (fd.get("mw_nombre") as string) || "").trim();
     // Identifica todas las líneas creadas en un mismo envío del formulario,
     // para que la validación anti-duplicados no bloquee líneas iguales.
     const submissionId = crypto.randomUUID();
@@ -782,8 +805,29 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       : observacionesRaw;
     const rutFile = rutFileState;
     const logoFile = logoFileState;
+    const logoFile2 = logoFile2State;
     const logoNombre = ((fd.get("mw_logo_nombre") as string) || "").trim();
+    const logoNombre2 = ((fd.get("mw_logo_nombre_2") as string) || "").trim();
+    const logosCount = noLogo ? 0 : logoCount;
     const fechaRequerida = fd.get("mw_fechaRequerida") as string;
+
+    // Segundo logo: archivo y nombre obligatorios
+    if (logosCount >= 2 && (!logoFile2 || logoFile2.size === 0 || !logoNombre2)) {
+      toast.error("Segundo logo incompleto", {
+        description: "Adjunte el archivo del logo 2 y escriba su nombre de referencia.",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Recompra: el logo debe quedar registrado (archivo nuevo o logo anterior)
+    if (isRecompra && !noLogo && !(logoFile && logoFile.size > 0) && !recompraLogoUrl) {
+      toast.error("Logo de la recompra requerido", {
+        description: "Seleccione un logo anterior del cliente o adjunte el archivo del logo.",
+      });
+      setIsSubmitting(false);
+      return;
+    }
 
     // Nombre/referencia del logo OBLIGATORIO para pedidos mayor con logo
     if (!noLogo && !logoNombre) {
@@ -867,6 +911,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     // Upload logo once if provided. En recompras NO se crea solicitud
     // de diseño automática (el logo ya existe y fue aprobado antes).
     let logoUrl: string | null = null;
+    let logoUrl2: string | null = null;
     const hasLogoFile = !!(logoFile && logoFile.size > 0);
     const hasPersonalization = !!(personalizacion && personalizacion.trim());
     if ((hasLogoFile || hasPersonalization) && user && !isRecompra && !noLogo) {
@@ -874,21 +919,25 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       const referencia = `${firstLine.product} (${firstLine.type})`;
       const result = await createLogoRequestFromOrder({
         brand: "Magical Warmers",
-        clientName,
+        clientName: clientNameValue,
         logoName: logoNombre,
         product: referencia,
         advisorId: user.id,
         advisorName: user.email || "Asesor",
         logoFile: hasLogoFile ? logoFile : null,
+        logoFile2: logosCount >= 2 ? logoFile2 : null,
+        logoName2: logosCount >= 2 ? logoNombre2 : undefined,
         clientComments: observaciones || undefined,
         additionalInstructions: personalizacion || undefined,
       });
       if (result.success) {
         toast.success("Diseño de logo", { description: result.message });
         logoUrl = result.logoUrl || "logo-uploaded";
+        logoUrl2 = result.logoUrl2 || null;
       } else {
         toast.error("Diseño de logo", { description: result.message });
         if (result.logoUrl) logoUrl = result.logoUrl;
+        if (result.logoUrl2) logoUrl2 = result.logoUrl2;
       }
     } else if (logoFile && logoFile.size > 0 && isRecompra) {
       // Recompra: subir el logo directamente para conservar la URL real.
@@ -901,7 +950,20 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       } else {
         logoUrl = "logo-uploaded";
       }
+      if (logosCount >= 2 && logoFile2 && logoFile2.size > 0) {
+        const ext2 = logoFile2.name.split(".").pop();
+        const path2 = `originals/${crypto.randomUUID()}.${ext2}`;
+        const { error: upErr2 } = await supabase.storage.from("logo-files").upload(path2, logoFile2);
+        if (!upErr2) {
+          const { data: urlData2 } = supabase.storage.from("logo-files").getPublicUrl(path2);
+          logoUrl2 = urlData2.publicUrl;
+        }
+      }
+    } else if (isRecompra && !noLogo && recompraLogoUrl) {
+      // Recompra sin archivo nuevo: se reutiliza el logo aprobado anteriormente.
+      logoUrl = recompraLogoUrl;
     }
+    if (isRecompra && !logoUrl && recompraLogoUrl) logoUrl = recompraLogoUrl;
 
     const buildMagicalStages = (isThermic: boolean) => {
       const base = noLogo
@@ -925,7 +987,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         const { data } = await supabase.from("orders").insert({
           brand: "magical",
           sale_type: "mayor",
-          client_name: clientName,
+          client_name: clientNameValue,
           client_nit: (fd.get("mw_cedulaNit") as string) || null,
           client_phone: (fd.get("mw_contacto") as string) || null,
           client_email: (fd.get("mw_email") as string) || null,
@@ -946,10 +1008,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           payment_complete: estadoPago === "pago_total",
           delivery_date: fechaRequerida || null,
           payment_date: paymentDate || new Date().toISOString().slice(0, 10),
-        }).select("id").single();
+        }).select("id, order_code").single();
         if (data) {
           queryClient.invalidateQueries({ queryKey: ["orders"] });
-          toast.success("Compra de molde registrada", { description: `${clientName} — Molde "${moldeNombre}"` });
+          toast.success("Compra de molde registrada", { description: `${clientNameValue} — Molde "${moldeNombre}"` });
           [
             "ventas:mw:lines","ventas:mw:abono","ventas:mw:estadoPago",
             "ventas:mw:dobleTinta","ventas:mw:escarcha","ventas:mw:isRecompra",
@@ -981,6 +1043,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     // Si una línea falla, las demás deben guardarse igual (antes se abortaba
     // el pedido completo y se perdían unidades del mismo cliente).
     const failedLines: string[] = [];
+    const createdCodes: string[] = [];
 
     // Process each distinct line as a separate order
     const moldeCostoNum = parseFloat(moldeCosto) || 0;
@@ -1057,7 +1120,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
       // Accounting store
       useAccountingStore.getState().addOrder({
-        clientName,
+        clientName: clientNameValue,
         brand: "magical",
         product: referencia,
         quantity,
@@ -1076,12 +1139,12 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
 
       // Insert order to DB
-      let orderData: { id: string } | null = null;
+      let orderData: { id: string; order_code?: string | null } | null = null;
       try {
         const { data, error } = await supabase.from("orders").insert({
           brand: "magical",
           sale_type: "mayor",
-          client_name: clientName,
+          client_name: clientNameValue,
           client_nit: (fd.get("mw_cedulaNit") as string) || null,
           client_phone: (fd.get("mw_contacto") as string) || null,
           client_email: (fd.get("mw_email") as string) || null,
@@ -1100,6 +1163,12 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           glitter_color: glitterColorVal,
           gel_color: gelColor,
           logo_url: logoUrl,
+          logo_url_2: logoUrl2,
+          logo_count: logosCount,
+          logo_name: logoNombre || null,
+          logo_name_2: logosCount >= 2 ? (logoNombre2 || null) : null,
+          line_index: lineIdx + 1,
+          line_count: linesToSubmit.length,
           observations: [observaciones, line.isGift ? "🎁 OBSEQUIO" : "", isFirstLine ? extraNote : ""].filter(Boolean).join(" | ") || null,
           personalization: personalizacion || null,
           advisor_id: user?.id || "",
@@ -1131,6 +1200,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         continue;
       }
 
+      if (orderData.order_code) createdCodes.push(orderData.order_code);
+
       // El pedido queda pendiente de revisión de Inventarios.
       // Ni se reserva stock ni se crea orden de producción desde Ventas:
       // Inventarios decide (reservar inventario o solicitar producción).
@@ -1139,7 +1210,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         brand: "magical",
         product: referencia,
         quantity,
-        clientName,
+        clientName: clientNameValue,
         needsCuerpos: false,
         shortage: 0,
         hasLogo: !!logoFile,
@@ -1157,15 +1228,22 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       });
     }
 
+    const savedCount = linesToSubmit.length - failedLines.length;
     const giftCount = orderLines.filter((l) => l.isGift).length;
     const productCount = orderLines.filter((l) => !l.isGift).length;
     const summary = [
       `${productCount} producto(s)`,
       giftCount > 0 ? `${giftCount} obsequio(s)` : "",
     ].filter(Boolean).join(" + ");
-    toast.success("Pedido creado", {
-      description: `${clientName} — ${summary}. Enviado a Inventarios y Contabilidad.`,
-    });
+    toast.success(
+      savedCount === linesToSubmit.length ? "Pedido creado" : "Pedido creado parcialmente",
+      {
+        description: `${clientNameValue} — ${summary}. ${savedCount} de ${linesToSubmit.length} línea(s) guardada(s)${
+          createdCodes.length ? ` (${createdCodes.join(", ")})` : ""
+        }. Enviado a Inventarios y Contabilidad.`,
+        duration: 12000,
+      },
+    );
 
     [
       "ventas:mw:lines","ventas:mw:abono","ventas:mw:estadoPago",
@@ -1173,9 +1251,13 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       "ventas:mw:noLogo","ventas:mw:needsLogoAdjustment","ventas:mw:costoAdicional",
       "ventas:mw:cobroLogo","ventas:mw:costoLogo",
       "ventas:mw:moldeNuevo","ventas:mw:moldeNombre","ventas:mw:moldeCosto","ventas:mw:moldeModo",
-      "ventas:mw:fields",
+      "ventas:mw:fields","ventas:mw:logoCount","ventas:mw:clientName","ventas:mw:recompraLogoUrl",
     ].forEach(clearFormDraft);
     setLogoFileState(null);
+    setLogoFile2State(null);
+    setLogoCount(1);
+    setClientName("");
+    setRecompraLogoUrl("");
     setRutFileState(null);
     setPaymentProofFile(null);
     setMoldeNuevo(false);
@@ -1247,6 +1329,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
               <ClientNameAutocomplete
                 name="mw_nombre"
                 required
+                value={clientName}
+                onValueChange={setClientName}
                 onSelect={(c) => {
                   const f = formRef.current;
                   if (!f) return;
@@ -1615,21 +1699,100 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Archivos adjuntos</legend>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FileField label="Adjuntar logo" name="mw_logo" value={logoFileState} onChange={setLogoFileState} accept="image/*,.pdf,.svg,.ai" />
-              <FileField label="Adjuntar RUT de la empresa (opcional)" name="mw_rut" value={rutFileState} onChange={setRutFileState} accept="image/*,.pdf" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="mw_logo_nombre">Nombre o referencia del logo *</Label>
-              <Input
-                id="mw_logo_nombre"
-                name="mw_logo_nombre"
-                placeholder="Ej: Logo Coca-Cola v2, Escudo Colegio San José..."
-              />
-              <p className="text-xs text-muted-foreground">
-                Escriba un nombre claro para que producción identifique fácilmente este logo.
-              </p>
-            </div>
+
+            {!noLogo && (
+              <div className="rounded-lg border border-input p-4 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Logos del pedido</p>
+                    <p className="text-xs text-muted-foreground">Indique cuántos logos lleva la marcación.</p>
+                  </div>
+                  <div className="flex items-center gap-1 rounded-md border border-input p-1">
+                    {[1, 2].map((n) => (
+                      <Button
+                        key={n}
+                        type="button"
+                        size="sm"
+                        variant={logoCount === n ? "default" : "ghost"}
+                        className="h-8 px-3"
+                        onClick={() => {
+                          setLogoCount(n);
+                          if (n === 1) setLogoFile2State(null);
+                        }}
+                      >
+                        {n} logo{n > 1 ? "s" : ""}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {isRecompra && (
+                  <div className="space-y-1.5 rounded-md border border-input bg-muted/30 p-3">
+                    <Label>Logo anterior del cliente *</Label>
+                    <Select value={recompraLogoUrl || undefined} onValueChange={setRecompraLogoUrl}>
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            clientName.trim().length < 3
+                              ? "Escriba primero el nombre del cliente"
+                              : previousLogos.length
+                                ? "Seleccionar logo ya trabajado"
+                                : "Sin logos previos — adjunte el archivo"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {previousLogos.map((l: any) => {
+                          const url = l.adjusted_logo_url || l.original_logo_url;
+                          return (
+                            <SelectItem key={l.id} value={url}>
+                              {(l.logo_name || l.product || "Logo") + " — " + new Date(l.created_at).toLocaleDateString("es-CO")}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      En recompras el logo no se genera de nuevo: selecciónelo aquí o adjunte el archivo para que Estampación lo reciba.
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FileField label="Logo 1" name="mw_logo" value={logoFileState} onChange={setLogoFileState} accept="image/*,.pdf,.svg,.ai" />
+                  <div className="space-y-1.5">
+                    <Label htmlFor="mw_logo_nombre">Nombre o referencia del logo 1 *</Label>
+                    <Input
+                      id="mw_logo_nombre"
+                      name="mw_logo_nombre"
+                      placeholder="Ej: Logo Coca-Cola v2"
+                    />
+                  </div>
+                </div>
+
+                <div className={`grid gap-4 sm:grid-cols-2 ${logoCount < 2 ? "opacity-50" : ""}`}>
+                  <FileField
+                    label="Logo 2"
+                    name="mw_logo_2"
+                    value={logoFile2State}
+                    onChange={setLogoFile2State}
+                    accept="image/*,.pdf,.svg,.ai"
+                    disabled={logoCount < 2}
+                  />
+                  <div className="space-y-1.5">
+                    <Label htmlFor="mw_logo_nombre_2">Nombre o referencia del logo 2{logoCount >= 2 ? " *" : ""}</Label>
+                    <Input
+                      id="mw_logo_nombre_2"
+                      name="mw_logo_nombre_2"
+                      disabled={logoCount < 2}
+                      placeholder="Ej: Escudo del colegio"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <FileField label="Adjuntar RUT de la empresa (opcional)" name="mw_rut" value={rutFileState} onChange={setRutFileState} accept="image/*,.pdf" />
           </fieldset>
 
           <fieldset className="space-y-4">
@@ -3075,12 +3238,14 @@ function FileField({
   value,
   onChange,
   accept,
+  disabled,
 }: {
   label: string;
   name: string;
   value?: File | null;
   onChange?: (file: File | null) => void;
   accept?: string;
+  disabled?: boolean;
 }) {
   return (
     <div className="space-y-1.5">
@@ -3091,6 +3256,7 @@ function FileField({
           name={name}
           type="file"
           accept={accept}
+          disabled={disabled}
           onChange={(e) => onChange?.(e.target.files?.[0] || null)}
           className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary"
         />

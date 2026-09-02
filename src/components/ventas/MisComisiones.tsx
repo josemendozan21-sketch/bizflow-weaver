@@ -133,6 +133,7 @@ export default function MisComisiones() {
         const o = l.order;
         const pay = payMap.get(o.id);
         return {
+          "N° pedido": (o as any).order_code || "",
           "Fecha del pedido": format(new Date(o.created_at), "dd/MM/yyyy"),
           "Fecha soporte de pago": pay?.date
             ? format(new Date(`${pay.date}T12:00:00`), "dd/MM/yyyy")
@@ -152,6 +153,7 @@ export default function MisComisiones() {
       });
 
       rows.push({
+        "N° pedido": "",
         "Fecha del pedido": "",
         "Fecha soporte de pago": "",
         Cliente: "TOTAL",
