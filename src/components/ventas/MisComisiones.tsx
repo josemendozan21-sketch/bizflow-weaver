@@ -566,6 +566,16 @@ export default function MisComisiones() {
                           {l.reason}
                         </p>
                       </TableCell>
+                      <TableCell className="text-right">
+                        {!(Number(l.order.total_amount) > 0) && (
+                          <OrderDisputeDialog
+                            orderId={l.order.id}
+                            orderCode={(l.order as any).order_code}
+                            clientName={l.order.client_name}
+                            currentAmount={Number(l.order.total_amount) || 0}
+                          />
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
 
