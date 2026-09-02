@@ -449,7 +449,6 @@ const MateriaPrimaPanel = () => {
                 const status = getStockStatus(it);
                 const sc = STATUS_CONFIG[status];
                 const StatusIcon = sc.icon;
-                const isEditing = editingId === it.id;
                 const brandKey = (it.brand || "").toLowerCase();
                 return (
                   <TableRow key={it.id} className={
@@ -462,28 +461,12 @@ const MateriaPrimaPanel = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      {isEditing ? (
-                        <Input type="number" min={0} value={editForm.available}
-                          onChange={(e) => setEditForm({ ...editForm, available: e.target.value })}
-                          className="h-7 w-24 ml-auto text-right" />
-                      ) : (
-                        <span>
-                          <span className="font-semibold">{it.available.toLocaleString("es-CO")}</span>
-                          <span className="text-muted-foreground ml-1 text-xs">{it.unit}</span>
-                        </span>
-                      )}
+                      <span className="font-semibold">{it.available.toLocaleString("es-CO")}</span>
+                      <span className="text-muted-foreground ml-1 text-xs">{it.unit}</span>
                     </TableCell>
                     <TableCell className="text-right">
-                      {isEditing ? (
-                        <Input type="number" min={0} value={editForm.minStock}
-                          onChange={(e) => setEditForm({ ...editForm, minStock: e.target.value })}
-                          className="h-7 w-24 ml-auto text-right" />
-                      ) : (
-                        <span>
-                          <span>{it.min_stock.toLocaleString("es-CO")}</span>
-                          <span className="text-muted-foreground ml-1 text-xs">{it.unit}</span>
-                        </span>
-                      )}
+                      <span>{it.min_stock.toLocaleString("es-CO")}</span>
+                      <span className="text-muted-foreground ml-1 text-xs">{it.unit}</span>
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge variant={sc.variant} className="text-xs gap-1">
@@ -493,30 +476,18 @@ const MateriaPrimaPanel = () => {
                     </TableCell>
                     {!isReadOnly && (
                       <TableCell className="text-right space-x-1">
-                        {isEditing ? (
-                          <>
-                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => saveEdit(it.id)}>
-                              <Check className="h-4 w-4 text-primary" />
-                            </Button>
-                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)}>
-                              <X className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(it)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleDelete(it.id, it.name)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </>
-                        )}
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(it)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => askDelete(it)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                       </TableCell>
                     )}
                   </TableRow>
                 );
               })}
+
             </TableBody>
           </Table>
         )}
