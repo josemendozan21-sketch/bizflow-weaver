@@ -83,8 +83,11 @@ function PdfThumbnail({ url, name, alt }: { url: string; name: string; alt: stri
           setThumbnail(canvas.toDataURL("image/png"));
           setState("ready");
         }
-      } catch {
-        if (!cancelled) setState("error");
+      } catch (error) {
+        if (!cancelled) {
+          console.error("PDF thumbnail rendering failed", error);
+          setState("error");
+        }
       }
     };
 
