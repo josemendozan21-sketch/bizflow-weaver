@@ -1398,6 +1398,7 @@ export type Database = {
           id: string
           logo_name: string | null
           original_logo_url: string
+          original_logo_url_2: string | null
           product: string
           status: Database["public"]["Enums"]["logo_request_status"]
           updated_at: string
@@ -1419,6 +1420,7 @@ export type Database = {
           id?: string
           logo_name?: string | null
           original_logo_url: string
+          original_logo_url_2?: string | null
           product: string
           status?: Database["public"]["Enums"]["logo_request_status"]
           updated_at?: string
@@ -1440,6 +1442,7 @@ export type Database = {
           id?: string
           logo_name?: string | null
           original_logo_url?: string
+          original_logo_url_2?: string | null
           product?: string
           status?: Database["public"]["Enums"]["logo_request_status"]
           updated_at?: string
@@ -1651,6 +1654,7 @@ export type Database = {
           external_order_id: string | null
           gel_color: string | null
           glitter_color: string | null
+          group_number: number | null
           id: string
           ink_color: string | null
           ink_color_2: string | null
@@ -1666,9 +1670,17 @@ export type Database = {
           invoice_status: string
           is_credit: boolean
           is_recompra: boolean
+          line_count: number | null
+          line_index: number | null
+          logo_count: number
+          logo_name: string | null
+          logo_name_2: string | null
           logo_url: string | null
+          logo_url_2: string | null
           numero_guia: string | null
           observations: string | null
+          order_code: string | null
+          order_number: number
           payment_complete: boolean | null
           payment_date: string | null
           payment_due_date: string | null
@@ -1712,6 +1724,7 @@ export type Database = {
           external_order_id?: string | null
           gel_color?: string | null
           glitter_color?: string | null
+          group_number?: number | null
           id?: string
           ink_color?: string | null
           ink_color_2?: string | null
@@ -1727,9 +1740,17 @@ export type Database = {
           invoice_status?: string
           is_credit?: boolean
           is_recompra?: boolean
+          line_count?: number | null
+          line_index?: number | null
+          logo_count?: number
+          logo_name?: string | null
+          logo_name_2?: string | null
           logo_url?: string | null
+          logo_url_2?: string | null
           numero_guia?: string | null
           observations?: string | null
+          order_code?: string | null
+          order_number?: number
           payment_complete?: boolean | null
           payment_date?: string | null
           payment_due_date?: string | null
@@ -1773,6 +1794,7 @@ export type Database = {
           external_order_id?: string | null
           gel_color?: string | null
           glitter_color?: string | null
+          group_number?: number | null
           id?: string
           ink_color?: string | null
           ink_color_2?: string | null
@@ -1788,9 +1810,17 @@ export type Database = {
           invoice_status?: string
           is_credit?: boolean
           is_recompra?: boolean
+          line_count?: number | null
+          line_index?: number | null
+          logo_count?: number
+          logo_name?: string | null
+          logo_name_2?: string | null
           logo_url?: string | null
+          logo_url_2?: string | null
           numero_guia?: string | null
           observations?: string | null
+          order_code?: string | null
+          order_number?: number
           payment_complete?: boolean | null
           payment_date?: string | null
           payment_due_date?: string | null
@@ -2530,6 +2560,7 @@ export type Database = {
           molde: string | null
           needs_cuerpos: boolean | null
           observations: string | null
+          order_code: string | null
           order_id: string | null
           packager_name: string | null
           quantity: number
@@ -2570,6 +2601,7 @@ export type Database = {
           molde?: string | null
           needs_cuerpos?: boolean | null
           observations?: string | null
+          order_code?: string | null
           order_id?: string | null
           packager_name?: string | null
           quantity?: number
@@ -2610,6 +2642,7 @@ export type Database = {
           molde?: string | null
           needs_cuerpos?: boolean | null
           observations?: string | null
+          order_code?: string | null
           order_id?: string | null
           packager_name?: string | null
           quantity?: number
