@@ -1007,6 +1007,106 @@ export type Database = {
           },
         ]
       }
+      feria_shipment_items: {
+        Row: {
+          brand: string
+          created_at: string
+          id: string
+          item_name: string
+          logo: string | null
+          quantity: number
+          shipment_id: string
+          stock_item_id: string | null
+          unit_cost: number
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          brand: string
+          created_at?: string
+          id?: string
+          item_name: string
+          logo?: string | null
+          quantity: number
+          shipment_id: string
+          stock_item_id?: string | null
+          unit_cost?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Update: {
+          brand?: string
+          created_at?: string
+          id?: string
+          item_name?: string
+          logo?: string | null
+          quantity?: number
+          shipment_id?: string
+          stock_item_id?: string | null
+          unit_cost?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feria_shipment_items_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "feria_shipments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feria_shipments: {
+        Row: {
+          confirmed_at: string
+          confirmed_by: string | null
+          confirmed_by_name: string | null
+          created_at: string
+          direction: string
+          feria_id: string
+          id: string
+          notes: string | null
+          shipment_number: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          confirmed_at?: string
+          confirmed_by?: string | null
+          confirmed_by_name?: string | null
+          created_at?: string
+          direction: string
+          feria_id: string
+          id?: string
+          notes?: string | null
+          shipment_number: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          confirmed_at?: string
+          confirmed_by?: string | null
+          confirmed_by_name?: string | null
+          created_at?: string
+          direction?: string
+          feria_id?: string
+          id?: string
+          notes?: string | null
+          shipment_number?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feria_shipments_feria_id_fkey"
+            columns: ["feria_id"]
+            isOneToOne: false
+            referencedRelation: "ferias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feria_staff: {
         Row: {
           arl_document_url: string | null
