@@ -809,6 +809,17 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         setIsSubmitting(false);
         return;
       }
+      const nTintas = line.inkCount ?? 1;
+      if (nTintas >= 2 && !resolveColor(line.inkColor2 || "", line.inkCustom2 || "")) {
+        toast.error("Color de tinta 2 requerido", { description: "Seleccione el color de la tinta 2." });
+        setIsSubmitting(false);
+        return;
+      }
+      if (nTintas >= 3 && !resolveColor(line.inkColor3 || "", line.inkCustom3 || "")) {
+        toast.error("Color de tinta 3 requerido", { description: "Seleccione el color de la tinta 3." });
+        setIsSubmitting(false);
+        return;
+      }
     }
     }
 
