@@ -69,3 +69,12 @@ export function getRoleLabel(role: AppRole): string {
   };
   return labels[role];
 }
+
+/**
+ * Roles que pueden crear/editar/eliminar en inventario (materia prima, catálogo, etc.).
+ * Tolerante a mayúsculas/espacios por si el rol llega normalizado distinto.
+ */
+export function canManageInventory(role?: string | null): boolean {
+  const r = (role || "").trim().toLowerCase();
+  return r === "admin" || r === "inventarios";
+}

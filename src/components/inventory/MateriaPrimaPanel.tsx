@@ -28,6 +28,8 @@ import { supabase } from "@/integrations/supabase/client";
 import DebouncedSearchInput from "./DebouncedSearchInput";
 import { matchesQuery } from "@/lib/search";
 import InventoryChangeLogPanel from "./InventoryChangeLogPanel";
+import { canManageInventory } from "@/lib/rolePermissions";
+
 
 
 const UNITS = ["unidades", "gramos", "kilos", "tarros", "metros", "litros"];
@@ -69,7 +71,8 @@ const MateriaPrimaList = () => {
   const { stockItems, addStockItem, updateStockItem, deleteStockItem, refetch } = useInventory();
   const { role } = useAuth();
   // Inventarios gestiona el catálogo igual que en referencias/productos.
-  const isReadOnly = role !== "admin" && role !== "inventarios";
+  const isReadOnly = !canManageInventory(role);
+
 
   const [brandFilter, setBrandFilter] = useState<BrandFilter>("todas");
   const [search, setSearch] = useState("");
@@ -273,7 +276,14 @@ const MateriaPrimaList = () => {
             {totals.critico > 0 && <Badge variant="destructive" className="text-xs">{totals.critico} crítico{totals.critico > 1 ? "s" : ""}</Badge>}
             {totals.bajo > 0 && <Badge className="text-xs">{totals.bajo} bajo</Badge>}
           </CardTitle>
+          {isReadOnly && (
+            <Badge variant="outline" className="text-xs gap-1 text-muted-foreground">
+              <AlertCircle className="h-3 w-3" />
+              Tu rol no permite editar materia prima
+            </Badge>
+          )}
           {!isReadOnly && (
+
             <div className="flex items-center gap-2">
             <Dialog open={produceOpen} onOpenChange={setProduceOpen}>
               <DialogTrigger asChild>
