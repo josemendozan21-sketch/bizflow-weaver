@@ -78,7 +78,7 @@ function PdfThumbnail({ url, name, alt }: { url: string; name: string; alt: stri
         if (!context) throw new Error("Canvas unavailable");
         canvas.width = Math.ceil(viewport.width);
         canvas.height = Math.ceil(viewport.height);
-        await page.render({ canvas, canvasContext: context, viewport }).promise;
+        await page.render({ canvasContext: context, viewport }).promise;
         if (!cancelled) setState("ready");
       } catch {
         if (!cancelled) setState("error");
@@ -107,11 +107,14 @@ function PdfThumbnail({ url, name, alt }: { url: string; name: string; alt: stri
       )}
       {state === "error" && <FileText className="h-9 w-9 text-destructive" />}
       <p className="max-w-full truncate text-xs text-muted-foreground" title={name}>{name}</p>
-      <Button variant="link" size="sm" className="h-auto p-0 text-xs" asChild>
-        <a href={url} target="_blank" rel="noopener noreferrer">
-          Abrir PDF <ExternalLink className="ml-1 h-3 w-3" />
-        </a>
-      </Button>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center text-xs font-medium text-primary hover:underline"
+      >
+        Abrir PDF <ExternalLink className="ml-1 h-3 w-3" />
+      </a>
     </div>
   );
 }
