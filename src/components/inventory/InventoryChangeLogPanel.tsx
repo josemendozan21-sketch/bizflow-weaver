@@ -84,13 +84,18 @@ export default function InventoryChangeLogPanel({ category }: { category?: strin
           return b === "magical" ? "magical_warmers" : b;
         },
       },
-      {
-        label: "Categoría",
-        options: CATEGORY_LABEL,
-        get: (r: ChangeLogRow) => byId.get(r.id)?.category,
-      },
+      // Cuando el panel ya está limitado a una categoría, el filtro sobra.
+      ...(category
+        ? []
+        : [
+            {
+              label: "Categoría",
+              options: CATEGORY_LABEL,
+              get: (r: ChangeLogRow) => byId.get(r.id)?.category,
+            },
+          ]),
     ],
-    [byId],
+    [byId, category],
   );
 
   return (
@@ -101,8 +106,9 @@ export default function InventoryChangeLogPanel({ category }: { category?: strin
       entityHeader="Producto"
       contextHeader="Marca / Categoría"
       filters={filters}
-      exportFileName="historial_cambios_inventario"
+      exportFileName={category ? `historial_cambios_${category}` : "historial_cambios_inventario"}
       searchPlaceholder="Ej: Gafas, inventarios1..."
     />
   );
+
 }
