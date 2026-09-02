@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import OrderDisputeDialog from "@/components/ventas/OrderDisputeDialog";
 import DisputesPanel from "@/components/contabilidad/DisputesPanel";
-import { Loader2, Info, TrendingUp, Clock, CheckCircle2, ChevronLeft, ChevronRight, Download, AlertTriangle } from "lucide-react";
+import { Loader2, Info, TrendingUp, Clock, CheckCircle2, ChevronLeft, ChevronRight, ChevronDown, Download, AlertTriangle } from "lucide-react";
 
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -64,6 +64,7 @@ export default function MisComisiones() {
   const [search, setSearch] = useState("");
   const [minAmount, setMinAmount] = useState("");
   const [maxAmount, setMaxAmount] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const summary = useMemo(
     () => summarizeAdvisorProgress(orders, year, month, user?.id, charges),
@@ -495,100 +496,123 @@ El período de liquidación es el <b>mes de la factura</b> (si el pedido aún
               No hay pedidos en este período.
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha venta</TableHead>
-                    <TableHead>Factura</TableHead>
-                    <TableHead>N° Pedido</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                    <TableHead className="text-right">Flete + cargos</TableHead>
-                    <TableHead className="text-right">Base comisionable</TableHead>
-                    <TableHead className="text-right">Abono</TableHead>
-                    <TableHead className="text-right">Base sin IVA</TableHead>
-                    <TableHead className="text-right">%</TableHead>
-                    <TableHead className="text-right">Comisión</TableHead>
-                    <TableHead>Estado / motivo</TableHead>
-                    <TableHead className="text-right">Acción</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {lines.map((l) => (
-                    <TableRow key={l.order.id}>
-                      <TableCell className="whitespace-nowrap text-xs">
-                        {format(l.saleDate, "d MMM", { locale: es })}
-                        {l.weekend && (
-                          <Badge variant="outline" className="ml-1 text-[10px]">FDS</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                        {l.invoiceDate ? format(l.invoiceDate, "d MMM", { locale: es }) : "—"}
-                      </TableCell>
-                      <TableCell>
-                        <OrderCodeBadge code={(l.order as any).order_code} compact />
-                      </TableCell>
-                      <TableCell className="max-w-[200px] truncate">
-                        {l.order.client_name}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {l.order.sale_type === "menor" ? "Detal" : "Mayor"}
-                        {" · "}
-                        {l.clientKind === "recompra" ? "Recompra" : "Nuevo"}
-                      </TableCell>
-                      <TableCell className="text-right">{fmt(l.totalWithVat)}</TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        {l.shippingCost + l.extraCharges > 0
-                          ? `-${fmt(l.shippingCost + l.extraCharges)}`
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="text-right">{fmt(l.netTotalWithVat)}</TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        {fmt(Number(l.order.abono) || 0)}
-                      </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        {fmt(l.baseSinIva)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {(l.ratePct * 100).toFixed(0)}%
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {fmt(l.netCommission)}
-                      </TableCell>
-                      <TableCell className="max-w-[240px]">
-                        <Badge
-                          className={
-                            l.status === "total"
-                              ? "bg-emerald-600"
-                              : l.status === "parcial"
-                                ? "bg-sky-600"
-                                : l.status === "pendiente"
-                                  ? "bg-amber-500"
-                                  : "bg-muted text-muted-foreground"
-                          }
-                        >
-                          {STATUS_LABEL[l.status]}
-                        </Badge>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">
-                          {l.reason}
-                        </p>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <OrderDisputeDialog
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-8" />
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>N° Pedido</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead className="text-right">Valor</TableHead>
+                  <TableHead className="text-right">Comisión</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead className="text-right">Acción</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {lines.map((l) => {
+                  const open = expandedId === l.order.id;
+                  return (
+                    <Fragment key={l.order.id}>
+                      <TableRow
+                        className="cursor-pointer"
+                        onClick={() => setExpandedId(open ? null : l.order.id)}
+                      >
+                        <TableCell className="w-8 pr-0">
+                          <ChevronDown
+                            className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
+                          />
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-xs">
+                          {format(l.saleDate, "d MMM", { locale: es })}
+                          {l.weekend && (
+                            <Badge variant="outline" className="ml-1 text-[10px]">FDS</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <OrderCodeBadge code={(l.order as any).order_code} compact />
+                        </TableCell>
+                        <TableCell className="max-w-[180px] truncate">
+                          {l.order.client_name}
+                        </TableCell>
+                        <TableCell className="text-right whitespace-nowrap">{fmt(l.totalWithVat)}</TableCell>
+                        <TableCell className="text-right font-medium whitespace-nowrap">
+                          {fmt(l.netCommission)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            className={`whitespace-nowrap ${
+                              l.status === "total"
+                                ? "bg-emerald-600"
+                                : l.status === "parcial"
+                                  ? "bg-sky-600"
+                                  : l.status === "pendiente"
+                                    ? "bg-amber-500"
+                                    : "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            {STATUS_LABEL[l.status]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                          <OrderDisputeDialog
                             orderId={l.order.id}
                             orderCode={(l.order as any).order_code}
                             clientName={l.order.client_name}
                             currentAmount={Number(l.order.total_amount) || 0}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-
-                </TableBody>
-              </Table>
-            </div>
+                          />
+                        </TableCell>
+                      </TableRow>
+                      {open && (
+                        <TableRow className="bg-muted/30 hover:bg-muted/30">
+                          <TableCell colSpan={8} className="py-3">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-2 text-xs">
+                              <div>
+                                <p className="text-muted-foreground">Factura</p>
+                                <p className="font-medium">
+                                  {l.invoiceDate ? format(l.invoiceDate, "d MMM yyyy", { locale: es }) : "Pendiente de facturar"}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Tipo</p>
+                                <p className="font-medium">
+                                  {l.order.sale_type === "menor" ? "Detal" : "Mayor"} · {l.clientKind === "recompra" ? "Recompra" : "Nuevo"}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Flete + cargos</p>
+                                <p className="font-medium">
+                                  {l.shippingCost + l.extraCharges > 0 ? `-${fmt(l.shippingCost + l.extraCharges)}` : "—"}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Base comisionable</p>
+                                <p className="font-medium">{fmt(l.netTotalWithVat)}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Abono</p>
+                                <p className="font-medium">{fmt(Number(l.order.abono) || 0)}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Base sin IVA</p>
+                                <p className="font-medium">{fmt(l.baseSinIva)}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Tarifa</p>
+                                <p className="font-medium">{(l.ratePct * 100).toFixed(0)}%</p>
+                              </div>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground mt-2 border-t pt-2">
+                              {l.reason}
+                            </p>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </Fragment>
+                  );
+                })}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>

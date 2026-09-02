@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import {
   Card,
   CardContent,
@@ -69,6 +69,7 @@ export default function CommissionsPanel({ orders }: Props) {
   const [month, setMonth] = useState(today.getMonth());
   const [overrides, setOverrides] = useState<OrderOverrides>({});
   const [openAdvisor, setOpenAdvisor] = useState<string | null>(null);
+  const [expandedLine, setExpandedLine] = useState<string | null>(null);
   const { data: charges = {} } = useAllOrderCharges();
 
   const summaries = useMemo(
@@ -317,126 +318,141 @@ export default function CommissionsPanel({ orders }: Props) {
                       </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="mt-3">
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Cliente</TableHead>
-                              <TableHead>Tipo</TableHead>
-                              <TableHead>Día</TableHead>
-                              <TableHead>Forma de pago</TableHead>
-                              <TableHead>Devuelto</TableHead>
-                              <TableHead className="text-right">Total c/IVA</TableHead>
-                              <TableHead className="text-right">Flete + cargos</TableHead>
-                              <TableHead className="text-right">Base usada c/IVA</TableHead>
-                              <TableHead className="text-right">Base s/IVA</TableHead>
-                              <TableHead className="text-right">%</TableHead>
-                              <TableHead className="text-right">Comisión</TableHead>
-                              <TableHead>Causación</TableHead>
-                            </TableRow>
-
-                          </TableHeader>
-                          <TableBody>
-                            {a.lines.map((l) => (
-                              <TableRow key={l.order.id}>
-                                <TableCell className="font-medium">
-                                  {l.order.client_name}
-                                  {l.order.is_recompra && (
-                                    <Badge
-                                      variant="outline"
-                                      className="ml-1 text-[10px]"
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-8" />
+                            <TableHead>Cliente</TableHead>
+                            <TableHead>Día</TableHead>
+                            <TableHead>Forma de pago</TableHead>
+                            <TableHead className="text-right">Total c/IVA</TableHead>
+                            <TableHead className="text-right">Comisión</TableHead>
+                            <TableHead>Causación</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {a.lines.map((l) => {
+                            const open = expandedLine === l.order.id;
+                            return (
+                              <Fragment key={l.order.id}>
+                                <TableRow
+                                  className="cursor-pointer"
+                                  onClick={() => setExpandedLine(open ? null : l.order.id)}
+                                >
+                                  <TableCell className="w-8 pr-0">
+                                    <ChevronDown
+                                      className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
+                                    />
+                                  </TableCell>
+                                  <TableCell className="font-medium max-w-[200px] truncate">
+                                    {l.order.client_name}
+                                    {l.order.is_recompra && (
+                                      <Badge variant="outline" className="ml-1 text-[10px]">
+                                        recompra
+                                      </Badge>
+                                    )}
+                                    {l.returned && (
+                                      <Badge variant="destructive" className="ml-1 text-[10px]">
+                                        Devuelto
+                                      </Badge>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge variant={l.weekend ? "default" : "secondary"}>
+                                      {l.weekend ? "FDS" : "Semana"}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell onClick={(e) => e.stopPropagation()}>
+                                    <Select
+                                      value={l.paymentMode}
+                                      onValueChange={(v) =>
+                                        setLineOverride(l.order.id, {
+                                          paymentMode: v as PaymentMode,
+                                        })
+                                      }
                                     >
-                                      recompra
+                                      <SelectTrigger className="h-7 w-[140px] text-xs">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="contado">
+                                          Contado/Transf.
+                                        </SelectItem>
+                                        <SelectItem value="contraentrega">
+                                          Contraentrega
+                                        </SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </TableCell>
+                                  <TableCell className="text-right whitespace-nowrap">
+                                    {fmt(l.totalWithVat)}
+                                  </TableCell>
+                                  <TableCell className="text-right font-bold whitespace-nowrap">
+                                    {fmt(l.netCommission)}
+                                    {l.penalty > 0 && (
+                                      <div className="text-[10px] text-destructive">
+                                        -{fmt(l.penalty)}
+                                      </div>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge
+                                      className={`whitespace-nowrap ${
+                                        l.status === "total"
+                                          ? "bg-emerald-600"
+                                          : l.status === "parcial"
+                                            ? "bg-sky-600"
+                                            : l.status === "pendiente"
+                                              ? "bg-amber-500"
+                                              : "bg-muted text-muted-foreground"
+                                      }`}
+                                    >
+                                      {STATUS_LABEL[l.status]}
                                     </Badge>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  <Badge variant="outline">
-                                    {l.order.sale_type === "mayor" ? "Mayor" : "Detal"}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>
-                                  <Badge
-                                    variant={l.weekend ? "default" : "secondary"}
-                                  >
-                                    {l.weekend ? "FDS" : "Semana"}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>
-                                  <Select
-                                    value={l.paymentMode}
-                                    onValueChange={(v) =>
-                                      setLineOverride(l.order.id, {
-                                        paymentMode: v as PaymentMode,
-                                      })
-                                    }
-                                  >
-                                    <SelectTrigger className="h-7 w-[140px] text-xs">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="contado">
-                                        Contado/Transf.
-                                      </SelectItem>
-                                      <SelectItem value="contraentrega">
-                                        Contraentrega
-                                      </SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </TableCell>
-                                <TableCell>
-                                  {l.returned ? (
-                                    <Badge variant="destructive" className="text-[10px]">
-                                      Devuelto
-                                    </Badge>
-                                  ) : (
-                                    <span className="text-xs text-muted-foreground">—</span>
-                                  )}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  {fmt(l.totalWithVat)}
-                                </TableCell>
-                                <TableCell className="text-right text-muted-foreground">
-                                  {l.shippingCost + l.extraCharges > 0
-                                    ? `-${fmt(l.shippingCost + l.extraCharges)}`
-                                    : "—"}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  {fmt(l.commissionableWithVat)}
-                                </TableCell>
-                                <TableCell className="text-right text-muted-foreground">
-                                  {fmt(l.baseSinIva)}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  {pct(l.ratePct)}
-                                </TableCell>
-                                <TableCell className="text-right font-bold">
-                                  {fmt(l.netCommission)}
-                                  {l.penalty > 0 && (
-                                    <div className="text-[10px] text-destructive">
-                                      -{fmt(l.penalty)}
-                                    </div>
-                                  )}
-                                </TableCell>
-                                <TableCell className="max-w-[220px]">
-                                  <Badge
-                                    className={
-                                      l.status === "total"
-                                        ? "bg-emerald-600"
-                                        : "bg-sky-600"
-                                    }
-                                  >
-                                    {STATUS_LABEL[l.status]}
-                                  </Badge>
-                                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                                    {l.reason}
-                                  </p>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
+                                  </TableCell>
+                                </TableRow>
+                                {open && (
+                                  <TableRow className="bg-muted/30 hover:bg-muted/30">
+                                    <TableCell colSpan={7} className="py-3">
+                                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-6 gap-y-2 text-xs">
+                                        <div>
+                                          <p className="text-muted-foreground">Tipo</p>
+                                          <p className="font-medium">
+                                            {l.order.sale_type === "mayor" ? "Mayor" : "Detal"}
+                                          </p>
+                                        </div>
+                                        <div>
+                                          <p className="text-muted-foreground">Flete + cargos</p>
+                                          <p className="font-medium">
+                                            {l.shippingCost + l.extraCharges > 0
+                                              ? `-${fmt(l.shippingCost + l.extraCharges)}`
+                                              : "—"}
+                                          </p>
+                                        </div>
+                                        <div>
+                                          <p className="text-muted-foreground">Base usada c/IVA</p>
+                                          <p className="font-medium">{fmt(l.commissionableWithVat)}</p>
+                                        </div>
+                                        <div>
+                                          <p className="text-muted-foreground">Base s/IVA</p>
+                                          <p className="font-medium">{fmt(l.baseSinIva)}</p>
+                                        </div>
+                                        <div>
+                                          <p className="text-muted-foreground">Tarifa</p>
+                                          <p className="font-medium">{pct(l.ratePct)}</p>
+                                        </div>
+                                      </div>
+                                      <p className="text-[11px] text-muted-foreground mt-2 border-t pt-2">
+                                        {l.reason}
+                                      </p>
+                                    </TableCell>
+                                  </TableRow>
+                                )}
+                              </Fragment>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
                     </CollapsibleContent>
                   </Collapsible>
 

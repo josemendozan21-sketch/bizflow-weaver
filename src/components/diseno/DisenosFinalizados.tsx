@@ -6,6 +6,7 @@ import { Download, User, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
+import { LogoPreview } from "./LogoPreview";
 
 interface Props {
   requests: LogoRequest[];
@@ -46,10 +47,10 @@ export function DisenosFinalizados({ requests }: Props) {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="border rounded-lg p-3 bg-muted/20 flex items-center justify-center">
-                  <img
-                    src={req.adjusted_logo_url || req.original_logo_url}
+                  <LogoPreview
+                    url={req.adjusted_logo_url || req.original_logo_url}
                     alt="Diseño final"
-                    className="max-h-24 object-contain"
+                    maxHeightClass="max-h-24"
                   />
                 </div>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
