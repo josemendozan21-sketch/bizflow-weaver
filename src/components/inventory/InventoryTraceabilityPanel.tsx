@@ -12,6 +12,8 @@ import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 import { useInventory } from "@/hooks/useInventory";
 import { matchesQuery } from "@/lib/search";
+import { formatStockOptionLabel } from "@/lib/referenceCatalog";
+
 
 interface TraceMovement {
   id: string;
