@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, AlertTriangle, CheckCircle2, FileText, ShoppingCart, ClipboardList, Plus, Trash2, BarChart3, CalendarDays, Percent } from "lucide-react";
 import { useLogisticsStore } from "@/stores/logisticsStore";
 import { useInventoryStore } from "@/stores/inventoryStore";
+import { buildReferenceCatalog, tiposForReference, uniqueReferenceNames } from "@/lib/referenceCatalog";
 import { useInventory } from "@/hooks/useInventory";
 import { useAccountingStore } from "@/stores/accountingStore";
 
@@ -660,21 +661,25 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const materialConfigs = useInventoryStore((s) => s.materialConfigs);
   const { reserveBodyStock: reserveBodyStockDB, discountStock: discountStockDB, stockItems: inventoryStockItems } = useInventory();
 
+  // Catálogo unificado de referencias (misma fuente que Inventarios)
+  const magicalCatalog = useMemo(
+    () => buildReferenceCatalog(inventoryStockItems as any).filter((i) => i.brandKey === "magical"),
+    [inventoryStockItems],
+  );
+
   // Unique product names — combine local material configs with Magical products from DB
   // so newly-added references (e.g. "Tiroides") show up for all advisors.
   // Fuente única de verdad: el catálogo de referencias de Inventarios.
   // El asesor solo puede elegir de esta lista; Inventarios la administra.
-  const productNames = useMemo(() => {
-    const fromDB = inventoryStockItems
-      .filter(
-        (s) =>
-          s.brand === "magical" &&
-          (s.category === "producto_terminado" || s.category === "cuerpos_referencias")
-      )
-      .map((s) => s.name);
-    const names = [...new Set(fromDB)];
-    return names.sort((a, b) => a.localeCompare(b, "es"));
-  }, [inventoryStockItems]);
+  const productNames = useMemo(
+    () =>
+      uniqueReferenceNames(
+        magicalCatalog.filter(
+          (i) => i.category === "producto_terminado" || i.category === "cuerpos_referencias",
+        ),
+      ),
+    [magicalCatalog],
+  );
 
   // Una sola opción por referencia: el tipo (Frío/Térmico) se elige en el campo "Tipo".
   const productOptions = useMemo(
@@ -767,16 +772,13 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const fromConfig = materialConfigs
       .filter((c) => c.productName === productName)
       .map((c) => c.productType);
-    const fromDB = inventoryStockItems
-      .filter(
-        (s) =>
-          s.brand === "magical" &&
-          (s.category === "producto_terminado" || s.category === "cuerpos_referencias") &&
-          s.name === productName &&
-          s.product_type
-      )
-      .map((s) => s.product_type as string);
-    return [...new Set([...fromConfig, ...fromDB])];
+    const fromCatalog = tiposForReference(
+      magicalCatalog.filter(
+        (i) => i.category === "producto_terminado" || i.category === "cuerpos_referencias",
+      ),
+      productName,
+    ).filter(Boolean) as string[];
+    return [...new Set([...fromConfig, ...fromCatalog])];
   };
 
   const getMatchedConfig = (productName: string, productType: string) => {

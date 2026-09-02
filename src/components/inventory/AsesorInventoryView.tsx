@@ -10,8 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { useInventory } from "@/hooks/useInventory";
+import { useReferenceCatalog } from "@/hooks/useReferenceCatalog";
+import ReferenceLabel from "@/components/inventory/ReferenceLabel";
+import { normalizeText } from "@/lib/referenceCatalog";
 import type { InventoryBrand } from "@/stores/inventoryStore";
+
 
 const StockIndicator = ({ available, minStock }: { available: number; minStock?: number }) => {
   if (minStock !== undefined) {
@@ -24,18 +27,12 @@ const StockIndicator = ({ available, minStock }: { available: number; minStock?:
   return <Badge className="bg-green-500 hover:bg-green-600 text-white">Disponible</Badge>;
 };
 
-const classifyType = (referencia: string): string => {
-  const lower = referencia.toLowerCase();
-  if (lower.includes("frio") || lower.includes("frío") || lower.includes("cold")) return "Frío";
-  return "Térmico";
-};
-
 const EmptyMessage = () => (
   <p className="text-sm text-muted-foreground py-4 text-center">No hay registros en esta categoría.</p>
 );
 
-const normalize = (s: string) =>
-  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const normalize = normalizeText;
+
 
 type TypeFilter = "todos" | "termico" | "frio";
 type SortDir = "asc" | "desc";
@@ -90,31 +87,40 @@ const FiltersBar = ({
 
 export default function AsesorInventoryView() {
   const [selectedBrand, setSelectedBrand] = useState<InventoryBrand | null>(null);
-  const { bodyStock, stockItems, isLoading } = useInventory();
+  const { catalog, isLoading } = useReferenceCatalog();
+
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("todos");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [onlySinLogo, setOnlySinLogo] = useState(false);
 
-  const magicalBodies = bodyStock.filter((b) => b.brand.toLowerCase() === "magical");
-  const magicalFinished = stockItems.filter((s) => s.brand.toLowerCase() === "magical" && s.category === "producto_terminado");
-  const sweatspotFinished = stockItems.filter((s) => s.brand.toLowerCase() === "sweatspot" && s.category === "producto_terminado");
+  const magicalBodies = useMemo(
+    () => catalog.filter((i) => i.brandKey === "magical" && i.category === "cuerpos_referencias"),
+    [catalog],
+  );
+  const magicalFinished = useMemo(
+    () => catalog.filter((i) => i.brandKey === "magical" && i.category === "producto_terminado"),
+    [catalog],
+  );
+  const sweatspotFinished = useMemo(
+    () => catalog.filter((i) => i.brandKey === "sweatspot" && i.category === "producto_terminado"),
+    [catalog],
+  );
 
   const q = normalize(search.trim());
 
   const filteredMagicalBodies = useMemo(() => {
     return magicalBodies
       .filter((b) => {
-        if (q && !normalize(b.referencia).includes(q)) return false;
-        const tipo = classifyType(b.referencia);
-        if (typeFilter === "termico") return tipo === "Térmico";
-        if (typeFilter === "frio") return tipo === "Frío";
+        if (q && !normalize(`${b.name} ${b.tipo || ""}`).includes(q)) return false;
+        if (typeFilter === "termico") return b.tipo === "Térmico";
+        if (typeFilter === "frio") return b.tipo === "Frío";
         return true;
       })
       .sort((a, b) =>
         sortDir === "asc"
-          ? a.referencia.localeCompare(b.referencia, "es", { sensitivity: "base" })
-          : b.referencia.localeCompare(a.referencia, "es", { sensitivity: "base" })
+          ? a.name.localeCompare(b.name, "es", { sensitivity: "base" })
+          : b.name.localeCompare(a.name, "es", { sensitivity: "base" })
       );
   }, [magicalBodies, q, typeFilter, sortDir]);
 
@@ -122,8 +128,8 @@ export default function AsesorInventoryView() {
     return magicalFinished
       .filter((i) => {
         if (q && !normalize(i.name).includes(q)) return false;
-        if (typeFilter === "termico") return i.product_type === "Térmico";
-        if (typeFilter === "frio") return i.product_type === "Frío";
+        if (typeFilter === "termico") return i.tipo === "Térmico";
+        if (typeFilter === "frio") return i.tipo === "Frío";
         return true;
       })
       .sort((a, b) =>
@@ -132,6 +138,7 @@ export default function AsesorInventoryView() {
           : b.name.localeCompare(a.name, "es", { sensitivity: "base" })
       );
   }, [magicalFinished, q, typeFilter, sortDir]);
+
 
   const filteredSweatspotFinished = useMemo(() => {
     return sweatspotFinished
@@ -220,8 +227,9 @@ export default function AsesorInventoryView() {
                         <TableBody>
                           {filteredMagicalBodies.map((item) => (
                             <TableRow key={item.id}>
-                              <TableCell className="font-medium">{item.referencia}</TableCell>
-                              <TableCell>{classifyType(item.referencia)}</TableCell>
+                              <TableCell className="font-medium"><ReferenceLabel name={item.name} /></TableCell>
+                              <TableCell>{item.tipo || "—"}</TableCell>
+
                               <TableCell className="text-right">{item.available}</TableCell>
                               <TableCell><StockIndicator available={item.available} /></TableCell>
                             </TableRow>
@@ -315,7 +323,7 @@ export default function AsesorInventoryView() {
                                 <Badge className="text-[10px] bg-blue-600 hover:bg-blue-700">MARCABLE</Badge>
                               )}
                             </TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{item.product_type || "—"}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{item.productType || "—"}</TableCell>
                             <TableCell className="text-right">{item.available}</TableCell>
                             <TableCell>{item.unit}</TableCell>
                             <TableCell><StockIndicator available={item.available} /></TableCell>
