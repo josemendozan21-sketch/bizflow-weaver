@@ -1677,6 +1677,7 @@ export type Database = {
           designer_id: string | null
           designer_name: string | null
           extra_logos: Json
+          from_recompra: boolean
           id: string
           logo_name: string | null
           order_id: string | null
@@ -1701,6 +1702,7 @@ export type Database = {
           designer_id?: string | null
           designer_name?: string | null
           extra_logos?: Json
+          from_recompra?: boolean
           id?: string
           logo_name?: string | null
           order_id?: string | null
@@ -1725,6 +1727,7 @@ export type Database = {
           designer_id?: string | null
           designer_name?: string | null
           extra_logos?: Json
+          from_recompra?: boolean
           id?: string
           logo_name?: string | null
           order_id?: string | null
@@ -2242,6 +2245,10 @@ export type Database = {
           logo_count: number
           logo_name: string | null
           logo_name_2: string | null
+          logo_source: string | null
+          logo_source_at: string | null
+          logo_source_by: string | null
+          logo_source_by_name: string | null
           logo_url: string | null
           logo_url_2: string | null
           logos: Json
@@ -2316,6 +2323,10 @@ export type Database = {
           logo_count?: number
           logo_name?: string | null
           logo_name_2?: string | null
+          logo_source?: string | null
+          logo_source_at?: string | null
+          logo_source_by?: string | null
+          logo_source_by_name?: string | null
           logo_url?: string | null
           logo_url_2?: string | null
           logos?: Json
@@ -2390,6 +2401,10 @@ export type Database = {
           logo_count?: number
           logo_name?: string | null
           logo_name_2?: string | null
+          logo_source?: string | null
+          logo_source_at?: string | null
+          logo_source_by?: string | null
+          logo_source_by_name?: string | null
           logo_url?: string | null
           logo_url_2?: string | null
           logos?: Json
