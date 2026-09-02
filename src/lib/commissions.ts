@@ -2,20 +2,9 @@ import { type Order, isOrderFullyPaid } from "@/hooks/useOrders";
 import { startOfMonth, endOfMonth, isWithinInterval, getDay, parseISO } from "date-fns";
 
 /**
- * Base de causación: un pedido causa comisión cuando está PAGADO
- * (soporte de pago cargado / pago completo) o ya fue facturado.
- * La facturación posterior por contabilidad no es responsabilidad del asesor.
- */
-export function isCommissionable(o: Order): boolean {
-  return isOrderFullyPaid(o) || o.invoice_status === "facturado";
-}
-
-
-/**
  * Política de Comisiones y Bonos – Asesores Comerciales 2026
  *
  * Reglas oficiales:
- * - Base: pedidos FACTURADOS (invoice_status = 'facturado').
  * - Comisión sobre el valor SIN IVA (IVA 19%).
  * - % depende de: canal (detal/mayor), día (semana/FDS), forma de pago,
  *   y si es cliente nuevo o recompra (mayoristas).
@@ -37,6 +26,105 @@ export const RETURN_PENALTY = 10_000;
 export const MIN_TICKET_DETAL = 80_000;
 export const MIN_WEEKEND_PCT = 0.10;
 
+/* ------------------------------------------------------------------ *
+ * Causación de la comisión (regla única para Ventas y Contabilidad)
+ * ------------------------------------------------------------------ */
+
+export type CommissionStatus = "total" | "parcial" | "pendiente" | "excluido";
+
+export interface CommissionClassification {
+  /** Estado de causación del pedido. */
+  status: CommissionStatus;
+  /** Valor CON IVA que sí causa comisión (0 si no causa). */
+  base: number;
+  /** Motivo legible: por qué causa o por qué no. */
+  reason: string;
+}
+
+/**
+ * Política configurable: si un pedido con abono parcial causa comisión
+ * proporcional al abono (true) o se difiere hasta el pago total (false).
+ */
+export const PARTIAL_PAYMENT_ACCRUES = true;
+
+function num(v: unknown): number {
+  const n = Number(v ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/**
+ * Decide si un pedido causa comisión, cuánto y por qué.
+ * Maneja nulos explícitamente: antes un `payment_complete` nulo hacía que el
+ * pedido desapareciera silenciosamente del cálculo.
+ */
+export function classifyOrderForCommission(o: Order): CommissionClassification {
+  const total = num(o.total_amount);
+
+  if (total <= 0) {
+    return {
+      status: "excluido",
+      base: 0,
+      reason: "Pedido sin valor registrado (total en $0)",
+    };
+  }
+
+  if (isOrderFullyPaid(o)) {
+    return { status: "total", base: total, reason: "Pago completo registrado" };
+  }
+
+  if (o.invoice_status === "facturado") {
+    return { status: "total", base: total, reason: "Pedido facturado" };
+  }
+
+  const abono = Math.min(num(o.abono), total);
+  const hasProof = Boolean(o.payment_proof_url);
+
+  if (abono > 0 && PARTIAL_PAYMENT_ACCRUES) {
+    return {
+      status: "parcial",
+      base: abono,
+      reason: hasProof
+        ? "Abono parcial con soporte de pago — comisión proporcional a lo abonado"
+        : "Abono parcial registrado — comisión proporcional a lo abonado",
+    };
+  }
+
+  if (abono > 0) {
+    return {
+      status: "pendiente",
+      base: 0,
+      reason: "Abono parcial: la política difiere la comisión al pago total",
+    };
+  }
+
+  if (o.returned_at) {
+    return {
+      status: "excluido",
+      base: 0,
+      reason: "Pedido devuelto sin pago registrado",
+    };
+  }
+
+  return {
+    status: "pendiente",
+    base: 0,
+    reason: "Sin abono ni soporte de pago del cliente",
+  };
+}
+
+/** Compatibilidad: el pedido causa comisión (total o parcial). */
+export function isCommissionable(o: Order): boolean {
+  const c = classifyOrderForCommission(o);
+  return c.status === "total" || c.status === "parcial";
+}
+
+export const STATUS_LABEL: Record<CommissionStatus, string> = {
+  total: "Causa comisión",
+  parcial: "Comisión parcial (abono)",
+  pendiente: "Pendiente de pago",
+  excluido: "Excluido",
+};
+
 /**
  * Asesores con tarifa plana: Valentina Mendoza percibe 10% sobre cualquier
  * venta (base sin IVA), sin importar canal, día o forma de pago.
@@ -55,6 +143,9 @@ export function getFlatRateFor(advisorName?: string | null): number | null {
 
 export type PaymentMode = "contado" | "contraentrega";
 export type ClientKind = "nuevo" | "recompra";
+
+/** Criterio de asignación del período: fecha de venta o fecha de factura. */
+export type PeriodBasis = "venta" | "factura";
 
 export interface CommissionContext {
   /** Override manual: forma de pago (default: contado) */
@@ -107,12 +198,20 @@ export interface CommissionLine {
   paymentMode: PaymentMode;
   clientKind: ClientKind;
   returned: boolean;
+  /** Valor total del pedido con IVA */
   totalWithVat: number;
+  /** Valor con IVA que causa comisión (abono si es parcial) */
+  commissionableWithVat: number;
+  /** Base sin IVA sobre la que se aplica el % */
   baseSinIva: number;
   ratePct: number; // ej 0.12
   rawCommission: number;
   penalty: number;
   netCommission: number;
+  status: CommissionStatus;
+  reason: string;
+  saleDate: Date;
+  invoiceDate: Date | null;
 }
 
 /**
@@ -136,29 +235,100 @@ export interface AdvisorMonthSummary {
   kpiTicketOk: boolean;
   kpiWeekendPctOk: boolean;
   lines: CommissionLine[];
+  /** Pedidos del período que NO causaron comisión, con su motivo */
+  excludedLines: CommissionLine[];
+  excludedCount: number;
+  excludedWithVat: number;
+  /** Total vendido en el período incluyendo los excluidos */
+  grossSalesWithVat: number;
+  grossOrdersCount: number;
 }
 
 export type OrderOverrides = Record<string, Partial<CommissionContext>>;
 
-function getOrderDate(o: Order): Date {
-  const ref = o.invoice_date || o.created_at;
-  return typeof ref === "string" ? parseISO(ref) : new Date(ref);
+function parseDate(v: unknown): Date | null {
+  if (!v) return null;
+  const d = typeof v === "string" ? parseISO(v) : new Date(v as Date);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+export function getSaleDate(o: Order): Date {
+  return parseDate(o.created_at) || new Date();
+}
+
+export function getInvoiceDate(o: Order): Date | null {
+  return parseDate(o.invoice_date);
+}
+
+/** Fecha usada para ubicar el pedido en el período según el criterio elegido. */
+export function getPeriodDate(o: Order, basis: PeriodBasis = "venta"): Date {
+  if (basis === "factura") return getInvoiceDate(o) || getSaleDate(o);
+  return getSaleDate(o);
+}
+
+function buildLine(
+  o: Order,
+  paymentMode: PaymentMode,
+  weekendUnlocked: boolean,
+  basis: PeriodBasis
+): CommissionLine {
+  const cls = classifyOrderForCommission(o);
+  const d = getPeriodDate(o, basis);
+  const weekend = isWeekend(d);
+  const clientKind: ClientKind = o.is_recompra ? "recompra" : "nuevo";
+  const total = num(o.total_amount);
+  const commissionableWithVat = cls.base;
+  const baseSinIva = commissionableWithVat / IVA_DIVISOR;
+  const rate =
+    getFlatRateFor(o.advisor_name) ??
+    getCommissionRate({
+      saleType: (o.sale_type as "menor" | "mayor") || "mayor",
+      weekend,
+      paymentMode,
+      clientKind,
+      weekendUnlocked,
+    });
+  const rawCommission = baseSinIva * rate;
+  const returned = !!o.returned_at;
+  const penalty =
+    returned && paymentMode === "contraentrega" && rawCommission > 0
+      ? RETURN_PENALTY
+      : 0;
+  return {
+    order: o,
+    weekend,
+    paymentMode,
+    clientKind,
+    returned,
+    totalWithVat: total,
+    commissionableWithVat,
+    baseSinIva,
+    ratePct: rate,
+    rawCommission,
+    penalty,
+    netCommission: Math.max(rawCommission - penalty, 0),
+    status: cls.status,
+    reason: cls.reason,
+    saleDate: getSaleDate(o),
+    invoiceDate: getInvoiceDate(o),
+  };
 }
 
 export function summarizeAdvisorMonth(
   orders: Order[],
   overrides: OrderOverrides,
   year: number,
-  month: number
+  month: number,
+  basis: PeriodBasis = "venta"
 ): AdvisorMonthSummary[] {
   const start = startOfMonth(new Date(year, month, 1));
   const end = endOfMonth(new Date(year, month, 1));
 
-  // Agrupar por asesor primero (para calcular desbloqueo y KPIs)
+  // Agrupar por asesor primero (para calcular desbloqueo y KPIs).
+  // Se incluyen TODOS los pedidos del período; la clasificación decide si causan.
   const byAdvisor = new Map<string, Order[]>();
   for (const o of orders) {
-    if (!isCommissionable(o)) continue;
-    const d = getOrderDate(o);
+    const d = getPeriodDate(o, basis);
     if (!isWithinInterval(d, { start, end })) continue;
     const arr = byAdvisor.get(o.advisor_id) || [];
     arr.push(o);
@@ -170,55 +340,35 @@ export function summarizeAdvisorMonth(
   for (const [advisorId, advisorOrders] of byAdvisor) {
     const advisorName = advisorOrders[0]?.advisor_name || "—";
 
-    // Paso 1: total mensual CON IVA para decidir desbloqueo y bonos.
+    const grossSalesWithVat = advisorOrders.reduce(
+      (s, o) => s + num(o.total_amount),
+      0
+    );
+
+    // Paso 1: total causado CON IVA para decidir desbloqueo y bonos.
     const totalWithVat = advisorOrders.reduce(
-      (s, o) => s + Number(o.total_amount || 0),
+      (s, o) => s + classifyOrderForCommission(o).base,
       0
     );
     const weekendUnlocked = totalWithVat >= UNLOCK_THRESHOLD;
 
     // Paso 2: calcular cada línea con tasa final.
-    const lines: CommissionLine[] = advisorOrders.map((o) => {
+    const allLines = advisorOrders.map((o) => {
       const ctx = { ...defaultCtx, ...(overrides[o.id] || {}) };
-      const d = getOrderDate(o);
-      const weekend = isWeekend(d);
-      const clientKind: ClientKind = o.is_recompra ? "recompra" : "nuevo";
-      const total = Number(o.total_amount || 0);
-      const baseSinIva = total / IVA_DIVISOR;
-      const rate =
-        getFlatRateFor(o.advisor_name) ??
-        getCommissionRate({
-          saleType: o.sale_type as "menor" | "mayor",
-          weekend,
-          paymentMode: ctx.paymentMode,
-          clientKind,
-          weekendUnlocked,
-        });
-      const rawCommission = baseSinIva * rate;
-      // returned se lee desde el pedido (Logística lo registra). Solo aplica
-      // penalización si la forma de pago configurada es contraentrega.
-      const returned = !!o.returned_at;
-      const penalty =
-        returned && ctx.paymentMode === "contraentrega" ? RETURN_PENALTY : 0;
-      return {
-        order: o,
-        weekend,
-        paymentMode: ctx.paymentMode,
-        clientKind,
-        returned,
-        totalWithVat: total,
-        baseSinIva,
-        ratePct: rate,
-        rawCommission,
-        penalty,
-        netCommission: Math.max(rawCommission - penalty, 0),
-      };
+      return buildLine(o, ctx.paymentMode, weekendUnlocked, basis);
     });
+
+    const lines = allLines.filter(
+      (l) => l.status === "total" || l.status === "parcial"
+    );
+    const excludedLines = allLines.filter(
+      (l) => l.status === "pendiente" || l.status === "excluido"
+    );
 
     const totalSinIva = totalWithVat / IVA_DIVISOR;
     const weekendSales = lines
       .filter((l) => l.weekend)
-      .reduce((s, l) => s + l.totalWithVat, 0);
+      .reduce((s, l) => s + l.commissionableWithVat, 0);
     const weekendPct = totalWithVat > 0 ? weekendSales / totalWithVat : 0;
 
     const detalLines = lines.filter((l) => l.order.sale_type === "menor");
@@ -235,9 +385,7 @@ export function summarizeAdvisorMonth(
     const kpiTicketOk = ticketAvgDetal >= MIN_TICKET_DETAL || detalLines.length === 0;
     const kpiWeekendPctOk = weekendPct >= MIN_WEEKEND_PCT;
 
-    let bonus = 0;
-    if (totalWithVat >= BONUS_TIER_1_THRESHOLD) bonus += BONUS_TIER_1_AMOUNT;
-    if (totalWithVat >= BONUS_TIER_2_THRESHOLD) bonus += BONUS_TIER_2_AMOUNT;
+    const bonus = bonusFor(totalWithVat);
 
     result.push({
       advisorId,
@@ -257,6 +405,11 @@ export function summarizeAdvisorMonth(
       kpiTicketOk,
       kpiWeekendPctOk,
       lines,
+      excludedLines,
+      excludedCount: excludedLines.length,
+      excludedWithVat: excludedLines.reduce((s, l) => s + l.totalWithVat, 0),
+      grossSalesWithVat,
+      grossOrdersCount: advisorOrders.length,
     });
   }
 
@@ -265,7 +418,7 @@ export function summarizeAdvisorMonth(
 
 /* ------------------------------------------------------------------ *
  * Progreso del asesor (vista para el propio asesor)
- * Incluye pedidos facturados y pendientes por facturar.
+ * Incluye pedidos que causan y los que aún no.
  * ------------------------------------------------------------------ */
 
 export interface ProgressLine extends CommissionLine {
@@ -283,6 +436,8 @@ export interface AdvisorProgressSummary {
   pendingCount: number;
   pendingWithVat: number;
   pendingCommission: number;
+  excludedCount: number;
+  excludedWithVat: number;
   bonusInvoiced: number;
   bonusProjected: number;
   toPayInvoiced: number;
@@ -302,73 +457,60 @@ export function summarizeAdvisorProgress(
   orders: Order[],
   year: number,
   month: number,
-  advisorId?: string
+  advisorId?: string,
+  basis: PeriodBasis = "venta"
 ): AdvisorProgressSummary {
   const start = startOfMonth(new Date(year, month, 1));
   const end = endOfMonth(new Date(year, month, 1));
 
   const monthOrders = orders.filter((o) => {
     if (advisorId && o.advisor_id !== advisorId) return false;
-    const d = getOrderDate(o);
+    const d = getPeriodDate(o, basis);
     return isWithinInterval(d, { start, end });
   });
 
   const totalWithVat = monthOrders.reduce(
-    (s, o) => s + Number(o.total_amount || 0),
+    (s, o) => s + num(o.total_amount),
     0
   );
-  const invoicedWithVat = monthOrders
-    .filter((o) => isCommissionable(o))
-    .reduce((s, o) => s + Number(o.total_amount || 0), 0);
+  const causadoWithVat = monthOrders.reduce(
+    (s, o) => s + classifyOrderForCommission(o).base,
+    0
+  );
 
-  // El desbloqueo FDS se evalúa sobre lo facturado (política oficial).
-  const weekendUnlocked = invoicedWithVat >= UNLOCK_THRESHOLD;
+  // El desbloqueo FDS se evalúa sobre lo causado (política oficial).
+  const weekendUnlocked = causadoWithVat >= UNLOCK_THRESHOLD;
 
   const lines: ProgressLine[] = monthOrders.map((o) => {
-    const d = getOrderDate(o);
-    const weekend = isWeekend(d);
-    const clientKind: ClientKind = o.is_recompra ? "recompra" : "nuevo";
-    const total = Number(o.total_amount || 0);
-    const baseSinIva = total / IVA_DIVISOR;
     const paymentMode: PaymentMode =
       o.payment_method === "contra_entrega" ? "contraentrega" : "contado";
-    const rate =
-      getFlatRateFor(o.advisor_name) ??
-      getCommissionRate({
-        saleType: (o.sale_type as "menor" | "mayor") || "mayor",
-        weekend,
-        paymentMode,
-        clientKind,
-        weekendUnlocked,
-      });
-    const rawCommission = baseSinIva * rate;
-    const returned = !!o.returned_at;
-    const penalty =
-      returned && paymentMode === "contraentrega" ? RETURN_PENALTY : 0;
+    const base = buildLine(o, paymentMode, weekendUnlocked, basis);
     return {
-      order: o,
-      date: d,
-      invoiced: isCommissionable(o),
-      weekend,
-      paymentMode,
-      clientKind,
-      returned,
-      totalWithVat: total,
-      baseSinIva,
-      ratePct: rate,
-      rawCommission,
-      penalty,
-      netCommission: Math.max(rawCommission - penalty, 0),
+      ...base,
+      date: getPeriodDate(o, basis),
+      invoiced: base.status === "total" || base.status === "parcial",
     };
   });
 
   const invoicedLines = lines.filter((l) => l.invoiced);
-  const pendingLines = lines.filter((l) => !l.invoiced);
+  const pendingLines = lines.filter((l) => l.status === "pendiente");
+  const excludedLines = lines.filter((l) => l.status === "excluido");
 
   const invoicedCommission = invoicedLines.reduce((s, l) => s + l.netCommission, 0);
-  const pendingCommission = pendingLines.reduce((s, l) => s + l.netCommission, 0);
 
-  const bonusInvoiced = bonusFor(invoicedWithVat);
+  // Comisión proyectada de lo que aún no causa (si el cliente paga todo).
+  const pendingCommission = pendingLines.reduce((s, l) => {
+    const rate = l.ratePct;
+    const restante = Math.max(l.totalWithVat - l.commissionableWithVat, 0);
+    return s + (restante / IVA_DIVISOR) * rate;
+  }, 0);
+  // Saldo aún no causado de los pedidos parciales.
+  const partialRemaining = invoicedLines.reduce((s, l) => {
+    const restante = Math.max(l.totalWithVat - l.commissionableWithVat, 0);
+    return s + (restante / IVA_DIVISOR) * l.ratePct;
+  }, 0);
+
+  const bonusInvoiced = bonusFor(causadoWithVat);
   const bonusProjected = bonusFor(totalWithVat);
 
   return {
@@ -376,15 +518,18 @@ export function summarizeAdvisorProgress(
     totalWithVat,
     totalSinIva: totalWithVat / IVA_DIVISOR,
     invoicedCount: invoicedLines.length,
-    invoicedWithVat,
+    invoicedWithVat: causadoWithVat,
     invoicedCommission,
     pendingCount: pendingLines.length,
     pendingWithVat: pendingLines.reduce((s, l) => s + l.totalWithVat, 0),
-    pendingCommission,
+    pendingCommission: pendingCommission + partialRemaining,
+    excludedCount: excludedLines.length,
+    excludedWithVat: excludedLines.reduce((s, l) => s + l.totalWithVat, 0),
     bonusInvoiced,
     bonusProjected,
     toPayInvoiced: invoicedCommission + bonusInvoiced,
-    toPayProjected: invoicedCommission + pendingCommission + bonusProjected,
+    toPayProjected:
+      invoicedCommission + pendingCommission + partialRemaining + bonusProjected,
     weekendUnlocked,
     lines: lines.sort((a, b) => b.date.getTime() - a.date.getTime()),
   };
