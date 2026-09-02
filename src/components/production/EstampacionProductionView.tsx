@@ -276,8 +276,17 @@ export const EstampacionProductionView = () => {
               <Card key={o.id}>
                 <CardContent className="p-3 space-y-1 text-xs">
                   <div className="flex items-center justify-between">
-                    <p className="font-semibold text-sm">{o.client_name}</p>
-                    <Badge variant="secondary">Esperando Inventarios</Badge>
+                    <div>
+                      <p className="font-semibold text-sm">{o.client_name}</p>
+                      <p className="text-[11px] font-mono text-muted-foreground">
+                        {o.order_code || "—"}
+                        {(o.line_count ?? 1) > 1 ? ` · línea ${o.line_index}/${o.line_count}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge variant="secondary">Esperando Inventarios</Badge>
+                      {o.is_recompra && <Badge className="bg-green-100 text-green-800">Recompra</Badge>}
+                    </div>
                   </div>
                   <Row label="Producto" value={o.product} />
                   <Row label="Cantidad" value={`${o.quantity} uds`} />
@@ -314,6 +323,23 @@ export const EstampacionProductionView = () => {
                     </div>
                   ) : (
                     <p className="text-[11px] text-muted-foreground mt-2">Sin archivo de logo disponible.</p>
+                  )}
+                  {o.logo_url_2 && (
+                    <div className="rounded-md border p-2 space-y-2 mt-2">
+                      <p className="text-[11px] font-medium text-muted-foreground">
+                        Logo 2 {o.logo_name_2 ? `— ${o.logo_name_2}` : ""}
+                      </p>
+                      <img
+                        src={o.logo_url_2}
+                        alt={`Logo 2 ${o.client_name}`}
+                        className="max-h-24 w-full rounded border object-contain bg-white"
+                      />
+                      <a href={o.logo_url_2} download target="_blank" rel="noopener noreferrer">
+                        <Button size="sm" variant="outline" className="w-full">
+                          <Download className="h-3 w-3 mr-1" /> Descargar logo 2
+                        </Button>
+                      </a>
+                    </div>
                   )}
                   <Button
                     size="sm"
