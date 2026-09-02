@@ -294,6 +294,8 @@ function ColorSelect({
   onCustomChange,
   options,
   placeholder = "Seleccionar color",
+  allowCustom = true,
+  hint,
 }: {
   label: string;
   value: string;
@@ -302,6 +304,8 @@ function ColorSelect({
   onCustomChange: (v: string) => void;
   options?: string[];
   placeholder?: string;
+  allowCustom?: boolean;
+  hint?: string;
 }) {
   return (
     <div className="space-y-1.5">
@@ -314,10 +318,10 @@ function ColorSelect({
           {(options ?? PREDEFINED_COLORS).map((c) => (
             <SelectItem key={c} value={c}>{c}</SelectItem>
           ))}
-          <SelectItem value="otro">Otro (escribir)</SelectItem>
+          {allowCustom && <SelectItem value="otro">Otro (escribir)</SelectItem>}
         </SelectContent>
       </Select>
-      {value === "otro" && (
+      {allowCustom && value === "otro" && (
         <Input
           placeholder="Escriba el color..."
           value={customValue}
@@ -325,6 +329,7 @@ function ColorSelect({
           required
         />
       )}
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
 }
