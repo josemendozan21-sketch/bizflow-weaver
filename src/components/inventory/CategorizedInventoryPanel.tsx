@@ -340,9 +340,24 @@ const CategorizedInventoryPanel = ({
                 </Button>
               </>
             ) : (
-              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(item)}>
-                <Pencil className="h-4 w-4" />
-              </Button>
+              <>
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(item)}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  onClick={async () => {
+                    if (!window.confirm(`¿Eliminar la referencia "${item.name}"? Esta acción no se puede deshacer.`)) return;
+                    const res = await deleteStockItem(item.id);
+                    if (res.success) toast.success("Referencia eliminada");
+                    else toast.error(res.message);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </>
             )}
           </TableCell>
         )}

@@ -8,8 +8,15 @@ import { Label } from "@/components/ui/label";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Check, X, Pencil, Sparkles } from "lucide-react";
+import { Check, X, Pencil, Sparkles, Plus, Trash2, TextCursorInput } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { useInventory, type SupabaseStockItem } from "@/hooks/useInventory";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 type SweatCat = "termos_150" | "termos_250" | "termos_500" | "canguros" | "chalecos" | "accesorios";
@@ -38,7 +45,20 @@ interface SweatspotFinishedProductsProps {
 }
 
 const SweatspotFinishedProducts = ({ originFilter = "todos" }: SweatspotFinishedProductsProps) => {
-  const { stockItems, updateStockItem } = useInventory();
+  const { stockItems, updateStockItem, addStockItem, deleteStockItem } = useInventory();
+  const { role } = useAuth();
+  // Solo Admin e Inventarios pueden crear/editar/eliminar referencias.
+  const canManage = role === "admin" || role === "inventarios";
+  const [addOpen, setAddOpen] = useState(false);
+  const [newForm, setNewForm] = useState({
+    name: "",
+    color: "",
+    origen: "NACIONAL" as "NACIONAL" | "IMPORTADO",
+    categoria: "termos_250" as SweatCat,
+    logo: "sin" as "sin" | "con",
+    available: "",
+    minStock: "0",
+  });
   const [activeFilter, setActiveFilter] = useState<SweatCat | "todos">("todos");
   const [onlySinLogo, setOnlySinLogo] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -125,6 +145,47 @@ const SweatspotFinishedProducts = ({ originFilter = "todos" }: SweatspotFinished
     }
   };
 
+  const handleAdd = async () => {
+    if (!newForm.name.trim() || newForm.available === "") {
+      toast.error("Completa nombre y unidades disponibles");
+      return;
+    }
+    const res = await addStockItem({
+      brand: "sweatspot",
+      category: "producto_terminado",
+      name: newForm.name.trim(),
+      available: Number(newForm.available),
+      unit: "unidades",
+      min_stock: Number(newForm.minStock || 0),
+      product_type: newForm.origen,
+      color: newForm.color.trim() || null,
+      logo: newForm.logo === "con" ? "Sweatspot" : null,
+      sweatspot_category: newForm.categoria,
+    });
+    if (!res.success) {
+      toast.error(res.message);
+      return;
+    }
+    toast.success("Referencia creada");
+    setNewForm({ name: "", color: "", origen: "NACIONAL", categoria: "termos_250", logo: "sin", available: "", minStock: "0" });
+    setAddOpen(false);
+  };
+
+  const handleRename = async (item: SupabaseStockItem) => {
+    const next = window.prompt("Nuevo nombre de la referencia:", item.name);
+    if (!next || !next.trim() || next.trim() === item.name) return;
+    const res = await updateStockItem(item.id, { name: next.trim() });
+    if (res.success) toast.success("Referencia renombrada");
+    else toast.error(res.message);
+  };
+
+  const handleDelete = async (item: SupabaseStockItem) => {
+    if (!window.confirm(`¿Eliminar la referencia "${item.name}"? Esta acción no se puede deshacer.`)) return;
+    const res = await deleteStockItem(item.id);
+    if (res.success) toast.success("Referencia eliminada");
+    else toast.error(res.message);
+  };
+
   const renderCell = (item: SupabaseStockItem | null, marcable: boolean) => {
     if (!item) {
       return <span className="text-xs text-muted-foreground">—</span>;
@@ -154,9 +215,19 @@ const SweatspotFinishedProducts = ({ originFilter = "todos" }: SweatspotFinished
         <span className={`font-semibold tabular-nums ${item.available === 0 ? "text-muted-foreground" : marcable ? "text-blue-700" : ""}`}>
           {item.available}
         </span>
-        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => startEdit(item)}>
-          <Pencil className="h-3.5 w-3.5" />
-        </Button>
+        {canManage && (
+          <>
+            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => startEdit(item)}>
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleRename(item)} title="Renombrar referencia">
+              <TextCursorInput className="h-3.5 w-3.5" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleDelete(item)} title="Eliminar referencia">
+              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+            </Button>
+          </>
+        )}
       </div>
     );
   };
@@ -173,12 +244,83 @@ const SweatspotFinishedProducts = ({ originFilter = "todos" }: SweatspotFinished
               </Badge>
             )}
           </div>
+          <div className="flex items-center gap-2 flex-wrap">
+          {canManage && (
+            <Dialog open={addOpen} onOpenChange={setAddOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm"><Plus className="h-4 w-4 mr-1" />Agregar referencia</Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Agregar referencia — Sweatspot</DialogTitle>
+                  <DialogDescription>Producto terminado de Sweatspot</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-3 py-2">
+                  <div className="grid gap-1.5">
+                    <Label>Nombre *</Label>
+                    <Input value={newForm.name} onChange={(e) => setNewForm({ ...newForm, name: e.target.value })} placeholder="Ej: BIB SPOT" />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label>Color</Label>
+                    <Input value={newForm.color} onChange={(e) => setNewForm({ ...newForm, color: e.target.value })} placeholder="Ej: Morado" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-1.5">
+                      <Label>Origen</Label>
+                      <Select value={newForm.origen} onValueChange={(v) => setNewForm({ ...newForm, origen: v as "NACIONAL" | "IMPORTADO" })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="NACIONAL">Nacional</SelectItem>
+                          <SelectItem value="IMPORTADO">Importado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label>Categoría</Label>
+                      <Select value={newForm.categoria} onValueChange={(v) => setNewForm({ ...newForm, categoria: v as SweatCat })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {FILTER_OPTIONS.filter((f) => f.value !== "todos").map((f) => (
+                            <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="grid gap-1.5">
+                      <Label>Logo</Label>
+                      <Select value={newForm.logo} onValueChange={(v) => setNewForm({ ...newForm, logo: v as "sin" | "con" })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="sin">Sin logo</SelectItem>
+                          <SelectItem value="con">Con logo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label>Disponible *</Label>
+                      <Input type="number" min={0} value={newForm.available} onChange={(e) => setNewForm({ ...newForm, available: e.target.value })} />
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label>Mínimo</Label>
+                      <Input type="number" min={0} value={newForm.minStock} onChange={(e) => setNewForm({ ...newForm, minStock: e.target.value })} />
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button onClick={handleAdd}>Guardar</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
           <div className="flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5">
             <Sparkles className="h-3.5 w-3.5 text-blue-600" />
             <Label htmlFor="only-sin-logo" className="text-xs text-blue-900 cursor-pointer">
               Solo SIN LOGO (mayoristas con marcación)
             </Label>
             <Switch id="only-sin-logo" checked={onlySinLogo} onCheckedChange={setOnlySinLogo} />
+          </div>
           </div>
         </div>
         <div className="flex flex-wrap gap-1.5 pt-2">
