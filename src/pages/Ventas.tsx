@@ -1051,7 +1051,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             "ventas:mw:moldeNuevo","ventas:mw:moldeNombre","ventas:mw:moldeCosto","ventas:mw:moldeModo",
             "ventas:mw:fields",
           ].forEach(clearFormDraft);
-          setLogoFileState(null);
+          setMwLogos([makeLogoEntry()]);
           setRutFileState(null);
           setPaymentProofFile(null);
           setMoldeNuevo(false);
