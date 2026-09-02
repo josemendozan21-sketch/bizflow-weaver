@@ -1016,7 +1016,7 @@ function ShipmentGroupCard({
               </span>
               <div className="flex items-center gap-3 shrink-0">
                 <span className="text-muted-foreground">{it.quantity} und</span>
-                <PartialDeliveryControl order={it} showButton={canEdit} />
+                <PartialDeliveryControl order={it} />
                 <PaymentBadge order={it} />
               </div>
             </div>
@@ -1129,7 +1129,7 @@ function PendingGroupCard({
                 <AdvisorTag order={it} />
               </span>
               <div className="flex items-center gap-2 shrink-0">
-                <PartialDeliveryControl order={it} showButton={canEdit} />
+                <PartialDeliveryControl order={it} />
                 <ProductionStatusBadge status={it.production_status} order={it} />
                 <PaymentBadge order={it} />
               </div>

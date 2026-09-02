@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { PackageCheck } from "lucide-react";
 import DeliveryProgressBadge from "@/components/common/DeliveryProgressBadge";
@@ -13,7 +14,7 @@ interface PartialDeliveryControlProps {
     quantity: number;
     delivered_quantity?: number | null;
   };
-  /** Muestra el botón para registrar entregas (áreas operativas) */
+  /** Fuerza mostrar/ocultar el botón; por defecto depende del rol */
   showButton?: boolean;
   compact?: boolean;
 }
@@ -24,17 +25,20 @@ interface PartialDeliveryControlProps {
  */
 export default function PartialDeliveryControl({
   order,
-  showButton = false,
+  showButton,
   compact = true,
 }: PartialDeliveryControlProps) {
   const [open, setOpen] = useState(false);
+  const { role } = useAuth();
+  const canManage = ["admin", "inventarios", "logistica", "produccion"].includes(role ?? "");
+  const visible = showButton ?? canManage;
   const delivered = Number(order.delivered_quantity) || 0;
 
   return (
     <>
       <span className="inline-flex items-center gap-1">
         <DeliveryProgressBadge quantity={order.quantity} delivered={delivered} compact={compact} />
-        {showButton && (
+        {visible && (
           <Button
             variant="outline"
             size="sm"
