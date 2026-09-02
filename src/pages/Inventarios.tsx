@@ -59,6 +59,9 @@ const FullInventoryView = () => {
           <TabsTrigger value="materia_prima" className="gap-1.5">
             <Beaker className="h-4 w-4" /> Materia Prima
           </TabsTrigger>
+          <TabsTrigger value="abastecimiento" className="gap-1.5">
+            <PackageCheck className="h-4 w-4" /> Abastecimiento
+          </TabsTrigger>
           <TabsTrigger value="trazabilidad" className="gap-1.5">
             <Route className="h-4 w-4" /> Trazabilidad
           </TabsTrigger>
@@ -76,6 +79,13 @@ const FullInventoryView = () => {
         <TabsContent value="materia_prima" className="mt-4">
           <MateriaPrimaPanel />
         </TabsContent>
+
+        <TabsContent value="abastecimiento" className="mt-4 space-y-4">
+          <OrderRequirementsPanel />
+          <BatchReceptionPanel />
+          <ProductionBatchesPanel readOnly />
+        </TabsContent>
+
 
         <TabsContent value="trazabilidad" className="mt-4">
           <InventoryTraceabilityPanel />
