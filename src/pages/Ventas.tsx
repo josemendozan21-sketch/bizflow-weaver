@@ -1693,21 +1693,100 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Archivos adjuntos</legend>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FileField label="Adjuntar logo" name="mw_logo" value={logoFileState} onChange={setLogoFileState} accept="image/*,.pdf,.svg,.ai" />
-              <FileField label="Adjuntar RUT de la empresa (opcional)" name="mw_rut" value={rutFileState} onChange={setRutFileState} accept="image/*,.pdf" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="mw_logo_nombre">Nombre o referencia del logo *</Label>
-              <Input
-                id="mw_logo_nombre"
-                name="mw_logo_nombre"
-                placeholder="Ej: Logo Coca-Cola v2, Escudo Colegio San José..."
-              />
-              <p className="text-xs text-muted-foreground">
-                Escriba un nombre claro para que producción identifique fácilmente este logo.
-              </p>
-            </div>
+
+            {!noLogo && (
+              <div className="rounded-lg border border-input p-4 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Logos del pedido</p>
+                    <p className="text-xs text-muted-foreground">Indique cuántos logos lleva la marcación.</p>
+                  </div>
+                  <div className="flex items-center gap-1 rounded-md border border-input p-1">
+                    {[1, 2].map((n) => (
+                      <Button
+                        key={n}
+                        type="button"
+                        size="sm"
+                        variant={logoCount === n ? "default" : "ghost"}
+                        className="h-8 px-3"
+                        onClick={() => {
+                          setLogoCount(n);
+                          if (n === 1) setLogoFile2State(null);
+                        }}
+                      >
+                        {n} logo{n > 1 ? "s" : ""}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {isRecompra && (
+                  <div className="space-y-1.5 rounded-md border border-input bg-muted/30 p-3">
+                    <Label>Logo anterior del cliente *</Label>
+                    <Select value={recompraLogoUrl || undefined} onValueChange={setRecompraLogoUrl}>
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            clientName.trim().length < 3
+                              ? "Escriba primero el nombre del cliente"
+                              : previousLogos.length
+                                ? "Seleccionar logo ya trabajado"
+                                : "Sin logos previos — adjunte el archivo"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {previousLogos.map((l: any) => {
+                          const url = l.adjusted_logo_url || l.original_logo_url;
+                          return (
+                            <SelectItem key={l.id} value={url}>
+                              {(l.logo_name || l.product || "Logo") + " — " + new Date(l.created_at).toLocaleDateString("es-CO")}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      En recompras el logo no se genera de nuevo: selecciónelo aquí o adjunte el archivo para que Estampación lo reciba.
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FileField label="Logo 1" name="mw_logo" value={logoFileState} onChange={setLogoFileState} accept="image/*,.pdf,.svg,.ai" />
+                  <div className="space-y-1.5">
+                    <Label htmlFor="mw_logo_nombre">Nombre o referencia del logo 1 *</Label>
+                    <Input
+                      id="mw_logo_nombre"
+                      name="mw_logo_nombre"
+                      placeholder="Ej: Logo Coca-Cola v2"
+                    />
+                  </div>
+                </div>
+
+                <div className={`grid gap-4 sm:grid-cols-2 ${logoCount < 2 ? "opacity-50" : ""}`}>
+                  <FileField
+                    label="Logo 2"
+                    name="mw_logo_2"
+                    value={logoFile2State}
+                    onChange={setLogoFile2State}
+                    accept="image/*,.pdf,.svg,.ai"
+                    disabled={logoCount < 2}
+                  />
+                  <div className="space-y-1.5">
+                    <Label htmlFor="mw_logo_nombre_2">Nombre o referencia del logo 2{logoCount >= 2 ? " *" : ""}</Label>
+                    <Input
+                      id="mw_logo_nombre_2"
+                      name="mw_logo_nombre_2"
+                      disabled={logoCount < 2}
+                      placeholder="Ej: Escudo del colegio"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <FileField label="Adjuntar RUT de la empresa (opcional)" name="mw_rut" value={rutFileState} onChange={setRutFileState} accept="image/*,.pdf" />
           </fieldset>
 
           <fieldset className="space-y-4">
