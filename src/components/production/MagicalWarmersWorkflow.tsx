@@ -149,7 +149,9 @@ export const MagicalWarmersWorkflow = () => {
     const el = stageRefs.current[stage];
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
-  const producibleTasks = bodyTasks;
+  // Only Magical body tasks belong to this view (legacy rows without brand are magical)
+  const producibleTasks = bodyTasks.filter((t) => !t.brand || t.brand === "magical");
+
   const completedBodyTasks = producibleTasks.filter((t) => t.status === "finalizado");
   const inProgressBodyTasks = producibleTasks.filter((t) => t.status !== "finalizado");
 
