@@ -227,6 +227,13 @@ interface OrderLine {
   gelCustom: string;
   inkColor: string;
   inkCustom: string;
+  inkCount?: number;
+  inkColor2?: string;
+  inkCustom2?: string;
+  inkColor3?: string;
+  inkCustom3?: string;
+  glitterColor?: string;
+  glitterCustom?: string;
   units: string;
   valorUnitario: string;
   valorTotal: string;
