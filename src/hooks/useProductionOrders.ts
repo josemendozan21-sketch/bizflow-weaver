@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLogisticsStore } from "@/stores/logisticsStore";
 import { toast } from "sonner";
 import { baseRefName } from "@/lib/canonicalBodyRef";
+import { normalizeStages, TERMINAL_STAGES } from "@/lib/orderFlow";
+
 
 export interface ProductionOrder {
   id: string;
