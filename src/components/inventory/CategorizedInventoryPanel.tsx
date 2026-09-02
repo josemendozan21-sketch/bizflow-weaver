@@ -91,7 +91,7 @@ const CategorizedInventoryPanel = ({
   const [sweatspotOrigin, setSweatspotOrigin] = useState<"todos" | "IMPORTADO" | "NACIONAL">("todos");
   const [addOpen, setAddOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", available: "", minStock: "" });
+  const [editForm, setEditForm] = useState({ name: "", available: "", minStock: "", logo: "sin" as "sin" | "con" });
   const [newForm, setNewForm] = useState({
     name: "",
     available: "",
@@ -99,12 +99,15 @@ const CategorizedInventoryPanel = ({
     minStock: "",
     tipo: "" as "" | "Frío" | "Térmico" | "Ambos",
     category: "" as InventoryCategory | "",
+    logo: "sin" as "sin" | "con",
   });
   const [activeHighlights, setActiveHighlights] = useState<string[]>(highlightItemNames);
   const highlightRef = useRef<HTMLTableRowElement>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<"todos" | "termico" | "frio" | "otros">("todos");
+  const [logoFilter, setLogoFilter] = useState<"todos" | "con" | "sin">("todos");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
 
   useEffect(() => {
     if (activeHighlights.length > 0 && highlightRef.current) {
