@@ -324,8 +324,11 @@ export function getInvoiceDate(o: Order): Date | null {
   return parseDate(o.invoice_date);
 }
 
-/** Fecha usada para ubicar el pedido en el período según el criterio elegido. */
-export function getPeriodDate(o: Order, basis: PeriodBasis = "venta"): Date {
+/**
+ * Fecha usada para ubicar el pedido en el período.
+ * Oficial: fecha de factura; si aún no hay factura, fecha de venta.
+ */
+export function getPeriodDate(o: Order, basis: PeriodBasis = PERIOD_BASIS): Date {
   if (basis === "factura") return getInvoiceDate(o) || getSaleDate(o);
   return getSaleDate(o);
 }
@@ -334,13 +337,18 @@ function buildLine(
   o: Order,
   paymentMode: PaymentMode,
   weekendUnlocked: boolean,
-  basis: PeriodBasis
+  basis: PeriodBasis,
+  charges?: ChargesMap
 ): CommissionLine {
-  const cls = classifyOrderForCommission(o);
+  const cls = classifyOrderForCommission(o, charges);
   const d = getPeriodDate(o, basis);
   const weekend = isWeekend(d);
   const clientKind: ClientKind = o.is_recompra ? "recompra" : "nuevo";
   const total = num(o.total_amount);
+  const shippingCost = getShippingCost(o);
+  const extraCharges = getExtraCharges(o, charges);
+  const netTotalWithVat = getCommissionableTotal(o, charges);
+  const invoiceDate = getInvoiceDate(o);
   const commissionableWithVat = cls.base;
   const baseSinIva = commissionableWithVat / IVA_DIVISOR;
   const rate =
@@ -365,6 +373,10 @@ function buildLine(
     clientKind,
     returned,
     totalWithVat: total,
+    shippingCost,
+    extraCharges,
+    netTotalWithVat,
+    pendingInvoice: !invoiceDate,
     commissionableWithVat,
     baseSinIva,
     ratePct: rate,
@@ -374,7 +386,7 @@ function buildLine(
     status: cls.status,
     reason: cls.reason,
     saleDate: getSaleDate(o),
-    invoiceDate: getInvoiceDate(o),
+    invoiceDate,
   };
 }
 
