@@ -1016,9 +1016,13 @@ const WholesaleOrdersInbox = () => {
                   Mapea cada línea del pedido a su producto en inventario. Las cantidades se descontarán al confirmar.
                 </p>
                 {lineRows.map((r, idx) => {
-                  const options = stockItems
-                    .filter((s) => s.brand === delivering?.order.brand && s.category === "producto_terminado")
-                    .sort((a, b) => a.name.localeCompare(b.name));
+                  const options = sortStockOptions(
+                    stockItems.filter(
+                      (s) => s.brand === delivering?.order.brand && s.category === "producto_terminado",
+                    ) as any[],
+                    r.name,
+                  );
+                  const selected = options.find((s: any) => s.id === r.stockItemId);
                   return (
                     <div key={idx} className="border rounded-md p-2 space-y-2">
                       <div className="text-xs font-medium">{r.name}</div>
@@ -1032,14 +1036,35 @@ const WholesaleOrdersInbox = () => {
                           <SelectTrigger>
                             <SelectValue placeholder="Selecciona producto en inventario" />
                           </SelectTrigger>
-                          <SelectContent>
-                            {options.map((s) => (
-                              <SelectItem key={s.id} value={s.id}>
-                                {s.name} · disp. {s.available}
-                              </SelectItem>
-                            ))}
+                          <SelectContent className="max-h-72">
+                            {options.map((s: any) => {
+                              const parts = stockOptionParts(s);
+                              const sinStock = Number(s.available || 0) <= 0;
+                              return (
+                                <SelectItem key={s.id} value={s.id}>
+                                  <span className="flex flex-wrap items-center gap-1.5">
+                                    <span className="font-medium">{cleanReferenceName(s.name)}</span>
+                                    {parts.map((p) => (
+                                      <Badge key={p} variant="outline" className="px-1.5 py-0 text-[10px]">
+                                        {p}
+                                      </Badge>
+                                    ))}
+                                    <span
+                                      className={
+                                        sinStock
+                                          ? "text-[11px] text-destructive font-medium"
+                                          : "text-[11px] text-muted-foreground"
+                                      }
+                                    >
+                                      {sinStock ? "sin stock" : `disp. ${s.available}`}
+                                    </span>
+                                  </span>
+                                </SelectItem>
+                              );
+                            })}
                           </SelectContent>
                         </Select>
+
                         <Input
                           type="number"
                           min="1"
