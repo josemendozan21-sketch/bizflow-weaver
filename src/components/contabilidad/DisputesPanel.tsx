@@ -10,6 +10,7 @@ import { es } from "date-fns/locale";
 import { useOrderDisputes, useResolveOrderDispute, type DisputeStatus } from "@/hooks/useOrderDisputes";
 import type { Order } from "@/hooks/useOrders";
 import { useAuth } from "@/contexts/AuthContext";
+import { openSignedUrl } from "@/lib/signedUrl";
 
 interface Props {
   orders: Order[];
@@ -126,14 +127,13 @@ export default function DisputesPanel({ orders }: Props) {
                       <TableCell className="max-w-[260px]">
                         <p className="text-xs">{d.reason}</p>
                         {d.evidence_url && (
-                          <a
-                            href={d.evidence_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            type="button"
+                            onClick={() => openSignedUrl(d.evidence_url!)}
                             className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-1"
                           >
                             <ExternalLink className="h-3 w-3" /> Ver soporte
-                          </a>
+                          </button>
                         )}
                         {d.resolution_note && (
                           <p className="text-[11px] text-muted-foreground mt-1">
