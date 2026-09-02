@@ -444,6 +444,7 @@ export default function MisComisiones() {
                 ["facturado", "Causan comisión"],
                 ["pendiente", "Pendientes"],
                 ["excluido", "Excluidos"],
+                ["cero", `En $0 (${zeroLines.length})`],
               ] as [Filter, string][]).map(([v, label]) => (
 
                 <Button
@@ -451,11 +452,39 @@ export default function MisComisiones() {
                   size="sm"
                   variant={filter === v ? "default" : "outline"}
                   onClick={() => setFilter(v)}
+                  className={v === "cero" && zeroLines.length > 0 && filter !== v ? "border-amber-500 text-amber-600" : ""}
                 >
                   {label}
                 </Button>
               ))}
             </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 pt-2">
+            <Input
+              placeholder="Buscar por código, cliente o producto..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-[260px] h-9"
+            />
+            <Input
+              type="number"
+              placeholder="Monto desde"
+              value={minAmount}
+              onChange={(e) => setMinAmount(e.target.value)}
+              className="w-[130px] h-9"
+            />
+            <Input
+              type="number"
+              placeholder="Monto hasta"
+              value={maxAmount}
+              onChange={(e) => setMaxAmount(e.target.value)}
+              className="w-[130px] h-9"
+            />
+            {(search || minAmount || maxAmount) && (
+              <Button size="sm" variant="ghost" onClick={() => { setSearch(""); setMinAmount(""); setMaxAmount(""); }}>
+                Limpiar
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
