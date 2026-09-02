@@ -1595,6 +1595,50 @@ export type Database = {
         }
         Relationships: []
       }
+      order_deliveries: {
+        Row: {
+          created_at: string
+          delivered_at: string
+          delivered_by: string | null
+          delivered_by_name: string | null
+          id: string
+          notes: string | null
+          order_id: string
+          quantity: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          delivered_at?: string
+          delivered_by?: string | null
+          delivered_by_name?: string | null
+          id?: string
+          notes?: string | null
+          order_id: string
+          quantity: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          delivered_at?: string
+          delivered_by?: string | null
+          delivered_by_name?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string
+          quantity?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_deliveries_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_payments: {
         Row: {
           amount: number
@@ -1661,6 +1705,7 @@ export type Database = {
           client_phone: string | null
           created_at: string
           credit_dispatched_pending_payment: boolean
+          delivered_quantity: number
           delivery_date: string | null
           dispatch_notes: string | null
           dispatched_at: string | null
@@ -1733,6 +1778,7 @@ export type Database = {
           client_phone?: string | null
           created_at?: string
           credit_dispatched_pending_payment?: boolean
+          delivered_quantity?: number
           delivery_date?: string | null
           dispatch_notes?: string | null
           dispatched_at?: string | null
@@ -1805,6 +1851,7 @@ export type Database = {
           client_phone?: string | null
           created_at?: string
           credit_dispatched_pending_payment?: boolean
+          delivered_quantity?: number
           delivery_date?: string | null
           dispatch_notes?: string | null
           dispatched_at?: string | null
