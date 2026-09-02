@@ -580,8 +580,7 @@ El período de liquidación es el <b>mes de la factura</b> (si el pedido aún
                             orderCode={(l.order as any).order_code}
                             clientName={l.order.client_name}
                             currentAmount={Number(l.order.total_amount) || 0}
-                          />
-                        )}
+                        />�
                       </TableCell>
                     </TableRow>
                   ))}
