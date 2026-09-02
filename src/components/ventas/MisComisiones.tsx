@@ -47,7 +47,7 @@ const MONTHS = [
 
 const fmt = (n: number) => `$${Math.round(n).toLocaleString("es-CO")}`;
 
-type Filter = "todos" | "facturado" | "pendiente" | "excluido";
+type Filter = "todos" | "facturado" | "pendiente" | "excluido" | "cero";
 
 
 export default function MisComisiones() {
