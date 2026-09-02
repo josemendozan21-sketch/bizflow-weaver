@@ -90,6 +90,7 @@ const MAGICAL_STAGE_LABELS: Record<string, string> = {
 const SS_STAGE_LABELS: Record<string, string> = {
   estampacion: "Estampación",
   produccion_tubos: "Producción de tubos",
+  elaboracion_esquinas: "Elaboración de esquinas",
   ensamble_cuello: "Ensamble de cuello",
   sello_base: "Sello de base",
   refile: "Refile",

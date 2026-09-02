@@ -36,6 +36,7 @@ const STAGE_ICONS: Record<string, React.ElementType> = {
   produccion_cuerpos: Package,
   estampacion: Paintbrush,
   produccion_tubos: Cylinder,
+  elaboracion_esquinas: Scissors,
   ensamble_cuello: CircleDot,
   sello_base: Stamp,
   refile: Scissors,
@@ -47,6 +48,7 @@ const SS_STAGE_LABELS: Record<string, string> = {
   produccion_cuerpos: "Producción de cuerpos",
   estampacion: "Estampación",
   produccion_tubos: "Producción de tubos",
+  elaboracion_esquinas: "Elaboración de esquinas",
   ensamble_cuello: "Ensamble de cuello",
   sello_base: "Sello de base",
   refile: "Refile",
@@ -54,7 +56,7 @@ const SS_STAGE_LABELS: Record<string, string> = {
   listo: "Listo",
 };
 
-const FULL_STAGE_ORDER = ["produccion_cuerpos", "estampacion", "produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"];
+const FULL_STAGE_ORDER = ["produccion_cuerpos", "estampacion", "produccion_tubos", "elaboracion_esquinas", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"];
 
 const STATUS_BADGE: Record<string, { label: string; variant: "secondary" | "default" | "outline" }> = {
   pendiente: { label: "Pendiente", variant: "secondary" },

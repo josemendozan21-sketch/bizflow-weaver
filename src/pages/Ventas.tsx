@@ -31,6 +31,7 @@ import SmartPasteField, { type ParsedOrderData } from "@/components/ventas/Smart
 import ClientNameAutocomplete from "@/components/ventas/ClientNameAutocomplete";
 import { useFormDraft, clearFormDraft, usePersistedState } from "@/hooks/useFormDraft";
 import { OrderConfirmationDialog, type OrderSummary } from "@/components/ventas/OrderConfirmationDialog";
+import { buildStages } from "@/lib/orderFlow";
 type Brand = "sweatspot" | "magical";
 type SaleType = "mayor" | "menor";
 
@@ -2071,12 +2072,10 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       }
     }
 
-    const ssShortStages = ssNoLogo
-      ? ["colocacion_boquilla", "listo"]
-      : ["estampacion", "colocacion_boquilla", "listo"];
-    const ssFullStages = ssNoLogo
-      ? ["produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"]
-      : ["estampacion", "produccion_tubos", "ensamble_cuello", "sello_base", "refile", "colocacion_boquilla", "listo"];
+    const ssShortStages = buildStages("sweatspot", { hasLogo: !ssNoLogo, needsCuerpos: false, product: "" });
+    const ssFullStagesFor = (product: string) =>
+      buildStages("sweatspot", { hasLogo: !ssNoLogo, needsCuerpos: true, product });
+    const ssFullStages = ssFullStagesFor(ssLines[0]?.referencia || "");
 
     // Consolidar referencias idénticas para que todo el flujo reciba la cantidad total.
     const linesToSubmit = consolidateSweatspotLines(ssLines);

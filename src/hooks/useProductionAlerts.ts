@@ -10,6 +10,7 @@ const STAGE_LABELS: Record<string, string> = {
   recorte: "Recorte",
   empaque: "Empaque",
   produccion_tubos: "Producción de tubos",
+  elaboracion_esquinas: "Elaboración de esquinas",
   ensamble_cuello: "Ensamble de cuello",
   sello_base: "Sello de base",
   refile: "Refile",
