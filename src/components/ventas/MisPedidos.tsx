@@ -25,6 +25,7 @@ import { PendingProofPanel } from "./PendingProofPanel";
 
 import { matchesQuery } from "@/lib/search";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
+import DeliveryProgressBadge from "@/components/common/DeliveryProgressBadge";
 
 
 const STAGE_ORDER = [
@@ -502,13 +503,19 @@ function OrderGroupCard({
           <div>
             <div className="flex flex-wrap items-center gap-1 mb-1">
               {group.items.slice(0, 4).map((it) => (
-                <OrderCodeBadge
-                  key={it.id}
-                  code={it.order_code}
-                  lineIndex={it.line_index}
-                  lineCount={it.line_count}
-                  compact
-                />
+                <span key={it.id} className="inline-flex items-center gap-1">
+                  <OrderCodeBadge
+                    code={it.order_code}
+                    lineIndex={it.line_index}
+                    lineCount={it.line_count}
+                    compact
+                  />
+                  <DeliveryProgressBadge
+                    quantity={it.quantity}
+                    delivered={it.delivered_quantity}
+                    compact
+                  />
+                </span>
               ))}
               {group.items.length > 4 && (
                 <span className="text-[10px] text-muted-foreground">+{group.items.length - 4} más</span>

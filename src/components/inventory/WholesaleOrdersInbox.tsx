@@ -28,6 +28,7 @@ import { es } from "date-fns/locale";
 
 import { matchesQuery } from "@/lib/search";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
+import PartialDeliveryControl from "@/components/common/PartialDeliveryControl";
 
 
 interface MayorOrder {
@@ -669,8 +670,9 @@ const WholesaleOrdersInbox = () => {
                 )}
                 {isDelivered && <Badge variant="secondary">Entregado</Badge>}
               </div>
-              <div className="mt-1.5">
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                 <OrderCodeBadge code={o.order_code} lineIndex={o.line_index} lineCount={o.line_count} compact />
+                <PartialDeliveryControl order={o} />
               </div>
               <h3 className="font-semibold">{o.client_name}</h3>
               <p className="text-sm text-muted-foreground">
