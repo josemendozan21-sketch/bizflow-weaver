@@ -60,6 +60,14 @@ interface PendingIntakeOrder {
   gel_color?: string | null;
   silicone_color?: string | null;
   logo_url?: string | null;
+  logo_url_2?: string | null;
+  logo_count?: number | null;
+  logo_name?: string | null;
+  logo_name_2?: string | null;
+  order_code?: string | null;
+  line_index?: number | null;
+  line_count?: number | null;
+  is_recompra?: boolean | null;
   observations?: string | null;
   advisor_id?: string | null;
 }
@@ -167,7 +175,7 @@ export const EstampacionProductionView = () => {
       const { data, error } = await supabase
         .from("orders")
         .select(
-          "id, client_name, brand, product, quantity, advisor_name, delivery_date, created_at, production_status, ink_color, ink_count, ink_color_2, ink_color_3, glitter_color, gel_color, silicone_color, logo_url, observations, advisor_id"
+          "id, order_code, client_name, brand, product, quantity, advisor_name, delivery_date, created_at, production_status, ink_color, ink_count, ink_color_2, ink_color_3, glitter_color, gel_color, silicone_color, logo_url, logo_url_2, logo_count, logo_name, logo_name_2, line_index, line_count, is_recompra, observations, advisor_id"
         )
         .eq("production_status", "pendiente")
         .is("inventory_archived_at", null)
@@ -187,7 +195,9 @@ export const EstampacionProductionView = () => {
   );
   const pendingIntake = (pendingIntakeQuery.data ?? []).filter(
     (o) =>
-      approvedLogoClients.has(o.client_name.trim().toLowerCase()) &&
+      // Logo aprobado por diseño, o recompra con logo ya guardado (no genera solicitud nueva)
+      (approvedLogoClients.has(o.client_name.trim().toLowerCase()) ||
+        (Boolean(o.is_recompra) && Boolean(o.logo_url))) &&
       !orderIdsWithProductionOrder.has(o.id)
   );
 
