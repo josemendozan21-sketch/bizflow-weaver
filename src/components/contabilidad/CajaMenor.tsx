@@ -398,7 +398,7 @@ export default function CajaMenor() {
                   ) : m.kind === "traslado" ? (
                     <ArrowLeftRight className="h-4 w-4 text-muted-foreground" />
                   ) : m.signedAmount > 0 ? (
-                    <ArrowDownCircle className="h-4 w-4 text-primary" />
+                    <ArrowDownCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                   ) : (
                     <ArrowUpCircle className="h-4 w-4 text-destructive" />
                   )}
@@ -410,14 +410,14 @@ export default function CajaMenor() {
                         m.kind === "saldo_inicial"
                           ? "font-semibold text-muted-foreground"
                           : m.signedAmount > 0
-                            ? "font-semibold text-primary"
+                            ? "font-semibold text-emerald-600 dark:text-emerald-400"
                             : "font-semibold text-destructive"
                       }
                     >
                       {m.kind === "saldo_inicial" ? "=" : m.signedAmount > 0 ? "+" : "-"}
                       {formatCOP(m.amount)}
                     </span>
-                    <Badge variant="outline" className="text-[10px]">{sedeLabel(m.sede)}</Badge>
+                    <SedeBadge sede={m.sede} />
                     {m.kind === "saldo_inicial" && (
                       <Badge variant="secondary" className="text-[10px]">Saldo inicial / arqueo</Badge>
                     )}
@@ -453,7 +453,12 @@ export default function CajaMenor() {
                     </Button>
                   )}
                   {canManage && m.source === "fund" && (
-                    <Button size="sm" variant="ghost" className="h-7" onClick={() => setEditingFund(m.raw as PettyFund)}>
+                    <Button size="sm" variant="ghost" className="h-7" title="Editar movimiento / cambiar de sede" onClick={() => setEditingFund(m.raw as PettyFund)}>
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  )}
+                  {canManage && m.source === "expense" && (
+                    <Button size="sm" variant="ghost" className="h-7" title="Editar gasto / cambiar de sede" onClick={() => setEditingExpense(m.raw as PettyExpense)}>
                       <Pencil className="h-3 w-3" />
                     </Button>
                   )}
