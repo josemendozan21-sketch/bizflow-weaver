@@ -175,3 +175,103 @@ export function tiposForReference(items: ReferenceItem[], name: string): Referen
     .map((i) => i.tipo as ReferenceTipo);
   return [...new Set(tipos)];
 }
+
+/* ------------------------------------------------------------------ *
+ * Etiquetado unificado para selectores (<Select>) de inventario
+ * ------------------------------------------------------------------ */
+
+export interface StockOptionLike {
+  name: string;
+  brand?: string | null;
+  product_type?: string | null;
+  color?: string | null;
+  logo?: string | null;
+  sweatspot_category?: string | null;
+  available?: number | null;
+  in_process?: number | null;
+}
+
+/** Emoji + texto del tipo: "❄️ Frío" / "🔥 Térmico" */
+export function tipoLabel(tipo: ReferenceTipo | string | null | undefined): string | null {
+  const t = canonicalTipo(typeof tipo === "string" ? tipo : tipo || "");
+  if (!t) return null;
+  return t === "Frío" ? "❄️ Frío" : "🔥 Térmico";
+}
+
+/** Partes descriptivas de una referencia de inventario (sin el disponible) */
+export function stockOptionParts(item: StockOptionLike): string[] {
+  const parts: string[] = [];
+  const tipo = tipoLabel(item.product_type) ?? tipoLabel(tipoFromName(item.name));
+  if (tipo) {
+    parts.push(tipo);
+  } else if (item.product_type) {
+    // Sweatspot usa product_type para Importado/Nacional
+    parts.push(item.product_type);
+  }
+  if (item.color) parts.push(item.color);
+  if (brandKey(item.brand) === "sweatspot") {
+    parts.push(item.logo ? "CON LOGO" : "SIN LOGO");
+    if (item.sweatspot_category) parts.push(item.sweatspot_category);
+  } else if (item.logo) {
+    parts.push("CON LOGO");
+  }
+  return parts;
+}
+
+/** Etiqueta completa: "Pocket · ❄️ Frío · disp. 22" */
+export function formatStockOptionLabel(item: StockOptionLike): string {
+  const segs = [cleanReferenceName(item.name), ...stockOptionParts(item)];
+  segs.push(`disp. ${Number(item.available || 0)}`);
+  if (Number(item.in_process || 0) > 0) segs.push(`en proceso ${Number(item.in_process)}`);
+  return segs.join(" · ");
+}
+
+/**
+ * Busca en un listado de `stock_items` la variante que corresponde al texto de
+ * una línea de pedido (p.ej. "Pocket (Térmico)"), respetando marca y categoría.
+ */
+export function findStockMatch<T extends StockOptionLike & { id: string; category?: string }>(
+  items: T[],
+  lineText: string,
+  opts: { brand?: string | null; category?: string } = {},
+): T | undefined {
+  const wantName = normalizeText(cleanReferenceName(lineText));
+  const wantTipo = canonicalTipo(lineText) ?? tipoFromName(lineText);
+  const wantBrand = opts.brand ? brandKey(opts.brand) : null;
+
+  const pool = items.filter((s) => {
+    if (opts.category && s.category !== opts.category) return false;
+    if (wantBrand && brandKey(s.brand) !== wantBrand && brandKey(s.brand) !== "ambas") return false;
+    return normalizeText(cleanReferenceName(s.name)) === wantName;
+  });
+  if (pool.length === 0) return undefined;
+  if (!wantTipo) return pool.length === 1 ? pool[0] : undefined;
+
+  const byTipo = pool.filter(
+    (s) => (canonicalTipo(s.product_type) ?? tipoFromName(s.name)) === wantTipo,
+  );
+  if (byTipo.length === 1) return byTipo[0];
+  if (byTipo.length > 1) {
+    const withStock = byTipo.filter((s) => Number(s.available || 0) > 0);
+    return withStock.length === 1 ? withStock[0] : undefined;
+  }
+  return undefined;
+}
+
+/** Ordena las opciones poniendo primero las que coinciden con el tipo del pedido */
+export function sortStockOptions<T extends StockOptionLike>(items: T[], lineText?: string): T[] {
+  const wantTipo = lineText ? canonicalTipo(lineText) ?? tipoFromName(lineText) : null;
+  return [...items].sort((a, b) => {
+    if (wantTipo) {
+      const ta = (canonicalTipo(a.product_type) ?? tipoFromName(a.name)) === wantTipo ? 0 : 1;
+      const tb = (canonicalTipo(b.product_type) ?? tipoFromName(b.name)) === wantTipo ? 0 : 1;
+      if (ta !== tb) return ta - tb;
+    }
+    const byName = cleanReferenceName(a.name).localeCompare(cleanReferenceName(b.name), "es", {
+      sensitivity: "base",
+    });
+    if (byName !== 0) return byName;
+    return Number(b.available || 0) - Number(a.available || 0);
+  });
+}
+
