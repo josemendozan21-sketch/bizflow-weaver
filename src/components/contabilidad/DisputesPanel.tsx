@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { openSignedUrl } from "@/lib/signedUrl";
 import OrderDisputeDialog from "@/components/ventas/OrderDisputeDialog";
 import PaymentConsistencyPanel from "@/components/contabilidad/PaymentConsistencyPanel";
+import CommissionAdjustmentPanel from "@/components/contabilidad/CommissionAdjustmentPanel";
 
 interface Props {
   orders: Order[];
@@ -139,6 +140,7 @@ export default function DisputesPanel({ orders }: Props) {
 
   return (
     <div className="space-y-4">
+    <CommissionAdjustmentPanel advisorFilter={canResolve ? undefined : (user?.email ?? undefined)} />
     <PaymentConsistencyPanel orders={myOrders} canFix={canResolve} />
     <Card>
       <CardHeader className="pb-3">
