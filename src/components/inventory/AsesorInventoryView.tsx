@@ -6,23 +6,24 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ArrowLeft, ChevronRight, Package } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useReferenceCatalog } from "@/hooks/useReferenceCatalog";
-import ReferenceLabel from "@/components/inventory/ReferenceLabel";
 import FacetFilterBar from "@/components/inventory/FacetFilterBar";
 import GroupedInventoryTable, {
   type InventoryColumn,
   type InventoryGroup,
 } from "@/components/inventory/GroupedInventoryTable";
 import { cn } from "@/lib/utils";
-import { normalizeText, type ReferenceItem } from "@/lib/referenceCatalog";
+import { cleanReferenceName, normalizeText, type ReferenceItem } from "@/lib/referenceCatalog";
 import {
   MAGICAL_FACETS,
   SWEATSPOT_FACETS,
   buildFacetGroups,
+  buildVariantRows,
   magicalFacetValues,
   matchesSelection,
   pickGroupKey,
   sweatspotFacetValues,
   type FacetSelection,
+  type VariantRow,
 } from "@/lib/inventoryFacets";
 import type { InventoryBrand } from "@/stores/inventoryStore";
 
