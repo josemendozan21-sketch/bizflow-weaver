@@ -3,14 +3,12 @@ import type { Database } from "@/integrations/supabase/types";
 export type AppRole = Database["public"]["Enums"]["app_role"];
 
 /** Alcance de la información que un rol puede ver de un pedido. */
-export type OrderViewScope = "full" | "design" | "none";
+export type OrderViewScope = "full" | "operations" | "design" | "none";
 
 /** Roles con acceso completo a la ficha de cualquier pedido */
 const FULL_ROLES: AppRole[] = [
   "admin",
   "contabilidad",
-  "produccion",
-  "estampacion",
   "logistica",
   "inventarios",
   "asesor_comercial", // ve ficha completa, pero solo de SUS pedidos (filtrado en useOrders)
@@ -19,9 +17,13 @@ const FULL_ROLES: AppRole[] = [
 /** Roles que solo ven la información relacionada con diseño */
 const DESIGN_ROLES: AppRole[] = ["disenador"];
 
+/** Roles operativos: ven lo pertinente a su área, sin información comercial */
+const OPERATIONS_ROLES: AppRole[] = ["produccion", "estampacion"];
+
 export function getOrderViewScope(role?: AppRole | null): OrderViewScope {
   if (!role) return "none";
   if (FULL_ROLES.includes(role)) return "full";
+  if (OPERATIONS_ROLES.includes(role)) return "operations";
   if (DESIGN_ROLES.includes(role)) return "design";
   return "none";
 }
@@ -56,8 +58,20 @@ const DESIGN_LOG_FIELDS = new Set([
   "observations",
 ]);
 
+/** Campos del historial visibles para producción y estampación */
+const OPERATIONS_LOG_FIELDS = new Set([
+  ...DESIGN_LOG_FIELDS,
+  "delivery_date",
+  "delivered_quantity",
+  "dispatched_at",
+  "returned_at",
+  "current_stage",
+  "production_stage",
+]);
+
 export function isFieldVisibleForScope(field: string, scope: OrderViewScope): boolean {
   if (scope === "full") return true;
+  if (scope === "operations") return OPERATIONS_LOG_FIELDS.has(field);
   if (scope === "design") return DESIGN_LOG_FIELDS.has(field);
   return false;
 }
