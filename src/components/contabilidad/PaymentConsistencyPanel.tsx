@@ -80,7 +80,10 @@ export default function PaymentConsistencyPanel({
     const out: Row[] = [];
     for (const o of relevant) {
       const total = Number(o.total_amount) || 0;
+      const abono = Number(o.abono) || 0;
       const registered = paidByOrder.get(o.id) || 0;
+      const hasPaymentRows = payments.some((p) => p.order_id === o.id);
+      const anyProof = !!o.payment_proof_url;
       const finalProof = String(o.payment_proof_url || "").includes("soporte_pago_final");
       const dispatched = ["despachado", "entregado"].includes(String(o.production_status || ""));
       const fullyPaid = isOrderFullyPaid(o);
@@ -94,12 +97,39 @@ export default function PaymentConsistencyPanel({
         });
         continue;
       }
+      if (abono <= 0 && anyProof) {
+        out.push({
+          order: o,
+          kind: "soporte_sin_abono",
+          issue: "Tiene soporte de pago cargado pero el pedido no registra ningún abono",
+          gap: total,
+        });
+        continue;
+      }
       if (dispatched && !fullyPaid) {
         out.push({
           order: o,
           kind: "despachado_sin_pago",
           issue: "Pedido despachado o entregado sin pago completo",
           gap: getOrderBalance(o),
+        });
+        continue;
+      }
+      if (abono > 0 && !hasPaymentRows) {
+        out.push({
+          order: o,
+          kind: "abono_sin_historial",
+          issue: "El abono del pedido no tiene el pago correspondiente en el historial",
+          gap: abono,
+        });
+        continue;
+      }
+      if (hasPaymentRows && Math.abs(abono - registered) > 1) {
+        out.push({
+          order: o,
+          kind: "descuadre_abono_pagos",
+          issue: `El abono del pedido (${fmt(abono)}) no coincide con la suma de pagos registrados (${fmt(registered)})`,
+          gap: Math.abs(abono - registered),
         });
         continue;
       }
@@ -113,7 +143,14 @@ export default function PaymentConsistencyPanel({
       }
     }
     return out.sort((a, b) => b.gap - a.gap);
-  }, [relevant, paidByOrder]);
+  }, [relevant, paidByOrder, payments]);
+
+  const byKind = useMemo(() => {
+    const m = new Map<IssueKind, number>();
+    for (const r of rows) m.set(r.kind, (m.get(r.kind) || 0) + 1);
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  }, [rows]);
+
 
   const totalGap = rows.reduce((s, r) => s + r.gap, 0);
   const commissionGap = (totalGap / IVA_DIVISOR) * APPROX_RATE;
