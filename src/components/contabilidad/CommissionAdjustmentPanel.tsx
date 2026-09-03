@@ -215,6 +215,16 @@ export default function CommissionAdjustmentPanel({ advisorFilter }: { advisorFi
                     }`}
                   >
                     {fmt(g.ajuste)}
+                    {g.bonoDelta > 0 && (
+                      <span className="block text-[10px] font-normal text-muted-foreground">
+                        incl. bono {fmt(g.bonoDelta)}
+                      </span>
+                    )}
+                    {g.weekendUnlocked && (
+                      <span className="block text-[10px] font-normal text-muted-foreground">
+                        tarifas FDS desbloqueadas
+                      </span>
+                    )}
                   </TableCell>
 
                 </TableRow>
@@ -229,6 +239,7 @@ export default function CommissionAdjustmentPanel({ advisorFilter }: { advisorFi
                             <TableHead className="text-right">Total</TableHead>
                             <TableHead className="text-right">Base</TableHead>
                             <TableHead className="text-right">Tarifa</TableHead>
+                            <TableHead className="text-right">FDS</TableHead>
                             <TableHead className="text-right">Antes</TableHead>
                             <TableHead className="text-right">Correcta</TableHead>
                             <TableHead className="text-right">Ajuste</TableHead>
@@ -250,6 +261,9 @@ export default function CommissionAdjustmentPanel({ advisorFilter }: { advisorFi
                               <TableCell className="text-right">{fmt(r.net)}</TableCell>
                               <TableCell className="text-right">
                                 {(r.rate * 100).toFixed(0)}%
+                              </TableCell>
+                              <TableCell className="text-right text-muted-foreground">
+                                {r.weekend ? "Sí" : "—"}
                               </TableCell>
                               <TableCell className="text-right text-muted-foreground">
                                 {fmt(r.comisionAntes)}
