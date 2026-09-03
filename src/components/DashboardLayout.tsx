@@ -8,6 +8,8 @@ import { AIAssistant } from "@/components/AIAssistant";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 import { OrderQuickViewProvider, useOrderQuickView } from "@/components/common/OrderQuickView";
+import { useAuth } from "@/contexts/AuthContext";
+import { canSearchOrders } from "@/lib/orderAccess";
 
 function OrderSearchTrigger() {
   const quickView = useOrderQuickView();
