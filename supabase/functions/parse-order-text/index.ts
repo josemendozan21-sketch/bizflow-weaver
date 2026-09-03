@@ -57,7 +57,8 @@ Notas generales:
 - Los colores de gel y tinta pueden estar como "gel azul" o "tinta rosada"
 - El NIT/cédula puede venir como "NIT: 900123456-7" o "CC 1234567"
 - Si ves múltiples productos/líneas, inclúyelos todos en el array "productos"
-- Los valores pueden venir como "$15.000" o "15000" o "15mil"`;
+- Los valores pueden venir como "$15.000" o "15000" o "15mil"
+- Dirección: separa SIEMPRE la dirección base del complemento. En "Calle 117 # 6a-60 OFC 402" -> direccion="Calle 117 # 6a-60", complemento="OFC 402". Reconoce oficina/of/ofc, apto/apartamento, torre, bloque, interior, local, piso, casa, conjunto. Si no hay complemento, déjalo null. La ciudad no va dentro de la dirección.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
