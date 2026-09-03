@@ -111,11 +111,11 @@ const Ventas = () => {
 
         <TabsContent value="pedidos" className="space-y-6 mt-4">
           {/* Stepper */}
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-3 text-sm w-full">
             <StepIndicator n={1} current={step} label="Marca" />
-            <div className="h-px w-6 bg-border" />
+            <div className="h-px flex-1 bg-border" />
             <StepIndicator n={2} current={step} label="Tipo de venta" />
-            <div className="h-px w-6 bg-border" />
+            <div className="h-px flex-1 bg-border" />
             <StepIndicator n={3} current={step} label="Pedido" />
           </div>
 
@@ -126,14 +126,14 @@ const Ventas = () => {
           )}
 
           {step === 1 && (
-            <div className="grid gap-4 sm:grid-cols-2 max-w-lg">
+            <div className="grid gap-4 sm:grid-cols-2">
               <SelectionCard title="Sweatspot" description="Termos, canguros y accesorios" onClick={() => handleBrandSelect("sweatspot")} />
               <SelectionCard title="Magical Warmers" description="Cuerpos y producto terminado" onClick={() => handleBrandSelect("magical")} />
             </div>
           )}
 
           {step === 2 && (
-            <div className="grid gap-4 sm:grid-cols-2 max-w-lg">
+            <div className="grid gap-4 sm:grid-cols-2">
               <SelectionCard title="Al por mayor" description="Pedidos en volumen con abono inicial" onClick={() => handleSaleTypeSelect("mayor")} />
               <SelectionCard title="Al por menor" description="Venta unitaria al consumidor final" onClick={() => handleSaleTypeSelect("menor")} />
             </div>
