@@ -3130,45 +3130,52 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
 
            <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Datos del cliente</legend>
-            <div className="grid gap-4 sm:grid-cols-2">
-               <ClientNameAutocomplete
-                 label="Nombre completo"
-                 name="nombre"
-                 required
-                 value={nombre}
-                 onValueChange={setNombre}
-                 onSelect={(c) => {
-                   if (c.telefono) setTelefono(c.telefono);
-                   if (c.nit) setCedula(c.nit);
-                   if (c.email) setEmail(c.email);
-                   if (c.ciudad) setCiudad(c.ciudad);
-                   if (c.direccion) setDireccion(c.direccion);
-                 }}
-               />
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <ClientNameAutocomplete
+                label="Nombre completo"
+                name="nombre"
+                required
+                value={nombre}
+                onValueChange={setNombre}
+                onSelect={(c) => {
+                  if (c.telefono) setTelefono(c.telefono);
+                  if (c.nit) setCedula(c.nit);
+                  if (c.email) setEmail(c.email);
+                  if (c.ciudad) setCiudad(c.ciudad);
+                  if (c.direccion) setDireccion(c.direccion);
+                }}
+              />
               <div className="space-y-1.5">
-                <Label htmlFor="telefono">Teléfono</Label>
+                <Label htmlFor="telefono">Teléfono <span className="text-destructive">*</span></Label>
                 <Input id="telefono" name="telefono" type="tel" required value={telefono} onChange={(e) => setTelefono(e.target.value)} />
               </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="cedula">Cédula o NIT</Label>
+                <Label htmlFor="cedula">Cédula o NIT <span className="text-destructive">*</span></Label>
                 <Input id="cedula" name="cedula" required value={cedula} onChange={(e) => setCedula(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="email">Correo electrónico</Label>
+                <Label htmlFor="email">Correo electrónico <span className="text-destructive">*</span></Label>
                 <Input id="email" name="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
               </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="ciudad">Ciudad</Label>
+                <Label htmlFor="ciudad">Ciudad <span className="text-destructive">*</span></Label>
                 <Input id="ciudad" name="ciudad" required value={ciudad} onChange={(e) => setCiudad(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="departamento">Departamento</Label>
+                <Label htmlFor="departamento">Departamento <span className="text-destructive">*</span></Label>
                 <Input id="departamento" name="departamento" required value={departamento} onChange={(e) => setDepartamento(e.target.value)} />
               </div>
+              <AddressAutocomplete
+                name="direccion"
+                required
+                className="sm:col-span-2 lg:col-span-3"
+                value={direccion}
+                onValueChange={setDireccion}
+                onResolved={(r) => {
+                  if (r.city) setCiudad(r.city);
+                  if (r.department) setDepartamento(r.department);
+                }}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="direccion">Dirección de envío</Label>
