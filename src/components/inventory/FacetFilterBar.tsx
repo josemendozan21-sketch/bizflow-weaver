@@ -1,11 +1,11 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, X, SlidersHorizontal, ArrowDownAZ, ArrowUpAZ } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { Search, X, SlidersHorizontal, Settings2, ArrowDownAZ, ArrowUpAZ, Check } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import FacetSelect from "@/components/inventory/FacetSelect";
 import type { FacetGroup, FacetSelection } from "@/lib/inventoryFacets";
 import { countActiveFilters } from "@/lib/inventoryFacets";
 
@@ -14,10 +14,13 @@ interface FacetFilterBarProps {
   onSearchChange: (v: string) => void;
   searchPlaceholder?: string;
   groups: FacetGroup[];
+  /** Facetas siempre visibles en la fila principal; el resto va en "Más filtros". */
+  primaryKeys?: string[];
   selection: FacetSelection;
   onSelect: (key: string, value: string | undefined) => void;
   onClear: () => void;
   resultCount: number;
+  totalCount: number;
   sortDir: "asc" | "desc";
   onToggleSort: () => void;
   onlyAvailable: boolean;
@@ -25,154 +28,214 @@ interface FacetFilterBarProps {
 }
 
 /**
- * Barra de filtros por facetas: se lee de lo macro a lo micro y se comporta
- * igual en todas las marcas.
+ * Barra de filtros minimalista: una sola línea de desplegables (macro → micro),
+ * el resto de facetas detrás de "Más filtros".
  */
 export default function FacetFilterBar({
   search,
   onSearchChange,
   searchPlaceholder = "Buscar producto...",
   groups,
+  primaryKeys,
   selection,
   onSelect,
   onClear,
   resultCount,
+  totalCount,
   sortDir,
   onToggleSort,
   onlyAvailable,
   onOnlyAvailableChange,
 }: FacetFilterBarProps) {
-  const [expanded, setExpanded] = useState(false);
-  const [showAll, setShowAll] = useState<Record<string, boolean>>({});
-  const MAX_VISIBLE = 12;
   const activeCount = countActiveFilters(selection);
-  const activeChips = groups
+  const primary = primaryKeys?.length
+    ? groups.filter((g) => primaryKeys.includes(g.key))
+    : groups.slice(0, 2);
+  const secondary = groups.filter((g) => !primary.some((p) => p.key === g.key));
+  const secondaryActive = secondary.filter((g) => selection[g.key]).length;
+
+  const activeChips = secondary
     .map((g) => ({ key: g.key, label: g.label, value: selection[g.key] }))
     .filter((c) => c.value);
 
+  const renderFacetList = (list: FacetGroup[]) => (
+    <div className="space-y-3">
+      {list.map((group) => (
+        <div key={group.key} className="space-y-1.5">
+          <span className="text-xs text-muted-foreground">{group.label}</span>
+          <FacetSelect
+            group={group}
+            value={selection[group.key]}
+            onChange={(v) => onSelect(group.key, v)}
+            className="w-full justify-between"
+          />
+        </div>
+      ))}
+    </div>
+  );
+
   return (
-    <div className="space-y-3 mb-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[180px]">
+    <div className="space-y-2.5 mb-4">
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 min-w-0">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={searchPlaceholder}
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-8 h-9"
+            className="pl-8 h-9 border-0 border-b rounded-none shadow-none focus-visible:ring-0 focus-visible:border-primary px-8"
           />
-        </div>
-
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-9 gap-1.5 md:hidden"
-          onClick={() => setExpanded((v) => !v)}
-        >
-          <SlidersHorizontal className="h-4 w-4" />
-          Filtros
-          {activeCount > 0 && (
-            <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">
-              {activeCount}
-            </Badge>
-          )}
-        </Button>
-
-        <div className="flex items-center gap-2 rounded-md border px-3 h-9">
-          <Label htmlFor="only-available" className="text-xs cursor-pointer whitespace-nowrap">
-            Solo con stock
-          </Label>
-          <Switch id="only-available" checked={onlyAvailable} onCheckedChange={onOnlyAvailableChange} />
-        </div>
-
-        <Button type="button" variant="outline" size="sm" className="h-9 gap-1.5" onClick={onToggleSort}>
-          {sortDir === "asc" ? <ArrowDownAZ className="h-4 w-4" /> : <ArrowUpAZ className="h-4 w-4" />}
-          {sortDir === "asc" ? "A-Z" : "Z-A"}
-        </Button>
-
-        <span className="text-xs text-muted-foreground ml-auto whitespace-nowrap">
-          {resultCount} resultado{resultCount === 1 ? "" : "s"}
-        </span>
-      </div>
-
-      {activeChips.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          {activeChips.map((chip) => (
-            <Badge
-              key={chip.key}
-              variant="secondary"
-              className="gap-1 pl-2 pr-1 py-1 text-xs font-normal"
-            >
-              <span className="text-muted-foreground">{chip.label}:</span> {chip.value}
-              <button
-                type="button"
-                aria-label={`Quitar filtro ${chip.label}`}
-                className="ml-0.5 rounded-sm hover:bg-muted-foreground/20 p-0.5"
-                onClick={() => onSelect(chip.key, undefined)}
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          ))}
-          <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onClear}>
-            Limpiar todo
-          </Button>
-        </div>
-      )}
-
-      <div className={cn("space-y-2", !expanded && "hidden md:block")}>
-        {groups.map((group) => {
-          const isExpanded = !!showAll[group.key] || group.options.length <= MAX_VISIBLE;
-          const visible = isExpanded ? group.options : group.options.slice(0, MAX_VISIBLE);
-          return (
-          <div key={group.key} className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground w-20 shrink-0">{group.label}</span>
-            <Button
+          {search && (
+            <button
               type="button"
-              size="sm"
-              variant={!selection[group.key] ? "default" : "outline"}
-              className="h-7 px-2.5 text-xs"
-              onClick={() => onSelect(group.key, undefined)}
+              aria-label="Limpiar búsqueda"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-sm p-1 text-muted-foreground hover:text-foreground"
+              onClick={() => onSearchChange("")}
             >
-              Todos
-            </Button>
-            {visible.map((opt) => (
-              <Button
-                key={opt.value}
-                type="button"
-                size="sm"
-                variant={selection[group.key] === opt.value ? "default" : "outline"}
-                className="h-7 px-2.5 text-xs gap-1.5"
-                onClick={() =>
-                  onSelect(group.key, selection[group.key] === opt.value ? undefined : opt.value)
-                }
-              >
-                {opt.value}
-                <span
-                  className={cn(
-                    "text-[10px]",
-                    selection[group.key] === opt.value ? "opacity-80" : "text-muted-foreground",
-                  )}
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* Facetas principales (desktop) */}
+        <div className="hidden md:flex items-center gap-2">
+          {primary.map((group) => (
+            <FacetSelect
+              key={group.key}
+              group={group}
+              value={selection[group.key]}
+              onChange={(v) => onSelect(group.key, v)}
+            />
+          ))}
+
+          {secondary.length > 0 && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 gap-1.5 text-muted-foreground"
                 >
-                  {opt.count}
-                </span>
-              </Button>
-            ))}
-            {group.options.length > MAX_VISIBLE && (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className="h-7 px-2 text-xs text-muted-foreground"
-                onClick={() => setShowAll((s) => ({ ...s, [group.key]: !isExpanded }))}
-              >
-                {isExpanded ? "Ver menos" : `+${group.options.length - MAX_VISIBLE} más`}
+                  <SlidersHorizontal className="h-4 w-4" />
+                  Más
+                  {secondaryActive > 0 && (
+                    <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">{secondaryActive}</Badge>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64" align="end">
+                {renderFacetList(secondary)}
+              </PopoverContent>
+            </Popover>
+          )}
+        </div>
+
+        {/* Filtros en móvil */}
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button type="button" variant="outline" size="sm" className="h-9 gap-1.5 md:hidden shrink-0">
+              <SlidersHorizontal className="h-4 w-4" />
+              Filtros
+              {activeCount > 0 && (
+                <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">{activeCount}</Badge>
+              )}
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-[85vw] sm:w-80 overflow-y-auto">
+            <SheetHeader className="mb-4">
+              <SheetTitle>Filtros</SheetTitle>
+            </SheetHeader>
+            {renderFacetList(groups)}
+            {activeCount > 0 && (
+              <Button variant="ghost" size="sm" className="mt-4 w-full" onClick={onClear}>
+                Limpiar todo
               </Button>
             )}
-          </div>
-          );
-        })}
+          </SheetContent>
+        </Sheet>
+
+        {/* Opciones de vista */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 text-muted-foreground shrink-0"
+              aria-label="Opciones de vista"
+            >
+              <Settings2 className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-52 p-1" align="end">
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+              onClick={() => onOnlyAvailableChange(!onlyAvailable)}
+            >
+              <Check className={cn("h-4 w-4", onlyAvailable ? "opacity-100" : "opacity-0")} />
+              Solo con stock
+            </button>
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+              onClick={onToggleSort}
+            >
+              {sortDir === "asc" ? (
+                <ArrowDownAZ className="h-4 w-4" />
+              ) : (
+                <ArrowUpAZ className="h-4 w-4" />
+              )}
+              Orden {sortDir === "asc" ? "A-Z" : "Z-A"}
+            </button>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5 min-h-[1.5rem]">
+        {activeChips.map((chip) => (
+          <Badge
+            key={chip.key}
+            variant="outline"
+            className="gap-1 pl-2 pr-1 py-0.5 text-xs font-normal text-muted-foreground"
+          >
+            {chip.value}
+            <button
+              type="button"
+              aria-label={`Quitar filtro ${chip.label}`}
+              className="rounded-sm p-0.5 hover:text-foreground"
+              onClick={() => onSelect(chip.key, undefined)}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        ))}
+        {onlyAvailable && (
+          <Badge variant="outline" className="gap-1 pl-2 pr-1 py-0.5 text-xs font-normal text-muted-foreground">
+            Solo con stock
+            <button
+              type="button"
+              aria-label="Quitar filtro de stock"
+              className="rounded-sm p-0.5 hover:text-foreground"
+              onClick={() => onOnlyAvailableChange(false)}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        )}
+        <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+          {resultCount} de {totalCount}
+          {activeCount > 0 && (
+            <button
+              type="button"
+              className="ml-2 underline underline-offset-2 hover:text-foreground"
+              onClick={onClear}
+            >
+              Limpiar
+            </button>
+          )}
+        </span>
       </div>
     </div>
   );
