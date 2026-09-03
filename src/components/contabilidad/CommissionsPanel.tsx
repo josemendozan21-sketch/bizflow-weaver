@@ -30,6 +30,7 @@ import {
 import { ChevronDown, Info, TrendingUp, AlertCircle, Download } from "lucide-react";
 import { CommissionExpandButton } from "@/components/commissions/CommissionExpandButton";
 import { CommissionStatusBadge } from "@/components/commissions/CommissionStatusBadge";
+import { CommissionRulesLegend } from "@/components/commissions/CommissionRulesLegend";
 import type { Order } from "@/hooks/useOrders";
 import { useAllOrderCharges } from "@/hooks/useOrderCharges";
 import {
@@ -136,8 +137,7 @@ export default function CommissionsPanel({ orders }: Props) {
         <div>
           <h2 className="text-xl font-bold">Comisiones de asesores</h2>
           <p className="text-sm text-muted-foreground">
-            Cálculo automático según política oficial 2026. Período por fecha de
-            factura; la base excluye flete y cargos adicionales.
+            Cálculo automático según política oficial 2026.
           </p>
         </div>
         <div className="flex gap-2">
@@ -162,6 +162,8 @@ export default function CommissionsPanel({ orders }: Props) {
         </div>
 
       </div>
+
+      <CommissionRulesLegend />
 
       {/* Resumen política */}
       <Card className="border-primary/30 bg-primary/5">
