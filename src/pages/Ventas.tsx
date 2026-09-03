@@ -487,10 +487,11 @@ function buildSweatspotMayorSummary(args: {
   ssIsRecompra: boolean;
   ssNoLogo: boolean;
   ssPaymentProofFile: File | null;
+  ssLogos?: LogoEntry[];
   ssCobroLogo?: boolean;
   ssCostoLogo?: string;
 }): OrderSummary {
-  const { form, ssLines, grandTotal, ssAbono, ssEstadoPago, ssIsRecompra, ssNoLogo, ssPaymentProofFile, ssCobroLogo, ssCostoLogo } = args;
+  const { form, ssLines, grandTotal, ssAbono, ssEstadoPago, ssIsRecompra, ssNoLogo, ssPaymentProofFile, ssLogos = [], ssCobroLogo, ssCostoLogo } = args;
   const abonoNum = ssEstadoPago === "pago_total" ? grandTotal : (parseFloat(ssAbono) || 0);
   const saldo = Math.max(grandTotal - abonoNum, 0);
   const estadoPagoLabel =
@@ -542,8 +543,16 @@ function buildSweatspotMayorSummary(args: {
     ],
     opciones,
     archivos: [
-      { label: "Logo", value: getFileName(form, "ss_logo") || (ssNoLogo ? "No requiere" : "No adjuntado") },
-      { label: "Nombre del logo", value: getFieldVal(form, "ss_logo_nombre") || "—" },
+      ...(ssNoLogo
+        ? [{ label: "Logo", value: "No requiere" }]
+        : ssLogos.filter((l) => l.file || l.name.trim()).length === 0
+        ? [{ label: "Logo", value: "No adjuntado" }]
+        : ssLogos
+            .filter((l) => l.file || l.name.trim())
+            .map((l, i) => ({
+              label: `Logo ${i + 1}`,
+              value: [l.name.trim() || "Sin nombre", l.file?.name].filter(Boolean).join(" — "),
+            }))),
       { label: "RUT", value: getFileName(form, "ss_rut") || "No adjuntado" },
     ],
     observaciones: [getFieldVal(form, "ss_personalizacion"), getFieldVal(form, "ss_observaciones")].filter(Boolean).join("\n\n"),
@@ -1951,7 +1960,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const [ssCobroLogo, setSsCobroLogo] = usePersistedState("ventas:ss:cobroLogo", false);
   const [ssCostoLogo, setSsCostoLogo] = usePersistedState("ventas:ss:costoLogo", "");
   const [ssPaymentProofFile, setSsPaymentProofFile] = useState<File | null>(null);
-  const [ssLogoFileState, setSsLogoFileState] = useState<File | null>(null);
+  const [ssLogos, setSsLogos] = useState<LogoEntry[]>(() => [makeLogoEntry()]);
   const [ssRutFileState, setSsRutFileState] = useState<File | null>(null);
   const ssFormRef = useRef<HTMLFormElement>(null);
   useFormDraft(ssFormRef, "ventas:ss:fields");
@@ -2010,11 +2019,27 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       ? `Medio de pago: ${ssPaymentChannel}${observacionesRaw ? ` | ${observacionesRaw}` : ""}`
       : observacionesRaw;
     const rutFile = ssRutFileState;
-    const logoFile = ssLogoFileState;
-    const logoNombre = ((fd.get("ss_logo_nombre") as string) || "").trim();
+    const ssActiveLogos = ssNoLogo
+      ? []
+      : ssLogos.filter((l) => (l.file && l.file.size > 0) || l.name.trim());
+    const logoFile = ssActiveLogos[0]?.file || null;
+    const logoFile2 = ssActiveLogos[1]?.file || null;
+    const logoNombre = (ssActiveLogos[0]?.name || "").trim();
+    const logoNombre2 = (ssActiveLogos[1]?.name || "").trim();
+    const ssLogosCount = ssActiveLogos.length;
     const fechaRequerida = fd.get("ss_fechaRequerida") as string;
 
     const ssReusaLogoAnterior = ssIsRecompra && !ssNoLogo && ssRecompraMismoLogo === "si";
+    if (!ssNoLogo && !ssReusaLogoAnterior) {
+      const badIdx = ssActiveLogos.findIndex((l) => !l.file || l.file.size === 0 || !l.name.trim());
+      if (ssActiveLogos.length === 0 || badIdx >= 0) {
+        toast.error("Logos incompletos", {
+          description: "Cada logo necesita archivo y nombre. Complete o elimine las filas vacías.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+    }
     if (ssReusaLogoAnterior && !ssRecompraLogoUrl) {
       toast.error("Seleccione el logo anterior", {
         description: "Use el buscador para elegir el logo ya trabajado con este cliente.",
@@ -2083,6 +2108,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     // Auto-create design request once if logo was uploaded.
     // En recompras NO se crea solicitud de diseño automática.
     let logoUrl: string | null = null;
+    let logoUrl2: string | null = null;
+    let ssExtraLogoUrls: string[] = [];
     let ssLogoRequestId: string | null = null;
     let ssFirstOrderIdForLogo: string | null = null;
     const ssHasLogoFile = !!(logoFile && logoFile.size > 0);
@@ -2097,6 +2124,9 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         advisorId: user.id,
         advisorName: user.email || "Asesor",
         logoFile: ssHasLogoFile ? logoFile : null,
+        logoFile2: ssLogosCount >= 2 ? logoFile2 : null,
+        logoName2: ssLogosCount >= 2 ? logoNombre2 : undefined,
+        extraLogos: ssActiveLogos.slice(2).map((l) => ({ file: l.file, name: l.name.trim() })),
         clientComments: observaciones || undefined,
         additionalInstructions: personalizacion || undefined,
         fromRecompra: ssIsRecompra,
@@ -2104,11 +2134,14 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       if (result.success) {
         toast.success("Diseño de logo", { description: result.message });
         logoUrl = result.logoUrl || "logo-uploaded";
+        logoUrl2 = result.logoUrl2 || null;
         ssLogoRequestId = result.requestId || null;
       } else {
         toast.error("Diseño de logo", { description: result.message });
         if (result.logoUrl) logoUrl = result.logoUrl;
+        if (result.logoUrl2) logoUrl2 = result.logoUrl2;
       }
+      ssExtraLogoUrls = result.extraLogoUrls || [];
     } else if (ssReusaLogoAnterior && ssRecompraLogoUrl) {
       logoUrl = ssRecompraLogoUrl;
     }
@@ -2211,6 +2244,18 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
           ink_color: inkColor,
           silicone_color: siliconeColor,
           logo_url: logoUrl,
+          logo_url_2: logoUrl2,
+          logo_count: ssReusaLogoAnterior ? 1 : ssLogosCount,
+          logo_name: logoNombre || null,
+          logo_name_2: ssLogosCount >= 2 ? (logoNombre2 || null) : null,
+          logos: ssNoLogo
+            ? []
+            : ssReusaLogoAnterior
+            ? [{ name: logoNombre || "Logo anterior del cliente", url: logoUrl }]
+            : ssActiveLogos.map((l, i) => ({
+                name: l.name.trim() || null,
+                url: i === 0 ? logoUrl : i === 1 ? logoUrl2 : (ssExtraLogoUrls[i - 2] ?? null),
+              })),
           ...ssLogoSourceMeta,
           observations: [observaciones, lineIdx === 0 ? ssLogoNote : ""].filter(Boolean).join(" | ") || null,
           personalization: personalizacion || null,
@@ -2323,7 +2368,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       "ventas:ss:cobroLogo","ventas:ss:costoLogo",
       "ventas:ss:fields",
     ].forEach(clearFormDraft);
-    setSsLogoFileState(null);
+    setSsLogos([makeLogoEntry()]);
     setSsRecompraLogoUrl("");
     setSsClientName("");
     setSsRutFileState(null);
@@ -2657,22 +2702,11 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                 )}
               </div>
             )}
+            {!ssNoLogo && !(ssIsRecompra && ssRecompraMismoLogo === "si") && (
+              <OrderLogosField logos={ssLogos} onChange={setSsLogos} />
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
-              {!(ssIsRecompra && ssRecompraMismoLogo === "si") && (
-                <FileField label="Adjuntar logo" name="ss_logo" value={ssLogoFileState} onChange={setSsLogoFileState} accept="image/*,.pdf,.svg,.ai" />
-              )}
               <FileField label="Adjuntar RUT de la empresa (opcional)" name="ss_rut" value={ssRutFileState} onChange={setSsRutFileState} accept="image/*,.pdf" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="ss_logo_nombre">Nombre o referencia del logo *</Label>
-              <Input
-                id="ss_logo_nombre"
-                name="ss_logo_nombre"
-                placeholder="Ej: Logo Coca-Cola v2, Escudo Colegio San José..."
-              />
-              <p className="text-xs text-muted-foreground">
-                Escriba un nombre claro para que producción identifique fácilmente este logo.
-              </p>
             </div>
           </fieldset>
 
@@ -2726,6 +2760,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
             ssIsRecompra,
             ssNoLogo,
             ssPaymentProofFile,
+            ssLogos,
             ssCobroLogo,
             ssCostoLogo,
           })}
