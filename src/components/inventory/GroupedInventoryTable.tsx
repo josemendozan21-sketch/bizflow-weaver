@@ -47,7 +47,7 @@ export default function GroupedInventoryTable<T>({
 
   return (
     <div className="rounded-md border overflow-x-auto md:overflow-x-visible">
-      <Table>
+      <Table containerClassName="overflow-x-auto md:overflow-visible">
         <TableHeader className="sticky top-0 z-20 bg-background shadow-[inset_0_-1px_0_hsl(var(--border))]">
           <TableRow className="hover:bg-transparent">
             {columns.map((col) => (
