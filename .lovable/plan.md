@@ -3,7 +3,8 @@
 ## Qué está pasando hoy
 
 - El llenado automático con IA sí extrae la dirección, pero la escribe "a la fuerza" en el input del DOM. El nuevo campo de dirección con Google Maps guarda su texto en el estado de React, así que ese valor se pierde y el campo se ve vacío. Los demás campos (nombre, NIT, teléfono, ciudad) sí funcionan porque son inputs simples.
-- En **Magical detal** hay dos campos de dirección duplicados en pantalla (el nuevo con Google Maps y el viejo de texto), lo que además puede enviar el dato dos veces.
+- En **Magical detal** hay un campo de dirección duplicado en pantalla (el nuevo con Google Maps y el viejo de texto), lo que además puede enviar el dato dos veces.
+
 - No existe un campo de complemento (oficina, apartamento, bloque, interior, local), y hoy todo eso se mezcla dentro de la dirección principal.
 
 ## Qué se va a hacer
