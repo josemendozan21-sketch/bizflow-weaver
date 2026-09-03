@@ -221,6 +221,9 @@ export default function CommissionsPanel({ orders }: Props) {
         <div className="space-y-4">
           {summaries.map((a) => {
             const isOpen = openAdvisor === a.advisorId;
+            // Mismo desglose que ve el asesor: pendientes de pago vs excluidos.
+            const pendientes = a.excludedLines.filter((l) => l.status === "pendiente");
+            const excluidos = a.excludedLines.filter((l) => l.status === "excluido");
             return (
               <Card key={a.advisorId}>
                 <CardHeader className="pb-3">
@@ -235,9 +238,16 @@ export default function CommissionsPanel({ orders }: Props) {
                         <Badge variant="outline">
                           Ventas del período: {fmt(a.grossSalesWithVat)} ({a.grossOrdersCount})
                         </Badge>
-                        {a.excludedCount > 0 && (
+                        {pendientes.length > 0 && (
                           <Badge className="bg-amber-500">
-                            {a.excludedCount} excluidos · {fmt(a.excludedWithVat)}
+                            {pendientes.length} pendientes de pago ·{" "}
+                            {fmt(pendientes.reduce((s, l) => s + l.totalWithVat, 0))}
+                          </Badge>
+                        )}
+                        {excluidos.length > 0 && (
+                          <Badge variant="secondary">
+                            {excluidos.length} excluidos ·{" "}
+                            {fmt(excluidos.reduce((s, l) => s + l.totalWithVat, 0))}
                           </Badge>
                         )}
                         {a.weekendUnlocked ? (
@@ -256,6 +266,9 @@ export default function CommissionsPanel({ orders }: Props) {
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Comisión {fmt(a.rawCommission)} + Bono {fmt(a.bonus)}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        Misma cifra que el asesor ve como “Comisión causada”
                       </p>
                       <div className="flex gap-2 justify-end">
                         <Button

@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronDown, ChevronRight, Download, Loader2, Wallet } from "lucide-react";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
-import { IVA_DIVISOR, getFlatRateFor } from "@/lib/commissions";
+import { computeRetroAdjustment, type RetroAdjustmentRow } from "@/lib/commissions";
+import type { Order } from "@/hooks/useOrders";
 
 /** Marca dejada por la corrección automática de abonos finales. */
 export const FIX_NOTE = "Saldo final confirmado por el asesor (corrección automática 2026-09-03)";
@@ -16,128 +17,54 @@ function fmt(n: number) {
   return `$${Math.round(n || 0).toLocaleString("es-CO")}`;
 }
 
-interface AdjRow {
-  orderId: string;
-  code: string;
-  advisor: string;
-  period: string; // YYYY-MM
-  client: string;
-  total: number;
-  net: number;
-  rate: number;
-  abonoAntes: number;
-  comisionAntes: number;
-  comisionCorrecta: number;
-  ajuste: number;
-  invoiced: boolean;
-}
-
-function rateFor(o: any): number {
-  const flat = getFlatRateFor(o.advisor_name);
-  if (flat != null) return flat;
-  const contraentrega = o.payment_method === "contra_entrega";
-  if (o.sale_type === "menor") return contraentrega ? 0.10 : 0.12;
-  return o.is_recompra ? 0.06 : 0.10;
-}
+type AdjRow = RetroAdjustmentRow;
 
 /** Último mes ya liquidado a los asesores: solo esos generan ajuste retroactivo. */
 const LAST_SETTLED_PERIOD = "2026-07";
-
 
 export default function CommissionAdjustmentPanel({ advisorFilter }: { advisorFilter?: string }) {
   const [open, setOpen] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["commission-adjustment", FIX_NOTE],
+    queryKey: ["commission-adjustment", FIX_NOTE, "v2"],
     queryFn: async () => {
-      const { data: pays, error } = await supabase
-        .from("order_payments")
-        .select("order_id, amount")
-        .eq("notes", FIX_NOTE);
-      if (error) throw error;
-      const fixed = new Map<string, number>();
-      for (const p of pays || []) {
-        fixed.set(p.order_id, (fixed.get(p.order_id) || 0) + Number(p.amount || 0));
-      }
-      const ids = [...fixed.keys()];
-      if (!ids.length) return [] as AdjRow[];
-
-      const chunks: any[] = [];
-      for (let i = 0; i < ids.length; i += 200) {
-        const slice = ids.slice(i, i + 200);
-        const [{ data: ords }, { data: charges }] = await Promise.all([
-          supabase
-            .from("orders")
-            .select(
-              "id, order_code, advisor_name, client_name, total_amount, abono, shipping_cost, sale_type, is_recompra, payment_method, invoice_date, created_at"
-            )
-
-            .in("id", slice),
-          supabase.from("order_charges").select("order_id, amount").in("order_id", slice),
+      const [{ data: pays, error }, { data: ords, error: ordErr }, { data: charges }] =
+        await Promise.all([
+          supabase.from("order_payments").select("order_id, amount").eq("notes", FIX_NOTE),
+          supabase.from("orders").select("*").range(0, 19999),
+          supabase.from("order_charges").select("order_id, amount").range(0, 19999),
         ]);
-        const chargeMap = new Map<string, number>();
-        for (const c of charges || [])
-          chargeMap.set(c.order_id, (chargeMap.get(c.order_id) || 0) + Number(c.amount || 0));
-        for (const o of ords || []) chunks.push({ o, extra: chargeMap.get(o.id) || 0 });
+      if (error) throw error;
+      if (ordErr) throw ordErr;
+
+      const fixed: Record<string, number> = {};
+      for (const p of pays || []) {
+        fixed[p.order_id] = (fixed[p.order_id] || 0) + Number(p.amount || 0);
+      }
+      const chargeMap: Record<string, number> = {};
+      for (const c of (charges as any[]) || []) {
+        chargeMap[c.order_id] = (chargeMap[c.order_id] || 0) + Number(c.amount || 0);
       }
 
-      const rows: AdjRow[] = chunks.map(({ o, extra }) => {
-        const total = Number(o.total_amount) || 0;
-        const net = Math.max(total - (Number(o.shipping_cost) || 0) - extra, 0);
-        const rate = rateFor(o);
-        const abonoAntes = Math.max((Number(o.abono) || 0) - (fixed.get(o.id) || 0), 0);
-        const comisionCorrecta = (net / IVA_DIVISOR) * rate;
-        const comisionAntes =
-          total > 0 ? ((Math.min(abonoAntes, total) * net) / total / IVA_DIVISOR) * rate : 0;
-        const d = new Date(o.invoice_date || o.created_at);
-        const period = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-        return {
-          orderId: o.id,
-          code: o.order_code || "",
-          advisor: o.advisor_name || "Sin asesor",
-          client: o.client_name || "",
-          period,
-          total,
-          net,
-          rate,
-          abonoAntes,
-          comisionAntes,
-          comisionCorrecta,
-          ajuste: Math.max(comisionCorrecta - comisionAntes, 0),
-          invoiced: !!o.invoice_date,
-        };
-      });
-      return rows;
+      return computeRetroAdjustment(
+        (ords || []) as unknown as Order[],
+        fixed,
+        chargeMap,
+        LAST_SETTLED_PERIOD
+      );
     },
   });
 
-  const rows = useMemo(
+  const groups = useMemo(
     () =>
-      (data || []).filter((r) =>
-        advisorFilter ? r.advisor.toLowerCase() === advisorFilter.toLowerCase() : true
+      (data || []).filter((g) =>
+        advisorFilter ? g.advisor.toLowerCase() === advisorFilter.toLowerCase() : true
       ),
     [data, advisorFilter]
   );
 
-  const groups = useMemo(() => {
-    const m = new Map<string, { advisor: string; period: string; rows: AdjRow[] }>();
-    for (const r of rows) {
-      const k = `${r.advisor}__${r.period}`;
-      if (!m.has(k)) m.set(k, { advisor: r.advisor, period: r.period, rows: [] });
-      m.get(k)!.rows.push(r);
-    }
-    return [...m.entries()]
-      .map(([key, g]) => ({
-        key,
-        ...g,
-        settled: g.period <= LAST_SETTLED_PERIOD,
-        facturado: g.rows.reduce((s, r) => s + r.total, 0),
-        antes: g.rows.reduce((s, r) => s + r.comisionAntes, 0),
-        correcta: g.rows.reduce((s, r) => s + r.comisionCorrecta, 0),
-        ajuste: g.rows.reduce((s, r) => s + r.ajuste, 0),
-      }))
-      .sort((a, b) => a.advisor.localeCompare(b.advisor) || a.period.localeCompare(b.period));
-  }, [rows]);
+  const rows = useMemo(() => groups.flatMap((g) => g.rows), [groups]);
+
 
   /** Solo los meses ya liquidados generan un pago retroactivo. */
   const totalAjuste = groups.filter((g) => g.settled).reduce((s, g) => s + g.ajuste, 0);
@@ -158,6 +85,7 @@ export default function CommissionAdjustmentPanel({ advisorFilter }: { advisorFi
           Facturado: Math.round(g.facturado),
           "Comisión pagada antes": Math.round(g.antes),
           "Comisión correcta": Math.round(g.correcta),
+          "Bono adicional": Math.round(g.bonoDelta),
           "Ajuste a pagar": Math.round(g.ajuste),
         }))
       ),
@@ -174,6 +102,7 @@ export default function CommissionAdjustmentPanel({ advisorFilter }: { advisorFi
           Total: Math.round(r.total),
           "Base comisionable": Math.round(r.net),
           Tarifa: `${(r.rate * 100).toFixed(0)}%`,
+          "Fin de semana": r.weekend ? "Sí" : "No",
           "Abono registrado antes": Math.round(r.abonoAntes),
           "Comisión antes": Math.round(r.comisionAntes),
           "Comisión correcta": Math.round(r.comisionCorrecta),
@@ -286,6 +215,16 @@ export default function CommissionAdjustmentPanel({ advisorFilter }: { advisorFi
                     }`}
                   >
                     {fmt(g.ajuste)}
+                    {g.bonoDelta > 0 && (
+                      <span className="block text-[10px] font-normal text-muted-foreground">
+                        incl. bono {fmt(g.bonoDelta)}
+                      </span>
+                    )}
+                    {g.weekendUnlocked && (
+                      <span className="block text-[10px] font-normal text-muted-foreground">
+                        tarifas FDS desbloqueadas
+                      </span>
+                    )}
                   </TableCell>
 
                 </TableRow>
@@ -300,6 +239,7 @@ export default function CommissionAdjustmentPanel({ advisorFilter }: { advisorFi
                             <TableHead className="text-right">Total</TableHead>
                             <TableHead className="text-right">Base</TableHead>
                             <TableHead className="text-right">Tarifa</TableHead>
+                            <TableHead className="text-right">FDS</TableHead>
                             <TableHead className="text-right">Antes</TableHead>
                             <TableHead className="text-right">Correcta</TableHead>
                             <TableHead className="text-right">Ajuste</TableHead>
@@ -321,6 +261,9 @@ export default function CommissionAdjustmentPanel({ advisorFilter }: { advisorFi
                               <TableCell className="text-right">{fmt(r.net)}</TableCell>
                               <TableCell className="text-right">
                                 {(r.rate * 100).toFixed(0)}%
+                              </TableCell>
+                              <TableCell className="text-right text-muted-foreground">
+                                {r.weekend ? "Sí" : "—"}
                               </TableCell>
                               <TableCell className="text-right text-muted-foreground">
                                 {fmt(r.comisionAntes)}
