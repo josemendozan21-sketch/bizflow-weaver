@@ -213,6 +213,16 @@ export const defaultCtx: CommissionContext = {
   paymentMode: "contado",
 };
 
+/**
+ * Forma de pago real del pedido. Regla ÚNICA usada por la vista del asesor y
+ * por la liquidación de contabilidad (antes contabilidad asumía "contado"
+ * siempre, lo que inflaba la tarifa de detal y generaba cifras distintas).
+ */
+export function getDefaultPaymentMode(o: Order): PaymentMode {
+  return (o as any).payment_method === "contra_entrega" ? "contraentrega" : "contado";
+}
+
+
 function isWeekend(date: Date): boolean {
   const d = getDay(date); // 0=Dom, 6=Sab
   return d === 0 || d === 6;
