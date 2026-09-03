@@ -215,17 +215,25 @@ export default function CommissionAdjustmentPanel({ advisorFilter }: { advisorFi
           </CardTitle>
           <CardDescription>
             Pedidos ya entregados cuyo saldo final no quedaba registrado: la comisión se liquidó
-            sobre el abono inicial. Aquí está la diferencia por asesor y por mes.
+            sobre el abono inicial. Solo los meses <b>ya liquidados</b> (hasta {LAST_SETTLED_PERIOD})
+            generan un pago retroactivo; los meses posteriores ya quedan corregidos y se pagan en su
+            liquidación normal.
           </CardDescription>
         </div>
         <div className="text-right shrink-0">
-          <p className="text-xs text-muted-foreground">Ajuste total</p>
+          <p className="text-xs text-muted-foreground">Ajuste retroactivo (meses ya pagados)</p>
           <p className="text-xl font-semibold text-emerald-600">{fmt(totalAjuste)}</p>
+          {totalNoLiquidado > 0 && (
+            <p className="text-[11px] text-muted-foreground mt-1">
+              + {fmt(totalNoLiquidado)} en meses aún no liquidados (no se paga aparte)
+            </p>
+          )}
           <Button size="sm" variant="outline" className="mt-2" onClick={exportXlsx}>
             <Download className="h-4 w-4 mr-1" />
             Excel
           </Button>
         </div>
+
       </CardHeader>
       <CardContent>
         <Table>
