@@ -55,21 +55,21 @@ export default function Clientes() {
             <Input placeholder="Buscar por nombre, cédula, teléfono o email…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8" />
           </div>
           <Select value={city} onValueChange={(v) => setCity(v === "all" ? "" : v)}>
-            <SelectTrigger className="w-[150px]"><SelectValue placeholder="Ciudad" /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-[150px]"><SelectValue placeholder="Ciudad" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas las ciudades</SelectItem>
               {cities.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={sport} onValueChange={(v) => setSport(v === "all" ? "" : v)}>
-            <SelectTrigger className="w-[150px]"><SelectValue placeholder="Deporte" /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-[150px]"><SelectValue placeholder="Deporte" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos los deportes</SelectItem>
               {SPORT_OPTIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={status} onValueChange={(v) => setStatus(v === "all" ? "" : v)}>
-            <SelectTrigger className="w-[130px]"><SelectValue placeholder="Estado" /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-[130px]"><SelectValue placeholder="Estado" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="activo">Activos</SelectItem>

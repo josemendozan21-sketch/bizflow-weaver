@@ -106,3 +106,14 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  /* Scroll horizontal discreto (pestañas, filtros) */
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}

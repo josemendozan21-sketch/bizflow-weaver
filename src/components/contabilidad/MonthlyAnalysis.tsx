@@ -107,7 +107,7 @@ const MonthlyAnalysis = ({ orders }: Props) => {
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Año</span>
             <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-              <SelectTrigger className="w-[110px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-[110px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {years.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
               </SelectContent>
@@ -116,7 +116,7 @@ const MonthlyAnalysis = ({ orders }: Props) => {
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Mes</span>
             <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
-              <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-[150px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {MONTH_NAMES.map((m, i) => <SelectItem key={i} value={String(i)}>{m}</SelectItem>)}
               </SelectContent>
@@ -125,7 +125,7 @@ const MonthlyAnalysis = ({ orders }: Props) => {
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Marca</span>
             <Select value={brandFilter} onValueChange={(v) => setBrandFilter(v as typeof brandFilter)}>
-              <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-[180px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="todas">Todas</SelectItem>
                 <SelectItem value="magical">Magical Warmers</SelectItem>

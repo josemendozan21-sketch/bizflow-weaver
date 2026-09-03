@@ -55,9 +55,9 @@ export function DashboardLayout() {
   return (
     <SidebarProvider>
       <OrderQuickViewProvider>
-        <div className="min-h-screen flex w-full">
+        <div className="min-h-screen flex w-full max-w-full overflow-x-clip">
           <AppSidebar />
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 min-w-0 flex flex-col">
             <header className="h-14 flex items-center justify-between border-b px-4 bg-card">
               <div className="flex items-center">
                 <SidebarTrigger className="mr-4" />
@@ -68,7 +68,7 @@ export function DashboardLayout() {
                 <NotificationBell />
               </div>
             </header>
-            <main className="flex-1 p-6">
+            <main className="flex-1 min-w-0 max-w-full overflow-x-clip p-4 md:p-6">
               <ErrorBoundary>
                 <Outlet />
               </ErrorBoundary>

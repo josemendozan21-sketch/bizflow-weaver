@@ -143,7 +143,7 @@ export default function CommissionsPanel({ orders }: Props) {
         </div>
         <div className="flex gap-2">
           <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
-            <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-[140px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               {MONTHS.map((m, i) => (
                 <SelectItem key={i} value={String(i)}>{m}</SelectItem>
@@ -151,7 +151,7 @@ export default function CommissionsPanel({ orders }: Props) {
             </SelectContent>
           </Select>
           <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-            <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-[100px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               {[today.getFullYear() - 1, today.getFullYear(), today.getFullYear() + 1].map(
                 (y) => (
@@ -390,7 +390,7 @@ export default function CommissionsPanel({ orders }: Props) {
                                         })
                                       }
                                     >
-                                      <SelectTrigger className="h-7 w-[140px] text-xs">
+                                      <SelectTrigger className="h-7 w-full sm:w-[140px] text-xs">
                                         <SelectValue />
                                       </SelectTrigger>
                                       <SelectContent>

@@ -149,17 +149,29 @@ const magicalColumns = (firstHeader: string): InventoryColumn<ReferenceItem>[] =
     key: "name",
     header: firstHeader,
     render: (item) => <ReferenceLabel name={item.name} />,
-    className: "font-medium",
+    className: "font-medium max-w-[45vw] sm:max-w-none",
   },
   { key: "tipo", header: "Tipo", render: (item) => <TypeBadge tipo={item.tipo} /> },
   { key: "available", header: "Disponible", align: "right", render: (item) => item.available },
-  { key: "unit", header: "Unidad", render: (item) => item.unit },
+  { key: "unit", header: "Unidad", render: (item) => item.unit, className: "hidden md:table-cell" },
   { key: "estado", header: "Estado", render: (item) => <StockIndicator available={item.available} /> },
 ];
 
 const sweatspotColumns: InventoryColumn<ReferenceItem>[] = [
-  { key: "name", header: "Producto", render: (item) => item.name, className: "font-medium" },
-  { key: "color", header: "Color", render: (item) => item.color || "—" },
+  {
+    key: "name",
+    header: "Producto",
+    render: (item) => (
+      <div className="min-w-0">
+        <span className="block">{item.name}</span>
+        <span className="block text-[11px] text-muted-foreground sm:hidden">
+          {[item.color, item.productType].filter(Boolean).join(" · ") || "—"}
+        </span>
+      </div>
+    ),
+    className: "font-medium max-w-[45vw] sm:max-w-none",
+  },
+  { key: "color", header: "Color", render: (item) => item.color || "—", className: "hidden sm:table-cell" },
   {
     key: "logo",
     header: "Logo",
@@ -170,9 +182,9 @@ const sweatspotColumns: InventoryColumn<ReferenceItem>[] = [
         <Badge className="text-[10px] bg-blue-600 hover:bg-blue-700">MARCABLE</Badge>
       ),
   },
-  { key: "origen", header: "Origen", render: (item) => item.productType || "—", className: "text-xs text-muted-foreground" },
+  { key: "origen", header: "Origen", render: (item) => item.productType || "—", className: "hidden md:table-cell text-xs text-muted-foreground" },
   { key: "available", header: "Disponible", align: "right", render: (item) => item.available },
-  { key: "unit", header: "Unidad", render: (item) => item.unit },
+  { key: "unit", header: "Unidad", render: (item) => item.unit, className: "hidden md:table-cell" },
   { key: "estado", header: "Estado", render: (item) => <StockIndicator available={item.available} /> },
 ];
 
@@ -240,7 +252,7 @@ export default function AsesorInventoryView() {
             <p className="text-muted-foreground text-sm">Cargando...</p>
           ) : selectedBrand === "magical_warmers" ? (
             <Tabs defaultValue="cuerpos" className="space-y-4">
-              <TabsList className="grid w-full grid-cols-2 max-w-md">
+              <TabsList className="w-full max-w-md flex sm:grid sm:grid-cols-2">
                 <TabsTrigger value="cuerpos">Cuerpos ({magicalBodies.length})</TabsTrigger>
                 <TabsTrigger value="terminado">Producto Terminado ({magicalFinished.length})</TabsTrigger>
               </TabsList>

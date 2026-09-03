@@ -806,7 +806,7 @@ const WholesaleOrdersInbox = () => {
   return (
     <div className="space-y-4">
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as BandejaTab)} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="w-full flex md:grid md:grid-cols-3">
           <TabsTrigger value="mayor" className="gap-1.5">
             <Inbox className="h-4 w-4" /> Al por mayor
             <Badge variant="secondary" className="ml-1">{pending.length + inProduction.length}</Badge>
