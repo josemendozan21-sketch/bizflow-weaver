@@ -1,5 +1,4 @@
 import { Fragment, useState, type ReactNode } from "react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -46,32 +45,35 @@ export default function GroupedInventoryTable<T>({
   const showHeaders = !(groups.length === 1 && groups[0].key === "__all__");
 
   return (
-    <div className="overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow className="hover:bg-transparent border-b">
+    <div className="overflow-x-auto md:overflow-x-visible">
+      <table className="w-full caption-bottom text-sm">
+        <thead className="[&_tr]:border-b">
+          <tr className="hover:bg-transparent border-b">
             {columns.map((col) => (
-              <TableHead
+              <th
                 key={col.key}
                 className={cn(
-                  "h-8 text-[11px] font-normal uppercase tracking-wide text-muted-foreground",
+                  "sticky top-[76px] z-20 bg-background h-9 border-b px-4 text-left align-middle text-[11px] font-normal uppercase tracking-wide text-muted-foreground",
                   col.align === "right" && "text-right",
                   col.className,
                 )}
               >
                 {col.header}
-              </TableHead>
+              </th>
             ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+          </tr>
+        </thead>
+        <tbody>
           {groups.map((group) => {
             const isCollapsed = !!collapsed[group.key];
             return (
               <Fragment key={group.key}>
                 {showHeaders && (
-                  <TableRow className="border-0 hover:bg-transparent">
-                    <TableCell colSpan={columns.length} className="pt-6 pb-1">
+                  <tr className="border-0 hover:bg-transparent">
+                    <td
+                      colSpan={columns.length}
+                      className="sticky top-[112px] z-10 bg-background pt-6 pb-1"
+                    >
                       <button
                         type="button"
                         className="flex w-full items-center gap-1.5 text-left group"
@@ -84,34 +86,34 @@ export default function GroupedInventoryTable<T>({
                         )}
                         <span className="text-xs font-medium uppercase tracking-wide">{group.label}</span>
                         <span className="text-xs font-normal text-muted-foreground tabular-nums">
-                          · {group.items.length} ref{group.items.length === 1 ? "" : "s"} ·{" "}
-                          {group.units.toLocaleString("es-CO")} u
+                          · {group.items.length} ref{group.items.length === 1 ? "" : "s"} · total del
+                          grupo {group.units.toLocaleString("es-CO")} u
                         </span>
                       </button>
-                    </TableCell>
-                  </TableRow>
+                    </td>
+                  </tr>
                 )}
                 {!isCollapsed &&
                   group.items.map((item) => (
-                    <TableRow
+                    <tr
                       key={getRowKey(item)}
                       className={cn("border-b border-border/40 hover:bg-muted/40", getRowClassName?.(item))}
                     >
                       {columns.map((col) => (
-                        <TableCell
+                        <td
                           key={col.key}
-                          className={cn("py-2.5", col.align === "right" && "text-right", col.className)}
+                          className={cn("px-4 py-2.5 align-middle", col.align === "right" && "text-right", col.className)}
                         >
                           {col.render(item)}
-                        </TableCell>
+                        </td>
                       ))}
-                    </TableRow>
+                    </tr>
                   ))}
               </Fragment>
             );
           })}
-        </TableBody>
-      </Table>
+        </tbody>
+      </table>
     </div>
   );
 }

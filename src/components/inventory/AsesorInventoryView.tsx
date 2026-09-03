@@ -7,6 +7,7 @@ import { ArrowLeft, ChevronRight, Package } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useReferenceCatalog } from "@/hooks/useReferenceCatalog";
 import PageHeader from "@/components/common/PageHeader";
+import SelectionCard from "@/components/common/SelectionCard";
 import FacetFilterBar from "@/components/inventory/FacetFilterBar";
 import GroupedInventoryTable, {
   type InventoryColumn,
@@ -162,17 +163,13 @@ function FacetedInventorySection({
         align: "right" as const,
         render: (row: Row) =>
           row.variants[v.value] === undefined ? (
-            <span className="text-muted-foreground">—</span>
+            <span className="text-muted-foreground/60" title="No aplica">
+              —
+            </span>
           ) : (
-            <span className="tabular-nums">{row.variants[v.value].toLocaleString("es-CO")}</span>
+            <StockDot available={row.variants[v.value]} />
           ),
       })),
-      {
-        key: "estado",
-        header: "Estado",
-        align: "right",
-        render: (row) => <StockDot available={row.totalAvailable} />,
-      },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [firstHeader, metaParts, JSON.stringify(shownVariants)],
@@ -277,23 +274,14 @@ export default function AsesorInventoryView() {
       </Alert>
 
       {!selectedBrand ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid gap-4 sm:grid-cols-2">
           {(["magical_warmers", "sweatspot"] as InventoryBrand[]).map((brand) => (
-            <Card
+            <SelectionCard
               key={brand}
-              className="cursor-pointer transition-colors hover:border-primary/40"
+              title={brand === "magical_warmers" ? "Magical Warmers" : "Sweatspot"}
+              description="Ver disponibilidad de productos"
               onClick={() => setSelectedBrand(brand)}
-            >
-              <CardContent className="flex items-center justify-between py-5">
-                <div>
-                  <p className="font-medium">
-                    {brand === "magical_warmers" ? "Magical Warmers" : "Sweatspot"}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Ver disponibilidad de productos</p>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
+            />
           ))}
         </div>
       ) : (
@@ -306,7 +294,7 @@ export default function AsesorInventoryView() {
             <p className="text-muted-foreground text-sm">Cargando...</p>
           ) : selectedBrand === "magical_warmers" ? (
             <Tabs defaultValue="cuerpos" className="space-y-4">
-              <TabsList className="grid w-full grid-cols-2 max-w-md">
+              <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:inline-grid">
                 <TabsTrigger value="cuerpos">Cuerpos ({magicalBodies.length})</TabsTrigger>
                 <TabsTrigger value="terminado">Producto Terminado ({magicalFinished.length})</TabsTrigger>
               </TabsList>
