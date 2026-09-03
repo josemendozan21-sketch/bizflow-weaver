@@ -10,14 +10,15 @@
 ## Qué se va a hacer
 
 ### 1. Que la IA llene la dirección correctamente
-- Conectar el campo de dirección de Magical mayor y Sweatspot mayor al estado de React (igual que ya está en detal), para que el llenado con IA lo actualice de verdad.
+- Conectar el campo de dirección de Magical (mayor y detal) y Sweatspot (mayor y detal) al estado de React, para que el llenado con IA lo actualice de verdad.
 - Después del llenado, la dirección queda editable y con las sugerencias de Google Maps activas (sin dispararse sola con el texto recién pegado).
 - Quitar el campo de dirección duplicado en Magical detal.
 
 ### 2. Nuevo campo "Complemento"
-- Agregar un campo opcional **Complemento (oficina, apto, bloque, interior, local)** junto a la dirección en los tres formularios: Magical mayor, Sweatspot mayor y Magical detal.
+- Agregar un campo opcional **Complemento (oficina, apto, bloque, interior, local)** junto a la dirección en los cuatro formularios: Magical (mayor y detal) y Sweatspot (mayor y detal).
 - Ejemplo: Dirección = `Calle 117 # 6a-60`, Complemento = `OFC 402`.
 - Se guarda en una columna nueva del pedido y también se refleja en la dirección completa que ven Logística y Despachos, para no romper nada de lo existente.
+
 
 ### 3. La IA también entiende el complemento
 - Se actualiza el asistente de lectura de texto para que separe la dirección base del complemento: cuando el mensaje dice "Calle 117 # 6a-60 OFC 402", la dirección queda como `Calle 117 # 6a-60` y el complemento como `OFC 402`. Reconoce oficina/of/ofc, apto/apartamento, torre, bloque, interior, local, piso, casa, conjunto.
