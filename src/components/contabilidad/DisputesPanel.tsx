@@ -1,3 +1,4 @@
+import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -202,8 +203,8 @@ export default function DisputesPanel({ orders }: Props) {
                       <TableCell className="whitespace-nowrap text-xs">
                         {format(parseISO(d.created_at), "d MMM yyyy", { locale: es })}
                       </TableCell>
-                      <TableCell className="text-xs font-mono">
-                        {o?.order_code || "—"}
+                      <TableCell className="text-xs">
+                        <OrderCodeBadge code={o?.order_code} orderId={o?.id} compact />
                       </TableCell>
                       <TableCell className="max-w-[180px] truncate">
                         {o?.client_name || "—"}
@@ -334,8 +335,8 @@ export default function DisputesPanel({ orders }: Props) {
                 <TableBody>
                   {candidates.slice(0, 100).map((c) => (
                     <TableRow key={`${c.order.id}-${c.issue}`}>
-                      <TableCell className="text-xs font-mono">
-                        {(c.order as any).order_code || "—"}
+                      <TableCell className="text-xs">
+                        <OrderCodeBadge code={(c.order as any).order_code} orderId={c.order.id} compact />
                       </TableCell>
                       <TableCell className="max-w-[180px] truncate">
                         {c.order.client_name}
@@ -384,9 +385,7 @@ export default function DisputesPanel({ orders }: Props) {
                   >
                     <div className="min-w-0">
                       <p className="truncate">
-                        <span className="font-mono text-xs mr-2">
-                          {(o as any).order_code || "—"}
-                        </span>
+                        <OrderCodeBadge code={(o as any).order_code} orderId={o.id} compact className="mr-2" />
                         {o.client_name}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">

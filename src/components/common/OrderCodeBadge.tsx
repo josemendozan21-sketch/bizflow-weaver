@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Check, Copy, Hash } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useOrderQuickView } from "@/components/common/OrderQuickView";
 
 interface OrderCodeBadgeProps {
   code?: string | null;
@@ -10,11 +11,15 @@ interface OrderCodeBadgeProps {
   className?: string;
   /** Tamaño compacto para filas de tabla */
   compact?: boolean;
+  /** Id del pedido: permite abrir la ficha completa al hacer clic */
+  orderId?: string | null;
+  /** Desactiva la apertura de la ficha (solo copiar) */
+  disableDetail?: boolean;
 }
 
 /**
  * Badge unificado con el consecutivo del pedido (ej. MW-AM-01154).
- * Se usa en todas las áreas para identificar un pedido de principio a fin.
+ * Clic = abrir la ficha completa del pedido · ícono (visible en hover) = copiar.
  */
 export default function OrderCodeBadge({
   code,
@@ -22,13 +27,18 @@ export default function OrderCodeBadge({
   lineCount,
   className,
   compact = false,
+  orderId,
+  disableDetail = false,
 }: OrderCodeBadgeProps) {
   const [copied, setCopied] = useState(false);
+  const quickView = useOrderQuickView();
   const hasCode = Boolean(code && code.trim());
   const showLine = (lineCount ?? 1) > 1 && !!lineIndex;
+  const canOpenDetail = !disableDetail && !!quickView && (!!orderId || hasCode);
 
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     if (!hasCode) return;
     try {
       await navigator.clipboard.writeText(code as string);
@@ -40,32 +50,58 @@ export default function OrderCodeBadge({
     }
   };
 
+  const handleClick = (e: React.MouseEvent) => {
+    if (canOpenDetail) {
+      e.stopPropagation();
+      e.preventDefault();
+      quickView!.openOrder({ id: orderId ?? undefined, code });
+      return;
+    }
+    void handleCopy(e);
+  };
+
+  const iconSize = compact ? "h-2.5 w-2.5" : "h-3 w-3";
+
   return (
     <span
-      onClick={handleCopy}
-      title={hasCode ? "Clic para copiar el número de pedido" : "Pedido sin número asignado"}
+      onClick={handleClick}
+      title={
+        canOpenDetail
+          ? "Clic para ver todos los detalles del pedido"
+          : hasCode
+            ? "Clic para copiar el número de pedido"
+            : "Pedido sin número asignado"
+      }
       className={cn(
-        "inline-flex max-w-full items-center gap-1 whitespace-nowrap rounded-md border font-mono tracking-tight",
+        "group inline-flex max-w-full items-center gap-1 whitespace-nowrap rounded-md border font-mono tracking-tight",
         compact ? "px-1.5 py-0 text-[10px]" : "px-2 py-0.5 text-xs",
-        hasCode
+        hasCode || canOpenDetail
           ? "border-primary/30 bg-primary/10 text-primary cursor-pointer hover:bg-primary/20"
           : "border-border bg-muted text-muted-foreground",
         className
       )}
     >
-      <Hash className={compact ? "h-2.5 w-2.5" : "h-3 w-3"} />
+      <Hash className={iconSize} />
       {hasCode ? code : "Sin número"}
       {showLine && (
         <span className="font-sans font-normal opacity-70">
           · línea {lineIndex}/{lineCount}
         </span>
       )}
-      {hasCode &&
-        (copied ? (
-          <Check className={compact ? "h-2.5 w-2.5" : "h-3 w-3"} />
-        ) : (
-          <Copy className={cn(compact ? "h-2.5 w-2.5" : "h-3 w-3", "opacity-50")} />
-        ))}
+      {hasCode && (
+        <button
+          type="button"
+          onClick={handleCopy}
+          title="Copiar número de pedido"
+          aria-label="Copiar número de pedido"
+          className={cn(
+            "ml-0.5 rounded p-0.5 transition-opacity hover:bg-primary/20",
+            copied ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus:opacity-100 max-md:opacity-70"
+          )}
+        >
+          {copied ? <Check className={iconSize} /> : <Copy className={iconSize} />}
+        </button>
+      )}
     </span>
   );
 }
