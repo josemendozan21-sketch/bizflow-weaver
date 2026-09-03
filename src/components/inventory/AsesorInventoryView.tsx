@@ -321,7 +321,10 @@ export default function AsesorInventoryView() {
                       getValues={magicalFacetValues}
                       defs={MAGICAL_FACETS}
                       primaryKeys={["familia", "tipo"]}
-                      columns={magicalColumns("Referencia")}
+                      variantKey="tipo"
+                      variantColumns={MAGICAL_VARIANTS}
+                      firstHeader="Referencia"
+                      metaParts={magicalMeta}
                       searchPlaceholder="Buscar cuerpo (ej. círculo 8 cm frío)..."
                       searchFields={magicalSearchFields}
                     />
@@ -337,7 +340,10 @@ export default function AsesorInventoryView() {
                       getValues={magicalFacetValues}
                       defs={MAGICAL_FACETS}
                       primaryKeys={["familia", "tipo"]}
-                      columns={magicalColumns("Producto")}
+                      variantKey="tipo"
+                      variantColumns={MAGICAL_VARIANTS}
+                      firstHeader="Producto"
+                      metaParts={magicalMeta}
                       searchPlaceholder="Buscar producto (ej. corazón térmico)..."
                       searchFields={magicalSearchFields}
                     />
@@ -356,7 +362,10 @@ export default function AsesorInventoryView() {
                   getValues={sweatspotFacetValues}
                   defs={SWEATSPOT_FACETS}
                   primaryKeys={["categoria", "tamano"]}
-                  columns={sweatspotColumns}
+                  variantKey="logo"
+                  variantColumns={SWEATSPOT_VARIANTS}
+                  firstHeader="Producto"
+                  metaParts={sweatspotMeta}
                   searchPlaceholder="Buscar producto (ej. termo 500 azul con correa)..."
                   searchFields={sweatspotSearchFields}
                 />
