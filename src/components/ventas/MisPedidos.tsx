@@ -796,12 +796,27 @@ function PaymentConfirmDialog({ order }: { order: Order }) {
         return;
       }
 
+      // Registrar el saldo pendiente como pago real (no solo la bandera)
+      const pendiente = getOrderBalance(order);
+      if (pendiente > 0) {
+        const { error: payErr } = await supabase.from("order_payments" as any).insert({
+          order_id: order.id,
+          amount: pendiente,
+          payment_date: new Date().toISOString().slice(0, 10),
+          proof_url: finalProofUrl,
+          notes: "Saldo final confirmado por el asesor",
+        } as any);
+        if (payErr) throw payErr;
+      }
+
       const { error } = await supabase.from("orders").update({
         payment_complete: true,
         payment_proof_url: finalProofUrl,
+        abono: Number(order.total_amount) || 0,
       }).eq("id", order.id);
 
       if (error) throw error;
+
 
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       toast.success("Pago confirmado", { description: "El pedido ahora está disponible para despacho en logística." });

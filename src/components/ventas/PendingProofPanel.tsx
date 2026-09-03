@@ -46,6 +46,22 @@ export function PendingProofPanel({ orders, isAdmin }: { orders: Order[]; isAdmi
   const markPaid = async () => {
     if (!confirm(`¿Marcar ${ids.length} pedido(s) como pagados y cerrarlos?`)) return;
     setBusy(true);
+    const chosen = pending.filter((o) => selected.has(o.id));
+    const rows = chosen
+      .map((o) => ({
+        order_id: o.id,
+        amount: Math.max((Number(o.total_amount) || 0) - (Number(o.abono) || 0), 0),
+        payment_date: new Date().toISOString().slice(0, 10),
+        notes: "Saldo confirmado al cerrar el pedido",
+      }))
+      .filter((r) => r.amount > 0);
+    if (rows.length > 0) {
+      const { error: payErr } = await supabase.from("order_payments" as any).insert(rows as any);
+      if (payErr) {
+        setBusy(false);
+        return toast.error("No se pudieron registrar los pagos: " + payErr.message);
+      }
+    }
     const { error } = await supabase
       .from("orders")
       .update({ payment_complete: true, payment_method: "pagado" })
@@ -56,6 +72,7 @@ export function PendingProofPanel({ orders, isAdmin }: { orders: Order[]; isAdmi
     setSelected(new Set());
     qc.invalidateQueries({ queryKey: ["orders"] });
   };
+
 
   const removeOrders = async () => {
     if (!confirm(`¿Eliminar definitivamente ${ids.length} pedido(s)? Esta acción no se puede deshacer.`)) return;
