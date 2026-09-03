@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.create_initial_abono_payment() FROM PUBLIC, anon, authenticated;
