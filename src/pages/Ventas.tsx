@@ -302,6 +302,7 @@ function ColorSelect({
   placeholder = "Seleccionar color",
   allowCustom = true,
   hint,
+  required,
 }: {
   label: string;
   value: string;
@@ -312,10 +313,14 @@ function ColorSelect({
   placeholder?: string;
   allowCustom?: boolean;
   hint?: string;
+  required?: boolean;
 }) {
   return (
     <div className="space-y-1.5">
-      <Label>{label}</Label>
+      <Label>
+        {label}
+        {required && <span className="text-destructive"> *</span>}
+      </Label>
       <Select value={value || undefined} onValueChange={onValueChange}>
         <SelectTrigger>
           <SelectValue placeholder={placeholder} />
@@ -1330,7 +1335,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   };
 
   return (
-    <Card className="max-w-2xl">
+    <Card className="w-full max-w-none">
       <CardHeader>
         <CardTitle className="text-lg">Nuevo pedido — Magical Warmers</CardTitle>
         <CardDescription>Venta al por mayor</CardDescription>
@@ -2377,7 +2382,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   };
 
   return (
-    <Card className="max-w-2xl">
+    <Card className="w-full max-w-none">
       <CardHeader>
         <CardTitle className="text-lg">Nuevo pedido — Sweatspot</CardTitle>
         <CardDescription>Venta al por mayor</CardDescription>
@@ -3093,7 +3098,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
   };
 
   return (
-    <Card className="max-w-2xl">
+    <Card className="w-full max-w-none">
       <CardHeader>
         <CardTitle className="text-lg">Nuevo pedido — {brandLabel}</CardTitle>
         <CardDescription>{isMayor ? "Venta al por mayor" : "Venta al por menor"}</CardDescription>
@@ -3410,10 +3415,13 @@ function PaymentSummary({ totalAmount, abono, estadoPago }: { totalAmount: numbe
 
 /* ---- Shared helpers ---- */
 
-function Field({ label, name, type = "text", required }: { label: string; name: string; type?: string; required?: boolean }) {
+function Field({ label, name, type = "text", required, className }: { label: string; name: string; type?: string; required?: boolean; className?: string }) {
   return (
-    <div className="space-y-1.5">
-      <Label htmlFor={name}>{label}</Label>
+    <div className={`space-y-1.5 ${className ?? ""}`}>
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="text-destructive"> *</span>}
+      </Label>
       <Input id={name} name={name} type={type} required={required} />
     </div>
   );
