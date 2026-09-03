@@ -538,7 +538,7 @@ export interface AdvisorProgressSummary {
   lines: ProgressLine[];
 }
 
-function bonusFor(totalWithVat: number): number {
+export function bonusFor(totalWithVat: number): number {
   let b = 0;
   if (totalWithVat >= BONUS_TIER_1_THRESHOLD) b += BONUS_TIER_1_AMOUNT;
   if (totalWithVat >= BONUS_TIER_2_THRESHOLD) b += BONUS_TIER_2_AMOUNT;
@@ -630,4 +630,170 @@ export function summarizeAdvisorProgress(
     weekendUnlocked,
     lines: lines.sort((a, b) => b.date.getTime() - a.date.getTime()),
   };
+}
+
+/* ------------------------------------------------------------------ *
+ * Ajuste retroactivo de comisiones (corrección de abonos)
+ * Usa EXACTAMENTE la misma política que las vistas de asesor y
+ * contabilidad: tarifas de fin de semana con desbloqueo por umbral,
+ * tarifa plana por asesor, base sin flete/cargos y bonos por volumen.
+ * ------------------------------------------------------------------ */
+
+export interface RetroAdjustmentRow {
+  orderId: string;
+  code: string;
+  advisor: string;
+  period: string; // YYYY-MM
+  client: string;
+  total: number;
+  net: number;
+  rate: number;
+  weekend: boolean;
+  abonoAntes: number;
+  comisionAntes: number;
+  comisionCorrecta: number;
+  ajuste: number;
+  invoiced: boolean;
+}
+
+export interface RetroAdjustmentGroup {
+  key: string;
+  advisor: string;
+  period: string;
+  settled: boolean;
+  rows: RetroAdjustmentRow[];
+  facturado: number;
+  causadoAntes: number;
+  causadoCorrecto: number;
+  weekendUnlocked: boolean;
+  bonoAntes: number;
+  bonoCorrecto: number;
+  bonoDelta: number;
+  antes: number;
+  correcta: number;
+  ajuste: number;
+}
+
+function periodKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/**
+ * @param orders TODOS los pedidos (se necesitan para el desbloqueo FDS y los bonos del mes).
+ * @param fixedByOrder Monto que la corrección automática registró por pedido.
+ */
+export function computeRetroAdjustment(
+  orders: Order[],
+  fixedByOrder: Record<string, number>,
+  charges?: ChargesMap,
+  lastSettledPeriod = "2026-07",
+  basis: PeriodBasis = PERIOD_BASIS
+): RetroAdjustmentGroup[] {
+  // 1. Agrupar TODOS los pedidos por asesor + periodo.
+  const byGroup = new Map<string, Order[]>();
+  for (const o of orders) {
+    const key = `${o.advisor_name || "Sin asesor"}__${periodKey(getPeriodDate(o, basis))}`;
+    const arr = byGroup.get(key) || [];
+    arr.push(o);
+    byGroup.set(key, arr);
+  }
+
+  const groups: RetroAdjustmentGroup[] = [];
+
+  for (const [key, groupOrders] of byGroup) {
+    const affected = groupOrders.filter((o) => (fixedByOrder[o.id] || 0) > 0);
+    if (!affected.length) continue;
+
+    const [advisor, period] = key.split("__");
+
+    // Causado corregido del mes (política oficial) → decide FDS y bonos.
+    const causadoCorrecto = groupOrders.reduce(
+      (s, o) => s + classifyOrderForCommission(o, charges).base,
+      0
+    );
+    // Causado antes de la corrección: se resta el saldo que no estaba registrado,
+    // prorrateado sobre la parte comisionable del pedido.
+    const causadoAntes = groupOrders.reduce((s, o) => {
+      const total = num(o.total_amount);
+      const fixed = fixedByOrder[o.id] || 0;
+      const base = classifyOrderForCommission(o, charges).base;
+      if (fixed <= 0 || total <= 0) return s + base;
+      const net = getCommissionableTotal(o, charges);
+      const abonoAntes = Math.max(num(o.abono) - fixed, 0);
+      return s + (Math.min(abonoAntes, total) * net) / total;
+    }, 0);
+
+    const weekendUnlocked = causadoCorrecto >= UNLOCK_THRESHOLD;
+    const weekendUnlockedAntes = causadoAntes >= UNLOCK_THRESHOLD;
+
+    const rows: RetroAdjustmentRow[] = affected.map((o) => {
+      const total = num(o.total_amount);
+      const net = getCommissionableTotal(o, charges);
+      const d = getPeriodDate(o, basis);
+      const weekend = getDay(d) === 0 || getDay(d) === 6;
+      const flat = getFlatRateFor(o.advisor_name);
+      const rateFor = (unlocked: boolean) =>
+        flat != null
+          ? flat
+          : getCommissionRate({
+              saleType: o.sale_type === "menor" ? "menor" : "mayor",
+              weekend,
+              paymentMode: getDefaultPaymentMode(o),
+              clientKind: o.is_recompra ? "recompra" : "nuevo",
+              weekendUnlocked: unlocked,
+            });
+      const rate = rateFor(weekendUnlocked);
+      const abonoAntes = Math.max(num(o.abono) - (fixedByOrder[o.id] || 0), 0);
+      const comisionCorrecta = isGiftOrder(o) ? 0 : (net / IVA_DIVISOR) * rate;
+      const comisionAntes =
+        total > 0 && !isGiftOrder(o)
+          ? ((Math.min(abonoAntes, total) * net) / total / IVA_DIVISOR) *
+            rateFor(weekendUnlockedAntes)
+          : 0;
+      return {
+        orderId: o.id,
+        code: (o as any).order_code || "",
+        advisor,
+        period,
+        client: o.client_name || "",
+        total,
+        net,
+        rate,
+        weekend,
+        abonoAntes,
+        comisionAntes,
+        comisionCorrecta,
+        ajuste: Math.max(comisionCorrecta - comisionAntes, 0),
+        invoiced: Boolean(o.invoice_date),
+      };
+    });
+
+    const bonoAntes = bonusFor(causadoAntes);
+    const bonoCorrecto = bonusFor(causadoCorrecto);
+    const bonoDelta = Math.max(bonoCorrecto - bonoAntes, 0);
+    const antes = rows.reduce((s, r) => s + r.comisionAntes, 0);
+    const correcta = rows.reduce((s, r) => s + r.comisionCorrecta, 0);
+
+    groups.push({
+      key,
+      advisor,
+      period,
+      settled: period <= lastSettledPeriod,
+      rows,
+      facturado: rows.reduce((s, r) => s + r.total, 0),
+      causadoAntes,
+      causadoCorrecto,
+      weekendUnlocked,
+      bonoAntes,
+      bonoCorrecto,
+      bonoDelta,
+      antes,
+      correcta,
+      ajuste: rows.reduce((s, r) => s + r.ajuste, 0) + bonoDelta,
+    });
+  }
+
+  return groups.sort(
+    (a, b) => a.advisor.localeCompare(b.advisor) || a.period.localeCompare(b.period)
+  );
 }
