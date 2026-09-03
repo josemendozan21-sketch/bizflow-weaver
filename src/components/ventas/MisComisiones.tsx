@@ -325,6 +325,9 @@ export default function MisComisiones() {
             <p className="text-xs text-muted-foreground">
               {summary.invoicedCount} pedido(s) · {fmt(summary.invoicedWithVat)}
             </p>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Es la misma cifra que liquida contabilidad (comisión + bono).
+            </p>
           </CardContent>
         </Card>
 
