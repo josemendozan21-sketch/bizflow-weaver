@@ -69,8 +69,9 @@ export default function CommissionAdjustmentPanel({ advisorFilter }: { advisorFi
           supabase
             .from("orders")
             .select(
-              "id, order_code, advisor_name, client_name, total_amount, abono, shipping_cost, sale_type, is_recompra, invoice_date, created_at"
+              "id, order_code, advisor_name, client_name, total_amount, abono, shipping_cost, sale_type, is_recompra, payment_method, invoice_date, created_at"
             )
+
             .in("id", slice),
           supabase.from("order_charges").select("order_id, amount").in("order_id", slice),
         ]);
