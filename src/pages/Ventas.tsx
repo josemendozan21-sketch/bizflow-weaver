@@ -1558,11 +1558,11 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 {!line.isGift && (
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="space-y-1.5">
-                    <Label>Unidades</Label>
+                    <Label>Unidades <span className="text-destructive">*</span></Label>
                     <Input type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()} required value={line.units} onChange={(e) => updateLine(line.id, { units: e.target.value })} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Valor unitario</Label>
+                    <Label>Valor unitario <span className="text-destructive">*</span></Label>
                     <Input type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()} required value={line.valorUnitario} onChange={(e) => updateLine(line.id, { valorUnitario: e.target.value, autoCalc: true })} />
                   </div>
                   <div className="space-y-1.5">
@@ -1577,7 +1577,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 {line.isGift && (
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="space-y-1.5">
-                    <Label>Unidades</Label>
+                    <Label>Unidades <span className="text-destructive">*</span></Label>
                     <Input type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()} required value={line.units} onChange={(e) => updateLine(line.id, { units: e.target.value })} />
                   </div>
                 </div>
@@ -2569,15 +2569,15 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                 </div>
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="space-y-1.5">
-                    <Label>Unidades</Label>
+                    <Label>Unidades <span className="text-destructive">*</span></Label>
                     <Input type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()} value={line.units} onChange={(e) => updateSSLine(line.id, { units: e.target.value })} required />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Valor unitario</Label>
+                    <Label>Valor unitario <span className="text-destructive">*</span></Label>
                     <Input type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()} value={line.valorUnitario} onChange={(e) => updateSSLine(line.id, { valorUnitario: e.target.value, autoCalc: true })} required />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Valor total</Label>
+                    <Label>Valor total <span className="text-destructive">*</span></Label>
                     <Input type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()} value={line.valorTotal} onChange={(e) => updateSSLine(line.id, { valorTotal: e.target.value, autoCalc: false })} required />
                   </div>
                 </div>
@@ -3127,6 +3127,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
       <CardContent>
         <form ref={genericFormRef} onSubmit={handleSubmit} className="space-y-5">
           <SmartPasteField brand={brand} onDataParsed={handleSmartPaste} />
+          <p className="text-xs text-muted-foreground">Los campos marcados con <span className="text-destructive">*</span> son obligatorios.</p>
 
            <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Datos del cliente</legend>
@@ -3442,6 +3443,14 @@ function PaymentSummary({ totalAmount, abono, estadoPago }: { totalAmount: numbe
 }
 
 /* ---- Shared helpers ---- */
+
+function RequiredLegend() {
+  return (
+    <p className="text-xs text-muted-foreground">
+      Los campos marcados con <span className="text-destructive">*</span> son obligatorios.
+    </p>
+  );
+}
 
 function Field({ label, name, type = "text", required, className }: { label: string; name: string; type?: string; required?: boolean; className?: string }) {
   return (
