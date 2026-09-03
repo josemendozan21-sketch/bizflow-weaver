@@ -441,9 +441,10 @@ export function summarizeAdvisorMonth(
 
     // Paso 2: calcular cada línea con tasa final.
     const allLines = advisorOrders.map((o) => {
-      const ctx = { ...defaultCtx, ...(overrides[o.id] || {}) };
+      const ctx = { paymentMode: getDefaultPaymentMode(o), ...(overrides[o.id] || {}) };
       return buildLine(o, ctx.paymentMode, weekendUnlocked, basis, charges);
     });
+
 
     const lines = allLines.filter(
       (l) => l.status === "total" || l.status === "parcial"
