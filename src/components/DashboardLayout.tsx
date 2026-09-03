@@ -22,6 +22,7 @@ function OrderSearchTrigger() {
   }, []);
 
   useEffect(() => {
+    if (!allowed) return;
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
@@ -30,7 +31,9 @@ function OrderSearchTrigger() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [quickView]);
+  }, [quickView, allowed]);
+
+  if (!allowed) return null;
 
   return (
     <Button
