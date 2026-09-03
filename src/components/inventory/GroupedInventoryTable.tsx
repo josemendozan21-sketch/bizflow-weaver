@@ -53,7 +53,7 @@ export default function GroupedInventoryTable<T>({
               <th
                 key={col.key}
                 className={cn(
-                  "sticky top-[76px] z-20 bg-background h-9 border-b px-4 text-left align-middle text-[11px] font-normal uppercase tracking-wide text-muted-foreground",
+                  "h-9 border-b px-4 text-left align-middle text-[11px] font-normal uppercase tracking-wide text-muted-foreground",
                   col.align === "right" && "text-right",
                   col.className,
                 )}
@@ -72,7 +72,7 @@ export default function GroupedInventoryTable<T>({
                   <tr className="border-0 hover:bg-transparent">
                     <td
                       colSpan={columns.length}
-                      className="sticky top-[112px] z-10 bg-background pt-6 pb-1"
+                      className="pt-6 pb-1"
                     >
                       <button
                         type="button"
