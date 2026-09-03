@@ -1,7 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, X, SlidersHorizontal, Settings2, ArrowDownAZ, ArrowUpAZ, Check } from "lucide-react";
+import { Search, X, SlidersHorizontal, ArrowDownAZ, ArrowUpAZ } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -75,7 +77,7 @@ export default function FacetFilterBar({
   );
 
   return (
-    <div className="space-y-2.5 mb-4">
+    <div className="sticky top-0 z-30 -mx-1 px-1 pt-2 pb-2.5 space-y-2.5 mb-2 bg-background border-b">
       <div className="flex items-center gap-2">
         <div className="relative flex-1 min-w-0">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -155,50 +157,41 @@ export default function FacetFilterBar({
           </SheetContent>
         </Sheet>
 
-        {/* Toggle visible de stock */}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          aria-pressed={onlyAvailable}
-          onClick={() => onOnlyAvailableChange(!onlyAvailable)}
+        {/* Toggle de stock */}
+        <div
           className={cn(
-            "h-9 gap-1.5 font-normal text-muted-foreground border-dashed shrink-0",
-            onlyAvailable && "text-foreground border-solid border-primary/40 bg-primary/5",
+            "flex items-center gap-2 h-9 px-2.5 rounded-md border shrink-0 transition-colors",
+            onlyAvailable ? "border-primary/40 bg-primary/5" : "border-transparent",
           )}
         >
-          <Check className={cn("h-3.5 w-3.5", onlyAvailable ? "opacity-100" : "opacity-30")} />
-          <span className="hidden sm:inline">Con stock</span>
-        </Button>
+          <Switch
+            id="only-available"
+            checked={onlyAvailable}
+            onCheckedChange={onOnlyAvailableChange}
+          />
+          <Label
+            htmlFor="only-available"
+            className={cn(
+              "text-sm font-normal cursor-pointer whitespace-nowrap hidden sm:block",
+              onlyAvailable ? "text-foreground" : "text-muted-foreground",
+            )}
+          >
+            Solo con stock
+          </Label>
+        </div>
 
-        {/* Opciones de vista */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 text-muted-foreground shrink-0"
-              aria-label="Opciones de vista"
-            >
-              <Settings2 className="h-4 w-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-52 p-1" align="end">
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-              onClick={onToggleSort}
-            >
-              {sortDir === "asc" ? (
-                <ArrowDownAZ className="h-4 w-4" />
-              ) : (
-                <ArrowUpAZ className="h-4 w-4" />
-              )}
-              Orden {sortDir === "asc" ? "A-Z" : "Z-A"}
-            </button>
-          </PopoverContent>
-        </Popover>
+        {/* Orden */}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 text-muted-foreground shrink-0"
+          aria-label={`Orden ${sortDir === "asc" ? "A-Z" : "Z-A"}`}
+          title={`Orden ${sortDir === "asc" ? "A-Z" : "Z-A"}`}
+          onClick={onToggleSort}
+        >
+          {sortDir === "asc" ? <ArrowDownAZ className="h-4 w-4" /> : <ArrowUpAZ className="h-4 w-4" />}
+        </Button>
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5 min-h-[1.5rem]">
