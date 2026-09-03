@@ -28,6 +28,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createOrderNotifications } from "@/hooks/useNotifications";
 import SmartPasteField, { type ParsedOrderData } from "@/components/ventas/SmartPasteField";
+import AddressAutocomplete from "@/components/ventas/AddressAutocomplete";
 import ClientNameAutocomplete from "@/components/ventas/ClientNameAutocomplete";
 import { useFormDraft, clearFormDraft, usePersistedState } from "@/hooks/useFormDraft";
 import OrderLogosField, { makeLogoEntry, type LogoEntry } from "@/components/ventas/OrderLogosField";
@@ -1595,7 +1596,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Pago</legend>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {estadoPago !== "pago_total" && (
                 <div className="space-y-1.5">
                   <Label htmlFor="mw_abono">Abono del total del pedido</Label>
@@ -1603,7 +1604,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 </div>
               )}
               <div className="space-y-1.5">
-                <Label>Estado del pago</Label>
+                <Label>Estado del pago <span className="text-destructive">*</span></Label>
                 <Select value={estadoPago} onValueChange={(v) => setEstadoPago(v as typeof estadoPago)}>
                   <SelectTrigger>
                     <SelectValue />
@@ -1615,34 +1616,34 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="mw_paymentDate">Fecha del pago</Label>
+                <Input id="mw_paymentDate" type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
+                <p className="text-xs text-muted-foreground">Hoy por defecto; cámbiela si el pago fue otro día.</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Medio de pago</Label>
+                <Select value={paymentChannel} onValueChange={setPaymentChannel}>
+                  <SelectTrigger><SelectValue placeholder="Selecciona medio de pago" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="nequi">Nequi</SelectItem>
+                    <SelectItem value="bancolombia">Bancolombia</SelectItem>
+                    <SelectItem value="davivienda">Davivienda</SelectItem>
+                    <SelectItem value="link_pago">Link de pago</SelectItem>
+                    <SelectItem value="efectivo">Efectivo</SelectItem>
+                    <SelectItem value="transferencia">Transferencia</SelectItem>
+                    <SelectItem value="paypal">PayPal</SelectItem>
+                    <SelectItem value="otro">Otro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Soporte de pago inicial</Label>
+                <Input type="file" accept="image/*,.pdf" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary" />
+                <p className="text-xs text-muted-foreground">Comprobante del abono para contabilidad.</p>
+              </div>
+              <Field label="Fecha requerida de entrega" name="mw_fechaRequerida" type="date" />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="mw_paymentDate">Fecha del pago</Label>
-              <Input id="mw_paymentDate" type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
-              <p className="text-xs text-muted-foreground">Si el pago fue hoy déjala como está; si fue otro día selecciónala.</p>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Medio de pago</Label>
-              <Select value={paymentChannel} onValueChange={setPaymentChannel}>
-                <SelectTrigger><SelectValue placeholder="Selecciona medio de pago" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="nequi">Nequi</SelectItem>
-                  <SelectItem value="bancolombia">Bancolombia</SelectItem>
-                  <SelectItem value="davivienda">Davivienda</SelectItem>
-                  <SelectItem value="link_pago">Link de pago</SelectItem>
-                  <SelectItem value="efectivo">Efectivo</SelectItem>
-                  <SelectItem value="transferencia">Transferencia</SelectItem>
-                  <SelectItem value="paypal">PayPal</SelectItem>
-                  <SelectItem value="otro">Otro</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Soporte de pago inicial</Label>
-              <Input type="file" accept="image/*,.pdf" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary" />
-              <p className="text-xs text-muted-foreground">Adjunte el comprobante del abono inicial para revisión en contabilidad</p>
-            </div>
-            <Field label="Fecha requerida de entrega" name="mw_fechaRequerida" type="date" />
           </fieldset>
 
           <fieldset className="space-y-4">
@@ -2589,7 +2590,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Pago</legend>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {ssEstadoPago !== "pago_total" && (
                 <div className="space-y-1.5">
                   <Label htmlFor="ss_abono">Abono del total del pedido</Label>
@@ -2597,7 +2598,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                 </div>
               )}
               <div className="space-y-1.5">
-                <Label>Estado del pago</Label>
+                <Label>Estado del pago <span className="text-destructive">*</span></Label>
                 <Select value={ssEstadoPago} onValueChange={(v) => setSsEstadoPago(v as typeof ssEstadoPago)}>
                   <SelectTrigger>
                     <SelectValue />
@@ -2609,34 +2610,34 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ss_paymentDate">Fecha del pago</Label>
+                <Input id="ss_paymentDate" type="date" value={ssPaymentDate} onChange={(e) => setSsPaymentDate(e.target.value)} />
+                <p className="text-xs text-muted-foreground">Hoy por defecto; cámbiela si el pago fue otro día.</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Medio de pago</Label>
+                <Select value={ssPaymentChannel} onValueChange={setSsPaymentChannel}>
+                  <SelectTrigger><SelectValue placeholder="Selecciona medio de pago" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="nequi">Nequi</SelectItem>
+                    <SelectItem value="bancolombia">Bancolombia</SelectItem>
+                    <SelectItem value="davivienda">Davivienda</SelectItem>
+                    <SelectItem value="link_pago">Link de pago</SelectItem>
+                    <SelectItem value="efectivo">Efectivo</SelectItem>
+                    <SelectItem value="transferencia">Transferencia</SelectItem>
+                    <SelectItem value="paypal">PayPal</SelectItem>
+                    <SelectItem value="otro">Otro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Soporte de pago inicial</Label>
+                <Input type="file" accept="image/*,.pdf" onChange={(e) => setSsPaymentProofFile(e.target.files?.[0] || null)} className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary" />
+                <p className="text-xs text-muted-foreground">Comprobante del abono para contabilidad.</p>
+              </div>
+              <Field label="Fecha requerida de entrega" name="ss_fechaRequerida" type="date" />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="ss_paymentDate">Fecha del pago</Label>
-              <Input id="ss_paymentDate" type="date" value={ssPaymentDate} onChange={(e) => setSsPaymentDate(e.target.value)} />
-              <p className="text-xs text-muted-foreground">Si el pago fue hoy déjala como está; si fue otro día selecciónala.</p>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Medio de pago</Label>
-              <Select value={ssPaymentChannel} onValueChange={setSsPaymentChannel}>
-                <SelectTrigger><SelectValue placeholder="Selecciona medio de pago" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="nequi">Nequi</SelectItem>
-                  <SelectItem value="bancolombia">Bancolombia</SelectItem>
-                  <SelectItem value="davivienda">Davivienda</SelectItem>
-                  <SelectItem value="link_pago">Link de pago</SelectItem>
-                  <SelectItem value="efectivo">Efectivo</SelectItem>
-                  <SelectItem value="transferencia">Transferencia</SelectItem>
-                  <SelectItem value="paypal">PayPal</SelectItem>
-                  <SelectItem value="otro">Otro</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Soporte de pago inicial</Label>
-              <Input type="file" accept="image/*,.pdf" onChange={(e) => setSsPaymentProofFile(e.target.files?.[0] || null)} className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary" />
-              <p className="text-xs text-muted-foreground">Adjunte el comprobante del abono inicial para revisión en contabilidad</p>
-            </div>
-            <Field label="Fecha requerida de entrega" name="ss_fechaRequerida" type="date" />
           </fieldset>
 
           <fieldset className="space-y-4">
