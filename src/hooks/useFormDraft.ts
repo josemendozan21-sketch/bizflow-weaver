@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { setNativeValue } from "@/lib/domForm";
+
 
 /**
  * Persiste/restaura los inputs no-controlados de un formulario en localStorage.
