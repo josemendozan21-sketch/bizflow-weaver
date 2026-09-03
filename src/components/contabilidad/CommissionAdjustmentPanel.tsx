@@ -265,14 +265,28 @@ export default function CommissionAdjustmentPanel({ advisorFilter }: { advisorFi
                     )}
                   </TableCell>
                   <TableCell className="font-medium">{g.advisor}</TableCell>
-                  <TableCell>{g.period}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {g.period}
+                      {!g.settled && (
+                        <Badge variant="outline" className="text-[10px]">
+                          Aún no liquidado
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-right">{g.rows.length}</TableCell>
                   <TableCell className="text-right">{fmt(g.facturado)}</TableCell>
                   <TableCell className="text-right text-muted-foreground">{fmt(g.antes)}</TableCell>
                   <TableCell className="text-right">{fmt(g.correcta)}</TableCell>
-                  <TableCell className="text-right font-semibold text-emerald-600">
+                  <TableCell
+                    className={`text-right font-semibold ${
+                      g.settled ? "text-emerald-600" : "text-muted-foreground"
+                    }`}
+                  >
                     {fmt(g.ajuste)}
                   </TableCell>
+
                 </TableRow>
                 {open === g.key && (
                   <TableRow key={`${g.key}-d`}>
