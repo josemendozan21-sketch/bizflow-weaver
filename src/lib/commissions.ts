@@ -575,9 +575,9 @@ export function summarizeAdvisorProgress(
   const weekendUnlocked = causadoWithVat >= UNLOCK_THRESHOLD;
 
   const lines: ProgressLine[] = monthOrders.map((o) => {
-    const paymentMode: PaymentMode =
-      o.payment_method === "contra_entrega" ? "contraentrega" : "contado";
+    const paymentMode: PaymentMode = getDefaultPaymentMode(o);
     const base = buildLine(o, paymentMode, weekendUnlocked, basis, charges);
+
     return {
       ...base,
       date: getPeriodDate(o, basis),
