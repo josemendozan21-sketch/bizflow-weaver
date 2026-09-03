@@ -8,9 +8,13 @@ import { AIAssistant } from "@/components/AIAssistant";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 import { OrderQuickViewProvider, useOrderQuickView } from "@/components/common/OrderQuickView";
+import { useAuth } from "@/contexts/AuthContext";
+import { canSearchOrders } from "@/lib/orderAccess";
 
 function OrderSearchTrigger() {
   const quickView = useOrderQuickView();
+  const { role } = useAuth();
+  const allowed = canSearchOrders(role);
   const [isMac, setIsMac] = useState(false);
 
   useEffect(() => {
@@ -18,6 +22,7 @@ function OrderSearchTrigger() {
   }, []);
 
   useEffect(() => {
+    if (!allowed) return;
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
@@ -26,7 +31,9 @@ function OrderSearchTrigger() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [quickView]);
+  }, [quickView, allowed]);
+
+  if (!allowed) return null;
 
   return (
     <Button

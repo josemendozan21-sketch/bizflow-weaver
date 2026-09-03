@@ -3,6 +3,8 @@ import { Check, Copy, Hash } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useOrderQuickView } from "@/components/common/OrderQuickView";
+import { useAuth } from "@/contexts/AuthContext";
+import { canSearchOrders } from "@/lib/orderAccess";
 
 interface OrderCodeBadgeProps {
   code?: string | null;
@@ -32,9 +34,11 @@ export default function OrderCodeBadge({
 }: OrderCodeBadgeProps) {
   const [copied, setCopied] = useState(false);
   const quickView = useOrderQuickView();
+  const { role } = useAuth();
+  const canViewDetail = canSearchOrders(role);
   const hasCode = Boolean(code && code.trim());
   const showLine = (lineCount ?? 1) > 1 && !!lineIndex;
-  const canOpenDetail = !disableDetail && !!quickView && (!!orderId || hasCode);
+  const canOpenDetail = !disableDetail && canViewDetail && !!quickView && (!!orderId || hasCode);
 
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();

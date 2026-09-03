@@ -19,6 +19,8 @@ import {
   PRODUCTION_STATUS_LABELS,
   type Order,
 } from "@/hooks/useOrders";
+import { useAuth } from "@/contexts/AuthContext";
+import { getOrderViewScope, isFieldVisibleForScope } from "@/lib/orderAccess";
 
 interface Props {
   orderId?: string;
@@ -51,6 +53,9 @@ function SectionTitle({ icon: Icon, children }: { icon: any; children: React.Rea
 
 /** Ficha de solo lectura con TODOS los detalles de un pedido. */
 export default function OrderDetailDialog({ orderId, orderCode, open, onOpenChange }: Props) {
+  const { role } = useAuth();
+  const scope = getOrderViewScope(role);
+  const designOnly = scope === "design";
   const { data: order, isLoading } = useQuery({
     queryKey: ["order-detail", orderId ?? orderCode],
     enabled: open && (!!orderId || !!orderCode),
@@ -115,11 +120,12 @@ export default function OrderDetailDialog({ orderId, orderCode, open, onOpenChan
                 <Badge variant="outline">{order.sale_type === "menor" ? "Al detal" : "Al por mayor"}</Badge>
                 {order.is_recompra && <Badge variant="secondary">Recompra</Badge>}
                 {order.is_credit && <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Crédito</Badge>}
-                {fullyPaid ? (
-                  <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Pagado</Badge>
-                ) : (
-                  <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Saldo {money(balance)}</Badge>
-                )}
+                {!designOnly &&
+                  (fullyPaid ? (
+                    <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Pagado</Badge>
+                  ) : (
+                    <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Saldo {money(balance)}</Badge>
+                  ))}
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
                 <Field label="Asesor" value={order.advisor_name} />
@@ -139,6 +145,15 @@ export default function OrderDetailDialog({ orderId, orderCode, open, onOpenChan
             <Separator />
 
             {/* Cliente y despacho */}
+            {designOnly ? (
+              <section className="space-y-3">
+                <SectionTitle icon={Truck}>Cliente</SectionTitle>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Field label="Cliente" value={order.client_name} />
+                  <Field label="Ciudad" value={order.client_city} />
+                </div>
+              </section>
+            ) : (
             <section className="space-y-3">
               <SectionTitle icon={Truck}>Cliente y despacho</SectionTitle>
               <div className="grid gap-3 sm:grid-cols-3">
@@ -157,6 +172,7 @@ export default function OrderDetailDialog({ orderId, orderCode, open, onOpenChan
               </div>
               {order.dispatch_notes && <Field label="Notas de despacho" value={order.dispatch_notes} />}
             </section>
+            )}
 
             <Separator />
 
@@ -166,7 +182,7 @@ export default function OrderDetailDialog({ orderId, orderCode, open, onOpenChan
               <div className="grid gap-3 sm:grid-cols-3">
                 <Field label="Producto" value={order.product} />
                 <Field label="Cantidad" value={`${order.quantity} uds`} />
-                <Field label="Precio unitario" value={money(order.unit_price)} />
+                {!designOnly && <Field label="Precio unitario" value={money(order.unit_price)} />}
                 <Field label="Color de tinta" value={order.ink_color} />
                 <Field label="Color de gel" value={order.gel_color} />
                 <Field label="Color de silicona" value={order.silicone_color} />
@@ -190,6 +206,8 @@ export default function OrderDetailDialog({ orderId, orderCode, open, onOpenChan
               )}
             </section>
 
+            {!designOnly && (
+            <>
             <Separator />
 
             {/* Dinero */}
@@ -249,9 +267,11 @@ export default function OrderDetailDialog({ orderId, orderCode, open, onOpenChan
                 {order.invoice_notes && <Field label="Notas" value={order.invoice_notes} />}
               </div>
             </section>
+            </>
+            )}
 
             {/* Entregas parciales */}
-            {deliveries.length > 0 && (
+            {!designOnly && deliveries.length > 0 && (
               <>
                 <Separator />
                 <section className="space-y-2">
@@ -271,7 +291,10 @@ export default function OrderDetailDialog({ orderId, orderCode, open, onOpenChan
               </>
             )}
 
-            <OrderChangeLogPanel orderId={order.id} />
+            <OrderChangeLogPanel
+              orderId={order.id}
+              fieldFilter={designOnly ? (f) => isFieldVisibleForScope(f, scope) : undefined}
+            />
           </div>
         )}
       </DialogContent>

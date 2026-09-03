@@ -10,6 +10,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useOrders, getOrderBalance, isOrderFullyPaid, PRODUCTION_STATUS_LABELS } from "@/hooks/useOrders";
 import { matchesQuery } from "@/lib/search";
+import { useAuth } from "@/contexts/AuthContext";
+import { canSeeOrderFinancials } from "@/lib/orderAccess";
 
 interface Props {
   open: boolean;
@@ -21,6 +23,8 @@ interface Props {
 export default function OrderSearchDialog({ open, onOpenChange, onSelect }: Props) {
   const [query, setQuery] = useState("");
   const { data: orders = [], isLoading } = useOrders();
+  const { role } = useAuth();
+  const showMoney = canSeeOrderFinancials(role);
 
   const results = useMemo(() => {
     const base = query.trim()
@@ -61,13 +65,14 @@ export default function OrderSearchDialog({ open, onOpenChange, onSelect }: Prop
                     <Badge variant="outline" className="text-[10px]">
                       {PRODUCTION_STATUS_LABELS[o.production_status] || o.production_status}
                     </Badge>
-                    {paid ? (
-                      <Badge className="bg-green-100 text-green-800 hover:bg-green-100 text-[10px]">Pagado</Badge>
-                    ) : (
-                      <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 text-[10px]">
-                        Saldo ${balance.toLocaleString("es-CO")}
-                      </Badge>
-                    )}
+                    {showMoney &&
+                      (paid ? (
+                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100 text-[10px]">Pagado</Badge>
+                      ) : (
+                        <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 text-[10px]">
+                          Saldo ${balance.toLocaleString("es-CO")}
+                        </Badge>
+                      ))}
                   </div>
                   <p className="text-xs text-muted-foreground truncate">
                     {o.product} · {o.quantity} uds · {o.advisor_name}

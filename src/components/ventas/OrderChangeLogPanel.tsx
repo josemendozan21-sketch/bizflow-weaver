@@ -14,9 +14,17 @@ const fmt = (field: string, value: string | null) => {
   return value;
 };
 
-export function OrderChangeLogPanel({ orderId }: { orderId: string }) {
+export function OrderChangeLogPanel({
+  orderId,
+  fieldFilter,
+}: {
+  orderId: string;
+  /** Permite restringir los campos visibles del historial (ej. rol diseño) */
+  fieldFilter?: (field: string) => boolean;
+}) {
   const [open, setOpen] = useState(false);
-  const { data: entries = [], isLoading } = useOrderChangeLog(open ? orderId : undefined);
+  const { data: allEntries = [], isLoading } = useOrderChangeLog(open ? orderId : undefined);
+  const entries = fieldFilter ? allEntries.filter((e) => fieldFilter(e.field)) : allEntries;
 
   return (
     <div className="pt-3 border-t">
