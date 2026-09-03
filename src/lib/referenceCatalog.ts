@@ -275,3 +275,11 @@ export function sortStockOptions<T extends StockOptionLike>(items: T[], lineText
   });
 }
 
+
+/** Colores de tinta administrados desde Inventarios (materia prima "Tinta ..."). */
+export function inkOptionsFromStock(items: Array<{ name?: string | null }>): string[] {
+  const names = (items || [])
+    .filter((s) => /^tinta\b/i.test(s.name || ""))
+    .map((s) => (s.name || "").replace(/^tinta\s*(pvc)?\s*/i, "").trim() || (s.name || ""));
+  return [...new Set(names.filter(Boolean))].sort((a, b) => a.localeCompare(b, "es"));
+}
