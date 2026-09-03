@@ -24,6 +24,11 @@ type Props = {
   onResolved?: (r: ResolvedAddress) => void;
   className?: string;
   placeholder?: string;
+  /** Si se define, se renderiza el campo de complemento (oficina, apto, bloque...). */
+  complementName?: string;
+  complementValue?: string;
+  onComplementChange?: (v: string) => void;
+  complementLabel?: string;
 };
 
 /**
@@ -40,6 +45,10 @@ export default function AddressAutocomplete({
   onResolved,
   className,
   placeholder = "Ej: Calle 92 # 15-40, Bogotá",
+  complementName,
+  complementValue,
+  onComplementChange,
+  complementLabel = "Complemento (oficina, apto, bloque, interior, local)",
 }: Props) {
   const controlled = value !== undefined;
   const [inner, setInner] = useState("");
@@ -116,8 +125,13 @@ export default function AddressAutocomplete({
     onResolved?.(r);
   };
 
+  const complementControlled = complementValue !== undefined;
+  const [innerComplement, setInnerComplement] = useState("");
+  const complementText = complementControlled ? (complementValue as string) : innerComplement;
+
   return (
-    <div className={`space-y-1.5 relative ${className ?? ""}`} ref={boxRef}>
+    <div className={`space-y-1.5 ${className ?? ""}`}>
+    <div className="space-y-1.5 relative" ref={boxRef}>
       <Label htmlFor={name}>
         {label}
         {required && <span className="text-destructive"> *</span>}
@@ -153,6 +167,23 @@ export default function AddressAutocomplete({
               </span>
             </button>
           ))}
+        </div>
+      )}
+    </div>
+      {complementName && (
+        <div className="space-y-1.5 pt-2">
+          <Label htmlFor={complementName}>{complementLabel}</Label>
+          <Input
+            id={complementName}
+            name={complementName}
+            autoComplete="off"
+            placeholder="Ej: OFC 402, Torre B Apto 501, Local 12"
+            value={complementText}
+            onChange={(e) => {
+              if (complementControlled) onComplementChange?.(e.target.value);
+              else setInnerComplement(e.target.value);
+            }}
+          />
         </div>
       )}
     </div>
