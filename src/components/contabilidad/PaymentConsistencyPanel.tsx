@@ -12,7 +12,13 @@ import { useOrderPaymentsByOrderIds } from "@/hooks/useOrderPayments";
 import { IVA_DIVISOR } from "@/lib/commissions";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 
-type IssueKind = "despachado_sin_pago" | "pagado_sin_registro" | "soporte_final_sin_pago";
+type IssueKind =
+  | "despachado_sin_pago"
+  | "pagado_sin_registro"
+  | "soporte_final_sin_pago"
+  | "soporte_sin_abono"
+  | "abono_sin_historial"
+  | "descuadre_abono_pagos";
 
 interface Row {
   order: Order;
@@ -25,7 +31,11 @@ const KIND_LABEL: Record<IssueKind, { label: string; className: string }> = {
   despachado_sin_pago: { label: "Despachado sin pago completo", className: "bg-amber-500 text-white" },
   pagado_sin_registro: { label: "Pagado sin respaldo de pagos", className: "bg-sky-600 text-white" },
   soporte_final_sin_pago: { label: "Soporte final sin registro", className: "bg-destructive text-white" },
+  soporte_sin_abono: { label: "Soporte de pago sin abono", className: "bg-orange-600 text-white" },
+  abono_sin_historial: { label: "Abono sin historial de pago", className: "bg-violet-600 text-white" },
+  descuadre_abono_pagos: { label: "Descuadre abono vs pagos", className: "bg-rose-600 text-white" },
 };
+
 
 function fmt(n: number) {
   return `$${Math.round(n || 0).toLocaleString("es-CO")}`;
@@ -50,12 +60,12 @@ export default function PaymentConsistencyPanel({
         const total = Number(o.total_amount) || 0;
         if (total <= 0) return false;
         if (String(o.payment_method || "").toLowerCase() === "obsequio") return false;
-        const dispatched = ["despachado", "entregado"].includes(String(o.production_status || ""));
-        const finalProof = String(o.payment_proof_url || "").includes("soporte_pago_final");
-        return (dispatched && !isOrderFullyPaid(o)) || finalProof || isOrderFullyPaid(o);
+        if (String(o.observations || "").toUpperCase().includes("OBSEQUIO")) return false;
+        return true;
       }),
     [orders]
   );
+
 
   const ids = useMemo(() => relevant.map((o) => o.id), [relevant]);
   const { data: payments = [] } = useOrderPaymentsByOrderIds(ids);
@@ -70,7 +80,10 @@ export default function PaymentConsistencyPanel({
     const out: Row[] = [];
     for (const o of relevant) {
       const total = Number(o.total_amount) || 0;
+      const abono = Number(o.abono) || 0;
       const registered = paidByOrder.get(o.id) || 0;
+      const hasPaymentRows = payments.some((p) => p.order_id === o.id);
+      const anyProof = !!o.payment_proof_url;
       const finalProof = String(o.payment_proof_url || "").includes("soporte_pago_final");
       const dispatched = ["despachado", "entregado"].includes(String(o.production_status || ""));
       const fullyPaid = isOrderFullyPaid(o);
@@ -84,12 +97,39 @@ export default function PaymentConsistencyPanel({
         });
         continue;
       }
+      if (abono <= 0 && anyProof) {
+        out.push({
+          order: o,
+          kind: "soporte_sin_abono",
+          issue: "Tiene soporte de pago cargado pero el pedido no registra ningún abono",
+          gap: total,
+        });
+        continue;
+      }
       if (dispatched && !fullyPaid) {
         out.push({
           order: o,
           kind: "despachado_sin_pago",
           issue: "Pedido despachado o entregado sin pago completo",
           gap: getOrderBalance(o),
+        });
+        continue;
+      }
+      if (abono > 0 && !hasPaymentRows) {
+        out.push({
+          order: o,
+          kind: "abono_sin_historial",
+          issue: "El abono del pedido no tiene el pago correspondiente en el historial",
+          gap: abono,
+        });
+        continue;
+      }
+      if (hasPaymentRows && Math.abs(abono - registered) > 1) {
+        out.push({
+          order: o,
+          kind: "descuadre_abono_pagos",
+          issue: `El abono del pedido (${fmt(abono)}) no coincide con la suma de pagos registrados (${fmt(registered)})`,
+          gap: Math.abs(abono - registered),
         });
         continue;
       }
@@ -103,7 +143,14 @@ export default function PaymentConsistencyPanel({
       }
     }
     return out.sort((a, b) => b.gap - a.gap);
-  }, [relevant, paidByOrder]);
+  }, [relevant, paidByOrder, payments]);
+
+  const byKind = useMemo(() => {
+    const m = new Map<IssueKind, number>();
+    for (const r of rows) m.set(r.kind, (m.get(r.kind) || 0) + 1);
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  }, [rows]);
+
 
   const totalGap = rows.reduce((s, r) => s + r.gap, 0);
   const commissionGap = (totalGap / IVA_DIVISOR) * APPROX_RATE;
@@ -163,6 +210,16 @@ export default function PaymentConsistencyPanel({
             </div>
           )}
         </div>
+        {byKind.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {byKind.map(([kind, count]) => (
+              <Badge key={kind} className={`${KIND_LABEL[kind].className} text-[11px]`}>
+                {KIND_LABEL[kind].label}: {count}
+              </Badge>
+            ))}
+          </div>
+        )}
+
       </CardHeader>
       <CardContent>
         {rows.length === 0 ? (
