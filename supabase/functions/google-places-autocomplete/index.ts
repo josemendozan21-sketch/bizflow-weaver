@@ -4,7 +4,16 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const API_KEY = Deno.env.get("GOOGLE_MAPS_API_KEY");
+const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_maps";
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+const CONNECTION_KEY = Deno.env.get("GOOGLE_MAPS_API_KEY");
+const API_KEY = LOVABLE_API_KEY && CONNECTION_KEY ? "ok" : "";
+
+const gatewayHeaders = (extra: Record<string, string> = {}) => ({
+  Authorization: `Bearer ${LOVABLE_API_KEY}`,
+  "X-Connection-Api-Key": CONNECTION_KEY as string,
+  ...extra,
+});
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -26,12 +35,11 @@ Deno.serve(async (req) => {
 
     if (action === "details") {
       if (!placeId) return json({ error: "placeId requerido" }, 400);
-      const url = `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}?languageCode=es&regionCode=CO`;
+      const url = `${GATEWAY_URL}/places/v1/places/${encodeURIComponent(placeId)}?languageCode=es&regionCode=CO`;
       const res = await fetch(url, {
-        headers: {
-          "X-Goog-Api-Key": API_KEY,
+        headers: gatewayHeaders({
           "X-Goog-FieldMask": "formattedAddress,addressComponents,shortFormattedAddress",
-        },
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -56,9 +64,9 @@ Deno.serve(async (req) => {
     const q = String(input ?? "").trim();
     if (q.length < 3) return json({ suggestions: [] });
 
-    const res = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
+    const res = await fetch(`${GATEWAY_URL}/places/v1/places:autocomplete`, {
       method: "POST",
-      headers: { "X-Goog-Api-Key": API_KEY, "Content-Type": "application/json" },
+      headers: gatewayHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({
         input: q,
         languageCode: "es",
