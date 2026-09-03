@@ -415,6 +415,15 @@ export function useInventory() {
       }
 
     ): Promise<{ success: boolean; message: string }> => {
+      if (typeof updates.available === "number" && updates.available < 0) {
+        return {
+          success: false,
+          message: "La cantidad disponible no puede ser negativa. Registra una entrada para reabastecer.",
+        };
+      }
+      if (typeof updates.min_stock === "number" && updates.min_stock < 0) {
+        return { success: false, message: "El mínimo no puede ser negativo." };
+      }
       const { error } = await supabase
         .from("stock_items")
         .update(updates as any)
