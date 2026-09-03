@@ -155,6 +155,22 @@ export default function FacetFilterBar({
           </SheetContent>
         </Sheet>
 
+        {/* Toggle visible de stock */}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          aria-pressed={onlyAvailable}
+          onClick={() => onOnlyAvailableChange(!onlyAvailable)}
+          className={cn(
+            "h-9 gap-1.5 font-normal text-muted-foreground border-dashed shrink-0",
+            onlyAvailable && "text-foreground border-solid border-primary/40 bg-primary/5",
+          )}
+        >
+          <Check className={cn("h-3.5 w-3.5", onlyAvailable ? "opacity-100" : "opacity-30")} />
+          <span className="hidden sm:inline">Con stock</span>
+        </Button>
+
         {/* Opciones de vista */}
         <Popover>
           <PopoverTrigger asChild>
@@ -169,14 +185,6 @@ export default function FacetFilterBar({
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-52 p-1" align="end">
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-              onClick={() => onOnlyAvailableChange(!onlyAvailable)}
-            >
-              <Check className={cn("h-4 w-4", onlyAvailable ? "opacity-100" : "opacity-0")} />
-              Solo con stock
-            </button>
             <button
               type="button"
               className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
@@ -211,19 +219,6 @@ export default function FacetFilterBar({
             </button>
           </Badge>
         ))}
-        {onlyAvailable && (
-          <Badge variant="outline" className="gap-1 pl-2 pr-1 py-0.5 text-xs font-normal text-muted-foreground">
-            Solo con stock
-            <button
-              type="button"
-              aria-label="Quitar filtro de stock"
-              className="rounded-sm p-0.5 hover:text-foreground"
-              onClick={() => onOnlyAvailableChange(false)}
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </Badge>
-        )}
         <span className="ml-auto text-xs text-muted-foreground tabular-nums">
           {resultCount} de {totalCount}
           {activeCount > 0 && (

@@ -7,6 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import SelectionCard from "@/components/common/SelectionCard";
+import PageHeader from "@/components/common/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, AlertTriangle, CheckCircle2, FileText, ShoppingCart, ClipboardList, Plus, Trash2, BarChart3, CalendarDays, Percent } from "lucide-react";
@@ -81,10 +83,7 @@ const Ventas = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Ventas</h1>
-        <p className="text-muted-foreground">Gestión de cotizaciones y pedidos</p>
-      </div>
+      <PageHeader title="Ventas" description="Gestión de cotizaciones y pedidos" />
 
       <Tabs defaultValue="pedidos" className="w-full">
         <TabsList>
@@ -128,15 +127,15 @@ const Ventas = () => {
 
           {step === 1 && (
             <div className="grid gap-4 sm:grid-cols-2 max-w-lg">
-              <BrandCard icon={<span className="text-xl font-bold">Sweatspot</span>} onClick={() => handleBrandSelect("sweatspot")} />
-              <BrandCard icon={<span className="text-xl font-bold">Magical Warmers</span>} onClick={() => handleBrandSelect("magical")} />
+              <SelectionCard title="Sweatspot" description="Termos, canguros y accesorios" onClick={() => handleBrandSelect("sweatspot")} />
+              <SelectionCard title="Magical Warmers" description="Cuerpos y producto terminado" onClick={() => handleBrandSelect("magical")} />
             </div>
           )}
 
           {step === 2 && (
             <div className="grid gap-4 sm:grid-cols-2 max-w-lg">
-              <SaleTypeCard title="Al por mayor" description="Pedidos en volumen con abono inicial" onClick={() => handleSaleTypeSelect("mayor")} />
-              <SaleTypeCard title="Al por menor" description="Venta unitaria al consumidor final" onClick={() => handleSaleTypeSelect("menor")} />
+              <SelectionCard title="Al por mayor" description="Pedidos en volumen con abono inicial" onClick={() => handleSaleTypeSelect("mayor")} />
+              <SelectionCard title="Al por menor" description="Venta unitaria al consumidor final" onClick={() => handleSaleTypeSelect("menor")} />
             </div>
           )}
 
@@ -185,27 +184,6 @@ function StepIndicator({ n, current, label }: { n: number; current: number; labe
   );
 }
 
-function BrandCard({ icon, name, onClick }: { icon: React.ReactNode; name?: string; onClick: () => void }) {
-  return (
-    <Card className="cursor-pointer transition-all hover:border-primary hover:shadow-md" onClick={onClick}>
-      <CardContent className="flex flex-col items-center gap-3 p-8">
-        <div className="text-primary">{icon}</div>
-        {name && <span className="text-lg font-semibold text-foreground">{name}</span>}
-      </CardContent>
-    </Card>
-  );
-}
-
-function SaleTypeCard({ title, description, onClick }: { title: string; description: string; onClick: () => void }) {
-  return (
-    <Card className="cursor-pointer transition-all hover:border-primary hover:shadow-md" onClick={onClick}>
-      <CardContent className="flex flex-col items-center gap-2 p-8 text-center">
-        <span className="text-lg font-semibold text-foreground">{title}</span>
-        <span className="text-sm text-muted-foreground">{description}</span>
-      </CardContent>
-    </Card>
-  );
-}
 
 /* ---- Order Form ---- */
 

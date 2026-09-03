@@ -6,23 +6,25 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ArrowLeft, ChevronRight, Package } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useReferenceCatalog } from "@/hooks/useReferenceCatalog";
-import ReferenceLabel from "@/components/inventory/ReferenceLabel";
+import PageHeader from "@/components/common/PageHeader";
 import FacetFilterBar from "@/components/inventory/FacetFilterBar";
 import GroupedInventoryTable, {
   type InventoryColumn,
   type InventoryGroup,
 } from "@/components/inventory/GroupedInventoryTable";
 import { cn } from "@/lib/utils";
-import { normalizeText, type ReferenceItem } from "@/lib/referenceCatalog";
+import { cleanReferenceName, normalizeText, type ReferenceItem } from "@/lib/referenceCatalog";
 import {
   MAGICAL_FACETS,
   SWEATSPOT_FACETS,
   buildFacetGroups,
+  buildVariantRows,
   magicalFacetValues,
   matchesSelection,
   pickGroupKey,
   sweatspotFacetValues,
   type FacetSelection,
+  type VariantRow,
 } from "@/lib/inventoryFacets";
 import type { InventoryBrand } from "@/stores/inventoryStore";
 
@@ -68,12 +70,23 @@ const MetaLine = ({ parts }: { parts: (string | null | undefined)[] }) => {
 
 type SortDir = "asc" | "desc";
 
+type Row = VariantRow<ReferenceItem>;
+
+interface VariantColumnDef {
+  value: string;
+  header: string;
+}
+
 interface FacetedSectionProps {
   items: ReferenceItem[];
   getValues: (item: ReferenceItem) => Record<string, string | null>;
   defs: typeof SWEATSPOT_FACETS;
   primaryKeys: string[];
-  columns: InventoryColumn<ReferenceItem>[];
+  /** Faceta que se despliega como columnas (ej. tipo o logo). */
+  variantKey: string;
+  variantColumns: VariantColumnDef[];
+  firstHeader: string;
+  metaParts: (row: Row) => (string | null | undefined)[];
   searchPlaceholder: string;
   searchFields: (item: ReferenceItem) => string;
 }
@@ -84,7 +97,10 @@ function FacetedInventorySection({
   getValues,
   defs,
   primaryKeys,
-  columns,
+  variantKey,
+  variantColumns,
+  firstHeader,
+  metaParts,
   searchPlaceholder,
   searchFields,
 }: FacetedSectionProps) {
@@ -110,40 +126,84 @@ function FacetedInventorySection({
   );
 
   const filtered = useMemo(
-    () =>
-      base
-        .filter((i) => matchesSelection(getValues(i), selection))
-        .sort((a, b) =>
-          sortDir === "asc"
-            ? a.name.localeCompare(b.name, "es", { sensitivity: "base" })
-            : b.name.localeCompare(a.name, "es", { sensitivity: "base" }),
-        ),
-    [base, selection, sortDir, getValues],
+    () => base.filter((i) => matchesSelection(getValues(i), selection)),
+    [base, selection, getValues],
   );
 
-  const groupKey = pickGroupKey(groupsDef, selection);
+  const rows = useMemo(
+    () =>
+      buildVariantRows(
+        filtered,
+        getValues,
+        (i) => cleanReferenceName(i.name),
+        (i) => i.available,
+        variantKey,
+      ).sort((a, b) =>
+        sortDir === "asc"
+          ? a.label.localeCompare(b.label, "es", { sensitivity: "base" })
+          : b.label.localeCompare(a.label, "es", { sensitivity: "base" }),
+      ),
+    [filtered, getValues, variantKey, sortDir],
+  );
 
-  const grouped: InventoryGroup<ReferenceItem>[] = useMemo(() => {
+  // Al filtrar por una variante solo se muestra esa columna.
+  const activeVariant = selection[variantKey];
+  const shownVariants = activeVariant
+    ? variantColumns.filter((v) => v.value === activeVariant)
+    : variantColumns;
+
+  const columns: InventoryColumn<Row>[] = useMemo(
+    () => [
+      { key: "name", header: firstHeader, render: (row) => row.label, className: "font-medium" },
+      { key: "meta", header: "Detalle", render: (row) => <MetaLine parts={metaParts(row)} /> },
+      ...shownVariants.map((v) => ({
+        key: `v-${v.value}`,
+        header: v.header,
+        align: "right" as const,
+        render: (row: Row) =>
+          row.variants[v.value] === undefined ? (
+            <span className="text-muted-foreground">—</span>
+          ) : (
+            <span className="tabular-nums">{row.variants[v.value].toLocaleString("es-CO")}</span>
+          ),
+      })),
+      {
+        key: "estado",
+        header: "Estado",
+        align: "right",
+        render: (row) => <StockDot available={row.totalAvailable} />,
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [firstHeader, metaParts, JSON.stringify(shownVariants)],
+  );
+
+  const groupKey = pickGroupKey(
+    groupsDef.filter((g) => g.key !== variantKey),
+    selection,
+  );
+
+  const grouped: InventoryGroup<Row>[] = useMemo(() => {
     if (!groupKey) {
       return [
         {
           key: "__all__",
           label: "Resultados",
-          items: filtered,
-          units: filtered.reduce((s, i) => s + i.available, 0),
+          items: rows,
+          units: rows.reduce((s, r) => s + r.totalAvailable, 0),
         },
       ];
     }
-    const map = new Map<string, InventoryGroup<ReferenceItem>>();
-    for (const item of filtered) {
-      const value = getValues(item)[groupKey] || "Sin especificar";
+    const map = new Map<string, InventoryGroup<Row>>();
+    for (const row of rows) {
+      const value = row.values[groupKey] || "Sin especificar";
       const g = map.get(value) || { key: value, label: value, items: [], units: 0 };
-      g.items.push(item);
-      g.units += item.available;
+      g.items.push(row);
+      g.units += row.totalAvailable;
       map.set(value, g);
     }
     return [...map.values()].sort((a, b) => a.label.localeCompare(b.label, "es", { sensitivity: "base" }));
-  }, [filtered, groupKey, getValues]);
+  }, [rows, groupKey]);
 
   return (
     <>
@@ -159,56 +219,30 @@ function FacetedInventorySection({
           setSelection({});
           setOnlyAvailable(false);
         }}
-        resultCount={filtered.length}
+        resultCount={rows.length}
         totalCount={items.length}
         sortDir={sortDir}
         onToggleSort={() => setSortDir(sortDir === "asc" ? "desc" : "asc")}
         onlyAvailable={onlyAvailable}
         onOnlyAvailableChange={setOnlyAvailable}
       />
-      <GroupedInventoryTable groups={grouped} columns={columns} getRowKey={(i) => i.id} />
+      <GroupedInventoryTable groups={grouped} columns={columns} getRowKey={(row) => row.key} />
     </>
   );
 }
 
-const magicalColumns = (firstHeader: string): InventoryColumn<ReferenceItem>[] => [
-  {
-    key: "name",
-    header: firstHeader,
-    render: (item) => <ReferenceLabel name={item.name} />,
-    className: "font-medium",
-  },
-  {
-    key: "meta",
-    header: "Detalle",
-    render: (item) => <MetaLine parts={[item.tipo]} />,
-  },
-  {
-    key: "available",
-    header: "Disponible",
-    align: "right",
-    render: (item) => <StockDot available={item.available} />,
-  },
+const MAGICAL_VARIANTS: VariantColumnDef[] = [
+  { value: "Frío", header: "Frío" },
+  { value: "Térmico", header: "Térmico" },
 ];
 
-const sweatspotColumns: InventoryColumn<ReferenceItem>[] = [
-  { key: "name", header: "Producto", render: (item) => item.name, className: "font-medium" },
-  {
-    key: "meta",
-    header: "Detalle",
-    render: (item) => (
-      <MetaLine
-        parts={[item.color, item.logo ? "con logo" : "marcable", item.productType]}
-      />
-    ),
-  },
-  {
-    key: "available",
-    header: "Disponible",
-    align: "right",
-    render: (item) => <StockDot available={item.available} />,
-  },
+const SWEATSPOT_VARIANTS: VariantColumnDef[] = [
+  { value: "Con logo", header: "Con logo" },
+  { value: "Marcable (sin logo)", header: "Marcable" },
 ];
+
+const magicalMeta = (row: Row) => [row.values.tamano];
+const sweatspotMeta = (row: Row) => [row.values.color, row.values.origen];
 
 const magicalSearchFields = (i: ReferenceItem) => `${i.name} ${i.tipo || ""}`;
 const sweatspotSearchFields = (i: ReferenceItem) =>
@@ -233,10 +267,7 @@ export default function AsesorInventoryView() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Inventarios</h1>
-        <p className="text-muted-foreground">Disponibilidad de productos por marca</p>
-      </div>
+      <PageHeader title="Inventarios" description="Disponibilidad de productos por marca" />
 
       <Alert>
         <Package className="h-4 w-4" />
@@ -288,7 +319,10 @@ export default function AsesorInventoryView() {
                       getValues={magicalFacetValues}
                       defs={MAGICAL_FACETS}
                       primaryKeys={["familia", "tipo"]}
-                      columns={magicalColumns("Referencia")}
+                      variantKey="tipo"
+                      variantColumns={MAGICAL_VARIANTS}
+                      firstHeader="Referencia"
+                      metaParts={magicalMeta}
                       searchPlaceholder="Buscar cuerpo (ej. círculo 8 cm frío)..."
                       searchFields={magicalSearchFields}
                     />
@@ -304,7 +338,10 @@ export default function AsesorInventoryView() {
                       getValues={magicalFacetValues}
                       defs={MAGICAL_FACETS}
                       primaryKeys={["familia", "tipo"]}
-                      columns={magicalColumns("Producto")}
+                      variantKey="tipo"
+                      variantColumns={MAGICAL_VARIANTS}
+                      firstHeader="Producto"
+                      metaParts={magicalMeta}
                       searchPlaceholder="Buscar producto (ej. corazón térmico)..."
                       searchFields={magicalSearchFields}
                     />
@@ -323,7 +360,10 @@ export default function AsesorInventoryView() {
                   getValues={sweatspotFacetValues}
                   defs={SWEATSPOT_FACETS}
                   primaryKeys={["categoria", "tamano"]}
-                  columns={sweatspotColumns}
+                  variantKey="logo"
+                  variantColumns={SWEATSPOT_VARIANTS}
+                  firstHeader="Producto"
+                  metaParts={sweatspotMeta}
                   searchPlaceholder="Buscar producto (ej. termo 500 azul con correa)..."
                   searchFields={sweatspotSearchFields}
                 />
