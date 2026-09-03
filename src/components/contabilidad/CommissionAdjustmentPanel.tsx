@@ -153,6 +153,7 @@ export default function CommissionAdjustmentPanel({ advisorFilter }: { advisorFi
         groups.map((g) => ({
           Asesor: g.advisor,
           Mes: g.period,
+          Estado: g.settled ? "Ya liquidado — ajuste a pagar" : "Aún no liquidado",
           Pedidos: g.rows.length,
           Facturado: Math.round(g.facturado),
           "Comisión pagada antes": Math.round(g.antes),
