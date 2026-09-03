@@ -43,6 +43,8 @@ export default function FacetFilterBar({
   onOnlyAvailableChange,
 }: FacetFilterBarProps) {
   const [expanded, setExpanded] = useState(false);
+  const [showAll, setShowAll] = useState<Record<string, boolean>>({});
+  const MAX_VISIBLE = 12;
   const activeCount = countActiveFilters(selection);
   const activeChips = groups
     .map((g) => ({ key: g.key, label: g.label, value: selection[g.key] }))
@@ -120,7 +122,10 @@ export default function FacetFilterBar({
       )}
 
       <div className={cn("space-y-2", !expanded && "hidden md:block")}>
-        {groups.map((group) => (
+        {groups.map((group) => {
+          const isExpanded = !!showAll[group.key] || group.options.length <= MAX_VISIBLE;
+          const visible = isExpanded ? group.options : group.options.slice(0, MAX_VISIBLE);
+          return (
           <div key={group.key} className="flex flex-wrap items-center gap-1.5">
             <span className="text-xs font-medium text-muted-foreground w-20 shrink-0">{group.label}</span>
             <Button
@@ -132,7 +137,7 @@ export default function FacetFilterBar({
             >
               Todos
             </Button>
-            {group.options.map((opt) => (
+            {visible.map((opt) => (
               <Button
                 key={opt.value}
                 type="button"
@@ -154,8 +159,20 @@ export default function FacetFilterBar({
                 </span>
               </Button>
             ))}
+            {group.options.length > MAX_VISIBLE && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-xs text-muted-foreground"
+                onClick={() => setShowAll((s) => ({ ...s, [group.key]: !isExpanded }))}
+              >
+                {isExpanded ? "Ver menos" : `+${group.options.length - MAX_VISIBLE} más`}
+              </Button>
+            )}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
