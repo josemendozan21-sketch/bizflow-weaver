@@ -136,27 +136,30 @@ export function useInventory() {
         return { success: false, message: `Producto "${itemName}" no encontrado en inventario.` };
       }
 
-      const newAvailable = item.available - amount;
-      const { error } = await supabase
-        .from("stock_items")
-        .update({ available: newAvailable } as any)
-        .eq("id", item.id);
+      // El descuento automático lo aplica el sistema (función segura en la base de
+      // datos): no depende de los permisos de edición del usuario y nunca deja el
+      // inventario en negativo. Queda registrado en la bitácora de inventario.
+      const { data: res, error } = await supabase.rpc("consume_stock_item" as any, {
+        _item_id: item.id,
+        _amount: amount,
+        _reason: `Consumo automático — ${itemName}`,
+      } as any);
 
       if (error) {
         return { success: false, message: `Error al actualizar inventario: ${error.message}` };
       }
 
-      const wasInsufficient = item.available < amount;
-      if (wasInsufficient) {
+      const result = (res || {}) as { applied?: number; shortfall?: number; new_available?: number };
+      if ((result.shortfall ?? 0) > 0) {
         return {
           success: true,
-          message: `⚠️ Stock insuficiente de "${item.name}". Se descontaron ${item.available} de ${amount} requeridos. Reabastecer.`,
+          message: `⚠️ Stock insuficiente de "${item.name}". Se descontaron ${result.applied ?? 0} de ${amount} requeridos. Reabastecer.`,
         };
       }
 
       return {
         success: true,
-        message: `Se descontaron ${amount} de "${item.name}". Nuevo stock: ${newAvailable}.`,
+        message: `Se descontaron ${amount} de "${item.name}". Nuevo stock: ${result.new_available ?? 0}.`,
       };
     },
     [stockItems]
