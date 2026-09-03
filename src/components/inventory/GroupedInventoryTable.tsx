@@ -63,7 +63,7 @@ export default function GroupedInventoryTable<T>({
             return (
               <Fragment key={group.key}>
                 {showHeaders && (
-                  <TableRow className="bg-muted hover:bg-muted sticky top-[41px] z-10">
+                  <TableRow className="bg-muted hover:bg-muted sticky top-[47px] z-10">
                     <TableCell colSpan={columns.length} className="py-2 bg-muted">
 
                       <button
