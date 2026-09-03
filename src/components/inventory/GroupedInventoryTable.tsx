@@ -27,8 +27,8 @@ interface GroupedInventoryTableProps<T> {
 }
 
 /**
- * Tabla de inventario agrupada por la faceta macro activa. Se usa igual en
- * Magical y Sweatspot para que la experiencia sea idéntica.
+ * Tabla agrupada por la faceta macro activa. Estilo minimalista: separadores
+ * finos, sin cajas ni fondos saturados.
  */
 export default function GroupedInventoryTable<T>({
   groups,
@@ -40,18 +40,25 @@ export default function GroupedInventoryTable<T>({
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   if (groups.length === 0 || groups.every((g) => g.items.length === 0)) {
-    return <p className="text-sm text-muted-foreground py-6 text-center">{emptyMessage}</p>;
+    return <p className="text-sm text-muted-foreground py-10 text-center">{emptyMessage}</p>;
   }
 
   const showHeaders = !(groups.length === 1 && groups[0].key === "__all__");
 
   return (
-    <div className="rounded-md border overflow-x-auto">
+    <div className="overflow-x-auto">
       <Table>
         <TableHeader>
-          <TableRow>
+          <TableRow className="hover:bg-transparent border-b">
             {columns.map((col) => (
-              <TableHead key={col.key} className={cn(col.align === "right" && "text-right", col.className)}>
+              <TableHead
+                key={col.key}
+                className={cn(
+                  "h-8 text-[11px] font-normal uppercase tracking-wide text-muted-foreground",
+                  col.align === "right" && "text-right",
+                  col.className,
+                )}
+              >
                 {col.header}
               </TableHead>
             ))}
@@ -63,22 +70,22 @@ export default function GroupedInventoryTable<T>({
             return (
               <Fragment key={group.key}>
                 {showHeaders && (
-                  <TableRow className="bg-muted/60 hover:bg-muted/60">
-                    <TableCell colSpan={columns.length} className="py-2">
+                  <TableRow className="border-0 hover:bg-transparent">
+                    <TableCell colSpan={columns.length} className="pt-6 pb-1">
                       <button
                         type="button"
-                        className="flex items-center gap-2 text-sm font-semibold w-full text-left"
+                        className="flex w-full items-center gap-1.5 text-left group"
                         onClick={() => setCollapsed((c) => ({ ...c, [group.key]: !isCollapsed }))}
                       >
                         {isCollapsed ? (
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
                         ) : (
-                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                         )}
-                        {group.label}
-                        <span className="text-xs font-normal text-muted-foreground">
-                          {group.items.length} referencia{group.items.length === 1 ? "" : "s"} ·{" "}
-                          {group.units.toLocaleString("es-CO")} unidades
+                        <span className="text-xs font-medium uppercase tracking-wide">{group.label}</span>
+                        <span className="text-xs font-normal text-muted-foreground tabular-nums">
+                          · {group.items.length} ref{group.items.length === 1 ? "" : "s"} ·{" "}
+                          {group.units.toLocaleString("es-CO")} u
                         </span>
                       </button>
                     </TableCell>
@@ -86,11 +93,14 @@ export default function GroupedInventoryTable<T>({
                 )}
                 {!isCollapsed &&
                   group.items.map((item) => (
-                    <TableRow key={getRowKey(item)} className={getRowClassName?.(item)}>
+                    <TableRow
+                      key={getRowKey(item)}
+                      className={cn("border-b border-border/40 hover:bg-muted/40", getRowClassName?.(item))}
+                    >
                       {columns.map((col) => (
                         <TableCell
                           key={col.key}
-                          className={cn(col.align === "right" && "text-right", col.className)}
+                          className={cn("py-2.5", col.align === "right" && "text-right", col.className)}
                         >
                           {col.render(item)}
                         </TableCell>
