@@ -77,7 +77,7 @@ export default function FacetFilterBar({
   );
 
   return (
-    <div className="sticky top-0 z-30 -mx-1 px-1 pt-2 pb-2.5 space-y-2.5 mb-2 bg-background border-b">
+    <div className="pb-2.5 space-y-2.5 mb-2 border-b">
       <div className="flex items-center gap-2">
         <div className="relative flex-1 min-w-0">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
