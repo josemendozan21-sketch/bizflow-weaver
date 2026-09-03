@@ -74,6 +74,13 @@ const InventariosRoleView = () => {
           <TabsTrigger value="abastecimiento" className="gap-1.5 whitespace-nowrap">
             <PackageCheck className="h-4 w-4" /> Abastecimiento
           </TabsTrigger>
+          {RESERVATIONS_ENABLED && (
+            <TabsTrigger value="reservas" className="gap-1.5 whitespace-nowrap">
+              <BookmarkCheck className="h-4 w-4" /> Reservas
+            </TabsTrigger>
+          )}
+
+
 
           <TabsTrigger value="trazabilidad" className="gap-1.5 whitespace-nowrap">
             <Route className="h-4 w-4" /> Trazabilidad
