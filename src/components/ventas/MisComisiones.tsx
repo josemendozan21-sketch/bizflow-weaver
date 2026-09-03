@@ -24,6 +24,7 @@ import DisputesPanel from "@/components/contabilidad/DisputesPanel";
 import { Loader2, Info, TrendingUp, Clock, CheckCircle2, ChevronLeft, ChevronRight, Download, AlertTriangle } from "lucide-react";
 import { CommissionExpandButton } from "@/components/commissions/CommissionExpandButton";
 import { CommissionStatusBadge } from "@/components/commissions/CommissionStatusBadge";
+import { CommissionRulesLegend } from "@/components/commissions/CommissionRulesLegend";
 
 import { format } from "date-fns";
 import { es } from "date-fns/locale";

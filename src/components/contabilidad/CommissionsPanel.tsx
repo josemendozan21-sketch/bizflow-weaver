@@ -30,6 +30,7 @@ import {
 import { ChevronDown, Info, TrendingUp, AlertCircle, Download } from "lucide-react";
 import { CommissionExpandButton } from "@/components/commissions/CommissionExpandButton";
 import { CommissionStatusBadge } from "@/components/commissions/CommissionStatusBadge";
+import { CommissionRulesLegend } from "@/components/commissions/CommissionRulesLegend";
 import type { Order } from "@/hooks/useOrders";
 import { useAllOrderCharges } from "@/hooks/useOrderCharges";
 import {
