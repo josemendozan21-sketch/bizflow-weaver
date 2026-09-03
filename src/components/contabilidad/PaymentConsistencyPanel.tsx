@@ -12,7 +12,13 @@ import { useOrderPaymentsByOrderIds } from "@/hooks/useOrderPayments";
 import { IVA_DIVISOR } from "@/lib/commissions";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 
-type IssueKind = "despachado_sin_pago" | "pagado_sin_registro" | "soporte_final_sin_pago";
+type IssueKind =
+  | "despachado_sin_pago"
+  | "pagado_sin_registro"
+  | "soporte_final_sin_pago"
+  | "soporte_sin_abono"
+  | "abono_sin_historial"
+  | "descuadre_abono_pagos";
 
 interface Row {
   order: Order;
@@ -25,7 +31,11 @@ const KIND_LABEL: Record<IssueKind, { label: string; className: string }> = {
   despachado_sin_pago: { label: "Despachado sin pago completo", className: "bg-amber-500 text-white" },
   pagado_sin_registro: { label: "Pagado sin respaldo de pagos", className: "bg-sky-600 text-white" },
   soporte_final_sin_pago: { label: "Soporte final sin registro", className: "bg-destructive text-white" },
+  soporte_sin_abono: { label: "Soporte de pago sin abono", className: "bg-orange-600 text-white" },
+  abono_sin_historial: { label: "Abono sin historial de pago", className: "bg-violet-600 text-white" },
+  descuadre_abono_pagos: { label: "Descuadre abono vs pagos", className: "bg-rose-600 text-white" },
 };
+
 
 function fmt(n: number) {
   return `$${Math.round(n || 0).toLocaleString("es-CO")}`;
