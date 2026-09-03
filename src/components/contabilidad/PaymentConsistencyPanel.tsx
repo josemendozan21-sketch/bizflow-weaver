@@ -60,12 +60,12 @@ export default function PaymentConsistencyPanel({
         const total = Number(o.total_amount) || 0;
         if (total <= 0) return false;
         if (String(o.payment_method || "").toLowerCase() === "obsequio") return false;
-        const dispatched = ["despachado", "entregado"].includes(String(o.production_status || ""));
-        const finalProof = String(o.payment_proof_url || "").includes("soporte_pago_final");
-        return (dispatched && !isOrderFullyPaid(o)) || finalProof || isOrderFullyPaid(o);
+        if (String(o.observations || "").toUpperCase().includes("OBSEQUIO")) return false;
+        return true;
       }),
     [orders]
   );
+
 
   const ids = useMemo(() => relevant.map((o) => o.id), [relevant]);
   const { data: payments = [] } = useOrderPaymentsByOrderIds(ids);
