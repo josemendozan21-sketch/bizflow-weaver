@@ -85,10 +85,12 @@ function useInventoryDashboardStats() {
         (o) => o.production_status === "pendiente"
       ).length;
 
-      const reserved = orders.filter(
-        (o) =>
-          reservedOrderIds.has(o.id) && o.production_status !== "entregado"
-      ).length;
+      const reserved = reservedOrderIds.size;
+
+      const reservedUnits = reservations.reduce(
+        (sum, r) => sum + (Number(r.quantity) || 0),
+        0
+      );
 
       const waitingProduction = productionOrders.filter(
         (p) =>
@@ -105,9 +107,11 @@ function useInventoryDashboardStats() {
       return {
         pendingReview,
         reserved,
+        reservedUnits,
         waitingProduction,
         activeProduction,
       };
+
     },
     refetchInterval: 15_000,
   });
