@@ -423,7 +423,7 @@ const MateriaPrimaList = () => {
             className="pl-8 h-9"
           />
           <Select value={brandFilter} onValueChange={(v) => setBrandFilter(v as BrandFilter)}>
-            <SelectTrigger className="h-9 w-[160px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-9 w-full sm:w-[160px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todas">Todas las marcas</SelectItem>
               <SelectItem value="magical">Magical</SelectItem>

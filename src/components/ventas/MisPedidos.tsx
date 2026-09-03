@@ -338,7 +338,7 @@ export function MisPedidos() {
           />
         </div>
         <Select value={brandFilter} onValueChange={setBrandFilter}>
-          <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[160px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas las marcas</SelectItem>
             <SelectItem value="magical">Magical Warmers</SelectItem>
@@ -357,7 +357,7 @@ export function MisPedidos() {
         </ToggleGroup>
         {isAdmin && (
           <Select value={advisorFilter} onValueChange={setAdvisorFilter}>
-            <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-[180px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos los asesores</SelectItem>
               {advisorOptions.map(([id, name]) => (
@@ -367,7 +367,7 @@ export function MisPedidos() {
           </Select>
         )}
         <Select value={dateRange} onValueChange={setDateRange}>
-          <SelectTrigger className="w-[170px]"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[170px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas las fechas</SelectItem>
             <SelectItem value="30">Últimos 30 días</SelectItem>
@@ -376,7 +376,7 @@ export function MisPedidos() {
           </SelectContent>
         </Select>
         <Select value={monthFilter} onValueChange={setMonthFilter}>
-          <SelectTrigger className="w-[190px]"><SelectValue placeholder="Mes" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[190px]"><SelectValue placeholder="Mes" /></SelectTrigger>
           <SelectContent className="max-h-72">
             <SelectItem value="all">Todos los meses</SelectItem>
             {monthOptions.map((m) => {

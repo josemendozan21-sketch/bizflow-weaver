@@ -60,7 +60,7 @@ const DisenoLogos = () => {
           />
         </div>
         <Tabs defaultValue="por_estampar">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="w-full flex sm:grid sm:grid-cols-2">
             <TabsTrigger value="por_estampar">Por estampar ({aprobadosList.length})</TabsTrigger>
             <TabsTrigger value="finalizados">Finalizados ({finalizadosList.length})</TabsTrigger>
           </TabsList>
@@ -86,7 +86,7 @@ const DisenoLogos = () => {
 
 
       <Tabs defaultValue="solicitudes">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="w-full flex md:grid md:grid-cols-4">
           <TabsTrigger value="solicitudes">Solicitudes ({pendingCount})</TabsTrigger>
           <TabsTrigger value="diseno">Diseñador ({designCount})</TabsTrigger>
           <TabsTrigger value="aprobacion">Aprobación ({approvalCount})</TabsTrigger>

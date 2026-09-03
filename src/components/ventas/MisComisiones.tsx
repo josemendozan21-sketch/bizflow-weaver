@@ -247,7 +247,7 @@ export default function MisComisiones() {
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
-            <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-[140px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               {MONTHS.map((m, i) => (
                 <SelectItem key={i} value={String(i)}>{m}</SelectItem>
@@ -255,7 +255,7 @@ export default function MisComisiones() {
             </SelectContent>
           </Select>
           <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-            <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-[100px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               {yearOptions.map((y) => (
                 <SelectItem key={y} value={String(y)}>{y}</SelectItem>
@@ -465,21 +465,21 @@ export default function MisComisiones() {
               placeholder="Buscar por código, cliente o producto..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-[260px] h-9"
+              className="w-full sm:w-[260px] h-9"
             />
             <Input
               type="number"
               placeholder="Monto desde"
               value={minAmount}
               onChange={(e) => setMinAmount(e.target.value)}
-              className="w-[130px] h-9"
+              className="w-full sm:w-[130px] h-9"
             />
             <Input
               type="number"
               placeholder="Monto hasta"
               value={maxAmount}
               onChange={(e) => setMaxAmount(e.target.value)}
-              className="w-[130px] h-9"
+              className="w-full sm:w-[130px] h-9"
             />
             {(search || minAmount || maxAmount) && (
               <Button size="sm" variant="ghost" onClick={() => { setSearch(""); setMinAmount(""); setMaxAmount(""); }}>

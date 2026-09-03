@@ -355,7 +355,7 @@ export default function CajaMenor() {
           </h3>
           <div className="flex items-center gap-2 flex-wrap">
             <Select value={monthFilter} onValueChange={setMonthFilter}>
-              <SelectTrigger className="h-8 w-[190px]">
+              <SelectTrigger className="h-8 w-full sm:w-[190px]">
                 <SelectValue placeholder="Mes" />
               </SelectTrigger>
               <SelectContent>

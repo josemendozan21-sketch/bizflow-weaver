@@ -253,7 +253,7 @@ const AdminUsuarios = () => {
                         value={u.role ?? "none"}
                         onValueChange={(v) => handleRoleChange(u.user_id, v)}
                       >
-                        <SelectTrigger className="w-[180px]">
+                        <SelectTrigger className="w-full sm:w-[180px]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -276,7 +276,7 @@ const AdminUsuarios = () => {
                             value={posAssignments.find((a) => a.user_id === u.user_id)?.feria_id ?? ""}
                             onValueChange={(feria_id) => assignPos.mutate({ user_id: u.user_id, feria_id })}
                           >
-                            <SelectTrigger className="w-[180px] h-8 text-xs">
+                            <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs">
                               <SelectValue placeholder="Asignar feria" />
                             </SelectTrigger>
                             <SelectContent>
@@ -294,7 +294,7 @@ const AdminUsuarios = () => {
                             value={locationAssignments.find((a) => a.user_id === u.user_id)?.location_id ?? ""}
                             onValueChange={(location_id) => assignPosLocation.mutate({ user_id: u.user_id, location_id })}
                           >
-                            <SelectTrigger className="w-[200px] h-8 text-xs">
+                            <SelectTrigger className="w-full sm:w-[200px] h-8 text-xs">
                               <SelectValue placeholder="Asignar punto" />
                             </SelectTrigger>
                             <SelectContent>

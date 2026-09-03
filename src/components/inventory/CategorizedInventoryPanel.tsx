@@ -474,7 +474,7 @@ const CategorizedInventoryPanel = ({
 
       {selectedBrand === "sweatspot" ? (
         <Tabs value={sweatspotOrigin} onValueChange={(v) => setSweatspotOrigin(v as "todos" | "IMPORTADO" | "NACIONAL")}>
-          <TabsList className="w-full grid grid-cols-3">
+          <TabsList className="w-full flex md:grid md:grid-cols-3">
             <TabsTrigger value="todos" className="gap-1.5 text-xs sm:text-sm">
               <PackageCheck className="h-4 w-4 hidden sm:block" />
               Todos
@@ -503,7 +503,7 @@ const CategorizedInventoryPanel = ({
         </Tabs>
       ) : (
         <Tabs value={selectedCategory} onValueChange={(v) => setSelectedCategory(v as InventoryCategory)}>
-          <TabsList className="w-full grid" style={{ gridTemplateColumns: `repeat(${CATEGORIES.length}, minmax(0, 1fr))` }}>
+          <TabsList className="w-full flex md:grid" style={{ gridTemplateColumns: `repeat(${CATEGORIES.length}, minmax(0, 1fr))` }}>
             {CATEGORIES.map((cat) => {
               const meta = CATEGORY_META[cat];
               const Icon = meta.icon;
@@ -672,7 +672,7 @@ const CategorizedInventoryPanel = ({
                         placeholder="Buscar producto..."
                       />
                       <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}>
-                        <SelectTrigger className="h-9 w-[140px]">
+                        <SelectTrigger className="h-9 w-full sm:w-[140px]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -684,7 +684,7 @@ const CategorizedInventoryPanel = ({
                       </Select>
                       {cat === "producto_terminado" && (
                         <Select value={logoFilter} onValueChange={(v) => setLogoFilter(v as typeof logoFilter)}>
-                          <SelectTrigger className="h-9 w-[150px]">
+                          <SelectTrigger className="h-9 w-full sm:w-[150px]">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>

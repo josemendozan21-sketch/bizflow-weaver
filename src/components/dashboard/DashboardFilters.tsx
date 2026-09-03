@@ -41,7 +41,7 @@ export function DashboardFilters({ filters, onChange }: DashboardFiltersProps) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Select value={filters.brand} onValueChange={(v) => update({ brand: v })}>
-        <SelectTrigger className="w-[140px] h-8 text-xs">
+        <SelectTrigger className="w-full sm:w-[140px] h-8 text-xs">
           <SelectValue placeholder="Marca" />
         </SelectTrigger>
         <SelectContent>
@@ -52,7 +52,7 @@ export function DashboardFilters({ filters, onChange }: DashboardFiltersProps) {
       </Select>
 
       <Select value={filters.status} onValueChange={(v) => update({ status: v })}>
-        <SelectTrigger className="w-[140px] h-8 text-xs">
+        <SelectTrigger className="w-full sm:w-[140px] h-8 text-xs">
           <SelectValue placeholder="Estado" />
         </SelectTrigger>
         <SelectContent>
@@ -67,7 +67,7 @@ export function DashboardFilters({ filters, onChange }: DashboardFiltersProps) {
       </Select>
 
       <Select value={filters.priority} onValueChange={(v) => update({ priority: v })}>
-        <SelectTrigger className="w-[130px] h-8 text-xs">
+        <SelectTrigger className="w-full sm:w-[130px] h-8 text-xs">
           <SelectValue placeholder="Prioridad" />
         </SelectTrigger>
         <SelectContent>

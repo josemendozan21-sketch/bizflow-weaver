@@ -70,7 +70,7 @@ export default function PuntosVenta() {
         </div>
         {!isPos && eligible.length > 1 && (
           <Select value={locationId} onValueChange={setLocationId}>
-            <SelectTrigger className="w-[240px] h-8 text-sm"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-[240px] h-8 text-sm"><SelectValue /></SelectTrigger>
             <SelectContent>
               {eligible.map((l) => (
                 <SelectItem key={l.id} value={l.id}>{l.name} — {l.city}</SelectItem>

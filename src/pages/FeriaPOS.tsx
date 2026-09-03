@@ -103,7 +103,7 @@ export default function FeriaPOS() {
           <OfflineIndicator />
           {allowSelect && eligibleFerias.length > 1 && (
           <Select value={feriaId} onValueChange={setFeriaId}>
-            <SelectTrigger className="w-[280px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-[280px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               {eligibleFerias.map((f) => (
                 <SelectItem key={f.id} value={f.id}>{f.name} — {f.city}</SelectItem>

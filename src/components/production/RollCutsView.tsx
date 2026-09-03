@@ -86,7 +86,7 @@ export function RollCutsView() {
           className="max-w-xs"
         />
         <Select value={filterTipo} onValueChange={(v) => setFilterTipo(v as any)}>
-          <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[140px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos los tipos</SelectItem>
             <SelectItem value="calor">Térmico</SelectItem>
@@ -94,7 +94,7 @@ export function RollCutsView() {
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as any)}>
-          <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[160px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos los estados</SelectItem>
             <SelectItem value="disponible">Disponible</SelectItem>

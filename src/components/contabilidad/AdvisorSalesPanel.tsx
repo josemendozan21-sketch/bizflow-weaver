@@ -168,14 +168,14 @@ export default function AdvisorSalesPanel({ orders }: Props) {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Select value={dateBasis} onValueChange={(v) => setDateBasis(v as "pedido" | "factura")}>
-                <SelectTrigger className="w-[170px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full sm:w-[170px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="pedido">Fecha de pedido</SelectItem>
                   <SelectItem value="factura">Fecha de factura</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={scope} onValueChange={(v) => setScope(v as "mes" | "rango" | "todo")}>
-                <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full sm:w-[140px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="mes">Por mes</SelectItem>
                   <SelectItem value="rango">Rango fechas</SelectItem>
@@ -185,7 +185,7 @@ export default function AdvisorSalesPanel({ orders }: Props) {
               {scope === "mes" && (
                 <>
                   <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
-                    <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="w-full sm:w-[140px]"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {Array.from({ length: 12 }, (_, i) => (
                         <SelectItem key={i} value={String(i)}>
@@ -195,7 +195,7 @@ export default function AdvisorSalesPanel({ orders }: Props) {
                     </SelectContent>
                   </Select>
                   <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-                    <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="w-full sm:w-[100px]"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {years.map((y) => (
                         <SelectItem key={y} value={String(y)}>{y}</SelectItem>
@@ -210,18 +210,18 @@ export default function AdvisorSalesPanel({ orders }: Props) {
                     type="date"
                     value={dateFrom}
                     onChange={(e) => setDateFrom(e.target.value)}
-                    className="w-[150px]"
+                    className="w-full sm:w-[150px]"
                   />
                   <Input
                     type="date"
                     value={dateTo}
                     onChange={(e) => setDateTo(e.target.value)}
-                    className="w-[150px]"
+                    className="w-full sm:w-[150px]"
                   />
                 </>
               )}
               <Select value={advisorFilter} onValueChange={setAdvisorFilter}>
-                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Asesor" /></SelectTrigger>
+                <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Asesor" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">Todos los asesores</SelectItem>
                   {advisors.map(([id, name]) => (
@@ -230,7 +230,7 @@ export default function AdvisorSalesPanel({ orders }: Props) {
                 </SelectContent>
               </Select>
               <Select value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as any)}>
-                <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full sm:w-[160px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todos los pagos</SelectItem>
                   <SelectItem value="pagados">Pagados</SelectItem>
