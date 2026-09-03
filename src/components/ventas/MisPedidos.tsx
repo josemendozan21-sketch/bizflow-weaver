@@ -843,7 +843,7 @@ function PaymentConfirmDialog({ order }: { order: Order }) {
         </DialogHeader>
         <div className="space-y-4">
           <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-1">
-            <p><strong>Pedido:</strong> <span className="font-mono">{order.order_code || "—"}</span>{(order.line_count ?? 1) > 1 ? ` · línea ${order.line_index}/${order.line_count}` : ""}</p>
+            <p className="flex items-center gap-2"><strong>Pedido:</strong> <OrderCodeBadge code={order.order_code} orderId={order.id} lineIndex={order.line_index} lineCount={order.line_count} compact /></p>
             <p><strong>Cliente:</strong> {order.client_name}</p>
             <p><strong>Producto:</strong> {order.product} — {order.quantity} uds</p>
             <p><strong>Total:</strong> ${Number(order.total_amount).toLocaleString("es-CO")}</p>

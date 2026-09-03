@@ -487,7 +487,7 @@ export default function CommissionsPanel({ orders }: Props) {
                                   {l.order.client_name}
                                 </TableCell>
                                 <TableCell className="text-xs">
-                                  {(l.order as any).order_code || "—"}
+                                  <OrderCodeBadge code={(l.order as any).order_code} orderId={l.order.id} compact />
                                 </TableCell>
                                 <TableCell className="text-right">
                                   {fmt(l.totalWithVat)}

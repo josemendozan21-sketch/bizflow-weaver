@@ -1564,7 +1564,7 @@ function ReturnOrderButton({ order }: { order: Order }) {
         </DialogHeader>
         <div className="space-y-3">
           <div className="text-sm space-y-1 rounded-md border p-3 bg-muted/30">
-            <p><b>Pedido:</b> <span className="font-mono">{order.order_code || "—"}</span></p>
+            <p className="flex items-center gap-2"><b>Pedido:</b> <OrderCodeBadge code={order.order_code} orderId={order.id} compact /></p>
             <p><b>Cliente:</b> {order.client_name}</p>
             <p><b>Producto:</b> {order.product} — {order.quantity} und</p>
             <p><b>Asesor:</b> {order.advisor_name}</p>
