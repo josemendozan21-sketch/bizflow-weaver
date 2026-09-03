@@ -35,9 +35,14 @@ interface AdjRow {
 function rateFor(o: any): number {
   const flat = getFlatRateFor(o.advisor_name);
   if (flat != null) return flat;
-  if (o.sale_type === "menor") return 0.12;
+  const contraentrega = o.payment_method === "contra_entrega";
+  if (o.sale_type === "menor") return contraentrega ? 0.10 : 0.12;
   return o.is_recompra ? 0.06 : 0.10;
 }
+
+/** Último mes ya liquidado a los asesores: solo esos generan ajuste retroactivo. */
+const LAST_SETTLED_PERIOD = "2026-07";
+
 
 export default function CommissionAdjustmentPanel({ advisorFilter }: { advisorFilter?: string }) {
   const [open, setOpen] = useState<string | null>(null);
@@ -64,8 +69,9 @@ export default function CommissionAdjustmentPanel({ advisorFilter }: { advisorFi
           supabase
             .from("orders")
             .select(
-              "id, order_code, advisor_name, client_name, total_amount, abono, shipping_cost, sale_type, is_recompra, invoice_date, created_at"
+              "id, order_code, advisor_name, client_name, total_amount, abono, shipping_cost, sale_type, is_recompra, payment_method, invoice_date, created_at"
             )
+
             .in("id", slice),
           supabase.from("order_charges").select("order_id, amount").in("order_id", slice),
         ]);
@@ -124,6 +130,7 @@ export default function CommissionAdjustmentPanel({ advisorFilter }: { advisorFi
       .map(([key, g]) => ({
         key,
         ...g,
+        settled: g.period <= LAST_SETTLED_PERIOD,
         facturado: g.rows.reduce((s, r) => s + r.total, 0),
         antes: g.rows.reduce((s, r) => s + r.comisionAntes, 0),
         correcta: g.rows.reduce((s, r) => s + r.comisionCorrecta, 0),
@@ -132,7 +139,10 @@ export default function CommissionAdjustmentPanel({ advisorFilter }: { advisorFi
       .sort((a, b) => a.advisor.localeCompare(b.advisor) || a.period.localeCompare(b.period));
   }, [rows]);
 
-  const totalAjuste = groups.reduce((s, g) => s + g.ajuste, 0);
+  /** Solo los meses ya liquidados generan un pago retroactivo. */
+  const totalAjuste = groups.filter((g) => g.settled).reduce((s, g) => s + g.ajuste, 0);
+  const totalNoLiquidado = groups.filter((g) => !g.settled).reduce((s, g) => s + g.ajuste, 0);
+
 
   async function exportXlsx() {
     const XLSX = await import("xlsx");
@@ -143,6 +153,7 @@ export default function CommissionAdjustmentPanel({ advisorFilter }: { advisorFi
         groups.map((g) => ({
           Asesor: g.advisor,
           Mes: g.period,
+          Estado: g.settled ? "Ya liquidado — ajuste a pagar" : "Aún no liquidado",
           Pedidos: g.rows.length,
           Facturado: Math.round(g.facturado),
           "Comisión pagada antes": Math.round(g.antes),
@@ -205,17 +216,25 @@ export default function CommissionAdjustmentPanel({ advisorFilter }: { advisorFi
           </CardTitle>
           <CardDescription>
             Pedidos ya entregados cuyo saldo final no quedaba registrado: la comisión se liquidó
-            sobre el abono inicial. Aquí está la diferencia por asesor y por mes.
+            sobre el abono inicial. Solo los meses <b>ya liquidados</b> (hasta {LAST_SETTLED_PERIOD})
+            generan un pago retroactivo; los meses posteriores ya quedan corregidos y se pagan en su
+            liquidación normal.
           </CardDescription>
         </div>
         <div className="text-right shrink-0">
-          <p className="text-xs text-muted-foreground">Ajuste total</p>
+          <p className="text-xs text-muted-foreground">Ajuste retroactivo (meses ya pagados)</p>
           <p className="text-xl font-semibold text-emerald-600">{fmt(totalAjuste)}</p>
+          {totalNoLiquidado > 0 && (
+            <p className="text-[11px] text-muted-foreground mt-1">
+              + {fmt(totalNoLiquidado)} en meses aún no liquidados (no se paga aparte)
+            </p>
+          )}
           <Button size="sm" variant="outline" className="mt-2" onClick={exportXlsx}>
             <Download className="h-4 w-4 mr-1" />
             Excel
           </Button>
         </div>
+
       </CardHeader>
       <CardContent>
         <Table>
@@ -247,14 +266,28 @@ export default function CommissionAdjustmentPanel({ advisorFilter }: { advisorFi
                     )}
                   </TableCell>
                   <TableCell className="font-medium">{g.advisor}</TableCell>
-                  <TableCell>{g.period}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {g.period}
+                      {!g.settled && (
+                        <Badge variant="outline" className="text-[10px]">
+                          Aún no liquidado
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-right">{g.rows.length}</TableCell>
                   <TableCell className="text-right">{fmt(g.facturado)}</TableCell>
                   <TableCell className="text-right text-muted-foreground">{fmt(g.antes)}</TableCell>
                   <TableCell className="text-right">{fmt(g.correcta)}</TableCell>
-                  <TableCell className="text-right font-semibold text-emerald-600">
+                  <TableCell
+                    className={`text-right font-semibold ${
+                      g.settled ? "text-emerald-600" : "text-muted-foreground"
+                    }`}
+                  >
                     {fmt(g.ajuste)}
                   </TableCell>
+
                 </TableRow>
                 {open === g.key && (
                   <TableRow key={`${g.key}-d`}>

@@ -213,6 +213,16 @@ export const defaultCtx: CommissionContext = {
   paymentMode: "contado",
 };
 
+/**
+ * Forma de pago real del pedido. Regla ÚNICA usada por la vista del asesor y
+ * por la liquidación de contabilidad (antes contabilidad asumía "contado"
+ * siempre, lo que inflaba la tarifa de detal y generaba cifras distintas).
+ */
+export function getDefaultPaymentMode(o: Order): PaymentMode {
+  return (o as any).payment_method === "contra_entrega" ? "contraentrega" : "contado";
+}
+
+
 function isWeekend(date: Date): boolean {
   const d = getDay(date); // 0=Dom, 6=Sab
   return d === 0 || d === 6;
@@ -431,9 +441,10 @@ export function summarizeAdvisorMonth(
 
     // Paso 2: calcular cada línea con tasa final.
     const allLines = advisorOrders.map((o) => {
-      const ctx = { ...defaultCtx, ...(overrides[o.id] || {}) };
+      const ctx = { paymentMode: getDefaultPaymentMode(o), ...(overrides[o.id] || {}) };
       return buildLine(o, ctx.paymentMode, weekendUnlocked, basis, charges);
     });
+
 
     const lines = allLines.filter(
       (l) => l.status === "total" || l.status === "parcial"
@@ -564,9 +575,9 @@ export function summarizeAdvisorProgress(
   const weekendUnlocked = causadoWithVat >= UNLOCK_THRESHOLD;
 
   const lines: ProgressLine[] = monthOrders.map((o) => {
-    const paymentMode: PaymentMode =
-      o.payment_method === "contra_entrega" ? "contraentrega" : "contado";
+    const paymentMode: PaymentMode = getDefaultPaymentMode(o);
     const base = buildLine(o, paymentMode, weekendUnlocked, basis, charges);
+
     return {
       ...base,
       date: getPeriodDate(o, basis),
