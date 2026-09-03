@@ -46,7 +46,7 @@ export default function GroupedInventoryTable<T>({
   const showHeaders = !(groups.length === 1 && groups[0].key === "__all__");
 
   return (
-    <div className="rounded-md border overflow-auto max-h-[65vh]">
+    <div className="rounded-md border overflow-x-auto md:overflow-x-visible">
       <Table>
         <TableHeader className="sticky top-0 z-20 bg-background shadow-[inset_0_-1px_0_hsl(var(--border))]">
           <TableRow className="hover:bg-transparent">
