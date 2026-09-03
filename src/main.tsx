@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { registerPWA } from "./pwa/register";
+import { startVersionCheck } from "./pwa/versionCheck";
 
 // Workaround for known React 18 + Radix portal bug:
 // "Failed to execute 'removeChild' on 'Node': The node to be removed is not a child of this node"
@@ -32,5 +33,6 @@ if (typeof Node !== "undefined") {
 }
 
 registerPWA();
+startVersionCheck();
 
 createRoot(document.getElementById("root")!).render(<App />);
