@@ -30,6 +30,7 @@ import { createOrderNotifications } from "@/hooks/useNotifications";
 import SmartPasteField, { type ParsedOrderData } from "@/components/ventas/SmartPasteField";
 import AddressAutocomplete from "@/components/ventas/AddressAutocomplete";
 import { setNativeValue } from "@/lib/domForm";
+import { formatAddress } from "@/lib/formatAddress";
 import ClientNameAutocomplete from "@/components/ventas/ClientNameAutocomplete";
 import { useFormDraft, clearFormDraft, usePersistedState } from "@/hooks/useFormDraft";
 import OrderLogosField, { makeLogoEntry, type LogoEntry } from "@/components/ventas/OrderLogosField";
@@ -428,7 +429,7 @@ function buildMagicalMayorSummary(args: {
       { label: "Cédula/NIT", value: getFieldVal(form, "mw_cedulaNit") },
       { label: "Contacto", value: getFieldVal(form, "mw_contacto") },
       { label: "Email", value: getFieldVal(form, "mw_email") },
-      { label: "Dirección", value: getFieldVal(form, "mw_direccion") },
+      { label: "Dirección", value: formatAddress(getFieldVal(form, "mw_direccion"), getFieldVal(form, "mw_complemento")) },
       { label: "Ciudad", value: getFieldVal(form, "mw_ciudad") },
       { label: "Departamento", value: getFieldVal(form, "mw_departamento") },
     ],
@@ -521,7 +522,7 @@ function buildSweatspotMayorSummary(args: {
       { label: "Cédula/NIT", value: getFieldVal(form, "ss_cedulaNit") },
       { label: "Contacto", value: getFieldVal(form, "ss_contacto") },
       { label: "Email", value: getFieldVal(form, "ss_email") },
-      { label: "Dirección", value: getFieldVal(form, "ss_direccion") },
+      { label: "Dirección", value: formatAddress(getFieldVal(form, "ss_direccion"), getFieldVal(form, "ss_complemento")) },
       { label: "Ciudad", value: getFieldVal(form, "ss_ciudad") },
       { label: "Departamento", value: getFieldVal(form, "ss_departamento") },
     ],
@@ -571,7 +572,7 @@ function buildSweatspotMayorSummary(args: {
 function buildGenericRetailSummary(args: {
   brandLabel: string;
   isMayor: boolean;
-  cliente: { nombre: string; telefono: string; cedula: string; email: string; ciudad: string; departamento: string; direccion: string };
+  cliente: { nombre: string; telefono: string; cedula: string; email: string; ciudad: string; departamento: string; direccion: string; complemento?: string };
   productLines: RetailProductLine[];
   grandTotal: number;
   shippingCost: string;
@@ -592,7 +593,7 @@ function buildGenericRetailSummary(args: {
       { label: "Cédula/NIT", value: cliente.cedula },
       { label: "Teléfono", value: cliente.telefono },
       { label: "Email", value: cliente.email },
-      { label: "Dirección", value: cliente.direccion },
+      { label: "Dirección", value: formatAddress(cliente.direccion, cliente.complemento) },
       { label: "Ciudad", value: cliente.ciudad },
       { label: "Departamento", value: cliente.departamento },
     ],
@@ -3390,7 +3391,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
           summary={buildGenericRetailSummary({
             brandLabel,
             isMayor,
-            cliente: { nombre, telefono, cedula, email, ciudad, departamento, direccion },
+            cliente: { nombre, telefono, cedula, email, ciudad, departamento, direccion, complemento },
             productLines,
             grandTotal,
             shippingCost,
