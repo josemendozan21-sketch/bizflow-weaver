@@ -149,6 +149,14 @@ const InventariosRoleView = () => {
           <ProductionBatchesPanel readOnly />
         </TabsContent>
 
+        {RESERVATIONS_ENABLED && (
+          <TabsContent value="reservas" className="mt-4">
+            <ReservationsPanel />
+          </TabsContent>
+        )}
+
+
+
 
         <TabsContent value="trazabilidad" className="mt-4">
           <InventoryTraceabilityPanel />
