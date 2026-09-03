@@ -232,8 +232,8 @@ function FacetedInventorySection({
 }
 
 const MAGICAL_VARIANTS: VariantColumnDef[] = [
-  { value: "Frío", header: "❄️ Frío" },
-  { value: "Térmico", header: "🔥 Térmico" },
+  { value: "Frío", header: "Frío" },
+  { value: "Térmico", header: "Térmico" },
 ];
 
 const SWEATSPOT_VARIANTS: VariantColumnDef[] = [
