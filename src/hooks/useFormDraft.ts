@@ -26,6 +26,8 @@ export function useFormDraft(formRef: React.RefObject<HTMLFormElement>, key: str
           if (!el) return;
           if ((el as HTMLInputElement).type === "file" || (el as HTMLInputElement).type === "password") return;
           setNativeValue(el, value);
+        });
+
 
         restored.current = true;
         setRestoredTick((t) => t + 1);
