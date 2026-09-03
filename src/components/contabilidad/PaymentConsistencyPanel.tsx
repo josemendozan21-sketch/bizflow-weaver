@@ -210,6 +210,16 @@ export default function PaymentConsistencyPanel({
             </div>
           )}
         </div>
+        {byKind.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {byKind.map(([kind, count]) => (
+              <Badge key={kind} className={`${KIND_LABEL[kind].className} text-[11px]`}>
+                {KIND_LABEL[kind].label}: {count}
+              </Badge>
+            ))}
+          </div>
+        )}
+
       </CardHeader>
       <CardContent>
         {rows.length === 0 ? (
