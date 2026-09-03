@@ -104,7 +104,10 @@ export default function ClientNameAutocomplete({
 
   return (
     <div className="space-y-1.5 relative" ref={boxRef}>
-      <Label htmlFor={name}>{label}</Label>
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="text-destructive"> *</span>}
+      </Label>
       <Input
         id={name}
         name={name}

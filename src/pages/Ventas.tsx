@@ -28,6 +28,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createOrderNotifications } from "@/hooks/useNotifications";
 import SmartPasteField, { type ParsedOrderData } from "@/components/ventas/SmartPasteField";
+import AddressAutocomplete from "@/components/ventas/AddressAutocomplete";
 import ClientNameAutocomplete from "@/components/ventas/ClientNameAutocomplete";
 import { useFormDraft, clearFormDraft, usePersistedState } from "@/hooks/useFormDraft";
 import OrderLogosField, { makeLogoEntry, type LogoEntry } from "@/components/ventas/OrderLogosField";
@@ -302,6 +303,7 @@ function ColorSelect({
   placeholder = "Seleccionar color",
   allowCustom = true,
   hint,
+  required,
 }: {
   label: string;
   value: string;
@@ -312,10 +314,14 @@ function ColorSelect({
   placeholder?: string;
   allowCustom?: boolean;
   hint?: string;
+  required?: boolean;
 }) {
   return (
     <div className="space-y-1.5">
-      <Label>{label}</Label>
+      <Label>
+        {label}
+        {required && <span className="text-destructive"> *</span>}
+      </Label>
       <Select value={value || undefined} onValueChange={onValueChange}>
         <SelectTrigger>
           <SelectValue placeholder={placeholder} />
@@ -1330,13 +1336,14 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   };
 
   return (
-    <Card className="max-w-2xl">
+    <Card className="w-full max-w-none">
       <CardHeader>
         <CardTitle className="text-lg">Nuevo pedido — Magical Warmers</CardTitle>
         <CardDescription>Venta al por mayor</CardDescription>
       </CardHeader>
       <CardContent>
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
+          <RequiredLegend />
           <SmartPasteField
             brand="magical"
             onDataParsed={(data) => {
@@ -1388,7 +1395,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Información del cliente</legend>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <ClientNameAutocomplete
                 name="mw_nombre"
                 required
@@ -1409,15 +1416,25 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 }}
               />
               <Field label="Cédula o NIT" name="mw_cedulaNit" required />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Número de contacto" name="mw_contacto" type="tel" required />
               <Field label="Correo electrónico" name="mw_email" type="email" required />
-            </div>
-            <Field label="Dirección de envío" name="mw_direccion" required />
-            <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Ciudad" name="mw_ciudad" required />
               <Field label="Departamento" name="mw_departamento" required />
+              <AddressAutocomplete
+                name="mw_direccion"
+                required
+                className="sm:col-span-2 lg:col-span-3"
+                onResolved={(r) => {
+                  const f = formRef.current;
+                  if (!f) return;
+                  const set = (n: string, v: string) => {
+                    const el = f.querySelector(`[name="${n}"]`) as HTMLInputElement | null;
+                    if (el && v) el.value = v;
+                  };
+                  set("mw_ciudad", r.city);
+                  set("mw_departamento", r.department);
+                }}
+              />
             </div>
           </fieldset>
 
@@ -1542,11 +1559,11 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 {!line.isGift && (
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="space-y-1.5">
-                    <Label>Unidades</Label>
+                    <Label>Unidades <span className="text-destructive">*</span></Label>
                     <Input type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()} required value={line.units} onChange={(e) => updateLine(line.id, { units: e.target.value })} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Valor unitario</Label>
+                    <Label>Valor unitario <span className="text-destructive">*</span></Label>
                     <Input type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()} required value={line.valorUnitario} onChange={(e) => updateLine(line.id, { valorUnitario: e.target.value, autoCalc: true })} />
                   </div>
                   <div className="space-y-1.5">
@@ -1561,7 +1578,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 {line.isGift && (
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="space-y-1.5">
-                    <Label>Unidades</Label>
+                    <Label>Unidades <span className="text-destructive">*</span></Label>
                     <Input type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()} required value={line.units} onChange={(e) => updateLine(line.id, { units: e.target.value })} />
                   </div>
                 </div>
@@ -1580,7 +1597,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Pago</legend>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {estadoPago !== "pago_total" && (
                 <div className="space-y-1.5">
                   <Label htmlFor="mw_abono">Abono del total del pedido</Label>
@@ -1588,7 +1605,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 </div>
               )}
               <div className="space-y-1.5">
-                <Label>Estado del pago</Label>
+                <Label>Estado del pago <span className="text-destructive">*</span></Label>
                 <Select value={estadoPago} onValueChange={(v) => setEstadoPago(v as typeof estadoPago)}>
                   <SelectTrigger>
                     <SelectValue />
@@ -1600,34 +1617,34 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="mw_paymentDate">Fecha del pago</Label>
+                <Input id="mw_paymentDate" type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
+                <p className="text-xs text-muted-foreground">Hoy por defecto; cámbiela si el pago fue otro día.</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Medio de pago</Label>
+                <Select value={paymentChannel} onValueChange={setPaymentChannel}>
+                  <SelectTrigger><SelectValue placeholder="Selecciona medio de pago" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="nequi">Nequi</SelectItem>
+                    <SelectItem value="bancolombia">Bancolombia</SelectItem>
+                    <SelectItem value="davivienda">Davivienda</SelectItem>
+                    <SelectItem value="link_pago">Link de pago</SelectItem>
+                    <SelectItem value="efectivo">Efectivo</SelectItem>
+                    <SelectItem value="transferencia">Transferencia</SelectItem>
+                    <SelectItem value="paypal">PayPal</SelectItem>
+                    <SelectItem value="otro">Otro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Soporte de pago inicial</Label>
+                <Input type="file" accept="image/*,.pdf" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary" />
+                <p className="text-xs text-muted-foreground">Comprobante del abono para contabilidad.</p>
+              </div>
+              <Field label="Fecha requerida de entrega" name="mw_fechaRequerida" type="date" />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="mw_paymentDate">Fecha del pago</Label>
-              <Input id="mw_paymentDate" type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
-              <p className="text-xs text-muted-foreground">Si el pago fue hoy déjala como está; si fue otro día selecciónala.</p>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Medio de pago</Label>
-              <Select value={paymentChannel} onValueChange={setPaymentChannel}>
-                <SelectTrigger><SelectValue placeholder="Selecciona medio de pago" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="nequi">Nequi</SelectItem>
-                  <SelectItem value="bancolombia">Bancolombia</SelectItem>
-                  <SelectItem value="davivienda">Davivienda</SelectItem>
-                  <SelectItem value="link_pago">Link de pago</SelectItem>
-                  <SelectItem value="efectivo">Efectivo</SelectItem>
-                  <SelectItem value="transferencia">Transferencia</SelectItem>
-                  <SelectItem value="paypal">PayPal</SelectItem>
-                  <SelectItem value="otro">Otro</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Soporte de pago inicial</Label>
-              <Input type="file" accept="image/*,.pdf" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary" />
-              <p className="text-xs text-muted-foreground">Adjunte el comprobante del abono inicial para revisión en contabilidad</p>
-            </div>
-            <Field label="Fecha requerida de entrega" name="mw_fechaRequerida" type="date" />
           </fieldset>
 
           <fieldset className="space-y-4">
@@ -2377,13 +2394,14 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   };
 
   return (
-    <Card className="max-w-2xl">
+    <Card className="w-full max-w-none">
       <CardHeader>
         <CardTitle className="text-lg">Nuevo pedido — Sweatspot</CardTitle>
         <CardDescription>Venta al por mayor</CardDescription>
       </CardHeader>
       <CardContent>
         <form ref={ssFormRef} onSubmit={handleSubmit} className="space-y-6">
+          <RequiredLegend />
           <SmartPasteField
             brand="sweatspot"
             onDataParsed={(data) => {
@@ -2447,7 +2465,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Información del cliente</legend>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <ClientNameAutocomplete
                 name="ss_nombre"
                 required
@@ -2468,15 +2486,25 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                 }}
               />
               <Field label="Cédula o NIT" name="ss_cedulaNit" required />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Número de contacto" name="ss_contacto" type="tel" required />
               <Field label="Correo electrónico" name="ss_email" type="email" required />
-            </div>
-            <Field label="Dirección de envío" name="ss_direccion" required />
-            <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Ciudad" name="ss_ciudad" required />
               <Field label="Departamento" name="ss_departamento" required />
+              <AddressAutocomplete
+                name="ss_direccion"
+                required
+                className="sm:col-span-2 lg:col-span-3"
+                onResolved={(r) => {
+                  const f = ssFormRef.current;
+                  if (!f) return;
+                  const set = (n: string, v: string) => {
+                    const el = f.querySelector(`[name="${n}"]`) as HTMLInputElement | null;
+                    if (el && v) el.value = v;
+                  };
+                  set("ss_ciudad", r.city);
+                  set("ss_departamento", r.department);
+                }}
+              />
             </div>
           </fieldset>
 
@@ -2543,15 +2571,15 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                 </div>
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="space-y-1.5">
-                    <Label>Unidades</Label>
+                    <Label>Unidades <span className="text-destructive">*</span></Label>
                     <Input type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()} value={line.units} onChange={(e) => updateSSLine(line.id, { units: e.target.value })} required />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Valor unitario</Label>
+                    <Label>Valor unitario <span className="text-destructive">*</span></Label>
                     <Input type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()} value={line.valorUnitario} onChange={(e) => updateSSLine(line.id, { valorUnitario: e.target.value, autoCalc: true })} required />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Valor total</Label>
+                    <Label>Valor total <span className="text-destructive">*</span></Label>
                     <Input type="number" onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()} value={line.valorTotal} onChange={(e) => updateSSLine(line.id, { valorTotal: e.target.value, autoCalc: false })} required />
                   </div>
                 </div>
@@ -2564,7 +2592,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Pago</legend>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {ssEstadoPago !== "pago_total" && (
                 <div className="space-y-1.5">
                   <Label htmlFor="ss_abono">Abono del total del pedido</Label>
@@ -2572,7 +2600,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                 </div>
               )}
               <div className="space-y-1.5">
-                <Label>Estado del pago</Label>
+                <Label>Estado del pago <span className="text-destructive">*</span></Label>
                 <Select value={ssEstadoPago} onValueChange={(v) => setSsEstadoPago(v as typeof ssEstadoPago)}>
                   <SelectTrigger>
                     <SelectValue />
@@ -2584,34 +2612,34 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ss_paymentDate">Fecha del pago</Label>
+                <Input id="ss_paymentDate" type="date" value={ssPaymentDate} onChange={(e) => setSsPaymentDate(e.target.value)} />
+                <p className="text-xs text-muted-foreground">Hoy por defecto; cámbiela si el pago fue otro día.</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Medio de pago</Label>
+                <Select value={ssPaymentChannel} onValueChange={setSsPaymentChannel}>
+                  <SelectTrigger><SelectValue placeholder="Selecciona medio de pago" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="nequi">Nequi</SelectItem>
+                    <SelectItem value="bancolombia">Bancolombia</SelectItem>
+                    <SelectItem value="davivienda">Davivienda</SelectItem>
+                    <SelectItem value="link_pago">Link de pago</SelectItem>
+                    <SelectItem value="efectivo">Efectivo</SelectItem>
+                    <SelectItem value="transferencia">Transferencia</SelectItem>
+                    <SelectItem value="paypal">PayPal</SelectItem>
+                    <SelectItem value="otro">Otro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Soporte de pago inicial</Label>
+                <Input type="file" accept="image/*,.pdf" onChange={(e) => setSsPaymentProofFile(e.target.files?.[0] || null)} className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary" />
+                <p className="text-xs text-muted-foreground">Comprobante del abono para contabilidad.</p>
+              </div>
+              <Field label="Fecha requerida de entrega" name="ss_fechaRequerida" type="date" />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="ss_paymentDate">Fecha del pago</Label>
-              <Input id="ss_paymentDate" type="date" value={ssPaymentDate} onChange={(e) => setSsPaymentDate(e.target.value)} />
-              <p className="text-xs text-muted-foreground">Si el pago fue hoy déjala como está; si fue otro día selecciónala.</p>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Medio de pago</Label>
-              <Select value={ssPaymentChannel} onValueChange={setSsPaymentChannel}>
-                <SelectTrigger><SelectValue placeholder="Selecciona medio de pago" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="nequi">Nequi</SelectItem>
-                  <SelectItem value="bancolombia">Bancolombia</SelectItem>
-                  <SelectItem value="davivienda">Davivienda</SelectItem>
-                  <SelectItem value="link_pago">Link de pago</SelectItem>
-                  <SelectItem value="efectivo">Efectivo</SelectItem>
-                  <SelectItem value="transferencia">Transferencia</SelectItem>
-                  <SelectItem value="paypal">PayPal</SelectItem>
-                  <SelectItem value="otro">Otro</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Soporte de pago inicial</Label>
-              <Input type="file" accept="image/*,.pdf" onChange={(e) => setSsPaymentProofFile(e.target.files?.[0] || null)} className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary" />
-              <p className="text-xs text-muted-foreground">Adjunte el comprobante del abono inicial para revisión en contabilidad</p>
-            </div>
-            <Field label="Fecha requerida de entrega" name="ss_fechaRequerida" type="date" />
           </fieldset>
 
           <fieldset className="space-y-4">
@@ -3093,7 +3121,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
   };
 
   return (
-    <Card className="max-w-2xl">
+    <Card className="w-full max-w-none">
       <CardHeader>
         <CardTitle className="text-lg">Nuevo pedido — {brandLabel}</CardTitle>
         <CardDescription>{isMayor ? "Venta al por mayor" : "Venta al por menor"}</CardDescription>
@@ -3101,48 +3129,56 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
       <CardContent>
         <form ref={genericFormRef} onSubmit={handleSubmit} className="space-y-5">
           <SmartPasteField brand={brand} onDataParsed={handleSmartPaste} />
+          <p className="text-xs text-muted-foreground">Los campos marcados con <span className="text-destructive">*</span> son obligatorios.</p>
 
            <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Datos del cliente</legend>
-            <div className="grid gap-4 sm:grid-cols-2">
-               <ClientNameAutocomplete
-                 label="Nombre completo"
-                 name="nombre"
-                 required
-                 value={nombre}
-                 onValueChange={setNombre}
-                 onSelect={(c) => {
-                   if (c.telefono) setTelefono(c.telefono);
-                   if (c.nit) setCedula(c.nit);
-                   if (c.email) setEmail(c.email);
-                   if (c.ciudad) setCiudad(c.ciudad);
-                   if (c.direccion) setDireccion(c.direccion);
-                 }}
-               />
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <ClientNameAutocomplete
+                label="Nombre completo"
+                name="nombre"
+                required
+                value={nombre}
+                onValueChange={setNombre}
+                onSelect={(c) => {
+                  if (c.telefono) setTelefono(c.telefono);
+                  if (c.nit) setCedula(c.nit);
+                  if (c.email) setEmail(c.email);
+                  if (c.ciudad) setCiudad(c.ciudad);
+                  if (c.direccion) setDireccion(c.direccion);
+                }}
+              />
               <div className="space-y-1.5">
-                <Label htmlFor="telefono">Teléfono</Label>
+                <Label htmlFor="telefono">Teléfono <span className="text-destructive">*</span></Label>
                 <Input id="telefono" name="telefono" type="tel" required value={telefono} onChange={(e) => setTelefono(e.target.value)} />
               </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="cedula">Cédula o NIT</Label>
+                <Label htmlFor="cedula">Cédula o NIT <span className="text-destructive">*</span></Label>
                 <Input id="cedula" name="cedula" required value={cedula} onChange={(e) => setCedula(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="email">Correo electrónico</Label>
+                <Label htmlFor="email">Correo electrónico <span className="text-destructive">*</span></Label>
                 <Input id="email" name="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
               </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="ciudad">Ciudad</Label>
+                <Label htmlFor="ciudad">Ciudad <span className="text-destructive">*</span></Label>
                 <Input id="ciudad" name="ciudad" required value={ciudad} onChange={(e) => setCiudad(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="departamento">Departamento</Label>
+                <Label htmlFor="departamento">Departamento <span className="text-destructive">*</span></Label>
                 <Input id="departamento" name="departamento" required value={departamento} onChange={(e) => setDepartamento(e.target.value)} />
               </div>
+              <AddressAutocomplete
+                name="direccion"
+                required
+                className="sm:col-span-2 lg:col-span-3"
+                value={direccion}
+                onValueChange={setDireccion}
+                onResolved={(r) => {
+                  if (r.city) setCiudad(r.city);
+                  if (r.department) setDepartamento(r.department);
+                }}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="direccion">Dirección de envío</Label>
@@ -3410,10 +3446,21 @@ function PaymentSummary({ totalAmount, abono, estadoPago }: { totalAmount: numbe
 
 /* ---- Shared helpers ---- */
 
-function Field({ label, name, type = "text", required }: { label: string; name: string; type?: string; required?: boolean }) {
+function RequiredLegend() {
   return (
-    <div className="space-y-1.5">
-      <Label htmlFor={name}>{label}</Label>
+    <p className="text-xs text-muted-foreground">
+      Los campos marcados con <span className="text-destructive">*</span> son obligatorios.
+    </p>
+  );
+}
+
+function Field({ label, name, type = "text", required, className }: { label: string; name: string; type?: string; required?: boolean; className?: string }) {
+  return (
+    <div className={`space-y-1.5 ${className ?? ""}`}>
+      <Label htmlFor={name}>
+        {label}
+        {required && <span className="text-destructive"> *</span>}
+      </Label>
       <Input id={name} name={name} type={type} required={required} />
     </div>
   );
