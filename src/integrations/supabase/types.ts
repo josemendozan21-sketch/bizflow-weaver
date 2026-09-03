@@ -4195,6 +4195,10 @@ export type Database = {
         Args: { _confirm_quantity?: number; _requirement_id: string }
         Returns: Json
       }
+      consume_stock_item: {
+        Args: { _amount: number; _item_id: string; _reason?: string }
+        Returns: Json
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
