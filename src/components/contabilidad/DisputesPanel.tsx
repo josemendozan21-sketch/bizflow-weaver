@@ -12,6 +12,7 @@ import type { Order } from "@/hooks/useOrders";
 import { useAuth } from "@/contexts/AuthContext";
 import { openSignedUrl } from "@/lib/signedUrl";
 import OrderDisputeDialog from "@/components/ventas/OrderDisputeDialog";
+import PaymentConsistencyPanel from "@/components/contabilidad/PaymentConsistencyPanel";
 
 interface Props {
   orders: Order[];
@@ -138,6 +139,7 @@ export default function DisputesPanel({ orders }: Props) {
 
   return (
     <div className="space-y-4">
+    <PaymentConsistencyPanel orders={myOrders} canFix={canResolve} />
     <Card>
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
