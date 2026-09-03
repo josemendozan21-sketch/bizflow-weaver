@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Package } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ArrowLeft, ChevronRight, Package } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useReferenceCatalog } from "@/hooks/useReferenceCatalog";
 import ReferenceLabel from "@/components/inventory/ReferenceLabel";
@@ -12,6 +12,7 @@ import GroupedInventoryTable, {
   type InventoryColumn,
   type InventoryGroup,
 } from "@/components/inventory/GroupedInventoryTable";
+import { cn } from "@/lib/utils";
 import { normalizeText, type ReferenceItem } from "@/lib/referenceCatalog";
 import {
   MAGICAL_FACETS,
@@ -25,18 +26,44 @@ import {
 } from "@/lib/inventoryFacets";
 import type { InventoryBrand } from "@/stores/inventoryStore";
 
-const StockIndicator = ({ available }: { available: number }) => {
-  if (available <= 0) return <Badge variant="destructive">Sin stock</Badge>;
-  if (available <= 10) return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white">Bajo</Badge>;
-  return <Badge className="bg-green-500 hover:bg-green-600 text-white">Disponible</Badge>;
+/** Estado de stock como punto de color discreto. */
+const StockDot = ({ available }: { available: number }) => {
+  const state =
+    available <= 0
+      ? { label: "Sin stock", cls: "bg-destructive" }
+      : available <= 10
+        ? { label: "Stock bajo", cls: "bg-amber-500" }
+        : { label: "Disponible", cls: "bg-emerald-500" };
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex items-center justify-end gap-2 tabular-nums">
+            <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", state.cls)} aria-hidden />
+            <span className="sr-only">{state.label}</span>
+            {available.toLocaleString("es-CO")}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>{state.label}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 };
 
-const TypeBadge = ({ tipo }: { tipo: string | null }) => {
-  if (tipo === "Frío")
-    return <Badge className="bg-sky-100 text-sky-800 hover:bg-sky-100 border-sky-200">❄️ Frío</Badge>;
-  if (tipo === "Térmico")
-    return <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100 border-orange-200">🔥 Térmico</Badge>;
-  return <span className="text-muted-foreground">—</span>;
+/** Metadatos de una fila en texto tenue separado por puntos. */
+const MetaLine = ({ parts }: { parts: (string | null | undefined)[] }) => {
+  const clean = parts.filter(Boolean) as string[];
+  if (clean.length === 0) return <span className="text-muted-foreground">—</span>;
+  return (
+    <span className="text-xs text-muted-foreground">
+      {clean.map((p, i) => (
+        <span key={p + i}>
+          {i > 0 && <span className="mx-1.5 opacity-50">·</span>}
+          {p}
+        </span>
+      ))}
+    </span>
+  );
 };
 
 type SortDir = "asc" | "desc";
@@ -45,10 +72,10 @@ interface FacetedSectionProps {
   items: ReferenceItem[];
   getValues: (item: ReferenceItem) => Record<string, string | null>;
   defs: typeof SWEATSPOT_FACETS;
+  primaryKeys: string[];
   columns: InventoryColumn<ReferenceItem>[];
   searchPlaceholder: string;
   searchFields: (item: ReferenceItem) => string;
-  getRowClassName?: (item: ReferenceItem) => string;
 }
 
 /** Sección de inventario con facetas macro → micro (idéntica en ambas marcas). */
@@ -56,10 +83,10 @@ function FacetedInventorySection({
   items,
   getValues,
   defs,
+  primaryKeys,
   columns,
   searchPlaceholder,
   searchFields,
-  getRowClassName,
 }: FacetedSectionProps) {
   const [search, setSearch] = useState("");
   const [selection, setSelection] = useState<FacetSelection>({});
@@ -125,21 +152,21 @@ function FacetedInventorySection({
         onSearchChange={setSearch}
         searchPlaceholder={searchPlaceholder}
         groups={groupsDef}
+        primaryKeys={primaryKeys}
         selection={selection}
         onSelect={(key, value) => setSelection((s) => ({ ...s, [key]: value }))}
-        onClear={() => setSelection({})}
+        onClear={() => {
+          setSelection({});
+          setOnlyAvailable(false);
+        }}
         resultCount={filtered.length}
+        totalCount={items.length}
         sortDir={sortDir}
         onToggleSort={() => setSortDir(sortDir === "asc" ? "desc" : "asc")}
         onlyAvailable={onlyAvailable}
         onOnlyAvailableChange={setOnlyAvailable}
       />
-      <GroupedInventoryTable
-        groups={grouped}
-        columns={columns}
-        getRowKey={(i) => i.id}
-        getRowClassName={getRowClassName}
-      />
+      <GroupedInventoryTable groups={grouped} columns={columns} getRowKey={(i) => i.id} />
     </>
   );
 }
@@ -151,29 +178,36 @@ const magicalColumns = (firstHeader: string): InventoryColumn<ReferenceItem>[] =
     render: (item) => <ReferenceLabel name={item.name} />,
     className: "font-medium",
   },
-  { key: "tipo", header: "Tipo", render: (item) => <TypeBadge tipo={item.tipo} /> },
-  { key: "available", header: "Disponible", align: "right", render: (item) => item.available },
-  { key: "unit", header: "Unidad", render: (item) => item.unit },
-  { key: "estado", header: "Estado", render: (item) => <StockIndicator available={item.available} /> },
+  {
+    key: "meta",
+    header: "Detalle",
+    render: (item) => <MetaLine parts={[item.tipo, item.unit]} />,
+  },
+  {
+    key: "available",
+    header: "Disponible",
+    align: "right",
+    render: (item) => <StockDot available={item.available} />,
+  },
 ];
 
 const sweatspotColumns: InventoryColumn<ReferenceItem>[] = [
   { key: "name", header: "Producto", render: (item) => item.name, className: "font-medium" },
-  { key: "color", header: "Color", render: (item) => item.color || "—" },
   {
-    key: "logo",
-    header: "Logo",
-    render: (item) =>
-      item.logo ? (
-        <Badge variant="secondary" className="text-[10px]">CON LOGO</Badge>
-      ) : (
-        <Badge className="text-[10px] bg-blue-600 hover:bg-blue-700">MARCABLE</Badge>
-      ),
+    key: "meta",
+    header: "Detalle",
+    render: (item) => (
+      <MetaLine
+        parts={[item.color, item.logo ? "con logo" : "marcable", item.productType, item.unit]}
+      />
+    ),
   },
-  { key: "origen", header: "Origen", render: (item) => item.productType || "—", className: "text-xs text-muted-foreground" },
-  { key: "available", header: "Disponible", align: "right", render: (item) => item.available },
-  { key: "unit", header: "Unidad", render: (item) => item.unit },
-  { key: "estado", header: "Estado", render: (item) => <StockIndicator available={item.available} /> },
+  {
+    key: "available",
+    header: "Disponible",
+    align: "right",
+    render: (item) => <StockDot available={item.available} />,
+  },
 ];
 
 const magicalSearchFields = (i: ReferenceItem) => `${i.name} ${i.tipo || ""}`;
@@ -204,10 +238,10 @@ export default function AsesorInventoryView() {
         <p className="text-muted-foreground">Disponibilidad de productos por marca</p>
       </div>
 
-      <Alert className="border-blue-200 bg-blue-50">
-        <Package className="h-4 w-4 text-blue-600" />
-        <AlertDescription className="text-blue-800">
-          📦 Vista de disponibilidad — Solo lectura. Para modificar el inventario contacta al administrador.
+      <Alert>
+        <Package className="h-4 w-4" />
+        <AlertDescription className="text-muted-foreground">
+          Vista de disponibilidad — solo lectura. Para modificar el inventario contacta al administrador.
         </AlertDescription>
       </Alert>
 
@@ -216,23 +250,24 @@ export default function AsesorInventoryView() {
           {(["magical_warmers", "sweatspot"] as InventoryBrand[]).map((brand) => (
             <Card
               key={brand}
-              className="cursor-pointer hover:shadow-md transition-shadow"
+              className="cursor-pointer transition-colors hover:border-primary/40"
               onClick={() => setSelectedBrand(brand)}
             >
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">
-                  {brand === "magical_warmers" ? "Magical Warmers" : "Sweatspot"}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">Ver disponibilidad de productos</p>
+              <CardContent className="flex items-center justify-between py-5">
+                <div>
+                  <p className="font-medium">
+                    {brand === "magical_warmers" ? "Magical Warmers" : "Sweatspot"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Ver disponibilidad de productos</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </CardContent>
             </Card>
           ))}
         </div>
       ) : (
         <>
-          <Button variant="ghost" size="sm" onClick={() => setSelectedBrand(null)} className="gap-1.5">
+          <Button variant="ghost" size="sm" onClick={() => setSelectedBrand(null)} className="gap-1.5 -ml-2">
             <ArrowLeft className="h-4 w-4" /> Volver a marcas
           </Button>
 
@@ -246,13 +281,13 @@ export default function AsesorInventoryView() {
               </TabsList>
 
               <TabsContent value="cuerpos">
-                <Card>
-                  <CardHeader><CardTitle>Cuerpos disponibles</CardTitle></CardHeader>
-                  <CardContent>
+                <Card className="border-0 shadow-none">
+                  <CardContent className="p-0">
                     <FacetedInventorySection
                       items={magicalBodies}
                       getValues={magicalFacetValues}
                       defs={MAGICAL_FACETS}
+                      primaryKeys={["familia", "tipo"]}
                       columns={magicalColumns("Referencia")}
                       searchPlaceholder="Buscar cuerpo (ej. círculo 8 cm frío)..."
                       searchFields={magicalSearchFields}
@@ -262,13 +297,13 @@ export default function AsesorInventoryView() {
               </TabsContent>
 
               <TabsContent value="terminado">
-                <Card>
-                  <CardHeader><CardTitle>Producto terminado</CardTitle></CardHeader>
-                  <CardContent>
+                <Card className="border-0 shadow-none">
+                  <CardContent className="p-0">
                     <FacetedInventorySection
                       items={magicalFinished}
                       getValues={magicalFacetValues}
                       defs={MAGICAL_FACETS}
+                      primaryKeys={["familia", "tipo"]}
                       columns={magicalColumns("Producto")}
                       searchPlaceholder="Buscar producto (ej. corazón térmico)..."
                       searchFields={magicalSearchFields}
@@ -278,17 +313,19 @@ export default function AsesorInventoryView() {
               </TabsContent>
             </Tabs>
           ) : (
-            <Card>
-              <CardHeader><CardTitle>Producto terminado</CardTitle></CardHeader>
-              <CardContent>
+            <Card className="border-0 shadow-none">
+              <CardHeader className="px-0 pt-0 pb-2">
+                <CardTitle className="text-base font-medium">Producto terminado</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
                 <FacetedInventorySection
                   items={sweatspotFinished}
                   getValues={sweatspotFacetValues}
                   defs={SWEATSPOT_FACETS}
+                  primaryKeys={["categoria", "tamano"]}
                   columns={sweatspotColumns}
                   searchPlaceholder="Buscar producto (ej. termo 500 azul con correa)..."
                   searchFields={sweatspotSearchFields}
-                  getRowClassName={(item) => (!item.logo ? "bg-blue-50/40" : "")}
                 />
               </CardContent>
             </Card>
