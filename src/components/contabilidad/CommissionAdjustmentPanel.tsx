@@ -130,6 +130,7 @@ export default function CommissionAdjustmentPanel({ advisorFilter }: { advisorFi
       .map(([key, g]) => ({
         key,
         ...g,
+        settled: g.period <= LAST_SETTLED_PERIOD,
         facturado: g.rows.reduce((s, r) => s + r.total, 0),
         antes: g.rows.reduce((s, r) => s + r.comisionAntes, 0),
         correcta: g.rows.reduce((s, r) => s + r.comisionCorrecta, 0),
@@ -138,7 +139,10 @@ export default function CommissionAdjustmentPanel({ advisorFilter }: { advisorFi
       .sort((a, b) => a.advisor.localeCompare(b.advisor) || a.period.localeCompare(b.period));
   }, [rows]);
 
-  const totalAjuste = groups.reduce((s, g) => s + g.ajuste, 0);
+  /** Solo los meses ya liquidados generan un pago retroactivo. */
+  const totalAjuste = groups.filter((g) => g.settled).reduce((s, g) => s + g.ajuste, 0);
+  const totalNoLiquidado = groups.filter((g) => !g.settled).reduce((s, g) => s + g.ajuste, 0);
+
 
   async function exportXlsx() {
     const XLSX = await import("xlsx");
