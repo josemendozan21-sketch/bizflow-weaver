@@ -1393,7 +1393,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Información del cliente</legend>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <ClientNameAutocomplete
                 name="mw_nombre"
                 required
@@ -1414,15 +1414,25 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 }}
               />
               <Field label="Cédula o NIT" name="mw_cedulaNit" required />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Número de contacto" name="mw_contacto" type="tel" required />
               <Field label="Correo electrónico" name="mw_email" type="email" required />
-            </div>
-            <Field label="Dirección de envío" name="mw_direccion" required />
-            <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Ciudad" name="mw_ciudad" required />
               <Field label="Departamento" name="mw_departamento" required />
+              <AddressAutocomplete
+                name="mw_direccion"
+                required
+                className="sm:col-span-2 lg:col-span-3"
+                onResolved={(r) => {
+                  const f = formRef.current;
+                  if (!f) return;
+                  const set = (n: string, v: string) => {
+                    const el = f.querySelector(`[name="${n}"]`) as HTMLInputElement | null;
+                    if (el && v) el.value = v;
+                  };
+                  set("mw_ciudad", r.city);
+                  set("mw_departamento", r.department);
+                }}
+              />
             </div>
           </fieldset>
 
@@ -2452,7 +2462,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
           <fieldset className="space-y-4">
             <legend className="text-sm font-semibold text-foreground mb-2">Información del cliente</legend>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <ClientNameAutocomplete
                 name="ss_nombre"
                 required
@@ -2473,15 +2483,25 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                 }}
               />
               <Field label="Cédula o NIT" name="ss_cedulaNit" required />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Número de contacto" name="ss_contacto" type="tel" required />
               <Field label="Correo electrónico" name="ss_email" type="email" required />
-            </div>
-            <Field label="Dirección de envío" name="ss_direccion" required />
-            <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Ciudad" name="ss_ciudad" required />
               <Field label="Departamento" name="ss_departamento" required />
+              <AddressAutocomplete
+                name="ss_direccion"
+                required
+                className="sm:col-span-2 lg:col-span-3"
+                onResolved={(r) => {
+                  const f = ssFormRef.current;
+                  if (!f) return;
+                  const set = (n: string, v: string) => {
+                    const el = f.querySelector(`[name="${n}"]`) as HTMLInputElement | null;
+                    if (el && v) el.value = v;
+                  };
+                  set("ss_ciudad", r.city);
+                  set("ss_departamento", r.department);
+                }}
+              />
             </div>
           </fieldset>
 
