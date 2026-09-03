@@ -95,7 +95,7 @@ export default function GroupedInventoryTable<T>({
                 )}
                 {!isCollapsed &&
                   group.items.map((item) => (
-                    <TableRow
+                    <tr
                       key={getRowKey(item)}
                       className={cn("border-b border-border/40 hover:bg-muted/40", getRowClassName?.(item))}
                     >
