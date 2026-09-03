@@ -29,6 +29,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createOrderNotifications } from "@/hooks/useNotifications";
 import SmartPasteField, { type ParsedOrderData } from "@/components/ventas/SmartPasteField";
 import AddressAutocomplete from "@/components/ventas/AddressAutocomplete";
+import { setNativeValue } from "@/lib/domForm";
 import ClientNameAutocomplete from "@/components/ventas/ClientNameAutocomplete";
 import { useFormDraft, clearFormDraft, usePersistedState } from "@/hooks/useFormDraft";
 import OrderLogosField, { makeLogoEntry, type LogoEntry } from "@/components/ventas/OrderLogosField";
@@ -1034,6 +1035,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           client_phone: (fd.get("mw_contacto") as string) || null,
           client_email: (fd.get("mw_email") as string) || null,
           client_address: (fd.get("mw_direccion") as string) || null,
+          client_address_complement: (fd.get("mw_complemento") as string) || null,
           client_city: (fd.get("mw_ciudad") as string) || null,
           product: `Molde: ${moldeNombre}`,
           quantity: 1,
@@ -1191,6 +1193,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           client_phone: (fd.get("mw_contacto") as string) || null,
           client_email: (fd.get("mw_email") as string) || null,
           client_address: (fd.get("mw_direccion") as string) || null,
+          client_address_complement: (fd.get("mw_complemento") as string) || null,
           client_city: (fd.get("mw_ciudad") as string) || null,
           product: referencia,
           quantity,
@@ -1352,13 +1355,14 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
               if (!form) return;
               const setInput = (name: string, value: string | undefined | null) => {
                 const el = form.querySelector(`[name="${name}"]`) as HTMLInputElement;
-                if (el && value) { el.value = value; el.dispatchEvent(new Event("input", { bubbles: true })); }
+                if (el && value) setNativeValue(el, value);
               };
               setInput("mw_nombre", data.cliente?.nombre);
               setInput("mw_cedulaNit", data.cliente?.cedula_nit);
               setInput("mw_contacto", data.cliente?.telefono);
               setInput("mw_email", data.cliente?.email);
               setInput("mw_direccion", data.cliente?.direccion);
+              setInput("mw_complemento", data.cliente?.complemento);
               setInput("mw_ciudad", data.cliente?.ciudad);
 
               // Fill product lines
@@ -1406,7 +1410,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                   if (!f) return;
                   const set = (n: string, v: string) => {
                     const el = f.querySelector(`[name="${n}"]`) as HTMLInputElement | null;
-                    if (el && v) el.value = v;
+                    if (el && v) setNativeValue(el, v);
                   };
                   set("mw_cedulaNit", c.nit);
                   set("mw_contacto", c.telefono);
@@ -1422,6 +1426,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
               <Field label="Departamento" name="mw_departamento" required />
               <AddressAutocomplete
                 name="mw_direccion"
+                complementName="mw_complemento"
                 required
                 className="sm:col-span-2 lg:col-span-3"
                 onResolved={(r) => {
@@ -1429,7 +1434,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                   if (!f) return;
                   const set = (n: string, v: string) => {
                     const el = f.querySelector(`[name="${n}"]`) as HTMLInputElement | null;
-                    if (el && v) el.value = v;
+                    if (el && v) setNativeValue(el, v);
                   };
                   set("mw_ciudad", r.city);
                   set("mw_departamento", r.department);
@@ -2251,6 +2256,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
           client_phone: (fd.get("ss_contacto") as string) || null,
           client_email: (fd.get("ss_email") as string) || null,
           client_address: (fd.get("ss_direccion") as string) || null,
+          client_address_complement: (fd.get("ss_complemento") as string) || null,
           client_city: (fd.get("ss_ciudad") as string) || null,
           product: referencia,
           quantity,
@@ -2409,13 +2415,14 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
               if (!form) return;
               const setInput = (name: string, value: string | undefined | null) => {
                 const el = form.querySelector(`[name="${name}"]`) as HTMLInputElement;
-                if (el && value) { el.value = value; el.dispatchEvent(new Event("input", { bubbles: true })); }
+                if (el && value) setNativeValue(el, value);
               };
               setInput("ss_nombre", data.cliente?.nombre);
               setInput("ss_cedulaNit", data.cliente?.cedula_nit);
               setInput("ss_contacto", data.cliente?.telefono);
               setInput("ss_email", data.cliente?.email);
               setInput("ss_direccion", data.cliente?.direccion);
+              setInput("ss_complemento", data.cliente?.complemento);
               setInput("ss_ciudad", data.cliente?.ciudad);
 
               // Fill product lines
@@ -2476,7 +2483,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                   if (!f) return;
                   const set = (n: string, v: string) => {
                     const el = f.querySelector(`[name="${n}"]`) as HTMLInputElement | null;
-                    if (el && v) el.value = v;
+                    if (el && v) setNativeValue(el, v);
                   };
                   set("ss_cedulaNit", c.nit);
                   set("ss_contacto", c.telefono);
@@ -2492,6 +2499,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
               <Field label="Departamento" name="ss_departamento" required />
               <AddressAutocomplete
                 name="ss_direccion"
+                complementName="ss_complemento"
                 required
                 className="sm:col-span-2 lg:col-span-3"
                 onResolved={(r) => {
@@ -2499,7 +2507,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                   if (!f) return;
                   const set = (n: string, v: string) => {
                     const el = f.querySelector(`[name="${n}"]`) as HTMLInputElement | null;
-                    if (el && v) el.value = v;
+                    if (el && v) setNativeValue(el, v);
                   };
                   set("ss_ciudad", r.city);
                   set("ss_departamento", r.department);
@@ -2851,6 +2859,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
   const [ciudad, setCiudad] = usePersistedState<string>(`${draftKey}:ciudad`, "");
   const [departamento, setDepartamento] = usePersistedState<string>(`${draftKey}:departamento`, "");
   const [direccion, setDireccion] = usePersistedState<string>(`${draftKey}:direccion`, "");
+  const [complemento, setComplemento] = usePersistedState<string>(`${draftKey}:complemento`, "");
   const [notas, setNotas] = usePersistedState<string>(`${draftKey}:notas`, "");
 
   const handleSmartPaste = (data: ParsedOrderData) => {
@@ -2860,6 +2869,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
     if (data.cliente?.email) setEmail(data.cliente.email);
     if (data.cliente?.ciudad) setCiudad(data.cliente.ciudad);
     if (data.cliente?.direccion) setDireccion(data.cliente.direccion);
+    if (data.cliente?.complemento) setComplemento(data.cliente.complemento);
     if (data.observaciones) setNotas(data.observaciones);
     if (data.productos?.[0]) {
       const p = data.productos[0];
@@ -3056,6 +3066,7 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
             client_phone: tel || null,
             client_email: email.trim() || null,
             client_address: dir || null,
+            client_address_complement: complemento.trim() || null,
             client_city: ciu || null,
             product: referencia,
             quantity,
@@ -3109,10 +3120,10 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
       });
       // Clear draft on success
       [
-        "paymentMethod","shippingCost","productLines","nombre","telefono","cedula","email","ciudad","departamento","direccion","notas",
+        "paymentMethod","shippingCost","productLines","nombre","telefono","cedula","email","ciudad","departamento","direccion","complemento","notas",
       ].forEach((k) => { try { localStorage.removeItem(`${draftKey}:${k}`); } catch {/* ignore */} });
       setProductLines([createEmptyRetailLine()]);
-      setNombre(""); setTelefono(""); setCedula(""); setEmail(""); setCiudad(""); setDepartamento(""); setDireccion(""); setNotas("");
+      setNombre(""); setTelefono(""); setCedula(""); setEmail(""); setCiudad(""); setDepartamento(""); setDireccion(""); setComplemento(""); setNotas("");
       setShippingCost(""); setPaymentMethod("contra_entrega"); setGenericPaymentProofFile(null);
     }
 
@@ -3174,15 +3185,14 @@ function GenericForm({ brand, saleType, onReset }: { brand: Brand; saleType: Sal
                 className="sm:col-span-2 lg:col-span-3"
                 value={direccion}
                 onValueChange={setDireccion}
+                complementName="complemento"
+                complementValue={complemento}
+                onComplementChange={setComplemento}
                 onResolved={(r) => {
                   if (r.city) setCiudad(r.city);
                   if (r.department) setDepartamento(r.department);
                 }}
               />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="direccion">Dirección de envío</Label>
-              <Input id="direccion" name="direccion" required value={direccion} onChange={(e) => setDireccion(e.target.value)} />
             </div>
           </fieldset>
 
