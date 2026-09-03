@@ -2,94 +2,53 @@ import { useMemo, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ArrowLeft, ChevronRight, Package } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Package } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useReferenceCatalog } from "@/hooks/useReferenceCatalog";
-import PageHeader from "@/components/common/PageHeader";
-import SelectionCard from "@/components/common/SelectionCard";
+import ReferenceLabel from "@/components/inventory/ReferenceLabel";
 import FacetFilterBar from "@/components/inventory/FacetFilterBar";
 import GroupedInventoryTable, {
   type InventoryColumn,
   type InventoryGroup,
 } from "@/components/inventory/GroupedInventoryTable";
-import { cn } from "@/lib/utils";
-import { cleanReferenceName, normalizeText, type ReferenceItem } from "@/lib/referenceCatalog";
+import { normalizeText, type ReferenceItem } from "@/lib/referenceCatalog";
 import {
   MAGICAL_FACETS,
   SWEATSPOT_FACETS,
   buildFacetGroups,
-  buildVariantRows,
   magicalFacetValues,
   matchesSelection,
   pickGroupKey,
   sweatspotFacetValues,
   type FacetSelection,
-  type VariantRow,
 } from "@/lib/inventoryFacets";
 import type { InventoryBrand } from "@/stores/inventoryStore";
 
-/** Estado de stock como punto de color discreto. */
-const StockDot = ({ available }: { available: number }) => {
-  const state =
-    available <= 0
-      ? { label: "Sin stock", cls: "bg-destructive" }
-      : available <= 10
-        ? { label: "Stock bajo", cls: "bg-amber-500" }
-        : { label: "Disponible", cls: "bg-emerald-500" };
-  return (
-    <TooltipProvider delayDuration={200}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="inline-flex items-center justify-end gap-2 tabular-nums">
-            <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", state.cls)} aria-hidden />
-            <span className="sr-only">{state.label}</span>
-            {available.toLocaleString("es-CO")}
-          </span>
-        </TooltipTrigger>
-        <TooltipContent>{state.label}</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
+const StockIndicator = ({ available }: { available: number }) => {
+  if (available <= 0) return <Badge variant="destructive">Sin stock</Badge>;
+  if (available <= 10) return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white">Bajo</Badge>;
+  return <Badge className="bg-green-500 hover:bg-green-600 text-white">Disponible</Badge>;
 };
 
-/** Metadatos de una fila en texto tenue separado por puntos. */
-const MetaLine = ({ parts }: { parts: (string | null | undefined)[] }) => {
-  const clean = parts.filter(Boolean) as string[];
-  if (clean.length === 0) return <span className="text-muted-foreground">—</span>;
-  return (
-    <span className="text-xs text-muted-foreground">
-      {clean.map((p, i) => (
-        <span key={p + i}>
-          {i > 0 && <span className="mx-1.5 opacity-50">·</span>}
-          {p}
-        </span>
-      ))}
-    </span>
-  );
+const TypeBadge = ({ tipo }: { tipo: string | null }) => {
+  if (tipo === "Frío")
+    return <Badge className="bg-sky-100 text-sky-800 hover:bg-sky-100 border-sky-200">❄️ Frío</Badge>;
+  if (tipo === "Térmico")
+    return <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100 border-orange-200">🔥 Térmico</Badge>;
+  return <span className="text-muted-foreground">—</span>;
 };
 
 type SortDir = "asc" | "desc";
-
-type Row = VariantRow<ReferenceItem>;
-
-interface VariantColumnDef {
-  value: string;
-  header: string;
-}
 
 interface FacetedSectionProps {
   items: ReferenceItem[];
   getValues: (item: ReferenceItem) => Record<string, string | null>;
   defs: typeof SWEATSPOT_FACETS;
-  primaryKeys: string[];
-  /** Faceta que se despliega como columnas (ej. tipo o logo). */
-  variantKey: string;
-  variantColumns: VariantColumnDef[];
-  firstHeader: string;
-  metaParts: (row: Row) => (string | null | undefined)[];
+  columns: InventoryColumn<ReferenceItem>[];
   searchPlaceholder: string;
   searchFields: (item: ReferenceItem) => string;
+  getRowClassName?: (item: ReferenceItem) => string;
 }
 
 /** Sección de inventario con facetas macro → micro (idéntica en ambas marcas). */
@@ -97,13 +56,10 @@ function FacetedInventorySection({
   items,
   getValues,
   defs,
-  primaryKeys,
-  variantKey,
-  variantColumns,
-  firstHeader,
-  metaParts,
+  columns,
   searchPlaceholder,
   searchFields,
+  getRowClassName,
 }: FacetedSectionProps) {
   const [search, setSearch] = useState("");
   const [selection, setSelection] = useState<FacetSelection>({});
@@ -127,80 +83,40 @@ function FacetedInventorySection({
   );
 
   const filtered = useMemo(
-    () => base.filter((i) => matchesSelection(getValues(i), selection)),
-    [base, selection, getValues],
-  );
-
-  const rows = useMemo(
     () =>
-      buildVariantRows(
-        filtered,
-        getValues,
-        (i) => cleanReferenceName(i.name),
-        (i) => i.available,
-        variantKey,
-      ).sort((a, b) =>
-        sortDir === "asc"
-          ? a.label.localeCompare(b.label, "es", { sensitivity: "base" })
-          : b.label.localeCompare(a.label, "es", { sensitivity: "base" }),
-      ),
-    [filtered, getValues, variantKey, sortDir],
+      base
+        .filter((i) => matchesSelection(getValues(i), selection))
+        .sort((a, b) =>
+          sortDir === "asc"
+            ? a.name.localeCompare(b.name, "es", { sensitivity: "base" })
+            : b.name.localeCompare(a.name, "es", { sensitivity: "base" }),
+        ),
+    [base, selection, sortDir, getValues],
   );
 
-  // Al filtrar por una variante solo se muestra esa columna.
-  const activeVariant = selection[variantKey];
-  const shownVariants = activeVariant
-    ? variantColumns.filter((v) => v.value === activeVariant)
-    : variantColumns;
+  const groupKey = pickGroupKey(groupsDef, selection);
 
-  const columns: InventoryColumn<Row>[] = useMemo(
-    () => [
-      { key: "name", header: firstHeader, render: (row) => row.label, className: "font-medium" },
-      { key: "meta", header: "Detalle", render: (row) => <MetaLine parts={metaParts(row)} /> },
-      ...shownVariants.map((v) => ({
-        key: `v-${v.value}`,
-        header: v.header,
-        align: "right" as const,
-        render: (row: Row) =>
-          row.variants[v.value] === undefined ? (
-            <span className="text-muted-foreground/60" title="No aplica">
-              —
-            </span>
-          ) : (
-            <StockDot available={row.variants[v.value]} />
-          ),
-      })),
-    ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [firstHeader, metaParts, JSON.stringify(shownVariants)],
-  );
-
-  const groupKey = pickGroupKey(
-    groupsDef.filter((g) => g.key !== variantKey),
-    selection,
-  );
-
-  const grouped: InventoryGroup<Row>[] = useMemo(() => {
+  const grouped: InventoryGroup<ReferenceItem>[] = useMemo(() => {
     if (!groupKey) {
       return [
         {
           key: "__all__",
           label: "Resultados",
-          items: rows,
-          units: rows.reduce((s, r) => s + r.totalAvailable, 0),
+          items: filtered,
+          units: filtered.reduce((s, i) => s + i.available, 0),
         },
       ];
     }
-    const map = new Map<string, InventoryGroup<Row>>();
-    for (const row of rows) {
-      const value = row.values[groupKey] || "Sin especificar";
+    const map = new Map<string, InventoryGroup<ReferenceItem>>();
+    for (const item of filtered) {
+      const value = getValues(item)[groupKey] || "Sin especificar";
       const g = map.get(value) || { key: value, label: value, items: [], units: 0 };
-      g.items.push(row);
-      g.units += row.totalAvailable;
+      g.items.push(item);
+      g.units += item.available;
       map.set(value, g);
     }
     return [...map.values()].sort((a, b) => a.label.localeCompare(b.label, "es", { sensitivity: "base" }));
-  }, [rows, groupKey]);
+  }, [filtered, groupKey, getValues]);
 
   return (
     <>
@@ -209,37 +125,56 @@ function FacetedInventorySection({
         onSearchChange={setSearch}
         searchPlaceholder={searchPlaceholder}
         groups={groupsDef}
-        primaryKeys={primaryKeys}
         selection={selection}
         onSelect={(key, value) => setSelection((s) => ({ ...s, [key]: value }))}
-        onClear={() => {
-          setSelection({});
-          setOnlyAvailable(false);
-        }}
-        resultCount={rows.length}
-        totalCount={items.length}
+        onClear={() => setSelection({})}
+        resultCount={filtered.length}
         sortDir={sortDir}
         onToggleSort={() => setSortDir(sortDir === "asc" ? "desc" : "asc")}
         onlyAvailable={onlyAvailable}
         onOnlyAvailableChange={setOnlyAvailable}
       />
-      <GroupedInventoryTable groups={grouped} columns={columns} getRowKey={(row) => row.key} />
+      <GroupedInventoryTable
+        groups={grouped}
+        columns={columns}
+        getRowKey={(i) => i.id}
+        getRowClassName={getRowClassName}
+      />
     </>
   );
 }
 
-const MAGICAL_VARIANTS: VariantColumnDef[] = [
-  { value: "Frío", header: "Frío" },
-  { value: "Térmico", header: "Térmico" },
+const magicalColumns = (firstHeader: string): InventoryColumn<ReferenceItem>[] => [
+  {
+    key: "name",
+    header: firstHeader,
+    render: (item) => <ReferenceLabel name={item.name} />,
+    className: "font-medium",
+  },
+  { key: "tipo", header: "Tipo", render: (item) => <TypeBadge tipo={item.tipo} /> },
+  { key: "available", header: "Disponible", align: "right", render: (item) => item.available },
+  { key: "unit", header: "Unidad", render: (item) => item.unit },
+  { key: "estado", header: "Estado", render: (item) => <StockIndicator available={item.available} /> },
 ];
 
-const SWEATSPOT_VARIANTS: VariantColumnDef[] = [
-  { value: "Con logo", header: "Con logo" },
-  { value: "Marcable (sin logo)", header: "Marcable" },
+const sweatspotColumns: InventoryColumn<ReferenceItem>[] = [
+  { key: "name", header: "Producto", render: (item) => item.name, className: "font-medium" },
+  { key: "color", header: "Color", render: (item) => item.color || "—" },
+  {
+    key: "logo",
+    header: "Logo",
+    render: (item) =>
+      item.logo ? (
+        <Badge variant="secondary" className="text-[10px]">CON LOGO</Badge>
+      ) : (
+        <Badge className="text-[10px] bg-blue-600 hover:bg-blue-700">MARCABLE</Badge>
+      ),
+  },
+  { key: "origen", header: "Origen", render: (item) => item.productType || "—", className: "text-xs text-muted-foreground" },
+  { key: "available", header: "Disponible", align: "right", render: (item) => item.available },
+  { key: "unit", header: "Unidad", render: (item) => item.unit },
+  { key: "estado", header: "Estado", render: (item) => <StockIndicator available={item.available} /> },
 ];
-
-const magicalMeta = (row: Row) => [row.values.tamano];
-const sweatspotMeta = (row: Row) => [row.values.color, row.values.origen];
 
 const magicalSearchFields = (i: ReferenceItem) => `${i.name} ${i.tipo || ""}`;
 const sweatspotSearchFields = (i: ReferenceItem) =>
@@ -264,29 +199,40 @@ export default function AsesorInventoryView() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Inventarios" description="Disponibilidad de productos por marca" />
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Inventarios</h1>
+        <p className="text-muted-foreground">Disponibilidad de productos por marca</p>
+      </div>
 
-      <Alert>
-        <Package className="h-4 w-4" />
-        <AlertDescription className="text-muted-foreground">
-          Vista de disponibilidad — solo lectura. Para modificar el inventario contacta al administrador.
+      <Alert className="border-blue-200 bg-blue-50">
+        <Package className="h-4 w-4 text-blue-600" />
+        <AlertDescription className="text-blue-800">
+          📦 Vista de disponibilidad — Solo lectura. Para modificar el inventario contacta al administrador.
         </AlertDescription>
       </Alert>
 
       {!selectedBrand ? (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {(["magical_warmers", "sweatspot"] as InventoryBrand[]).map((brand) => (
-            <SelectionCard
+            <Card
               key={brand}
-              title={brand === "magical_warmers" ? "Magical Warmers" : "Sweatspot"}
-              description="Ver disponibilidad de productos"
+              className="cursor-pointer hover:shadow-md transition-shadow"
               onClick={() => setSelectedBrand(brand)}
-            />
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">
+                  {brand === "magical_warmers" ? "Magical Warmers" : "Sweatspot"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">Ver disponibilidad de productos</p>
+              </CardContent>
+            </Card>
           ))}
         </div>
       ) : (
         <>
-          <Button variant="ghost" size="sm" onClick={() => setSelectedBrand(null)} className="gap-1.5 -ml-2">
+          <Button variant="ghost" size="sm" onClick={() => setSelectedBrand(null)} className="gap-1.5">
             <ArrowLeft className="h-4 w-4" /> Volver a marcas
           </Button>
 
@@ -294,23 +240,20 @@ export default function AsesorInventoryView() {
             <p className="text-muted-foreground text-sm">Cargando...</p>
           ) : selectedBrand === "magical_warmers" ? (
             <Tabs defaultValue="cuerpos" className="space-y-4">
-              <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:inline-grid">
+              <TabsList className="grid w-full grid-cols-2 max-w-md">
                 <TabsTrigger value="cuerpos">Cuerpos ({magicalBodies.length})</TabsTrigger>
                 <TabsTrigger value="terminado">Producto Terminado ({magicalFinished.length})</TabsTrigger>
               </TabsList>
 
               <TabsContent value="cuerpos">
-                <Card className="border-0 shadow-none">
-                  <CardContent className="p-0">
+                <Card>
+                  <CardHeader><CardTitle>Cuerpos disponibles</CardTitle></CardHeader>
+                  <CardContent>
                     <FacetedInventorySection
                       items={magicalBodies}
                       getValues={magicalFacetValues}
                       defs={MAGICAL_FACETS}
-                      primaryKeys={["familia", "tipo"]}
-                      variantKey="tipo"
-                      variantColumns={MAGICAL_VARIANTS}
-                      firstHeader="Referencia"
-                      metaParts={magicalMeta}
+                      columns={magicalColumns("Referencia")}
                       searchPlaceholder="Buscar cuerpo (ej. círculo 8 cm frío)..."
                       searchFields={magicalSearchFields}
                     />
@@ -319,17 +262,14 @@ export default function AsesorInventoryView() {
               </TabsContent>
 
               <TabsContent value="terminado">
-                <Card className="border-0 shadow-none">
-                  <CardContent className="p-0">
+                <Card>
+                  <CardHeader><CardTitle>Producto terminado</CardTitle></CardHeader>
+                  <CardContent>
                     <FacetedInventorySection
                       items={magicalFinished}
                       getValues={magicalFacetValues}
                       defs={MAGICAL_FACETS}
-                      primaryKeys={["familia", "tipo"]}
-                      variantKey="tipo"
-                      variantColumns={MAGICAL_VARIANTS}
-                      firstHeader="Producto"
-                      metaParts={magicalMeta}
+                      columns={magicalColumns("Producto")}
                       searchPlaceholder="Buscar producto (ej. corazón térmico)..."
                       searchFields={magicalSearchFields}
                     />
@@ -338,22 +278,17 @@ export default function AsesorInventoryView() {
               </TabsContent>
             </Tabs>
           ) : (
-            <Card className="border-0 shadow-none">
-              <CardHeader className="px-0 pt-0 pb-2">
-                <CardTitle className="text-base font-medium">Producto terminado</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
+            <Card>
+              <CardHeader><CardTitle>Producto terminado</CardTitle></CardHeader>
+              <CardContent>
                 <FacetedInventorySection
                   items={sweatspotFinished}
                   getValues={sweatspotFacetValues}
                   defs={SWEATSPOT_FACETS}
-                  primaryKeys={["categoria", "tamano"]}
-                  variantKey="logo"
-                  variantColumns={SWEATSPOT_VARIANTS}
-                  firstHeader="Producto"
-                  metaParts={sweatspotMeta}
+                  columns={sweatspotColumns}
                   searchPlaceholder="Buscar producto (ej. termo 500 azul con correa)..."
                   searchFields={sweatspotSearchFields}
+                  getRowClassName={(item) => (!item.logo ? "bg-blue-50/40" : "")}
                 />
               </CardContent>
             </Card>

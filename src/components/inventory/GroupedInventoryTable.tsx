@@ -1,4 +1,5 @@
 import { Fragment, useState, type ReactNode } from "react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,8 +27,8 @@ interface GroupedInventoryTableProps<T> {
 }
 
 /**
- * Tabla agrupada por la faceta macro activa. Estilo minimalista: separadores
- * finos, sin cajas ni fondos saturados.
+ * Tabla de inventario agrupada por la faceta macro activa. Se usa igual en
+ * Magical y Sweatspot para que la experiencia sea idéntica.
  */
 export default function GroupedInventoryTable<T>({
   groups,
@@ -39,81 +40,68 @@ export default function GroupedInventoryTable<T>({
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   if (groups.length === 0 || groups.every((g) => g.items.length === 0)) {
-    return <p className="text-sm text-muted-foreground py-10 text-center">{emptyMessage}</p>;
+    return <p className="text-sm text-muted-foreground py-6 text-center">{emptyMessage}</p>;
   }
 
   const showHeaders = !(groups.length === 1 && groups[0].key === "__all__");
 
   return (
-    <div className="overflow-x-auto md:overflow-x-visible">
-      <table className="w-full caption-bottom text-sm">
-        <thead className="[&_tr]:border-b">
-          <tr className="hover:bg-transparent border-b">
+    <div className="rounded-md border overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
             {columns.map((col) => (
-              <th
-                key={col.key}
-                className={cn(
-                  "h-9 border-b px-4 text-left align-middle text-[11px] font-normal uppercase tracking-wide text-muted-foreground",
-                  col.align === "right" && "text-right",
-                  col.className,
-                )}
-              >
+              <TableHead key={col.key} className={cn(col.align === "right" && "text-right", col.className)}>
                 {col.header}
-              </th>
+              </TableHead>
             ))}
-          </tr>
-        </thead>
-        <tbody>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {groups.map((group) => {
             const isCollapsed = !!collapsed[group.key];
             return (
               <Fragment key={group.key}>
                 {showHeaders && (
-                  <tr className="border-0 hover:bg-transparent">
-                    <td
-                      colSpan={columns.length}
-                      className="pt-6 pb-1"
-                    >
+                  <TableRow className="bg-muted/60 hover:bg-muted/60">
+                    <TableCell colSpan={columns.length} className="py-2">
                       <button
                         type="button"
-                        className="flex w-full items-center gap-1.5 text-left group"
+                        className="flex items-center gap-2 text-sm font-semibold w-full text-left"
                         onClick={() => setCollapsed((c) => ({ ...c, [group.key]: !isCollapsed }))}
                       >
                         {isCollapsed ? (
-                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
                         ) : (
-                          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
                         )}
-                        <span className="text-xs font-medium uppercase tracking-wide">{group.label}</span>
-                        <span className="text-xs font-normal text-muted-foreground tabular-nums">
-                          · {group.items.length} ref{group.items.length === 1 ? "" : "s"} · total del
-                          grupo {group.units.toLocaleString("es-CO")} u
+                        {group.label}
+                        <span className="text-xs font-normal text-muted-foreground">
+                          {group.items.length} referencia{group.items.length === 1 ? "" : "s"} ·{" "}
+                          {group.units.toLocaleString("es-CO")} unidades
                         </span>
                       </button>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )}
                 {!isCollapsed &&
                   group.items.map((item) => (
-                    <tr
-                      key={getRowKey(item)}
-                      className={cn("border-b border-border/40 hover:bg-muted/40", getRowClassName?.(item))}
-                    >
+                    <TableRow key={getRowKey(item)} className={getRowClassName?.(item)}>
                       {columns.map((col) => (
-                        <td
+                        <TableCell
                           key={col.key}
-                          className={cn("px-4 py-2.5 align-middle", col.align === "right" && "text-right", col.className)}
+                          className={cn(col.align === "right" && "text-right", col.className)}
                         >
                           {col.render(item)}
-                        </td>
+                        </TableCell>
                       ))}
-                    </tr>
+                    </TableRow>
                   ))}
               </Fragment>
             );
           })}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }
