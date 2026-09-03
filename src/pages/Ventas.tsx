@@ -1343,6 +1343,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       </CardHeader>
       <CardContent>
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
+          <RequiredLegend />
           <SmartPasteField
             brand="magical"
             onDataParsed={(data) => {
@@ -2400,6 +2401,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       </CardHeader>
       <CardContent>
         <form ref={ssFormRef} onSubmit={handleSubmit} className="space-y-6">
+          <RequiredLegend />
           <SmartPasteField
             brand="sweatspot"
             onDataParsed={(data) => {
