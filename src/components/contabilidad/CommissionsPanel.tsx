@@ -163,6 +163,8 @@ export default function CommissionsPanel({ orders }: Props) {
 
       </div>
 
+      <CommissionRulesLegend />
+
       {/* Resumen política */}
       <Card className="border-primary/30 bg-primary/5">
         <CardHeader className="pb-2">
