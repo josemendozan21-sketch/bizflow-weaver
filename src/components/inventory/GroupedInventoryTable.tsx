@@ -46,9 +46,9 @@ export default function GroupedInventoryTable<T>({
   const showHeaders = !(groups.length === 1 && groups[0].key === "__all__");
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto md:overflow-x-visible">
       <Table>
-        <TableHeader>
+        <TableHeader className="sticky top-[86px] z-20 bg-background">
           <TableRow className="hover:bg-transparent border-b">
             {columns.map((col) => (
               <TableHead
@@ -71,7 +71,10 @@ export default function GroupedInventoryTable<T>({
               <Fragment key={group.key}>
                 {showHeaders && (
                   <TableRow className="border-0 hover:bg-transparent">
-                    <TableCell colSpan={columns.length} className="pt-6 pb-1">
+                    <TableCell
+                      colSpan={columns.length}
+                      className="sticky top-[118px] z-10 bg-background pt-6 pb-1"
+                    >
                       <button
                         type="button"
                         className="flex w-full items-center gap-1.5 text-left group"
@@ -84,8 +87,8 @@ export default function GroupedInventoryTable<T>({
                         )}
                         <span className="text-xs font-medium uppercase tracking-wide">{group.label}</span>
                         <span className="text-xs font-normal text-muted-foreground tabular-nums">
-                          · {group.items.length} ref{group.items.length === 1 ? "" : "s"} ·{" "}
-                          {group.units.toLocaleString("es-CO")} u
+                          · {group.items.length} ref{group.items.length === 1 ? "" : "s"} · total del
+                          grupo {group.units.toLocaleString("es-CO")} u
                         </span>
                       </button>
                     </TableCell>

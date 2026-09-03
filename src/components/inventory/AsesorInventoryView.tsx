@@ -162,17 +162,13 @@ function FacetedInventorySection({
         align: "right" as const,
         render: (row: Row) =>
           row.variants[v.value] === undefined ? (
-            <span className="text-muted-foreground">—</span>
+            <span className="text-muted-foreground/60" title="No aplica">
+              —
+            </span>
           ) : (
-            <span className="tabular-nums">{row.variants[v.value].toLocaleString("es-CO")}</span>
+            <StockDot available={row.variants[v.value]} />
           ),
       })),
-      {
-        key: "estado",
-        header: "Estado",
-        align: "right",
-        render: (row) => <StockDot available={row.totalAvailable} />,
-      },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [firstHeader, metaParts, JSON.stringify(shownVariants)],
