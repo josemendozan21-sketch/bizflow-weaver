@@ -179,3 +179,53 @@ export function pickGroupKey(groups: FacetGroup[], selection: FacetSelection): s
 export function countActiveFilters(selection: FacetSelection): number {
   return Object.values(selection).filter(Boolean).length;
 }
+
+/* ------------------------------------------------------------------ */
+/* Filas por variante (sin redundancia)                                */
+/* ------------------------------------------------------------------ */
+
+export interface VariantRow<T> {
+  key: string;
+  label: string;
+  values: FacetValues;
+  /** Cantidad disponible por valor de la faceta de variante. */
+  variants: Record<string, number>;
+  items: T[];
+  totalAvailable: number;
+}
+
+/**
+ * Agrupa referencias que solo se diferencian por una faceta (ej. Frío/Térmico
+ * o Con logo/Marcable) en una sola fila con una cantidad por variante.
+ */
+export function buildVariantRows<T>(
+  items: T[],
+  getValues: (item: T) => FacetValues,
+  getLabel: (item: T) => string,
+  getAvailable: (item: T) => number,
+  variantKey: string,
+): VariantRow<T>[] {
+  const map = new Map<string, VariantRow<T>>();
+  for (const item of items) {
+    const values = getValues(item);
+    const base: FacetValues = { ...values };
+    delete base[variantKey];
+    const label = getLabel(item);
+    const key = [
+      normalizeText(label),
+      ...Object.keys(base)
+        .sort()
+        .map((k) => `${k}=${normalizeText(base[k] || "")}`),
+    ].join("|");
+
+    const row =
+      map.get(key) ||
+      ({ key, label, values: base, variants: {}, items: [], totalAvailable: 0 } as VariantRow<T>);
+    const variant = values[variantKey] || "—";
+    row.variants[variant] = (row.variants[variant] || 0) + getAvailable(item);
+    row.totalAvailable += getAvailable(item);
+    row.items.push(item);
+    map.set(key, row);
+  }
+  return [...map.values()];
+}
