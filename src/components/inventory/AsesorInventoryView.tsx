@@ -181,7 +181,7 @@ const magicalColumns = (firstHeader: string): InventoryColumn<ReferenceItem>[] =
   {
     key: "meta",
     header: "Detalle",
-    render: (item) => <MetaLine parts={[item.tipo, item.unit]} />,
+    render: (item) => <MetaLine parts={[item.tipo]} />,
   },
   {
     key: "available",
@@ -198,7 +198,7 @@ const sweatspotColumns: InventoryColumn<ReferenceItem>[] = [
     header: "Detalle",
     render: (item) => (
       <MetaLine
-        parts={[item.color, item.logo ? "con logo" : "marcable", item.productType, item.unit]}
+        parts={[item.color, item.logo ? "con logo" : "marcable", item.productType]}
       />
     ),
   },
