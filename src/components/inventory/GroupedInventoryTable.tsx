@@ -46,8 +46,8 @@ export default function GroupedInventoryTable<T>({
   const showHeaders = !(groups.length === 1 && groups[0].key === "__all__");
 
   return (
-    <div className="rounded-md border overflow-auto max-h-[65vh]">
-      <Table>
+    <div className="rounded-md border overflow-x-auto md:overflow-x-visible">
+      <Table containerClassName="overflow-x-auto md:overflow-visible">
         <TableHeader className="sticky top-0 z-20 bg-background shadow-[inset_0_-1px_0_hsl(var(--border))]">
           <TableRow className="hover:bg-transparent">
             {columns.map((col) => (
@@ -63,7 +63,7 @@ export default function GroupedInventoryTable<T>({
             return (
               <Fragment key={group.key}>
                 {showHeaders && (
-                  <TableRow className="bg-muted hover:bg-muted sticky top-[41px] z-10">
+                  <TableRow className="bg-muted hover:bg-muted sticky top-[47px] z-10">
                     <TableCell colSpan={columns.length} className="py-2 bg-muted">
 
                       <button
