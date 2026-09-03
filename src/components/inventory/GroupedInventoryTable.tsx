@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -61,9 +61,9 @@ export default function GroupedInventoryTable<T>({
           {groups.map((group) => {
             const isCollapsed = !!collapsed[group.key];
             return (
-              <>
+              <Fragment key={group.key}>
                 {showHeaders && (
-                  <TableRow key={`h-${group.key}`} className="bg-muted/60 hover:bg-muted/60">
+                  <TableRow className="bg-muted/60 hover:bg-muted/60">
                     <TableCell colSpan={columns.length} className="py-2">
                       <button
                         type="button"
@@ -97,7 +97,7 @@ export default function GroupedInventoryTable<T>({
                       ))}
                     </TableRow>
                   ))}
-              </>
+              </Fragment>
             );
           })}
         </TableBody>
