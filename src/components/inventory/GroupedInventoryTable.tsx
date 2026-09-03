@@ -48,13 +48,13 @@ export default function GroupedInventoryTable<T>({
   return (
     <div className="overflow-x-auto md:overflow-x-visible">
       <Table>
-        <TableHeader className="sticky top-[86px] z-20 bg-background">
+        <TableHeader>
           <TableRow className="hover:bg-transparent border-b">
             {columns.map((col) => (
               <TableHead
                 key={col.key}
                 className={cn(
-                  "h-8 text-[11px] font-normal uppercase tracking-wide text-muted-foreground",
+                  "sticky top-[74px] z-20 bg-background h-8 text-[11px] font-normal uppercase tracking-wide text-muted-foreground",
                   col.align === "right" && "text-right",
                   col.className,
                 )}
@@ -73,7 +73,7 @@ export default function GroupedInventoryTable<T>({
                   <TableRow className="border-0 hover:bg-transparent">
                     <TableCell
                       colSpan={columns.length}
-                      className="sticky top-[118px] z-10 bg-background pt-6 pb-1"
+                      className="sticky top-[102px] z-10 bg-background pt-6 pb-1"
                     >
                       <button
                         type="button"
