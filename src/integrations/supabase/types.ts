@@ -2270,6 +2270,7 @@ export type Database = {
           brand: string
           brand_code: string | null
           client_address: string | null
+          client_address_complement: string | null
           client_city: string | null
           client_email: string | null
           client_name: string
@@ -2348,6 +2349,7 @@ export type Database = {
           brand: string
           brand_code?: string | null
           client_address?: string | null
+          client_address_complement?: string | null
           client_city?: string | null
           client_email?: string | null
           client_name: string
@@ -2426,6 +2428,7 @@ export type Database = {
           brand?: string
           brand_code?: string | null
           client_address?: string | null
+          client_address_complement?: string | null
           client_city?: string | null
           client_email?: string | null
           client_name?: string
