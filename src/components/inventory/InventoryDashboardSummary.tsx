@@ -140,6 +140,14 @@ function useInventoryDashboardStats() {
         color: "emerald",
       },
       {
+        key: "reservedUnits",
+        label: "Unidades reservadas",
+        value: stats?.reservedUnits ?? 0,
+        icon: PackageCheck,
+        color: "amber",
+      },
+
+      {
         key: "waitingProduction",
         label: "Pedidos esperando producción",
         value: stats?.waitingProduction ?? 0,
