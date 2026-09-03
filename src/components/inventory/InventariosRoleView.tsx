@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Boxes, ShoppingBag, History, Beaker, Sparkles, Warehouse, Store, Tent, PackageSearch, Route, PackageCheck } from "lucide-react";
+import { Boxes, ShoppingBag, History, Beaker, Sparkles, Warehouse, Store, Tent, PackageSearch, Route, PackageCheck, BookmarkCheck } from "lucide-react";
+import { RESERVATIONS_ENABLED } from "@/lib/featureFlags";
+import ReservationsPanel from "@/components/inventory/ReservationsPanel";
+
 import { Button } from "@/components/ui/button";
 import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
 import MateriaPrimaPanel from "@/components/inventory/MateriaPrimaPanel";
@@ -74,6 +77,13 @@ const InventariosRoleView = () => {
           <TabsTrigger value="abastecimiento" className="gap-1.5 whitespace-nowrap">
             <PackageCheck className="h-4 w-4" /> Abastecimiento
           </TabsTrigger>
+          {RESERVATIONS_ENABLED && (
+            <TabsTrigger value="reservas" className="gap-1.5 whitespace-nowrap">
+              <BookmarkCheck className="h-4 w-4" /> Reservas
+            </TabsTrigger>
+          )}
+
+
 
           <TabsTrigger value="trazabilidad" className="gap-1.5 whitespace-nowrap">
             <Route className="h-4 w-4" /> Trazabilidad
@@ -138,6 +148,14 @@ const InventariosRoleView = () => {
           <BatchReceptionPanel />
           <ProductionBatchesPanel readOnly />
         </TabsContent>
+
+        {RESERVATIONS_ENABLED && (
+          <TabsContent value="reservas" className="mt-4">
+            <ReservationsPanel />
+          </TabsContent>
+        )}
+
+
 
 
         <TabsContent value="trazabilidad" className="mt-4">

@@ -2139,6 +2139,66 @@ export type Database = {
           },
         ]
       }
+      order_reservations: {
+        Row: {
+          brand: string
+          category: string
+          consumed_at: string | null
+          created_at: string
+          id: string
+          item_name: string
+          order_code: string | null
+          order_id: string
+          quantity: number
+          release_reason: string | null
+          released_at: string | null
+          released_by: string | null
+          released_by_name: string | null
+          requirement_id: string | null
+          status: string
+          stock_item_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          brand: string
+          category?: string
+          consumed_at?: string | null
+          created_at?: string
+          id?: string
+          item_name: string
+          order_code?: string | null
+          order_id: string
+          quantity: number
+          release_reason?: string | null
+          released_at?: string | null
+          released_by?: string | null
+          released_by_name?: string | null
+          requirement_id?: string | null
+          status?: string
+          stock_item_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          brand?: string
+          category?: string
+          consumed_at?: string | null
+          created_at?: string
+          id?: string
+          item_name?: string
+          order_code?: string | null
+          order_id?: string
+          quantity?: number
+          release_reason?: string | null
+          released_at?: string | null
+          released_by?: string | null
+          released_by_name?: string | null
+          requirement_id?: string | null
+          status?: string
+          stock_item_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       order_value_disputes: {
         Row: {
           created_at: string
@@ -4195,6 +4255,10 @@ export type Database = {
       }
       receive_production_batch: {
         Args: { _batch_id: string; _received: number }
+        Returns: Json
+      }
+      release_order_reservation: {
+        Args: { _reason: string; _reservation_id: string }
         Returns: Json
       }
       resolve_order_value_dispute: {

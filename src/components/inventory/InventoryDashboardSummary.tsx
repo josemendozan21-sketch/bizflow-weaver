@@ -51,10 +51,10 @@ function useInventoryDashboardStats() {
           .eq("sale_type", "mayor")
           .gte("created_at", "2026-05-15"),
         supabase
-          .from("inventory_movements")
-          .select("order_id, movement_kind")
-          .eq("movement_kind", "reserva")
-          .not("order_id", "is", null),
+          .from("order_reservations")
+          .select("order_id, quantity, status")
+          .eq("status", "activa"),
+
         supabase
           .from("production_orders")
           .select("id, stage_status, completed_at"),
@@ -67,8 +67,10 @@ function useInventoryDashboardStats() {
       }>;
       const reservations = (reservationsRes.data || []) as Array<{
         order_id: string;
-        movement_kind: string;
+        quantity: number;
+        status: string;
       }>;
+
       const productionOrders = (productionRes.data || []) as Array<{
         id: string;
         stage_status: string;
@@ -83,10 +85,12 @@ function useInventoryDashboardStats() {
         (o) => o.production_status === "pendiente"
       ).length;
 
-      const reserved = orders.filter(
-        (o) =>
-          reservedOrderIds.has(o.id) && o.production_status !== "entregado"
-      ).length;
+      const reserved = reservedOrderIds.size;
+
+      const reservedUnits = reservations.reduce(
+        (sum, r) => sum + (Number(r.quantity) || 0),
+        0
+      );
 
       const waitingProduction = productionOrders.filter(
         (p) =>
@@ -103,9 +107,11 @@ function useInventoryDashboardStats() {
       return {
         pendingReview,
         reserved,
+        reservedUnits,
         waitingProduction,
         activeProduction,
       };
+
     },
     refetchInterval: 15_000,
   });
@@ -133,6 +139,14 @@ function useInventoryDashboardStats() {
         icon: PackageCheck,
         color: "emerald",
       },
+      {
+        key: "reservedUnits",
+        label: "Unidades reservadas",
+        value: stats?.reservedUnits ?? 0,
+        icon: PackageCheck,
+        color: "amber",
+      },
+
       {
         key: "waitingProduction",
         label: "Pedidos esperando producción",
