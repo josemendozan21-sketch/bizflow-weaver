@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import SelectionCard from "@/components/common/SelectionCard";
+import PageHeader from "@/components/common/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, AlertTriangle, CheckCircle2, FileText, ShoppingCart, ClipboardList, Plus, Trash2, BarChart3, CalendarDays, Percent } from "lucide-react";
@@ -82,10 +83,7 @@ const Ventas = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Ventas</h1>
-        <p className="text-muted-foreground">Gestión de cotizaciones y pedidos</p>
-      </div>
+      <PageHeader title="Ventas" description="Gestión de cotizaciones y pedidos" />
 
       <Tabs defaultValue="pedidos" className="w-full">
         <TabsList>

@@ -6,6 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ArrowLeft, ChevronRight, Package } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useReferenceCatalog } from "@/hooks/useReferenceCatalog";
+import PageHeader from "@/components/common/PageHeader";
 import FacetFilterBar from "@/components/inventory/FacetFilterBar";
 import GroupedInventoryTable, {
   type InventoryColumn,
@@ -266,10 +267,7 @@ export default function AsesorInventoryView() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Inventarios</h1>
-        <p className="text-muted-foreground">Disponibilidad de productos por marca</p>
-      </div>
+      <PageHeader title="Inventarios" description="Disponibilidad de productos por marca" />
 
       <Alert>
         <Package className="h-4 w-4" />
