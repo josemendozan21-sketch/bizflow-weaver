@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, AlertTriangle, CheckCircle2, FileText, ShoppingCart, ClipboardList, Plus, Trash2, BarChart3, CalendarDays, Percent } from "lucide-react";
 import { useLogisticsStore } from "@/stores/logisticsStore";
 import { useInventoryStore } from "@/stores/inventoryStore";
-import { buildReferenceCatalog, tiposForReference, uniqueReferenceNames } from "@/lib/referenceCatalog";
+import { buildReferenceCatalog, tiposForReference, uniqueReferenceNames, inkOptionsFromStock } from "@/lib/referenceCatalog";
 import { useInventory } from "@/hooks/useInventory";
 import { useAccountingStore } from "@/stores/accountingStore";
 
@@ -707,12 +707,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   }, [inventoryStockItems]);
 
   // Tintas y gel también salen de Inventarios (materia prima)
-  const inkOptions = useMemo(() => {
-    const names = inventoryStockItems
-      .filter((s) => /^tinta\b/i.test(s.name || ""))
-      .map((s) => s.name.replace(/^tinta\s*(pvc)?\s*/i, "").trim() || s.name);
-    return [...new Set(names)].sort((a, b) => a.localeCompare(b, "es"));
-  }, [inventoryStockItems]);
+  const inkOptions = useMemo(() => inkOptionsFromStock(inventoryStockItems), [inventoryStockItems]);
 
   const gelOptions = useMemo(() => {
     const names = inventoryStockItems
@@ -1939,7 +1934,8 @@ function createEmptySSLine(): SweatspotOrderLine {
 function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { reserveBodyStock: reserveBodyStockDB } = useInventory();
+  const { reserveBodyStock: reserveBodyStockDB, stockItems: ssStockItems } = useInventory();
+  const ssInkOptions = useMemo(() => inkOptionsFromStock(ssStockItems), [ssStockItems]);
   const [ssLines, setSsLines] = usePersistedState<SweatspotOrderLine[]>("ventas:ss:lines", [createEmptySSLine()]);
   const [ssAbono, setSsAbono] = usePersistedState("ventas:ss:abono", "");
   const [ssEstadoPago, setSsEstadoPago] = usePersistedState<"abono_inicial" | "pago_total" | "pendiente">("ventas:ss:estadoPago", "abono_inicial");
@@ -2479,8 +2475,25 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                     <Input value={line.colorSilicona} onChange={(e) => updateSSLine(line.id, { colorSilicona: e.target.value })} required />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Color de tinta</Label>
-                    <Input value={line.colorTinta} onChange={(e) => updateSSLine(line.id, { colorTinta: e.target.value })} required />
+                    <ColorSelect
+                      label="Color de tinta"
+                      value={line.colorTinta}
+                      customValue=""
+                      onValueChange={(v) => updateSSLine(line.id, { colorTinta: v })}
+                      onCustomChange={() => {}}
+                      options={
+                        line.colorTinta && !ssInkOptions.includes(line.colorTinta)
+                          ? [...ssInkOptions, line.colorTinta]
+                          : ssInkOptions
+                      }
+                      placeholder={ssInkOptions.length ? "Seleccionar tinta" : "Sin tintas en Inventarios"}
+                      allowCustom={false}
+                      hint={
+                        ssInkOptions.length
+                          ? undefined
+                          : "No hay tintas registradas en Inventarios. Solicite a Inventarios cargarlas como materia prima."
+                      }
+                    />
                   </div>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-3">
