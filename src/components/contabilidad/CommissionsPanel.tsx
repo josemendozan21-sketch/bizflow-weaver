@@ -1,3 +1,4 @@
+import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import { Fragment, useMemo, useState } from "react";
 import {
   Card,
