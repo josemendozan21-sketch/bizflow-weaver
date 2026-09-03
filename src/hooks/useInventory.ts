@@ -276,10 +276,11 @@ export function useInventory() {
               normalizedRefBase.includes(normalize(si.name)),
           );
         if (matchingStockItem) {
-          await supabase
-            .from("stock_items")
-            .update({ available: matchingStockItem.available - qty } as any)
-            .eq("id", matchingStockItem.id);
+          await supabase.rpc("consume_stock_item" as any, {
+            _item_id: matchingStockItem.id,
+            _amount: qty,
+            _reason: `Reserva de cuerpos — ${referencia}`,
+          } as any);
         }
       }
 
