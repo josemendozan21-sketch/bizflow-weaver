@@ -377,6 +377,9 @@ export function useInventory() {
       logo?: string | null;
       sweatspot_category?: string | null;
     }): Promise<{ success: boolean; message: string }> => {
+      if (item.available < 0 || item.min_stock < 0) {
+        return { success: false, message: "Las cantidades no pueden ser negativas." };
+      }
       const { error } = await supabase.from("stock_items").insert({
         name: item.name,
         category: item.category,
