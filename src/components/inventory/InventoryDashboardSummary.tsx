@@ -67,8 +67,10 @@ function useInventoryDashboardStats() {
       }>;
       const reservations = (reservationsRes.data || []) as Array<{
         order_id: string;
-        movement_kind: string;
+        quantity: number;
+        status: string;
       }>;
+
       const productionOrders = (productionRes.data || []) as Array<{
         id: string;
         stage_status: string;
