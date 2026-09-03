@@ -426,14 +426,7 @@ export default function MisComisiones() {
               +{fmt(BONUS_TIER_2_AMOUNT)} desde {fmt(BONUS_TIER_2_THRESHOLD)}
             </Badge>
           </div>
-          <p className="text-xs text-muted-foreground flex items-start gap-1.5">
-            <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-El período de liquidación es el <b>mes de la factura</b> (si el pedido aún
-            no tiene factura, se muestra en su mes de venta y queda pendiente de
-            facturar). La comisión se causa cuando el pedido está pagado o
-            facturado; con abono parcial se causa proporcional a lo abonado. La
-            base <b>excluye flete y cargos adicionales</b> y se calcula sin IVA.
-          </p>
+          <CommissionRulesLegend />
 
         </CardContent>
       </Card>

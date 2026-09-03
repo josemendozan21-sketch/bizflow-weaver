@@ -136,8 +136,7 @@ export default function CommissionsPanel({ orders }: Props) {
         <div>
           <h2 className="text-xl font-bold">Comisiones de asesores</h2>
           <p className="text-sm text-muted-foreground">
-            Cálculo automático según política oficial 2026. Período por fecha de
-            factura; la base excluye flete y cargos adicionales.
+            Cálculo automático según política oficial 2026.
           </p>
         </div>
         <div className="flex gap-2">
