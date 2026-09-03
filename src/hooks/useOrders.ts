@@ -19,6 +19,7 @@ export interface Order {
   client_phone: string | null;
   client_email: string | null;
   client_address: string | null;
+  client_address_complement?: string | null;
   client_city: string | null;
   product: string;
   quantity: number;

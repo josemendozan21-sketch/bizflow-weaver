@@ -1,3 +1,4 @@
+import { formatAddress } from "@/lib/formatAddress";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -57,7 +58,7 @@ function exportOrdersToCSV(orders: Order[], brandLabel: (b: string) => string, s
       o.client_phone || "—",
       o.client_email || "—",
       o.client_city || "—",
-      o.client_address || "—",
+      formatAddress(o.client_address, o.client_address_complement) || "—",
       brandLabel(o.brand),
       saleLabel(o.sale_type),
       o.product,
@@ -121,7 +122,7 @@ function groupOrdersByShipment(
         clientNit: o.client_nit,
         clientPhone: o.client_phone,
         city: o.client_city,
-        address: o.client_address,
+        address: formatAddress(o.client_address, o.client_address_complement) || null,
         saleType: o.sale_type,
         brands: [],
         items: [],
