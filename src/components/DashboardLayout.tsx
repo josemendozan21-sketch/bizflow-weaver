@@ -11,6 +11,8 @@ import { OrderQuickViewProvider, useOrderQuickView } from "@/components/common/O
 
 function OrderSearchTrigger() {
   const quickView = useOrderQuickView();
+  const { role } = useAuth();
+  const allowed = canSearchOrders(role);
   const [isMac, setIsMac] = useState(false);
 
   useEffect(() => {
