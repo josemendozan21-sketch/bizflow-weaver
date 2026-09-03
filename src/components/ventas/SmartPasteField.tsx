@@ -13,6 +13,7 @@ export interface ParsedOrderData {
     telefono?: string | null;
     email?: string | null;
     direccion?: string | null;
+    complemento?: string | null;
     ciudad?: string | null;
   };
   productos?: Array<{

@@ -1,3 +1,4 @@
+import { formatAddress } from "@/lib/formatAddress";
 import { useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { openSignedUrl } from "@/lib/signedUrl";
@@ -43,7 +44,7 @@ function toAccountingOrder(o: Order): AccountingOrder {
     hasRut: !!o.client_nit,
     email: o.client_email ?? undefined,
     cedula: o.client_nit ?? undefined,
-    direccion: o.client_address ?? undefined,
+    direccion: formatAddress(o.client_address, o.client_address_complement) || undefined,
     ciudad: o.client_city ?? undefined,
     observaciones: o.observations ?? undefined,
     status: (o.invoice_status as "pendiente" | "facturado") ?? "pendiente",
@@ -288,7 +289,7 @@ const OrderCard = ({ order, actionSlot }: { order: Order; actionSlot?: React.Rea
           )}
           {order.client_email && <div><span className="text-muted-foreground">Email: </span><span className="font-medium">{order.client_email}</span></div>}
           {order.client_nit && <div><span className="text-muted-foreground">{isMayor ? "RUT" : "Cédula"}: </span><span className="font-medium">{order.client_nit}</span></div>}
-          {order.client_address && <div className="col-span-2"><span className="text-muted-foreground">Dirección: </span><span className="font-medium">{order.client_address}</span></div>}
+          {order.client_address && <div className="col-span-2"><span className="text-muted-foreground">Dirección: </span><span className="font-medium">{formatAddress(order.client_address, order.client_address_complement)}</span></div>}
           {order.client_city && <div><span className="text-muted-foreground">Ciudad: </span><span className="font-medium">{order.client_city}</span></div>}
           {order.delivery_date && <div><span className="text-muted-foreground">Fecha de entrega: </span><span className="font-medium">{order.delivery_date}</span></div>}
           {(order as any).is_recompra && (

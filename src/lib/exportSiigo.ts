@@ -1,3 +1,4 @@
+import { formatAddress } from "@/lib/formatAddress";
 import * as XLSX from "xlsx";
 import type { AccountingOrder } from "@/stores/accountingStore";
 import type { Order } from "@/hooks/useOrders";
@@ -148,7 +149,7 @@ function orderToFullRow(o: Order): (string | number)[] {
     o.client_email || "",
     o.client_phone || "",
     o.client_city || "",
-    o.client_address || "",
+    formatAddress(o.client_address, o.client_address_complement) || "",
     o.product || "",
     o.quantity || 0,
     Math.round(unit),

@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { setNativeValue } from "@/lib/domForm";
+
 
 /**
  * Persiste/restaura los inputs no-controlados de un formulario en localStorage.
@@ -23,9 +25,10 @@ export function useFormDraft(formRef: React.RefObject<HTMLFormElement>, key: str
           const el = form.querySelector(`[name="${name}"]`) as HTMLInputElement | HTMLTextAreaElement | null;
           if (!el) return;
           if ((el as HTMLInputElement).type === "file" || (el as HTMLInputElement).type === "password") return;
-          el.value = value;
-          el.dispatchEvent(new Event("input", { bubbles: true }));
+          setNativeValue(el, value);
         });
+
+
         restored.current = true;
         setRestoredTick((t) => t + 1);
       });
