@@ -56,6 +56,8 @@ export default function OrderDetailDialog({ orderId, orderCode, open, onOpenChan
   const { role } = useAuth();
   const scope = getOrderViewScope(role);
   const designOnly = scope === "design";
+  const operationsOnly = scope === "operations";
+  const restricted = designOnly || operationsOnly;
   const { data: order, isLoading } = useQuery({
     queryKey: ["order-detail", orderId ?? orderCode],
     enabled: open && (!!orderId || !!orderCode),
@@ -120,7 +122,7 @@ export default function OrderDetailDialog({ orderId, orderCode, open, onOpenChan
                 <Badge variant="outline">{order.sale_type === "menor" ? "Al detal" : "Al por mayor"}</Badge>
                 {order.is_recompra && <Badge variant="secondary">Recompra</Badge>}
                 {order.is_credit && <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Crédito</Badge>}
-                {!designOnly &&
+                {!restricted &&
                   (fullyPaid ? (
                     <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Pagado</Badge>
                   ) : (
@@ -145,12 +147,13 @@ export default function OrderDetailDialog({ orderId, orderCode, open, onOpenChan
             <Separator />
 
             {/* Cliente y despacho */}
-            {designOnly ? (
+            {restricted ? (
               <section className="space-y-3">
                 <SectionTitle icon={Truck}>Cliente</SectionTitle>
                 <div className="grid gap-3 sm:grid-cols-3">
                   <Field label="Cliente" value={order.client_name} />
                   <Field label="Ciudad" value={order.client_city} />
+                  {operationsOnly && <Field label="Despachado" value={date(order.dispatched_at, true)} />}
                 </div>
               </section>
             ) : (
@@ -182,7 +185,7 @@ export default function OrderDetailDialog({ orderId, orderCode, open, onOpenChan
               <div className="grid gap-3 sm:grid-cols-3">
                 <Field label="Producto" value={order.product} />
                 <Field label="Cantidad" value={`${order.quantity} uds`} />
-                {!designOnly && <Field label="Precio unitario" value={money(order.unit_price)} />}
+                {!restricted && <Field label="Precio unitario" value={money(order.unit_price)} />}
                 <Field label="Color de tinta" value={order.ink_color} />
                 <Field label="Color de gel" value={order.gel_color} />
                 <Field label="Color de silicona" value={order.silicone_color} />
@@ -206,7 +209,7 @@ export default function OrderDetailDialog({ orderId, orderCode, open, onOpenChan
               )}
             </section>
 
-            {!designOnly && (
+            {!restricted && (
             <>
             <Separator />
 
@@ -271,7 +274,7 @@ export default function OrderDetailDialog({ orderId, orderCode, open, onOpenChan
             )}
 
             {/* Entregas parciales */}
-            {!designOnly && deliveries.length > 0 && (
+            {!restricted && deliveries.length > 0 && (
               <>
                 <Separator />
                 <section className="space-y-2">
@@ -293,7 +296,7 @@ export default function OrderDetailDialog({ orderId, orderCode, open, onOpenChan
 
             <OrderChangeLogPanel
               orderId={order.id}
-              fieldFilter={designOnly ? (f) => isFieldVisibleForScope(f, scope) : undefined}
+              fieldFilter={restricted ? (f) => isFieldVisibleForScope(f, scope) : undefined}
             />
           </div>
         )}
