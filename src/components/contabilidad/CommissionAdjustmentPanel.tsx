@@ -35,9 +35,14 @@ interface AdjRow {
 function rateFor(o: any): number {
   const flat = getFlatRateFor(o.advisor_name);
   if (flat != null) return flat;
-  if (o.sale_type === "menor") return 0.12;
+  const contraentrega = o.payment_method === "contra_entrega";
+  if (o.sale_type === "menor") return contraentrega ? 0.10 : 0.12;
   return o.is_recompra ? 0.06 : 0.10;
 }
+
+/** Último mes ya liquidado a los asesores: solo esos generan ajuste retroactivo. */
+const LAST_SETTLED_PERIOD = "2026-07";
+
 
 export default function CommissionAdjustmentPanel({ advisorFilter }: { advisorFilter?: string }) {
   const [open, setOpen] = useState<string | null>(null);
