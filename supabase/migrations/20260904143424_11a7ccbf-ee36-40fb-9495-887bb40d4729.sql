@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.link_logo_request_to_order() FROM PUBLIC, anon, authenticated;
