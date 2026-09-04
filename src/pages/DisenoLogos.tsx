@@ -84,6 +84,9 @@ const DisenoLogos = () => {
 
       <LogosAtascados requests={requests} />
 
+      <PedidosSinSolicitud requests={requests} />
+
+
 
       <Tabs defaultValue="solicitudes">
         <TabsList className="w-full flex md:grid md:grid-cols-4">
