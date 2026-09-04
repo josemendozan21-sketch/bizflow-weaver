@@ -2157,7 +2157,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     let ssFirstOrderIdForLogo: string | null = null;
     const ssHasLogoFile = !!(logoFile && logoFile.size > 0);
     const ssHasPersonalization = !!(personalizacion && personalizacion.trim());
-    if ((ssHasLogoFile || ssHasPersonalization) && user && !ssReusaLogoAnterior && !ssNoLogo) {
+    const ssRecompraNeedsDesign = ssReusaLogoAnterior && ssNeedsLogoAdjustment;
+    if ((ssHasLogoFile || ssHasPersonalization || ssRecompraNeedsDesign) && user && (!ssReusaLogoAnterior || ssRecompraNeedsDesign) && !ssNoLogo) {
       const firstRef = ssLines[0].referencia;
       const result = await createLogoRequestFromOrder({
         brand: "Sweatspot",
@@ -2171,9 +2172,14 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         logoName2: ssLogosCount >= 2 ? logoNombre2 : undefined,
         extraLogos: ssActiveLogos.slice(2).map((l) => ({ file: l.file, name: l.name.trim() })),
         clientComments: observaciones || undefined,
-        additionalInstructions: personalizacion || undefined,
+        additionalInstructions: [
+          ssRecompraNeedsDesign ? "AJUSTE DE LOGO EXISTENTE (recompra)" : "",
+          personalizacion || "",
+        ].filter(Boolean).join(" — ") || undefined,
         fromRecompra: ssIsRecompra,
+        previousLogoUrl: ssRecompraNeedsDesign ? ssRecompraLogoUrl : undefined,
       });
+
       if (result.success) {
         toast.success("Diseño de logo", { description: result.message });
         logoUrl = result.logoUrl || "logo-uploaded";
