@@ -15,7 +15,12 @@ interface OrderLogoData {
   clientComments?: string;
   additionalInstructions?: string;
   fromRecompra?: boolean;
+  /** Recompra que reutiliza un logo ya existente pero requiere ajuste */
+  previousLogoUrl?: string;
+  /** Pedido asociado, cuando ya existe al momento de crear la solicitud */
+  orderId?: string;
 }
+
 
 /**
  * Uploads the logo file and creates a design request automatically
@@ -43,12 +48,16 @@ export async function createLogoRequestFromOrder(
 
       const { data: urlData } = supabase.storage.from("logo-files").getPublicUrl(path);
       publicUrl = urlData.publicUrl;
+    } else if (data.previousLogoUrl && data.previousLogoUrl.startsWith("http")) {
+      // Recompra con ajuste: el logo anterior es la base del trabajo de diseño.
+      publicUrl = data.previousLogoUrl;
     } else {
       // Sentinel value used when no original artwork is provided. The design
       // team will see this request and build the logo based on the
       // personalization text / instructions.
       publicUrl = "PENDIENTE_DISENO_DESDE_CERO";
     }
+
 
     // 1b. Upload second logo if provided
     let publicUrl2: string | null = null;
@@ -96,6 +105,8 @@ export async function createLogoRequestFromOrder(
       additional_instructions: data.additionalInstructions || null,
       status: "pendiente_diseno",
       from_recompra: !!data.fromRecompra,
+      order_id: data.orderId || null,
+
     }).select("id").single();
 
     if (insertError) {

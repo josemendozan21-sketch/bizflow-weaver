@@ -842,6 +842,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     // Cada logo agregado necesita archivo y nombre (excepto recompras, donde
     // el primer logo puede reutilizarse del histórico del cliente).
     const reusaLogoAnterior = isRecompra && !noLogo && recompraMismoLogo === "si";
+    // Recompra que reutiliza el logo pero pide un ajuste (otro molde/tamaño/color):
+    // debe llegar igual a Diseño.
+    const recompraNeedsDesign = reusaLogoAnterior && needsLogoAdjustment;
+
     const incompleteIdx = reusaLogoAnterior
       ? -1
       : activeLogos.findIndex(
@@ -966,7 +970,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     let firstOrderIdForLogo: string | null = null;
     const hasLogoFile = !!(logoFile && logoFile.size > 0);
     const hasPersonalization = !!(personalizacion && personalizacion.trim());
-    if ((hasLogoFile || hasPersonalization) && user && !reusaLogoAnterior && !noLogo) {
+    if ((hasLogoFile || hasPersonalization || recompraNeedsDesign) && user && (!reusaLogoAnterior || recompraNeedsDesign) && !noLogo) {
       const firstLine = orderLines[0];
       const referencia = `${firstLine.product} (${firstLine.type})`;
       const result = await createLogoRequestFromOrder({
@@ -981,8 +985,12 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         logoName2: logosCount >= 2 ? logoNombre2 : undefined,
         extraLogos: activeLogos.slice(2).map((l) => ({ file: l.file, name: l.name.trim() })),
         clientComments: observaciones || undefined,
-        additionalInstructions: personalizacion || undefined,
+        additionalInstructions: [
+          recompraNeedsDesign ? "AJUSTE DE LOGO EXISTENTE (recompra)" : "",
+          personalizacion || "",
+        ].filter(Boolean).join(" — ") || undefined,
         fromRecompra: isRecompra,
+        previousLogoUrl: recompraNeedsDesign ? recompraLogoUrl : undefined,
       });
       if (result.success) {
         toast.success("Diseño de logo", { description: result.message });
@@ -1000,6 +1008,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       logoUrl = recompraLogoUrl;
     }
     if (reusaLogoAnterior && !logoUrl && recompraLogoUrl) logoUrl = recompraLogoUrl;
+
 
     const logoSource: LogoSource = noLogo ? "sin_logo" : reusaLogoAnterior ? "reutilizado" : "nuevo";
     const logoSourceMeta = {
@@ -1698,13 +1707,24 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                     No, logo actualizado
                   </Button>
                 </div>
+                {recompraMismoLogo === "si" && (
+                  <div className="flex items-center justify-between rounded-md border border-input bg-background p-2">
+                    <Label htmlFor="mw_needsAdj" className="cursor-pointer text-xs">
+                      Requiere ajuste del logo (otro molde, tamaño o color)
+                    </Label>
+                    <Switch id="mw_needsAdj" checked={needsLogoAdjustment} onCheckedChange={setNeedsLogoAdjustment} />
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground">
                   {recompraMismoLogo === "si"
-                    ? "Se reutiliza el logo aprobado anteriormente y se notifica a Estampación."
+                    ? needsLogoAdjustment
+                      ? "Se creará una solicitud en Diseño con el logo anterior como base para el ajuste."
+                      : "Se reutiliza el logo aprobado anteriormente y se notifica a Estampación."
                     : "Se creará una solicitud de diseño y se notificará a Diseño y Estampación del logo nuevo."}
                 </p>
               </div>
             )}
+
             {noLogo && (
               <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3">
                 ✓ Sin logo: El pedido omitirá la etapa de estampación y pasará directo a producción.
@@ -2137,7 +2157,8 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     let ssFirstOrderIdForLogo: string | null = null;
     const ssHasLogoFile = !!(logoFile && logoFile.size > 0);
     const ssHasPersonalization = !!(personalizacion && personalizacion.trim());
-    if ((ssHasLogoFile || ssHasPersonalization) && user && !ssReusaLogoAnterior && !ssNoLogo) {
+    const ssRecompraNeedsDesign = ssReusaLogoAnterior && ssNeedsLogoAdjustment;
+    if ((ssHasLogoFile || ssHasPersonalization || ssRecompraNeedsDesign) && user && (!ssReusaLogoAnterior || ssRecompraNeedsDesign) && !ssNoLogo) {
       const firstRef = ssLines[0].referencia;
       const result = await createLogoRequestFromOrder({
         brand: "Sweatspot",
@@ -2151,9 +2172,14 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
         logoName2: ssLogosCount >= 2 ? logoNombre2 : undefined,
         extraLogos: ssActiveLogos.slice(2).map((l) => ({ file: l.file, name: l.name.trim() })),
         clientComments: observaciones || undefined,
-        additionalInstructions: personalizacion || undefined,
+        additionalInstructions: [
+          ssRecompraNeedsDesign ? "AJUSTE DE LOGO EXISTENTE (recompra)" : "",
+          personalizacion || "",
+        ].filter(Boolean).join(" — ") || undefined,
         fromRecompra: ssIsRecompra,
+        previousLogoUrl: ssRecompraNeedsDesign ? ssRecompraLogoUrl : undefined,
       });
+
       if (result.success) {
         toast.success("Diseño de logo", { description: result.message });
         logoUrl = result.logoUrl || "logo-uploaded";
@@ -2678,11 +2704,22 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                     No, logo actualizado
                   </Button>
                 </div>
+                {ssRecompraMismoLogo === "si" && (
+                  <div className="flex items-center justify-between rounded-md border border-input bg-background p-2">
+                    <Label htmlFor="ss_needsAdj" className="cursor-pointer text-xs">
+                      Requiere ajuste del logo (otro tamaño, color o referencia)
+                    </Label>
+                    <Switch id="ss_needsAdj" checked={ssNeedsLogoAdjustment} onCheckedChange={setSsNeedsLogoAdjustment} />
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground">
                   {ssRecompraMismoLogo === "si"
-                    ? "Se reutiliza el logo aprobado anteriormente y se notifica a Estampación."
+                    ? ssNeedsLogoAdjustment
+                      ? "Se creará una solicitud en Diseño con el logo anterior como base para el ajuste."
+                      : "Se reutiliza el logo aprobado anteriormente y se notifica a Estampación."
                     : "Se creará una solicitud de diseño y se notificará a Diseño y Estampación del logo nuevo."}
                 </p>
+
               </div>
             )}
             {ssNoLogo && (
