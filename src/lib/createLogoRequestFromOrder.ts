@@ -48,12 +48,16 @@ export async function createLogoRequestFromOrder(
 
       const { data: urlData } = supabase.storage.from("logo-files").getPublicUrl(path);
       publicUrl = urlData.publicUrl;
+    } else if (data.previousLogoUrl && data.previousLogoUrl.startsWith("http")) {
+      // Recompra con ajuste: el logo anterior es la base del trabajo de diseño.
+      publicUrl = data.previousLogoUrl;
     } else {
       // Sentinel value used when no original artwork is provided. The design
       // team will see this request and build the logo based on the
       // personalization text / instructions.
       publicUrl = "PENDIENTE_DISENO_DESDE_CERO";
     }
+
 
     // 1b. Upload second logo if provided
     let publicUrl2: string | null = null;
