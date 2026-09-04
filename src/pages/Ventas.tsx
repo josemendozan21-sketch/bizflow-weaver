@@ -2704,11 +2704,22 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
                     No, logo actualizado
                   </Button>
                 </div>
+                {ssRecompraMismoLogo === "si" && (
+                  <div className="flex items-center justify-between rounded-md border border-input bg-background p-2">
+                    <Label htmlFor="ss_needsAdj" className="cursor-pointer text-xs">
+                      Requiere ajuste del logo (otro tamaño, color o referencia)
+                    </Label>
+                    <Switch id="ss_needsAdj" checked={ssNeedsLogoAdjustment} onCheckedChange={setSsNeedsLogoAdjustment} />
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground">
                   {ssRecompraMismoLogo === "si"
-                    ? "Se reutiliza el logo aprobado anteriormente y se notifica a Estampación."
+                    ? ssNeedsLogoAdjustment
+                      ? "Se creará una solicitud en Diseño con el logo anterior como base para el ajuste."
+                      : "Se reutiliza el logo aprobado anteriormente y se notifica a Estampación."
                     : "Se creará una solicitud de diseño y se notificará a Diseño y Estampación del logo nuevo."}
                 </p>
+
               </div>
             )}
             {ssNoLogo && (
