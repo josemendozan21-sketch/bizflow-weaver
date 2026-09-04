@@ -1698,13 +1698,24 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                     No, logo actualizado
                   </Button>
                 </div>
+                {recompraMismoLogo === "si" && (
+                  <div className="flex items-center justify-between rounded-md border border-input bg-background p-2">
+                    <Label htmlFor="mw_needsAdj" className="cursor-pointer text-xs">
+                      Requiere ajuste del logo (otro molde, tamaño o color)
+                    </Label>
+                    <Switch id="mw_needsAdj" checked={needsLogoAdjustment} onCheckedChange={setNeedsLogoAdjustment} />
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground">
                   {recompraMismoLogo === "si"
-                    ? "Se reutiliza el logo aprobado anteriormente y se notifica a Estampación."
+                    ? needsLogoAdjustment
+                      ? "Se creará una solicitud en Diseño con el logo anterior como base para el ajuste."
+                      : "Se reutiliza el logo aprobado anteriormente y se notifica a Estampación."
                     : "Se creará una solicitud de diseño y se notificará a Diseño y Estampación del logo nuevo."}
                 </p>
               </div>
             )}
+
             {noLogo && (
               <p className="text-xs text-muted-foreground rounded-md border border-input bg-muted/30 p-3">
                 ✓ Sin logo: El pedido omitirá la etapa de estampación y pasará directo a producción.
