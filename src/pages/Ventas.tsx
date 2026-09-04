@@ -970,7 +970,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     let firstOrderIdForLogo: string | null = null;
     const hasLogoFile = !!(logoFile && logoFile.size > 0);
     const hasPersonalization = !!(personalizacion && personalizacion.trim());
-    if ((hasLogoFile || hasPersonalization) && user && !reusaLogoAnterior && !noLogo) {
+    if ((hasLogoFile || hasPersonalization || recompraNeedsDesign) && user && (!reusaLogoAnterior || recompraNeedsDesign) && !noLogo) {
       const firstLine = orderLines[0];
       const referencia = `${firstLine.product} (${firstLine.type})`;
       const result = await createLogoRequestFromOrder({
@@ -985,8 +985,12 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         logoName2: logosCount >= 2 ? logoNombre2 : undefined,
         extraLogos: activeLogos.slice(2).map((l) => ({ file: l.file, name: l.name.trim() })),
         clientComments: observaciones || undefined,
-        additionalInstructions: personalizacion || undefined,
+        additionalInstructions: [
+          recompraNeedsDesign ? "AJUSTE DE LOGO EXISTENTE (recompra)" : "",
+          personalizacion || "",
+        ].filter(Boolean).join(" — ") || undefined,
         fromRecompra: isRecompra,
+        previousLogoUrl: recompraNeedsDesign ? recompraLogoUrl : undefined,
       });
       if (result.success) {
         toast.success("Diseño de logo", { description: result.message });
@@ -1004,6 +1008,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       logoUrl = recompraLogoUrl;
     }
     if (reusaLogoAnterior && !logoUrl && recompraLogoUrl) logoUrl = recompraLogoUrl;
+
 
     const logoSource: LogoSource = noLogo ? "sin_logo" : reusaLogoAnterior ? "reutilizado" : "nuevo";
     const logoSourceMeta = {
