@@ -842,6 +842,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     // Cada logo agregado necesita archivo y nombre (excepto recompras, donde
     // el primer logo puede reutilizarse del histórico del cliente).
     const reusaLogoAnterior = isRecompra && !noLogo && recompraMismoLogo === "si";
+    // Recompra que reutiliza el logo pero pide un ajuste (otro molde/tamaño/color):
+    // debe llegar igual a Diseño.
+    const recompraNeedsDesign = reusaLogoAnterior && needsLogoAdjustment;
+
     const incompleteIdx = reusaLogoAnterior
       ? -1
       : activeLogos.findIndex(
