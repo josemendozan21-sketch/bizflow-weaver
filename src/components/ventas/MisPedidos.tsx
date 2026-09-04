@@ -947,6 +947,7 @@ const COLOR_OPTIONS = [
   "Azul",
   "Azul claro",
   "Aguamarina",
+  "Agua Marina",
   "Rojo",
   "Verde",
   "Verde lima",
