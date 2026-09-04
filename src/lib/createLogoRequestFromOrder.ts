@@ -15,7 +15,12 @@ interface OrderLogoData {
   clientComments?: string;
   additionalInstructions?: string;
   fromRecompra?: boolean;
+  /** Recompra que reutiliza un logo ya existente pero requiere ajuste */
+  previousLogoUrl?: string;
+  /** Pedido asociado, cuando ya existe al momento de crear la solicitud */
+  orderId?: string;
 }
+
 
 /**
  * Uploads the logo file and creates a design request automatically
