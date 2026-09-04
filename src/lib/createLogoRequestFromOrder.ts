@@ -105,6 +105,8 @@ export async function createLogoRequestFromOrder(
       additional_instructions: data.additionalInstructions || null,
       status: "pendiente_diseno",
       from_recompra: !!data.fromRecompra,
+      order_id: data.orderId || null,
+
     }).select("id").single();
 
     if (insertError) {
