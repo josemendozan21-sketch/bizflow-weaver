@@ -5,6 +5,8 @@ import { TrabajoDisenador } from "@/components/diseno/TrabajoDisenador";
 import { AprobacionAsesor } from "@/components/diseno/AprobacionAsesor";
 import { DisenosFinalizados } from "@/components/diseno/DisenosFinalizados";
 import LogosAtascados from "@/components/diseno/LogosAtascados";
+import PedidosSinSolicitud from "@/components/diseno/PedidosSinSolicitud";
+
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useMemo } from "react";
