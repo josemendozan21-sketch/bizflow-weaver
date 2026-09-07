@@ -142,7 +142,7 @@ export default function UnroutedOrdersPanel({ readOnly = false }: { readOnly?: b
           </div>
         </div>
         <p className="text-xs text-muted-foreground">
-          Pedidos aprobados o pendientes que aún no llegaron a los tableros de producción.
+          Pedidos aprobados o pendientes que esperan que Inventarios los rutee a producción. El asesor ya hizo su parte.
         </p>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -154,12 +154,13 @@ export default function UnroutedOrdersPanel({ readOnly = false }: { readOnly?: b
         )}
         {filtered.map((o) => {
           const age = daysSince(o.created_at);
-          const late = age > 2;
+          const late = age > 5;
+          const warn = age >= 2 && age <= 5;
           return (
             <div
               key={o.id}
               className={`flex flex-wrap items-center justify-between gap-3 rounded-md border p-3 ${
-                late ? "border-destructive/60 bg-destructive/5" : ""
+                late ? "border-destructive/60 bg-destructive/5" : warn ? "border-amber-500/60 bg-amber-500/5" : ""
               }`}
             >
               <div className="space-y-1">
@@ -169,10 +170,14 @@ export default function UnroutedOrdersPanel({ readOnly = false }: { readOnly?: b
                   <Badge variant="outline" className="text-[11px]">
                     {/sweat/i.test(o.brand) ? "Sweatspot" : "Magical Warmers"}
                   </Badge>
-                  <Badge variant={late ? "destructive" : "secondary"} className="text-[11px]">
-                    {age === 0 ? "hoy" : `${age} día(s)`}
+                  <Badge
+                    variant={late ? "destructive" : warn ? "outline" : "secondary"}
+                    className={`text-[11px] ${warn ? "border-amber-500 text-amber-600" : ""}`}
+                  >
+                    Esperando a Inventarios · {age === 0 ? "hoy" : `${age} día(s)`}
                   </Badge>
                 </div>
+
                 <p className="text-xs text-muted-foreground">
                   {o.quantity} uds · {o.product} · Asesor: {o.advisor_name || "—"}
                 </p>
