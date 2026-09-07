@@ -538,9 +538,23 @@ const WholesaleOrdersInbox = () => {
         toast.error(`Kit entregado pero no se pudo crear la orden de producción: ${e.message}`);
         return;
       }
+      const kitPartial = Number(partialQty);
+      if (kitPartial > 0) {
+        try {
+          await recordPartialDelivery(order, kitPartial, `Entrega parcial registrada con la salida de kit${obs ? ` — ${obs}` : ""}`);
+        } catch (e: any) {
+          setBusy(false);
+          toast.error(e.message);
+          return;
+        }
+      }
       setBusy(false);
-      toast.success(`Kit entregado a Estampación (${rows.map(r => `${r.q} ${r.c.key}`).join(", ")}).`);
+      toast.success(
+        `Kit entregado a Estampación (${rows.map(r => `${r.q} ${r.c.key}`).join(", ")}).` +
+        (kitPartial > 0 ? ` Se registraron ${kitPartial} uds entregadas del pedido.` : "")
+      );
       setDelivering(null);
+      qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["mayor-orders-inbox"] });
       qc.invalidateQueries({ queryKey: ["mayor-orders-delivered"] });
       qc.invalidateQueries({ queryKey: ["production_orders"] });
@@ -634,7 +648,22 @@ const WholesaleOrdersInbox = () => {
       toast.success(`${quantity} uds enviadas a ${TARGET_LABEL.estampacion}.`);
     }
 
+    if (target !== "produccion") {
+      const totalUnits = target === "logistica" && lineRows.length > 0
+        ? lineRows.reduce((sum, r) => sum + (Number(r.qty) || 0), 0)
+        : quantity;
+      if (totalUnits > 0 && totalUnits < (Number(order.quantity) || 0)) {
+        try {
+          await recordPartialDelivery(order, totalUnits, `Entrega parcial desde Inventarios${obs ? ` — ${obs}` : ""}`);
+          toast.info(`Registradas ${totalUnits} de ${order.quantity} uds. El pedido sigue abierto por el saldo.`);
+        } catch (e: any) {
+          toast.error(e.message);
+        }
+      }
+    }
+
     setDelivering(null);
+    qc.invalidateQueries({ queryKey: ["orders"] });
     qc.invalidateQueries({ queryKey: ["mayor-orders-inbox"] });
     qc.invalidateQueries({ queryKey: ["detal-orders-inbox"] });
     qc.invalidateQueries({ queryKey: ["mayor-orders-delivered"] });
