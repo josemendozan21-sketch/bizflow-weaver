@@ -1058,6 +1058,19 @@ const WholesaleOrdersInbox = () => {
                     )}
                   </div>
                 ))}
+                <div className="pt-2 border-t">
+                  <Label>Unidades del pedido entregadas (opcional)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="Deja vacío si aún no entregas unidades"
+                    value={partialQty}
+                    onChange={(e) => setPartialQty(e.target.value)}
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Úsalo para registrar una entrega por partes: el pedido queda abierto por el saldo pendiente.
+                  </p>
+                </div>
               </div>
             ) : delivering?.target === "logistica" && lineRows.length > 0 ? (
               <div className="space-y-3">
