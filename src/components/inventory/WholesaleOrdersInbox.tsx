@@ -48,6 +48,7 @@ interface MayorOrder {
   created_at: string;
   observations: string | null;
   is_recompra?: boolean | null;
+  delivered_quantity?: number | null;
 }
 
 const ACTIVE_STATUSES = [
@@ -182,6 +183,7 @@ const WholesaleOrdersInbox = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [kitQuantities, setKitQuantities] = useState<Record<string, string>>({});
   const [lineRows, setLineRows] = useState<Array<{ name: string; qty: string; stockItemId: string }>>([]);
+  const [partialQty, setPartialQty] = useState<string>("");
 
   // El tipo de plástico se deduce del producto del pedido (evita que una referencia
   // térmica se envíe a producción como fría por dejar el valor por defecto).
@@ -271,7 +273,7 @@ const WholesaleOrdersInbox = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id,order_code,line_index,line_count,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color,is_recompra")
+        .select("id,order_code,line_index,line_count,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color,is_recompra,delivered_quantity")
         .eq("sale_type", "mayor")
         .gte("created_at", "2026-05-15")
         .order("created_at", { ascending: false });
@@ -286,7 +288,7 @@ const WholesaleOrdersInbox = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id,order_code,line_index,line_count,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color,is_recompra")
+        .select("id,order_code,line_index,line_count,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color,is_recompra,delivered_quantity")
         .in("sale_type", ["menor", "detal"])
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -447,10 +449,28 @@ const WholesaleOrdersInbox = () => {
     return map;
   }, [orders, retailOrders]);
 
+  /** Registra una entrega por partes del pedido (aplica igual a Magical y Sweatspot). */
+  const recordPartialDelivery = async (order: MayorOrder, units: number, note?: string) => {
+    if (!user || !units || units <= 0) return;
+    const pending = (Number(order.quantity) || 0) - (Number(order.delivered_quantity) || 0);
+    if (units > pending) {
+      throw new Error(`Solo quedan ${pending} uds pendientes de entrega en este pedido`);
+    }
+    const { error } = await supabase.from("order_deliveries").insert({
+      order_id: order.id,
+      quantity: units,
+      delivered_by: user.id,
+      delivered_by_name: user.email || "Inventarios",
+      notes: note || null,
+    } as any);
+    if (error) throw new Error(error.message);
+  };
+
   const openDeliver = (order: MayorOrder, target: Target) => {
     setDelivering({ order, target });
     setQty(String(order.quantity));
     setObs("");
+    setPartialQty("");
     setPlastico("frio");
     if (order.brand === "sweatspot" && target === "estampacion") {
       const kit = buildSweatspotKit(order);
@@ -518,9 +538,23 @@ const WholesaleOrdersInbox = () => {
         toast.error(`Kit entregado pero no se pudo crear la orden de producción: ${e.message}`);
         return;
       }
+      const kitPartial = Number(partialQty);
+      if (kitPartial > 0) {
+        try {
+          await recordPartialDelivery(order, kitPartial, `Entrega parcial registrada con la salida de kit${obs ? ` — ${obs}` : ""}`);
+        } catch (e: any) {
+          setBusy(false);
+          toast.error(e.message);
+          return;
+        }
+      }
       setBusy(false);
-      toast.success(`Kit entregado a Estampación (${rows.map(r => `${r.q} ${r.c.key}`).join(", ")}).`);
+      toast.success(
+        `Kit entregado a Estampación (${rows.map(r => `${r.q} ${r.c.key}`).join(", ")}).` +
+        (kitPartial > 0 ? ` Se registraron ${kitPartial} uds entregadas del pedido.` : "")
+      );
       setDelivering(null);
+      qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["mayor-orders-inbox"] });
       qc.invalidateQueries({ queryKey: ["mayor-orders-delivered"] });
       qc.invalidateQueries({ queryKey: ["production_orders"] });
@@ -614,7 +648,22 @@ const WholesaleOrdersInbox = () => {
       toast.success(`${quantity} uds enviadas a ${TARGET_LABEL.estampacion}.`);
     }
 
+    if (target !== "produccion") {
+      const totalUnits = target === "logistica" && lineRows.length > 0
+        ? lineRows.reduce((sum, r) => sum + (Number(r.qty) || 0), 0)
+        : quantity;
+      if (totalUnits > 0 && totalUnits < (Number(order.quantity) || 0)) {
+        try {
+          await recordPartialDelivery(order, totalUnits, `Entrega parcial desde Inventarios${obs ? ` — ${obs}` : ""}`);
+          toast.info(`Registradas ${totalUnits} de ${order.quantity} uds. El pedido sigue abierto por el saldo.`);
+        } catch (e: any) {
+          toast.error(e.message);
+        }
+      }
+    }
+
     setDelivering(null);
+    qc.invalidateQueries({ queryKey: ["orders"] });
     qc.invalidateQueries({ queryKey: ["mayor-orders-inbox"] });
     qc.invalidateQueries({ queryKey: ["detal-orders-inbox"] });
     qc.invalidateQueries({ queryKey: ["mayor-orders-delivered"] });
@@ -1009,6 +1058,19 @@ const WholesaleOrdersInbox = () => {
                     )}
                   </div>
                 ))}
+                <div className="pt-2 border-t">
+                  <Label>Unidades del pedido entregadas (opcional)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="Deja vacío si aún no entregas unidades"
+                    value={partialQty}
+                    onChange={(e) => setPartialQty(e.target.value)}
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Úsalo para registrar una entrega por partes: el pedido queda abierto por el saldo pendiente.
+                  </p>
+                </div>
               </div>
             ) : delivering?.target === "logistica" && lineRows.length > 0 ? (
               <div className="space-y-3">

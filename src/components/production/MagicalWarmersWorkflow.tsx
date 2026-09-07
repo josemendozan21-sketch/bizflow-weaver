@@ -45,6 +45,7 @@ import { OperatorPromptDialog } from "./OperatorPromptDialog";
 import { StageLogsList } from "./StageLogsList";
 import { baseRefName } from "@/lib/canonicalBodyRef";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
+import ProductionDeliveryControl from "@/components/production/ProductionDeliveryControl";
 import { matchesQuery } from "@/lib/search";
 import { TERMINAL_STAGES } from "@/lib/orderFlow";
 
@@ -811,6 +812,14 @@ function OrderCard({ order, stageLogs, role, isAdmin, selected, onToggleSelect, 
             </Button>
           )}
         </div>
+
+        <ProductionDeliveryControl
+          orderId={order.order_id}
+          orderCode={order.order_code}
+          clientName={order.client_name}
+          product={order.molde || order.thermo_size}
+          quantity={order.quantity}
+        />
 
         <StageLogsList logs={stageLogs} stageLabels={STAGE_LABELS} />
       </CardContent>
