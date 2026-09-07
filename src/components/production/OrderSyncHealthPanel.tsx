@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AlertTriangle, Search, RefreshCw, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, Search, RefreshCw, CheckCircle2, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +25,9 @@ interface Issue {
   inkColor: string | null;
   gelColor: string | null;
   siliconeColor: string | null;
+  archived: boolean;
+  ageDays: number;
+  waitingInventory: boolean;
 }
 
 const ACTIVE_STATUSES = [
@@ -39,10 +42,21 @@ const ACTIVE_STATUSES = [
   "listo",
 ];
 
+const daysSince = (iso: string | null) =>
+  iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000) : 0;
+
+/** Semáforo de espera: verde <2 días, ámbar 2-5, rojo >5 */
+function waitTone(days: number): { variant: "secondary" | "outline" | "destructive"; className: string } {
+  if (days > 5) return { variant: "destructive", className: "" };
+  if (days >= 2) return { variant: "outline", className: "border-amber-500 text-amber-600" };
+  return { variant: "secondary", className: "" };
+}
+
 export default function OrderSyncHealthPanel({ readOnly = false }: { readOnly?: boolean }) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const { data: issues = [], isLoading } = useQuery({
     queryKey: ["order-sync-health"],
@@ -51,7 +65,7 @@ export default function OrderSyncHealthPanel({ readOnly = false }: { readOnly?: 
       const { data: orders, error } = await supabase
         .from("orders")
         .select(
-          "id, order_code, brand, client_name, product, quantity, advisor_name, sale_type, production_status, logo_url, ink_color, gel_color, silicone_color",
+          "id, order_code, brand, client_name, product, quantity, advisor_name, sale_type, production_status, logo_url, ink_color, gel_color, silicone_color, created_at, inventory_archived_at",
         )
         .eq("sale_type", "mayor")
         .in("production_status", ACTIVE_STATUSES)
@@ -73,8 +87,13 @@ export default function OrderSyncHealthPanel({ readOnly = false }: { readOnly?: 
       for (const o of list as any[]) {
         const p = byOrder.get(o.id);
         const problems: string[] = [];
+        const age = daysSince(o.created_at);
+        let waitingInventory = false;
         if (!p) {
-          problems.push("Sin orden de producción");
+          waitingInventory = true;
+          problems.push(
+            `Esperando ruteo de Inventarios — ${age === 0 ? "creado hoy" : `${age} día(s) de espera`} (el asesor ya hizo su parte)`,
+          );
         } else {
           if (Number(p.quantity) !== Number(o.quantity)) {
             problems.push(`Cantidades distintas: pedido ${o.quantity} vs producción ${p.quantity}`);
@@ -101,6 +120,9 @@ export default function OrderSyncHealthPanel({ readOnly = false }: { readOnly?: 
             inkColor: o.ink_color ?? null,
             gelColor: o.gel_color ?? null,
             siliconeColor: o.silicone_color ?? null,
+            archived: !!o.inventory_archived_at,
+            ageDays: age,
+            waitingInventory,
           });
         }
       }
@@ -108,10 +130,14 @@ export default function OrderSyncHealthPanel({ readOnly = false }: { readOnly?: 
     },
   });
 
-  const filtered = useMemo(() => {
+  const { pending, archived } = useMemo(() => {
     const q = search.trim();
-    if (!q) return issues;
-    return issues.filter((i) => matchesQuery([i.orderCode, i.clientName, i.product, i.advisorName, i.brand], q));
+    const match = (i: Issue) =>
+      !q || matchesQuery([i.orderCode, i.clientName, i.product, i.advisorName, i.brand], q);
+    return {
+      pending: issues.filter((i) => !i.archived && match(i)),
+      archived: issues.filter((i) => i.archived && match(i)),
+    };
   }, [issues, search]);
 
   const resync = async (i: Issue) => {
@@ -150,6 +176,52 @@ export default function OrderSyncHealthPanel({ readOnly = false }: { readOnly?: 
     }
   };
 
+  const renderIssue = (i: Issue, muted = false) => {
+    const tone = waitTone(i.ageDays);
+    return (
+      <div
+        key={i.orderId}
+        className={`flex flex-wrap items-center justify-between gap-3 rounded-md border p-3 ${
+          muted ? "opacity-70" : ""
+        }`}
+      >
+        <div className="space-y-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            {i.orderCode && <OrderCodeBadge code={i.orderCode} />}
+            <span className="text-sm font-medium">{i.clientName}</span>
+            <Badge variant="outline" className="text-[11px]">
+              {/sweat/i.test(i.brand) ? "Sweatspot" : "Magical Warmers"}
+            </Badge>
+            {i.waitingInventory && !muted && (
+              <Badge variant={tone.variant} className={`text-[11px] ${tone.className}`}>
+                {i.ageDays === 0 ? "hoy" : `${i.ageDays} día(s)`}
+              </Badge>
+            )}
+            {muted && (
+              <Badge variant="secondary" className="text-[11px]">
+                Atendido por Inventarios
+              </Badge>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {i.orderQty} uds · {i.product} · Asesor: {i.advisorName || "—"}
+          </p>
+          <ul className={`text-xs list-disc pl-4 ${muted ? "text-muted-foreground" : "text-destructive"}`}>
+            {i.problems.map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ul>
+        </div>
+        {!readOnly && i.prodId && (
+          <Button size="sm" variant="outline" disabled={busy === i.orderId} onClick={() => resync(i)}>
+            <RefreshCw className="h-4 w-4 mr-1" />
+            {busy === i.orderId ? "Sincronizando…" : "Resincronizar"}
+          </Button>
+        )}
+      </div>
+    );
+  };
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -157,7 +229,7 @@ export default function OrderSyncHealthPanel({ readOnly = false }: { readOnly?: 
           <CardTitle className="text-base flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-amber-600" />
             Pedidos con problemas de sincronización
-            <Badge variant={issues.length > 0 ? "destructive" : "secondary"}>{issues.length}</Badge>
+            <Badge variant={pending.length > 0 ? "destructive" : "secondary"}>{pending.length}</Badge>
           </CardTitle>
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -175,38 +247,26 @@ export default function OrderSyncHealthPanel({ readOnly = false }: { readOnly?: 
       </CardHeader>
       <CardContent className="space-y-2">
         {isLoading && <p className="text-sm text-muted-foreground">Cargando…</p>}
-        {!isLoading && filtered.length === 0 && (
+        {!isLoading && pending.length === 0 && (
           <p className="text-sm text-muted-foreground py-4 text-center flex items-center justify-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-green-600" /> Todos los pedidos están sincronizados.
           </p>
         )}
-        {filtered.map((i) => (
-          <div key={i.orderId} className="flex flex-wrap items-center justify-between gap-3 rounded-md border p-3">
-            <div className="space-y-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                {i.orderCode && <OrderCodeBadge code={i.orderCode} />}
-                <span className="text-sm font-medium">{i.clientName}</span>
-                <Badge variant="outline" className="text-[11px]">
-                  {/sweat/i.test(i.brand) ? "Sweatspot" : "Magical Warmers"}
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {i.orderQty} uds · {i.product} · Asesor: {i.advisorName || "—"}
-              </p>
-              <ul className="text-xs text-destructive list-disc pl-4">
-                {i.problems.map((p) => (
-                  <li key={p}>{p}</li>
-                ))}
-              </ul>
-            </div>
-            {!readOnly && i.prodId && (
-              <Button size="sm" variant="outline" disabled={busy === i.orderId} onClick={() => resync(i)}>
-                <RefreshCw className="h-4 w-4 mr-1" />
-                {busy === i.orderId ? "Sincronizando…" : "Resincronizar"}
-              </Button>
-            )}
+        {pending.map((i) => renderIssue(i))}
+
+        {archived.length > 0 && (
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => setShowArchived((v) => !v)}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            >
+              {showArchived ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+              Ya atendidos por Inventarios ({archived.length})
+            </button>
+            {showArchived && <div className="space-y-2 mt-2">{archived.map((i) => renderIssue(i, true))}</div>}
           </div>
-        ))}
+        )}
       </CardContent>
     </Card>
   );
