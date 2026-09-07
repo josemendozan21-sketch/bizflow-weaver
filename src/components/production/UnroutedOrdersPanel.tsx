@@ -40,6 +40,7 @@ export default function UnroutedOrdersPanel({ readOnly = false }: { readOnly?: b
         .from("orders")
         .select("id, order_code, brand, client_name, product, quantity, advisor_name, advisor_id, delivery_date, logo_file, created_at")
         .in("production_status", ["pendiente", "aprobado"])
+        .is("inventory_archived_at", null)
         .order("created_at", { ascending: true });
       if (error) throw error;
       const list = (pending ?? []) as unknown as UnroutedOrder[];
@@ -51,10 +52,39 @@ export default function UnroutedOrdersPanel({ readOnly = false }: { readOnly?: b
         .in("order_id", list.map((o) => o.id));
       if (poErr) throw poErr;
       const routed = new Set((pos ?? []).map((p: { order_id: string }) => p.order_id));
-      return list.filter((o) => !routed.has(o.id));
+      const unrouted = list.filter((o) => !routed.has(o.id));
+
+      // Aviso a Inventarios por cada pedido con más de 2 días sin rutear (una sola vez por pedido)
+      if (!readOnly) {
+        const late = unrouted.filter((o) => daysSince(o.created_at) > 2);
+        if (late.length > 0) {
+          const { data: already } = await supabase
+            .from("notifications")
+            .select("reference_id")
+            .eq("target_role", "inventarios")
+            .eq("title", "Pedido sin rutear a producción")
+            .in("reference_id", late.map((o) => o.id));
+          const notified = new Set((already ?? []).map((n: { reference_id: string | null }) => n.reference_id));
+          const rows = late
+            .filter((o) => !notified.has(o.id))
+            .map((o) => ({
+              target_role: "inventarios",
+              title: "Pedido sin rutear a producción",
+              message: `${o.order_code ? o.order_code + " — " : ""}${o.client_name}: ${o.quantity} uds de "${o.product}" llevan ${daysSince(o.created_at)} día(s) esperando ruteo.`,
+              type: "warning",
+              reference_id: o.id,
+            }));
+          if (rows.length > 0) {
+            await supabase.from("notifications").insert(rows as never);
+          }
+        }
+      }
+
+      return unrouted;
     },
     refetchInterval: 60_000,
   });
+
 
   const filtered = useMemo(() => {
     const q = search.trim();
@@ -112,7 +142,7 @@ export default function UnroutedOrdersPanel({ readOnly = false }: { readOnly?: b
           </div>
         </div>
         <p className="text-xs text-muted-foreground">
-          Pedidos aprobados o pendientes que aún no llegaron a los tableros de producción.
+          Pedidos aprobados o pendientes que esperan que Inventarios los rutee a producción. El asesor ya hizo su parte.
         </p>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -124,12 +154,13 @@ export default function UnroutedOrdersPanel({ readOnly = false }: { readOnly?: b
         )}
         {filtered.map((o) => {
           const age = daysSince(o.created_at);
-          const late = age > 2;
+          const late = age > 5;
+          const warn = age >= 2 && age <= 5;
           return (
             <div
               key={o.id}
               className={`flex flex-wrap items-center justify-between gap-3 rounded-md border p-3 ${
-                late ? "border-destructive/60 bg-destructive/5" : ""
+                late ? "border-destructive/60 bg-destructive/5" : warn ? "border-amber-500/60 bg-amber-500/5" : ""
               }`}
             >
               <div className="space-y-1">
@@ -139,10 +170,14 @@ export default function UnroutedOrdersPanel({ readOnly = false }: { readOnly?: b
                   <Badge variant="outline" className="text-[11px]">
                     {/sweat/i.test(o.brand) ? "Sweatspot" : "Magical Warmers"}
                   </Badge>
-                  <Badge variant={late ? "destructive" : "secondary"} className="text-[11px]">
-                    {age === 0 ? "hoy" : `${age} día(s)`}
+                  <Badge
+                    variant={late ? "destructive" : warn ? "outline" : "secondary"}
+                    className={`text-[11px] ${warn ? "border-amber-500 text-amber-600" : ""}`}
+                  >
+                    Esperando a Inventarios · {age === 0 ? "hoy" : `${age} día(s)`}
                   </Badge>
                 </div>
+
                 <p className="text-xs text-muted-foreground">
                   {o.quantity} uds · {o.product} · Asesor: {o.advisor_name || "—"}
                 </p>
