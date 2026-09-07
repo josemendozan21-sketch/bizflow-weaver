@@ -42,6 +42,9 @@ export function useOrderDeliveries(orderId?: string | null) {
     queryClient.invalidateQueries({ queryKey: ["orders"] });
     queryClient.invalidateQueries({ queryKey: ["all-orders"] });
     queryClient.invalidateQueries({ queryKey: ["production-orders"] });
+    queryClient.invalidateQueries({ queryKey: ["orders-delivery-progress"] });
+    queryClient.invalidateQueries({ queryKey: ["mayor-orders-inbox"] });
+    queryClient.invalidateQueries({ queryKey: ["detal-orders-inbox"] });
   };
 
   const addDelivery = useMutation({
