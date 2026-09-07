@@ -703,6 +703,16 @@ const WholesaleOrdersInbox = () => {
           ? <Badge className="bg-amber-500 hover:bg-amber-600 text-white">Stock parcial: {stock} / {o.quantity}</Badge>
           : <Badge variant="destructive">Sin stock</Badge>;
 
+    const sampleApproved = !o.sample_status || o.sample_status === "muestra_aprobada";
+    const sampleBlocked = kind === "mayor" && !sampleApproved && role !== "admin";
+    const sampleTitle = sampleBlocked ? "Esperando aprobación de la muestra por Estampación" : undefined;
+    const SAMPLE_LABEL: Record<string, string> = {
+      pendiente_muestra: "Pendiente de muestra",
+      muestra_enviada: "Muestra enviada",
+      muestra_aprobada: "Muestra aprobada",
+      muestra_rechazada: "Muestra rechazada",
+    };
+
     return (
       <Card key={o.id} className={isDelivered ? "opacity-60" : ""}>
         <CardContent className="p-4 space-y-3">
@@ -717,6 +727,11 @@ const WholesaleOrdersInbox = () => {
                   <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">Recompra</Badge>
                 )}
                 {isDelivered && <Badge variant="secondary">Entregado</Badge>}
+                {kind === "mayor" && o.sample_status && o.sample_status !== "muestra_aprobada" && (
+                  <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800">
+                    {SAMPLE_LABEL[o.sample_status] ?? o.sample_status}
+                  </Badge>
+                )}
               </div>
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                 <OrderCodeBadge code={o.order_code} lineIndex={o.line_index} lineCount={o.line_count} compact />
@@ -773,6 +788,13 @@ const WholesaleOrdersInbox = () => {
             </div>
           )}
 
+          {!isDelivered && kind === "mayor" && !sampleApproved && (
+            <div className="text-xs rounded border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-2 text-amber-900 dark:text-amber-200">
+              Esperando aprobación de la muestra por Estampación
+              {role === "admin" ? " — como administrador puedes entregar de todas formas." : ". La entrega de cuerpos está bloqueada."}
+            </div>
+          )}
+
           {!isDelivered && (
             kind === "detal" ? (
               <div className="pt-1 flex gap-2">
@@ -791,12 +813,13 @@ const WholesaleOrdersInbox = () => {
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant={markableEnough ? "default" : "outline"} className="flex-1 min-w-[150px] gap-1.5"
                     onClick={() => openDeliver(o, "terminado")}
-                    disabled={!markable}
-                    title={markable ? `Termos SIN LOGO disponibles: ${markableStock}` : "Sin termos SIN LOGO que coincidan con color y tamaño"}>
+                    disabled={!markable || sampleBlocked}
+                    title={sampleTitle ?? (markable ? `Termos SIN LOGO disponibles: ${markableStock}` : "Sin termos SIN LOGO que coincidan con color y tamaño")}>
                     <PackageCheck className="h-3.5 w-3.5" />
                     Entregar termos (marcar) {markable ? `(${markableStock})` : "(sin stock)"}
                   </Button>
                   <Button size="sm" variant={markableEnough ? "outline" : "default"} className="flex-1 min-w-[150px] gap-1.5"
+                    disabled={sampleBlocked} title={sampleTitle}
                     onClick={() => openDeliver(o, "estampacion")}>
                     <Paintbrush className="h-3.5 w-3.5" /> Salir kit
                   </Button>
@@ -811,14 +834,15 @@ const WholesaleOrdersInbox = () => {
               <div className="flex flex-wrap gap-2 pt-1">
                 <Button size="sm" variant={enough ? "default" : "outline"} className="flex-1 min-w-[150px] gap-1.5"
                   onClick={() => openDeliver(o, "estampacion")}
-                  disabled={!enough}
-                  title={enough ? "Enviar cuerpos a Estampación" : "No hay inventario suficiente: solicita producción"}>
+                  disabled={!enough || sampleBlocked}
+                  title={sampleTitle ?? (enough ? "Enviar cuerpos a Estampación" : "No hay inventario suficiente: solicita producción")}>
                   <Paintbrush className="h-3.5 w-3.5" /> Enviar a Estampación
                 </Button>
                 {!enough && (
                   <Button size="sm" variant="default" className="flex-1 min-w-[150px] gap-1.5"
                     onClick={() => openDeliver(o, "produccion")}
-                    title="El sistema crea la orden de producción con la referencia y cantidad del pedido">
+                    disabled={sampleBlocked}
+                    title={sampleTitle ?? "El sistema crea la orden de producción con la referencia y cantidad del pedido"}>
                     <Factory className="h-3.5 w-3.5" /> Solicitar Producción
                   </Button>
                 )}
