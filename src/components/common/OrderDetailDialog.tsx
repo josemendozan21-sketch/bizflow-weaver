@@ -29,6 +29,12 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
+const SAMPLE_LABEL: Record<string, string> = {
+  pendiente_muestra: "Pendiente de muestra",
+  muestra_enviada: "Muestra enviada",
+  muestra_aprobada: "Muestra aprobada",
+  muestra_rechazada: "Muestra rechazada",
+};
 const money = (n: unknown) => `$${(Number(n) || 0).toLocaleString("es-CO")}`;
 const date = (v?: string | null, withTime = false) =>
   v ? format(new Date(v), withTime ? "d MMM yyyy, h:mm a" : "d MMM yyyy", { locale: es }) : "—";
