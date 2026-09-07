@@ -44,6 +44,6 @@ Producción continúa normal
 - Backfill: pedidos con `production_status` distinto de `pendiente` → `muestra_aprobada`.
 - Trigger `AFTER UPDATE` en `orders` que inserta la notificación a `target_role: 'inventarios'` cuando `sample_status` pasa a `muestra_aprobada` (deduplicada por pedido).
 - RLS: escritura de los campos de muestra para `estampacion`, `produccion` y `admin`; lectura para los roles que ya ven el pedido.
-- `EstampacionProductionView.tsx`: quitar el filtro por `approvedLogoClients` en la pestaña "Por ingresar"; renombrarla "Muestras" con sub-filtros por estado y los controles de cambio de estado.
+- `EstampacionProductionView.tsx`: la pestaña "Por ingresar" pasa a "Muestras" y mantiene el filtro por logo aprobado en Diseño (`logo_requests.status = 'aprobado'` enlazado por `order_id`, más recompras con logo). Se agrega una sección aparte "En diseño" (solo lectura) con los pedidos cuyo logo sigue en revisión, y los controles de cambio de estado de muestra.
 - `WholesaleOrdersInbox.tsx`: leer `sample_status`, deshabilitar `openDeliver` cuando no esté aprobada, badge de estado y override para admin.
 - Reflejar el estado en `MisPedidos.tsx` (Ventas) y en `OrderQuickView` / `OrderDetailDialog`.
