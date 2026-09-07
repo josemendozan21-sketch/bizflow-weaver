@@ -121,6 +121,13 @@ export default function OrderDetailDialog({ orderId, orderCode, open, onOpenChan
                 <Badge variant="outline">{order.brand === "sweatspot" ? "Sweatspot" : "Magical Warmers"}</Badge>
                 <Badge variant="outline">{order.sale_type === "menor" ? "Al detal" : "Al por mayor"}</Badge>
                 {order.is_recompra && <Badge variant="secondary">Recompra</Badge>}
+                {(order as { sample_status?: string | null }).sample_status &&
+                  (order as { sample_status?: string | null }).sample_status !== "muestra_aprobada" && (
+                    <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800">
+                      {SAMPLE_LABEL[(order as { sample_status?: string }).sample_status as string] ??
+                        (order as { sample_status?: string }).sample_status}
+                    </Badge>
+                  )}
                 {order.is_credit && <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Crédito</Badge>}
                 {!restricted &&
                   (fullyPaid ? (
