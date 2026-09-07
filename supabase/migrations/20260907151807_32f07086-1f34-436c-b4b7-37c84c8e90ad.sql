@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.notify_inventarios_sample_approved() FROM PUBLIC, anon, authenticated;

@@ -29,6 +29,12 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
+const SAMPLE_LABEL: Record<string, string> = {
+  pendiente_muestra: "Pendiente de muestra",
+  muestra_enviada: "Muestra enviada",
+  muestra_aprobada: "Muestra aprobada",
+  muestra_rechazada: "Muestra rechazada",
+};
 const money = (n: unknown) => `$${(Number(n) || 0).toLocaleString("es-CO")}`;
 const date = (v?: string | null, withTime = false) =>
   v ? format(new Date(v), withTime ? "d MMM yyyy, h:mm a" : "d MMM yyyy", { locale: es }) : "—";
@@ -121,6 +127,13 @@ export default function OrderDetailDialog({ orderId, orderCode, open, onOpenChan
                 <Badge variant="outline">{order.brand === "sweatspot" ? "Sweatspot" : "Magical Warmers"}</Badge>
                 <Badge variant="outline">{order.sale_type === "menor" ? "Al detal" : "Al por mayor"}</Badge>
                 {order.is_recompra && <Badge variant="secondary">Recompra</Badge>}
+                {(order as { sample_status?: string | null }).sample_status &&
+                  (order as { sample_status?: string | null }).sample_status !== "muestra_aprobada" && (
+                    <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800">
+                      {SAMPLE_LABEL[(order as { sample_status?: string }).sample_status as string] ??
+                        (order as { sample_status?: string }).sample_status}
+                    </Badge>
+                  )}
                 {order.is_credit && <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Crédito</Badge>}
                 {!restricted &&
                   (fullyPaid ? (
