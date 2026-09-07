@@ -48,6 +48,7 @@ interface MayorOrder {
   created_at: string;
   observations: string | null;
   is_recompra?: boolean | null;
+  delivered_quantity?: number | null;
 }
 
 const ACTIVE_STATUSES = [
@@ -271,7 +272,7 @@ const WholesaleOrdersInbox = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id,order_code,line_index,line_count,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color,is_recompra")
+        .select("id,order_code,line_index,line_count,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color,is_recompra,delivered_quantity")
         .eq("sale_type", "mayor")
         .gte("created_at", "2026-05-15")
         .order("created_at", { ascending: false });
@@ -286,7 +287,7 @@ const WholesaleOrdersInbox = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id,order_code,line_index,line_count,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color,is_recompra")
+        .select("id,order_code,line_index,line_count,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color,is_recompra,delivered_quantity")
         .in("sale_type", ["menor", "detal"])
         .order("created_at", { ascending: false });
       if (error) throw error;
