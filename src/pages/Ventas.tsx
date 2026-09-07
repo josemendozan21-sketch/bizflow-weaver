@@ -81,31 +81,68 @@ const Ventas = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Ventas</h1>
-        <p className="text-muted-foreground">Gestión de cotizaciones y pedidos</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Ventas</h1>
+          <p className="text-muted-foreground">Gestión de cotizaciones y pedidos</p>
+        </div>
+        <ViewTour
+          tourKey="ventas"
+          steps={[
+            {
+              selector: '[data-tour="ventas-tabs"]',
+              title: "Todo empieza en las pestañas",
+              body: "Cada pestaña es una tarea: crear pedidos, hacerles seguimiento, cotizar, ver tu resumen, tus comisiones y el calendario. En celular desliza la barra o usa las flechas.",
+            },
+            {
+              selector: '[data-tour="ventas-nuevo"]',
+              title: "Crear un pedido",
+              body: "Aquí montas un pedido nuevo en 3 pasos: marca, tipo de venta y datos del pedido. Al final se reserva el inventario automáticamente.",
+            },
+            {
+              selector: '[data-tour="ventas-mis-pedidos"]',
+              title: "Seguimiento a tus pedidos",
+              body: "Consulta el estado de cada pedido, ajusta cantidades o valor mientras no esté cerrado, registra entregas parciales y sube soportes de pago. Usa Ctrl+K para buscar cualquier pedido.",
+            },
+            {
+              selector: '[data-tour="ventas-cotizaciones"]',
+              title: "Cotizaciones",
+              body: "Genera y descarga cotizaciones para tus clientes antes de confirmar el pedido.",
+            },
+            {
+              selector: '[data-tour="ventas-comisiones"]',
+              title: "Comisiones",
+              body: "Mira cuánto llevas ganado, qué pedidos cuentan y por qué, y reporta a Contabilidad si un abono quedó mal registrado.",
+            },
+            {
+              selector: '[data-tour="ventas-calendario"]',
+              title: "Calendario del punto",
+              body: "Actividades, horarios del asesor del punto, días cerrados y avisos de personal adicional.",
+            },
+          ]}
+        />
       </div>
 
       <Tabs defaultValue="pedidos" className="w-full">
-        <TabsList>
-          <TabsTrigger value="pedidos" className="gap-1.5">
+        <TabsList data-tour="ventas-tabs">
+          <TabsTrigger value="pedidos" className="gap-1.5" data-tour="ventas-nuevo">
             <ShoppingCart className="h-4 w-4" /> Nuevo Pedido
           </TabsTrigger>
-          <TabsTrigger value="mis-pedidos" className="gap-1.5">
+          <TabsTrigger value="mis-pedidos" className="gap-1.5" data-tour="ventas-mis-pedidos">
             <ClipboardList className="h-4 w-4" /> Mis Pedidos
           </TabsTrigger>
-          <TabsTrigger value="cotizaciones" className="gap-1.5">
+          <TabsTrigger value="cotizaciones" className="gap-1.5" data-tour="ventas-cotizaciones">
             <FileText className="h-4 w-4" /> Cotizaciones
           </TabsTrigger>
           <TabsTrigger value="resumen" className="gap-1.5">
             <BarChart3 className="h-4 w-4" /> Resumen
           </TabsTrigger>
           {showCommissions && (
-            <TabsTrigger value="comisiones" className="gap-1.5">
+            <TabsTrigger value="comisiones" className="gap-1.5" data-tour="ventas-comisiones">
               <Percent className="h-4 w-4" /> Comisiones
             </TabsTrigger>
           )}
-          <TabsTrigger value="calendario" className="gap-1.5">
+          <TabsTrigger value="calendario" className="gap-1.5" data-tour="ventas-calendario">
             <CalendarDays className="h-4 w-4" /> Calendario
           </TabsTrigger>
         </TabsList>
