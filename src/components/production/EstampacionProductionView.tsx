@@ -46,6 +46,7 @@ interface BodyStockItem {
 
 interface LogoRequestInfo {
   id: string;
+  order_id?: string | null;
   status: string;
   adjusted_logo_url: string | null;
   original_logo_url: string;
@@ -81,7 +82,15 @@ interface PendingIntakeOrder {
   observations?: string | null;
   advisor_id?: string | null;
   delivered_quantity?: number | null;
+  sample_status?: string | null;
 }
+
+const SAMPLE_LABEL: Record<string, string> = {
+  pendiente_muestra: "Pendiente de muestra",
+  muestra_enviada: "Muestra enviada",
+  muestra_aprobada: "Muestra aprobada",
+  muestra_rechazada: "Muestra rechazada",
+};
 
 const STATUS_BADGE: Record<string, { label: string; variant: "secondary" | "default" | "outline" }> = {
   pendiente: { label: "Pendiente", variant: "secondary" },
@@ -125,6 +134,39 @@ export const EstampacionProductionView = () => {
       toast.error((e as Error).message || "No se pudo recibir el pedido");
     } finally {
       setReceivingId(null);
+    }
+  };
+
+  const [sampleBusyId, setSampleBusyId] = useState<string | null>(null);
+
+  const setSampleStatus = async (
+    orderId: string,
+    status: "muestra_enviada" | "muestra_aprobada" | "muestra_rechazada",
+    reason?: string
+  ) => {
+    setSampleBusyId(orderId);
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({
+          sample_status: status,
+          sample_approved_at: status === "muestra_aprobada" ? new Date().toISOString() : null,
+          sample_reject_reason: status === "muestra_rechazada" ? reason ?? null : null,
+        } as never)
+        .eq("id", orderId);
+      if (error) throw error;
+      toast.success(
+        status === "muestra_aprobada"
+          ? "Muestra aprobada. Inventarios fue notificado para entregar los cuerpos."
+          : status === "muestra_enviada"
+            ? "Muestra marcada como enviada al cliente."
+            : "Muestra marcada como rechazada."
+      );
+      qc.invalidateQueries({ queryKey: ["orders_pending_intake_estampacion"] });
+    } catch (e) {
+      toast.error((e as Error).message || "No se pudo actualizar el estado de la muestra");
+    } finally {
+      setSampleBusyId(null);
     }
   };
 
@@ -182,7 +224,7 @@ export const EstampacionProductionView = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("logo_requests")
-        .select("id, status, adjusted_logo_url, original_logo_url, client_name");
+        .select("id, order_id, status, adjusted_logo_url, original_logo_url, client_name");
       if (error) throw error;
       return (data ?? []) as LogoRequestInfo[];
     },
@@ -199,7 +241,7 @@ export const EstampacionProductionView = () => {
       const { data, error } = await supabase
         .from("orders")
         .select(
-          "id, order_code, client_name, brand, product, quantity, advisor_name, delivery_date, created_at, production_status, ink_color, ink_count, ink_color_2, ink_color_3, glitter_color, gel_color, silicone_color, logo_url, logo_url_2, logos, logo_count, logo_name, logo_name_2, line_index, line_count, is_recompra, observations, advisor_id, delivered_quantity"
+          "id, order_code, client_name, brand, product, quantity, advisor_name, delivery_date, created_at, production_status, ink_color, ink_count, ink_color_2, ink_color_3, glitter_color, gel_color, silicone_color, logo_url, logo_url_2, logos, logo_count, logo_name, logo_name_2, line_index, line_count, is_recompra, observations, advisor_id, delivered_quantity, sample_status"
         )
         .eq("production_status", "pendiente")
         .is("inventory_archived_at", null)
@@ -209,9 +251,17 @@ export const EstampacionProductionView = () => {
     },
   });
 
+  const APPROVED_LOGO_STATUSES = ["aprobado", "finalizado"];
+  // Emparejamos por pedido (enlace directo solicitud → pedido). El match por nombre
+  // solo queda como respaldo para solicitudes antiguas sin enlace.
+  const approvedLogoOrderIds = new Set(
+    logoRequests
+      .filter((lr) => APPROVED_LOGO_STATUSES.includes(lr.status) && lr.order_id)
+      .map((lr) => lr.order_id as string)
+  );
   const approvedLogoClients = new Set(
     logoRequests
-      .filter((lr) => lr.status === "aprobado")
+      .filter((lr) => APPROVED_LOGO_STATUSES.includes(lr.status) && !lr.order_id)
       .map((lr) => lr.client_name.trim().toLowerCase())
   );
   const orderIdsWithProductionOrder = new Set(
@@ -219,8 +269,10 @@ export const EstampacionProductionView = () => {
   );
   const pendingIntake = (pendingIntakeQuery.data ?? []).filter(
     (o) =>
-      // Logo aprobado por diseño, o recompra con logo ya guardado (no genera solicitud nueva)
-      (approvedLogoClients.has(o.client_name.trim().toLowerCase()) ||
+      // Logo aprobado por diseño (enlace por pedido, con respaldo por nombre),
+      // o recompra con logo ya guardado (no genera solicitud nueva)
+      (approvedLogoOrderIds.has(o.id) ||
+        approvedLogoClients.has(o.client_name.trim().toLowerCase()) ||
         (Boolean(o.is_recompra) && Boolean(o.logo_url))) &&
       !orderIdsWithProductionOrder.has(o.id)
   );
@@ -332,9 +384,11 @@ export const EstampacionProductionView = () => {
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
             {pendingIntake.map((o) => {
-              const lr = logoRequests.find(
-                (l) => l.client_name.trim().toLowerCase() === o.client_name.trim().toLowerCase()
-              );
+              const lr =
+                logoRequests.find((l) => l.order_id === o.id) ??
+                logoRequests.find(
+                  (l) => l.client_name.trim().toLowerCase() === o.client_name.trim().toLowerCase()
+                );
               const lrUrl = lr?.adjusted_logo_url || lr?.original_logo_url || o.logo_url || null;
               return (
               <Card key={o.id}>
@@ -413,6 +467,46 @@ export const EstampacionProductionView = () => {
                       </a>
                     </div>
                   )}
+                  <div className="rounded-md border p-2 mt-2 space-y-2">
+                    <p className="text-[11px] font-medium text-muted-foreground">
+                      Muestra: {SAMPLE_LABEL[o.sample_status ?? "pendiente_muestra"]}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 min-w-[110px]"
+                        disabled={sampleBusyId === o.id}
+                        onClick={() => setSampleStatus(o.id, "muestra_enviada")}
+                      >
+                        Muestra enviada
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="flex-1 min-w-[110px]"
+                        disabled={sampleBusyId === o.id}
+                        onClick={() => setSampleStatus(o.id, "muestra_aprobada")}
+                      >
+                        <CheckCircle2 className="h-3 w-3 mr-1" /> Muestra aprobada
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 min-w-[110px]"
+                        disabled={sampleBusyId === o.id}
+                        onClick={() => {
+                          const reason = window.prompt("Motivo del rechazo de la muestra:") ?? undefined;
+                          if (reason === undefined) return;
+                          setSampleStatus(o.id, "muestra_rechazada", reason);
+                        }}
+                      >
+                        Muestra rechazada
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Inventarios solo puede entregar los cuerpos cuando la muestra está aprobada.
+                    </p>
+                  </div>
                   <Button
                     size="sm"
                     className="w-full mt-2"
