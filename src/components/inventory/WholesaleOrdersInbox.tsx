@@ -183,6 +183,7 @@ const WholesaleOrdersInbox = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [kitQuantities, setKitQuantities] = useState<Record<string, string>>({});
   const [lineRows, setLineRows] = useState<Array<{ name: string; qty: string; stockItemId: string }>>([]);
+  const [partialQty, setPartialQty] = useState<string>("");
 
   // El tipo de plástico se deduce del producto del pedido (evita que una referencia
   // térmica se envíe a producción como fría por dejar el valor por defecto).
@@ -448,10 +449,28 @@ const WholesaleOrdersInbox = () => {
     return map;
   }, [orders, retailOrders]);
 
+  /** Registra una entrega por partes del pedido (aplica igual a Magical y Sweatspot). */
+  const recordPartialDelivery = async (order: MayorOrder, units: number, note?: string) => {
+    if (!user || !units || units <= 0) return;
+    const pending = (Number(order.quantity) || 0) - (Number(order.delivered_quantity) || 0);
+    if (units > pending) {
+      throw new Error(`Solo quedan ${pending} uds pendientes de entrega en este pedido`);
+    }
+    const { error } = await supabase.from("order_deliveries").insert({
+      order_id: order.id,
+      quantity: units,
+      delivered_by: user.id,
+      delivered_by_name: user.email || "Inventarios",
+      notes: note || null,
+    } as any);
+    if (error) throw new Error(error.message);
+  };
+
   const openDeliver = (order: MayorOrder, target: Target) => {
     setDelivering({ order, target });
     setQty(String(order.quantity));
     setObs("");
+    setPartialQty("");
     setPlastico("frio");
     if (order.brand === "sweatspot" && target === "estampacion") {
       const kit = buildSweatspotKit(order);
