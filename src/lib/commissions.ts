@@ -55,8 +55,14 @@ function num(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-/** Flete cobrado en el pedido (ya viene incluido dentro de total_amount). */
+/**
+ * Flete a descontar de la base de comisión.
+ * En pedidos históricos el flete venía incluido dentro de total_amount, por lo
+ * que debe restarse. Cuando el envío se registró con el panel de envío
+ * (shipping_set_at), el flete va aparte del total y no hay nada que restar.
+ */
 export function getShippingCost(o: Order): number {
+  if ((o as any).shipping_set_at) return 0;
   return num((o as any).shipping_cost);
 }
 
