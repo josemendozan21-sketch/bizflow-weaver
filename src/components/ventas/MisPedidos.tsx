@@ -22,6 +22,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { PaymentsList } from "./PaymentsList";
 import { AddPaymentDialog } from "./AddPaymentDialog";
 import { PendingProofPanel } from "./PendingProofPanel";
+import { OrderShippingPanel } from "./OrderShippingPanel";
 
 import { matchesQuery } from "@/lib/search";
 import { useOrderCharges } from "@/hooks/useOrderCharges";
