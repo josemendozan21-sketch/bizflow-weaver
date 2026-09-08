@@ -821,7 +821,9 @@ function PaymentConfirmDialog({ order }: { order: Order }) {
         payment_complete: true,
         payment_proof_url: finalProofUrl,
         abono: Number(order.total_amount) || 0,
-      }).eq("id", order.id);
+        // El saldo cobrado incluyó el envío: queda como pagado dentro de los anticipos
+        ...(order.shipping_payment_mode === "por_cobrar" ? { shipping_payment_mode: "incluido_anticipos" } : {}),
+      } as never).eq("id", order.id);
 
       if (error) throw error;
 
