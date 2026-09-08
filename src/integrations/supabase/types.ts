@@ -2335,6 +2335,9 @@ export type Database = {
           sample_reject_reason: string | null
           sample_status: string
           shipping_cost: number | null
+          shipping_payment_mode: string
+          shipping_set_at: string | null
+          shipping_set_by_name: string | null
           silicone_color: string | null
           stamping_completed_at: string | null
           stamping_due_date: string | null
@@ -2417,6 +2420,9 @@ export type Database = {
           sample_reject_reason?: string | null
           sample_status?: string
           shipping_cost?: number | null
+          shipping_payment_mode?: string
+          shipping_set_at?: string | null
+          shipping_set_by_name?: string | null
           silicone_color?: string | null
           stamping_completed_at?: string | null
           stamping_due_date?: string | null
@@ -2499,6 +2505,9 @@ export type Database = {
           sample_reject_reason?: string | null
           sample_status?: string
           shipping_cost?: number | null
+          shipping_payment_mode?: string
+          shipping_set_at?: string | null
+          shipping_set_by_name?: string | null
           silicone_color?: string | null
           stamping_completed_at?: string | null
           stamping_due_date?: string | null

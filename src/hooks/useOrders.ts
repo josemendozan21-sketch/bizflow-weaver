@@ -54,6 +54,9 @@ export interface Order {
   invoice_file_url: string | null;
   is_recompra: boolean;
   shipping_cost: number | null;
+  shipping_payment_mode?: string | null;
+  shipping_set_at?: string | null;
+  shipping_set_by_name?: string | null;
   returned_at: string | null;
   return_notes: string | null;
   is_credit: boolean | null;
@@ -61,9 +64,24 @@ export interface Order {
   credit_dispatched_pending_payment: boolean | null;
 }
 
-type PaymentFields = Pick<Order, "sale_type" | "total_amount" | "abono" | "payment_method" | "payment_complete" | "payment_proof_url">;
+type PaymentFields = Pick<Order, "sale_type" | "total_amount" | "abono" | "payment_method" | "payment_complete" | "payment_proof_url"> &
+  Partial<Pick<Order, "shipping_cost" | "shipping_payment_mode">>;
 
-export function isOrderFullyPaid(order: PaymentFields): boolean {
+/** Modos de cobro del envío. */
+export const SHIPPING_MODE_LABELS: Record<string, string> = {
+  pendiente: "Envío sin definir",
+  contraentrega: "Envío contraentrega",
+  por_cobrar: "Envío por cobrar",
+  incluido_anticipos: "Envío incluido en los anticipos",
+};
+
+/** Valor del envío que aún debe sumarse al saldo del pedido. */
+export function getOrderShippingDue(order: PaymentFields): number {
+  if (order.shipping_payment_mode !== "por_cobrar") return 0;
+  return Math.max(Number(order.shipping_cost) || 0, 0);
+}
+
+function isProductFullyPaid(order: PaymentFields): boolean {
   return Boolean(
     order.payment_complete ||
       order.payment_method === "pagado" ||
@@ -72,15 +90,21 @@ export function isOrderFullyPaid(order: PaymentFields): boolean {
   );
 }
 
+export function isOrderFullyPaid(order: PaymentFields): boolean {
+  return isProductFullyPaid(order) && getOrderShippingDue(order) === 0;
+}
+
 export function getOrderPaidAmount(order: PaymentFields): number {
   const total = Number(order.total_amount) || 0;
-  if (isOrderFullyPaid(order)) return total;
+  if (isProductFullyPaid(order)) return total;
   return Math.min(Number(order.abono) || 0, total);
 }
 
+/** Saldo pendiente: producto pendiente + envío por cobrar. */
 export function getOrderBalance(order: PaymentFields): number {
   const total = Number(order.total_amount) || 0;
-  return Math.max(total - getOrderPaidAmount(order), 0);
+  const productDue = Math.max(total - getOrderPaidAmount(order), 0);
+  return productDue + getOrderShippingDue(order);
 }
 
 export const PRODUCTION_STATUS_LABELS: Record<string, string> = {

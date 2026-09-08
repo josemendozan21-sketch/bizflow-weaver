@@ -22,6 +22,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { PaymentsList } from "./PaymentsList";
 import { AddPaymentDialog } from "./AddPaymentDialog";
 import { PendingProofPanel } from "./PendingProofPanel";
+import { OrderShippingPanel } from "./OrderShippingPanel";
 
 import { matchesQuery } from "@/lib/search";
 import { useOrderCharges } from "@/hooks/useOrderCharges";
@@ -577,6 +578,13 @@ function OrderGroupCard({
         )}
       </CardHeader>
       <CardContent className="space-y-3">
+        {/* Envío del pedido (solo mayoreo, antes del despacho) */}
+        {group.items
+          .filter((o) => o.sale_type === "mayor" && !o.dispatched_at)
+          .map((o) => (
+            <OrderShippingPanel key={`ship-${o.id}`} order={o} />
+          ))}
+
         {/* Payment action banner */}
         {needsPaymentAction && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
@@ -813,7 +821,9 @@ function PaymentConfirmDialog({ order }: { order: Order }) {
         payment_complete: true,
         payment_proof_url: finalProofUrl,
         abono: Number(order.total_amount) || 0,
-      }).eq("id", order.id);
+        // El saldo cobrado incluyó el envío: queda como pagado dentro de los anticipos
+        ...(order.shipping_payment_mode === "por_cobrar" ? { shipping_payment_mode: "incluido_anticipos" } : {}),
+      } as never).eq("id", order.id);
 
       if (error) throw error;
 

@@ -242,7 +242,25 @@ export default function OrderDetailDialog({ orderId, orderCode, open, onOpenChan
                 />
                 <Field label="Método de pago" value={order.payment_method} />
                 <Field label="Vencimiento (crédito)" value={date(order.payment_due_date)} />
-                <Field label="Costo de envío" value={money(order.shipping_cost)} />
+                <Field
+                  label="Envío"
+                  value={
+                    order.shipping_payment_mode === "contraentrega" ? (
+                      "Contraentrega (lo paga el cliente a la transportadora)"
+                    ) : (
+                      <span>
+                        {money(order.shipping_cost)}
+                        <span className="text-muted-foreground">
+                          {order.shipping_payment_mode === "incluido_anticipos"
+                            ? " · incluido en los anticipos"
+                            : order.shipping_payment_mode === "por_cobrar"
+                              ? " · por cobrar"
+                              : ""}
+                        </span>
+                      </span>
+                    )
+                  }
+                />
               </div>
               {charges.length > 0 && (
                 <div className="rounded-md border p-2 space-y-1">
