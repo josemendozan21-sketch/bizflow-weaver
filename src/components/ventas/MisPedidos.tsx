@@ -577,6 +577,13 @@ function OrderGroupCard({
         )}
       </CardHeader>
       <CardContent className="space-y-3">
+        {/* Envío del pedido (solo mayoreo, antes del despacho) */}
+        {group.items
+          .filter((o) => o.sale_type === "mayor" && !o.dispatched_at)
+          .map((o) => (
+            <OrderShippingPanel key={`ship-${o.id}`} order={o} />
+          ))}
+
         {/* Payment action banner */}
         {needsPaymentAction && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
