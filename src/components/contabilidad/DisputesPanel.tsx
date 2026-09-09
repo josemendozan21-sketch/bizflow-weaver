@@ -392,12 +392,21 @@ export default function DisputesPanel({ orders }: Props) {
                         {(o as any).product} · {fmt(Number((o as any).total_amount) || 0)}
                       </p>
                     </div>
-                    <OrderDisputeDialog
-                      orderId={o.id}
-                      orderCode={(o as any).order_code}
-                      clientName={o.client_name}
-                      currentAmount={Number((o as any).total_amount) || 0}
-                    />
+                    <div className="flex flex-wrap justify-end gap-1">
+                      <OrderDisputeDialog
+                        orderId={o.id}
+                        orderCode={(o as any).order_code}
+                        clientName={o.client_name}
+                        currentAmount={Number((o as any).total_amount) || 0}
+                      />
+                      <OrderDisputeDialog
+                        orderId={o.id}
+                        orderCode={(o as any).order_code}
+                        clientName={o.client_name}
+                        currentAmount={Number((o as any).total_amount) || 0}
+                        mode="pago"
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
