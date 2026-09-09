@@ -316,8 +316,8 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
           </>
         )}
 
-        {/* Advisor approval/modification — only when adjusted logo exists */}
-        {isAdvisor && req.status === "listo_aprobacion" && (req.adjusted_logo_url || req.additional_instructions?.includes("recompra")) && (
+        {/* Advisor review — modification available whenever there's an adjusted logo; approval only when published */}
+        {isAdvisor && (req.adjusted_logo_url || req.additional_instructions?.includes("recompra")) && !["aprobado", "finalizado"].includes(req.status) && (
           <div className="space-y-3 pt-3 border-t">
             <p className="text-xs font-medium text-muted-foreground">
               Revisión del asesor
@@ -325,20 +325,27 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
                 <span className="ml-2 text-orange-600">(Recompra — aprueba si se reutiliza el logo original)</span>
               )}
             </p>
+            {req.status !== "listo_aprobacion" && (
+              <p className="text-xs text-muted-foreground">
+                Diseño sigue trabajando en este logo — puedes pedir cambios; la aprobación se habilita cuando lo marquen como listo.
+              </p>
+            )}
             {!showModInput ? (
               <div className="flex gap-3">
-                <Button
-                  onClick={handleApprove}
-                  disabled={actionLoading}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                >
-                  {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="mr-2 h-4 w-4" /> ✅ Aprobar diseño</>}
-                </Button>
+                {req.status === "listo_aprobacion" && (
+                  <Button
+                    onClick={handleApprove}
+                    disabled={actionLoading}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="mr-2 h-4 w-4" /> ✅ Aprobar diseño</>}
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   onClick={() => setShowModInput(true)}
                   disabled={actionLoading}
-                  className="flex-1 border-orange-400 text-orange-600 hover:bg-orange-50"
+                  className={`flex-1 border-orange-400 text-orange-600 hover:bg-orange-50 ${req.status === "listo_aprobacion" ? "" : "bg-orange-500/10"}`}
                 >
                   <RotateCcw className="mr-2 h-4 w-4" /> ✏️ Solicitar modificación
                 </Button>
