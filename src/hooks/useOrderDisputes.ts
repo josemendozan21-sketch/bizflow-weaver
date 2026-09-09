@@ -53,7 +53,9 @@ export function useCreateOrderDispute() {
       proposed_amount: number;
       reason: string;
       evidence?: File | null;
+      kind?: DisputeKind;
     }) => {
+      const kind: DisputeKind = input.kind || "valor";
       let evidence_url: string | null = null;
       if (input.evidence && input.evidence.size > 0) {
         const ext = input.evidence.name.split(".").pop();
@@ -74,15 +76,21 @@ export function useCreateOrderDispute() {
         proposed_amount: input.proposed_amount,
         reason: input.reason,
         evidence_url,
-      });
+        kind,
+      } as any);
       if (error) throw error;
 
       await supabase.from("notifications").insert({
         target_role: "contabilidad",
-        title: "Solicitud de corrección de valor",
-        message: `${user?.email || "Un asesor"} solicita corregir el valor de un pedido a $${Math.round(
-          input.proposed_amount
-        ).toLocaleString("es-CO")}. Motivo: ${input.reason}`,
+        title: kind === "pago" ? "Confirmación de pago para revisar" : "Solicitud de corrección de valor",
+        message:
+          kind === "pago"
+            ? `${user?.email || "Un asesor"} confirma que el cliente ya pagó $${Math.round(
+                input.proposed_amount
+              ).toLocaleString("es-CO")}. Motivo: ${input.reason}`
+            : `${user?.email || "Un asesor"} solicita corregir el valor de un pedido a $${Math.round(
+                input.proposed_amount
+              ).toLocaleString("es-CO")}. Motivo: ${input.reason}`,
         type: "info",
         reference_id: input.order_id,
       });
