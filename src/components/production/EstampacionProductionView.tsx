@@ -847,8 +847,23 @@ function EstampacionOrderCard({
           </div>
         )}
 
+        {readOnly && (
+          <div className="rounded-md border p-3 space-y-2 text-xs">
+            <p className="font-medium text-emerald-700">Estampación finalizada</p>
+            {order.stamp_size_photo_url && (
+              <img src={order.stamp_size_photo_url} alt="Prueba de tamaño" className="max-h-32 rounded border object-contain" />
+            )}
+            {order.stamp_inkgel_photo_url && (
+              <img src={order.stamp_inkgel_photo_url} alt="Prueba de tinta y gel" className="max-h-32 rounded border object-contain" />
+            )}
+            <p className="text-muted-foreground">
+              Este pedido continúa su proceso en Producción. No requiere acciones de Estampación.
+            </p>
+          </div>
+        )}
+
         <div className="flex gap-2 pt-1">
-          {order.stage_status === "pendiente" && (
+          {!readOnly && order.stage_status === "pendiente" && (
             <Button
               size="sm"
               variant="outline"
