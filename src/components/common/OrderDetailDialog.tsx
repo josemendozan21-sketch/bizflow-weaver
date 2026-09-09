@@ -230,6 +230,15 @@ export default function OrderDetailDialog({ orderId, orderCode, open, onOpenChan
             <section className="space-y-3">
               <SectionTitle icon={Wallet}>Pagos</SectionTitle>
               <div className="grid gap-3 sm:grid-cols-3">
+                {Number((order as any).tax_amount) > 0 && (
+                  <>
+                    <Field label="Subtotal productos" value={money(Number((order as any).subtotal_amount) || 0)} />
+                    <Field
+                      label={`IVA ${Number((order as any).tax_rate) || 19}%`}
+                      value={money(Number((order as any).tax_amount) || 0)}
+                    />
+                  </>
+                )}
                 <Field label="Total" value={<span className="font-semibold">{money(total)}</span>} />
                 <Field label="Pagado" value={<span className="text-green-700 font-semibold">{money(paid)}</span>} />
                 <Field
