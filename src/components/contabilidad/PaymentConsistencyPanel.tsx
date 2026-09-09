@@ -11,6 +11,7 @@ import { isOrderFullyPaid, getOrderBalance, type Order } from "@/hooks/useOrders
 import { useOrderPaymentsByOrderIds } from "@/hooks/useOrderPayments";
 import { IVA_DIVISOR } from "@/lib/commissions";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
+import OrderDisputeDialog from "@/components/ventas/OrderDisputeDialog";
 
 type IssueKind =
   | "despachado_sin_pago"
