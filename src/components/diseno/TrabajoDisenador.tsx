@@ -95,12 +95,13 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
 
   const isPdfPreview = (url: string | null) => url?.startsWith("pdf:") || url?.toLowerCase().endsWith(".pdf");
 
-  const handleSave = async () => {
+  const handleSave = async (statusOverride?: LogoRequestStatus) => {
+    const targetStatus = statusOverride ?? newStatus;
     setUploading(true);
     try {
       const updates: Partial<LogoRequest> & { id: string } = {
         id: req.id,
-        status: newStatus,
+        status: targetStatus,
         design_notes: designNotes.trim() || null,
         designer_id: user?.id,
         designer_name: user?.email || "Diseñador",
