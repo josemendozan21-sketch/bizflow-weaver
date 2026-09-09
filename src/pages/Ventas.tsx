@@ -40,6 +40,8 @@ import { buildStages } from "@/lib/orderFlow";
 import { LogoSearchDialog } from "@/components/ventas/LogoSearchDialog";
 import { notifyLogoFlow, type LogoSource } from "@/lib/recompraLogoFlow";
 import { LogoPreview } from "@/components/diseno/LogoPreview";
+import { IVA_RATE, computeIva, prorateIva } from "@/lib/tax";
+import { TaxOptionField } from "@/components/ventas/TaxOptionField";
 type Brand = "sweatspot" | "magical";
 type SaleType = "mayor" | "menor";
 
@@ -426,8 +428,11 @@ function buildMagicalMayorSummary(args: {
   moldeCosto?: string;
   moldeModo?: "con_pedido" | "separado" | "solo_molde";
   logos?: Array<{ file: File | null; name: string }>;
+  productsSubtotal?: number;
+  ivaAmount?: number;
+  priceIncludesTax?: boolean;
 }): OrderSummary {
-  const { logos = [], form, orderLines, grandTotal, abono, estadoPago, isRecompra, noLogo, dobleTinta, escarcha, costoAdicional, paymentProofFile, cobroLogo, costoLogo, moldeNuevo, moldeNombre, moldeCosto, moldeModo } = args;
+  const { logos = [], form, orderLines, grandTotal, abono, estadoPago, isRecompra, noLogo, dobleTinta, escarcha, costoAdicional, paymentProofFile, cobroLogo, costoLogo, moldeNuevo, moldeNombre, moldeCosto, moldeModo, productsSubtotal = 0, ivaAmount = 0, priceIncludesTax = true } = args;
   const abonoNum = estadoPago === "pago_total" ? grandTotal : (parseFloat(abono) || 0);
   const saldo = Math.max(grandTotal - abonoNum, 0);
   const estadoPagoLabel =
@@ -436,6 +441,11 @@ function buildMagicalMayorSummary(args: {
     : "Pago pendiente";
 
   const opciones: Array<{ label: string; value: string }> = [];
+  opciones.push({ label: "Subtotal productos", value: formatMoney(productsSubtotal) });
+  opciones.push({
+    label: `IVA ${IVA_RATE}%`,
+    value: priceIncludesTax ? "Incluido en el precio" : formatMoney(ivaAmount),
+  });
   if (isRecompra) opciones.push({ label: "Recompra", value: "Sí" });
   if (noLogo) opciones.push({ label: "Sin logo", value: "Sí" });
   if (dobleTinta) opciones.push({ label: "Doble tinta", value: "Sí" });
@@ -536,8 +546,11 @@ function buildSweatspotMayorSummary(args: {
   ssLogos?: LogoEntry[];
   ssCobroLogo?: boolean;
   ssCostoLogo?: string;
+  productsSubtotal?: number;
+  ivaAmount?: number;
+  priceIncludesTax?: boolean;
 }): OrderSummary {
-  const { form, ssLines, grandTotal, ssAbono, ssEstadoPago, ssIsRecompra, ssNoLogo, ssPaymentProofFile, ssLogos = [], ssCobroLogo, ssCostoLogo } = args;
+  const { form, ssLines, grandTotal, ssAbono, ssEstadoPago, ssIsRecompra, ssNoLogo, ssPaymentProofFile, ssLogos = [], ssCobroLogo, ssCostoLogo, productsSubtotal = 0, ivaAmount = 0, priceIncludesTax = true } = args;
   const abonoNum = ssEstadoPago === "pago_total" ? grandTotal : (parseFloat(ssAbono) || 0);
   const saldo = Math.max(grandTotal - abonoNum, 0);
   const estadoPagoLabel =
@@ -546,6 +559,11 @@ function buildSweatspotMayorSummary(args: {
     : "Pago pendiente";
 
   const opciones: Array<{ label: string; value: string }> = [];
+  opciones.push({ label: "Subtotal productos", value: formatMoney(productsSubtotal) });
+  opciones.push({
+    label: `IVA ${IVA_RATE}%`,
+    value: priceIncludesTax ? "Incluido en el precio" : formatMoney(ivaAmount),
+  });
   if (ssIsRecompra) opciones.push({ label: "Recompra", value: "Sí" });
   if (ssNoLogo) opciones.push({ label: "Sin logo", value: "Sí" });
   if (ssCobroLogo) {
@@ -679,6 +697,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [costoAdicional, setCostoAdicional] = usePersistedState("ventas:mw:costoAdicional", "");
+  const [priceIncludesTax, setPriceIncludesTax] = usePersistedState("ventas:mw:priceIncludesTax", true);
   const [cobroLogo, setCobroLogo] = usePersistedState("ventas:mw:cobroLogo", false);
   const [costoLogo, setCostoLogo] = usePersistedState("ventas:mw:costoLogo", "");
   const [mwLogos, setMwLogos] = useState<LogoEntry[]>(() => [makeLogoEntry()]);
@@ -790,14 +809,23 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     updateLine(lineId, { product: value, type: availableTypes.length === 1 ? availableTypes[0] : "" });
   };
 
+  // Base de productos: única base sobre la que se calcula el IVA.
+  const productsSubtotal = useMemo(
+    () => orderLines.reduce((sum, line) => (line.isGift ? sum : sum + (parseFloat(line.valorTotal) || 0)), 0),
+    [orderLines],
+  );
+  const ivaAmount = useMemo(
+    () => computeIva(productsSubtotal, priceIncludesTax),
+    [productsSubtotal, priceIncludesTax],
+  );
+
   // Grand total across all lines
   const grandTotal = useMemo(() => {
-    const linesSum = orderLines.reduce((sum, line) => line.isGift ? sum : sum + (parseFloat(line.valorTotal) || 0), 0);
     const extra = (dobleTinta || escarcha) ? (parseFloat(costoAdicional) || 0) : 0;
     const logoExtra = cobroLogo ? (parseFloat(costoLogo) || 0) : 0;
     const moldeExtra = (moldeNuevo && moldeModo !== "separado") ? (parseFloat(moldeCosto) || 0) : 0;
-    return linesSum + extra + logoExtra + moldeExtra;
-  }, [orderLines, costoAdicional, dobleTinta, escarcha, cobroLogo, costoLogo, moldeNuevo, moldeCosto, moldeModo]);
+    return productsSubtotal + ivaAmount + extra + logoExtra + moldeExtra;
+  }, [productsSubtotal, ivaAmount, costoAdicional, dobleTinta, escarcha, cobroLogo, costoLogo, moldeNuevo, moldeCosto, moldeModo]);
 
   // Auto-fill abono when pago_total
   useEffect(() => {
@@ -1157,11 +1185,18 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       : "";
     const extraNote = [adicionalNote, logoNote, moldeNote].filter(Boolean).join(" | ");
 
+    // IVA: se calcula sólo sobre la base de productos (no sobre costos adicionales,
+    // cobro de logo, molde ni envío) y se reparte entre las líneas.
+    const lineBases = linesToSubmit.map((line) => (line.isGift ? 0 : parseFloat(line.valorTotal) || 0));
+    const productsBase = lineBases.reduce((s, v) => s + v, 0);
+    const orderIva = computeIva(productsBase, priceIncludesTax);
+    const lineIvas = prorateIva(lineBases, orderIva);
+
     // Calcular totales del pedido completo para prorratear el abono entre líneas.
     // El abono ingresado por el asesor es por el TOTAL del pedido, no por cada línea.
     const lineTotalsForProration = linesToSubmit.map((line, idx) => {
       if (line.isGift) return 0;
-      const base = parseFloat(line.valorTotal) || 0;
+      const base = (parseFloat(line.valorTotal) || 0) + (lineIvas[idx] || 0);
       return idx === 0 ? base + extraCost : base;
     });
     const orderGrandTotal = lineTotalsForProration.reduce((s, v) => s + v, 0);
@@ -1182,8 +1217,11 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       const inkColor3 = inkCount >= 3 ? resolveColor(line.inkColor3 || "", line.inkCustom3 || "") : null;
       const glitterColorVal = resolveColor(line.glitterColor || "", line.glitterCustom || "") || null;
       const baseLineTotal = line.isGift ? 0 : (parseFloat(line.valorTotal) || 0);
-      // Sumar el costo adicional sólo a la primera línea (no a obsequios)
-      const lineTotal = (isFirstLine && !line.isGift) ? baseLineTotal + extraCost : baseLineTotal;
+      const lineIva = line.isGift ? 0 : (lineIvas[lineIdx] || 0);
+      // Sumar el IVA de la línea y el costo adicional (sólo primera línea, no obsequios)
+      const lineTotal = (isFirstLine && !line.isGift)
+        ? baseLineTotal + lineIva + extraCost
+        : baseLineTotal + lineIva;
       // Prorratear el abono total proporcionalmente al peso de la línea sobre el total.
       // La última línea no-obsequio recibe el residuo para evitar errores de redondeo.
       let abonoAmount = 0;
@@ -1248,6 +1286,10 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           submission_id: submissionId,
           unit_price: parseFloat(line.valorUnitario) || 0,
           total_amount: lineTotal,
+          subtotal_amount: baseLineTotal,
+          price_includes_tax: priceIncludesTax,
+          tax_rate: priceIncludesTax ? 0 : IVA_RATE,
+          tax_amount: lineIva,
           abono: abonoAmount,
           ink_color: inkColor,
           ink_count: inkCount,
@@ -1646,6 +1688,14 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 🎁 Adicionar obsequio
               </Button>
             </div>
+            <TaxOptionField
+              includesTax={priceIncludesTax}
+              onChange={setPriceIncludesTax}
+              productsSubtotal={productsSubtotal}
+              ivaAmount={ivaAmount}
+              otherConcepts={Math.max(grandTotal - productsSubtotal - ivaAmount, 0)}
+              total={grandTotal}
+            />
           </fieldset>
 
           <fieldset className="space-y-4">
@@ -1966,6 +2016,9 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             moldeCosto,
             moldeModo,
             logos: mwLogos,
+            productsSubtotal,
+            ivaAmount,
+            priceIncludesTax,
           })}
         />
       </CardContent>
@@ -2043,17 +2096,27 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const [ssPaymentProofFile, setSsPaymentProofFile] = useState<File | null>(null);
   const [ssLogos, setSsLogos] = useState<LogoEntry[]>(() => [makeLogoEntry()]);
   const [ssRutFileState, setSsRutFileState] = useState<File | null>(null);
+  const [ssPriceIncludesTax, setSsPriceIncludesTax] = usePersistedState("ventas:ss:priceIncludesTax", true);
   const ssFormRef = useRef<HTMLFormElement>(null);
   useFormDraft(ssFormRef, "ventas:ss:fields");
   const [ssConfirmOpen, setSsConfirmOpen] = useState(false);
   const tamanos = ["150 ml", "250 ml", "250 ml juguetón", "250 ml con correa", "500 ml", "500 ml con correa"] as const;
 
+  // Base de productos: única base sobre la que se calcula el IVA.
+  const productsSubtotal = useMemo(
+    () => ssLines.reduce((sum, line) => sum + (parseFloat(line.valorTotal) || 0), 0),
+    [ssLines],
+  );
+  const ivaAmount = useMemo(
+    () => computeIva(productsSubtotal, ssPriceIncludesTax),
+    [productsSubtotal, ssPriceIncludesTax],
+  );
+
   // Grand total across all lines
   const grandTotal = useMemo(() => {
-    const linesSum = ssLines.reduce((sum, line) => sum + (parseFloat(line.valorTotal) || 0), 0);
     const logoExtra = ssCobroLogo ? (parseFloat(ssCostoLogo) || 0) : 0;
-    return linesSum + logoExtra;
-  }, [ssLines, ssCobroLogo, ssCostoLogo]);
+    return productsSubtotal + ivaAmount + logoExtra;
+  }, [productsSubtotal, ivaAmount, ssCobroLogo, ssCostoLogo]);
 
   useEffect(() => {
     if (!ssCobroLogo) setSsCostoLogo("");
@@ -2253,8 +2316,15 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     // Process each distinct line as a separate order
     // Calcular totales para prorratear el abono entre líneas (el abono es por el TOTAL del pedido).
     const ssLogoExtra = ssCobroLogo ? (parseFloat(ssCostoLogo) || 0) : 0;
+    // IVA sólo sobre la base de productos (el cobro de logo y el envío quedan fuera).
+    const ssLineBases = linesToSubmit.map((line) => parseFloat(line.valorTotal) || 0);
+    const ssOrderIva = computeIva(
+      ssLineBases.reduce((s, v) => s + v, 0),
+      ssPriceIncludesTax,
+    );
+    const ssLineIvas = prorateIva(ssLineBases, ssOrderIva);
     const ssLineTotals = linesToSubmit.map((line, idx) => {
-      const base = parseFloat(line.valorTotal) || 0;
+      const base = (parseFloat(line.valorTotal) || 0) + (ssLineIvas[idx] || 0);
       return idx === 0 ? base + ssLogoExtra : base;
     });
     const ssGrandTotal = ssLineTotals.reduce((s, v) => s + v, 0);
@@ -2328,6 +2398,10 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
           submission_id: submissionId,
           unit_price: parseFloat(line.valorUnitario) || 0,
           total_amount: lineTotal,
+          subtotal_amount: ssLineBases[lineIdx] || 0,
+          price_includes_tax: ssPriceIncludesTax,
+          tax_rate: ssPriceIncludesTax ? 0 : IVA_RATE,
+          tax_amount: ssLineIvas[lineIdx] || 0,
           abono: abonoAmount,
           ink_color: inkColor,
           silicone_color: siliconeColor,
@@ -2661,6 +2735,14 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
             <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={addSSLine}>
               <Plus className="h-4 w-4" /> Agregar otro producto
             </Button>
+            <TaxOptionField
+              includesTax={ssPriceIncludesTax}
+              onChange={setSsPriceIncludesTax}
+              productsSubtotal={productsSubtotal}
+              ivaAmount={ivaAmount}
+              otherConcepts={Math.max(grandTotal - productsSubtotal - ivaAmount, 0)}
+              total={grandTotal}
+            />
           </fieldset>
 
           <fieldset className="space-y-4">
@@ -2875,6 +2957,9 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
             ssLogos,
             ssCobroLogo,
             ssCostoLogo,
+            productsSubtotal,
+            ivaAmount,
+            priceIncludesTax: ssPriceIncludesTax,
           })}
         />
       </CardContent>
