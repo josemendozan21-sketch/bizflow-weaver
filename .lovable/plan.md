@@ -25,14 +25,17 @@ Esta acción **no** cambia el valor del pedido. El diálogo actual de correcció
 
 Si el motivo escrito habla de pago ("ya pagó", "saldo", "abono") o el valor propuesto casi no cambia el total, el sistema sugiere usar "Confirmar pago completo" en su lugar, para evitar que se repita lo de MW-AM-00938.
 
-### 3. Corregir los dos pedidos de Andrea
+### 3. Corregir los pedidos de Andrea y Diana
 
-- **MW-AM-01031:** registrar el pago de $320.000 con el soporte ya cargado.
-- **MW-AM-00938:** devolver el total a $350.000 (el valor real, coincide con los dos pagos de $175.000) y anular el efecto de la corrección aprobada por error. Si el total correcto sí era $351.000, en su lugar se registra el $1.000 faltante — necesito que me confirmes cuál.
+- **MW-AM-01031 (Andrea, $320.000):** registrar el pago completo con el soporte ya cargado.
+- **MW-AM-00938 (Andrea):** devolver el total a $350.000 (el valor real, coincide con los dos pagos registrados) y anular el efecto de la corrección aprobada por error. Si el total correcto sí era $351.000, en su lugar se registra el $1.000 faltante — necesito que me confirmes cuál.
+- **MW-AM-00200 y MW-AM-00201 (Diana Lizarazo, $12.500 cada uno):** mismo caso, ya pagados y despachados; se registra el pago completo con el soporte cargado.
 
-### 4. Los otros pedidos del panel
+Los cuatro quedan con su pago en el historial, la comisión se causa y salen del panel.
 
-Los 4 restantes (Natalia x2, Diana x2) tienen el mismo síntoma: pagados con soporte pero sin pago registrado. Con la nueva acción, Angela los podrá cerrar ella misma uno por uno. MW-AM-01095 (DERMO ANGEL) sí tiene saldo real pendiente de $1.670.000 y se queda en el panel hasta que se pague.
+### 4. Los que quedan en el panel
+
+Los dos de Natalia Amador ($128.000 y $62.000) tienen el mismo síntoma; con la nueva acción Angela los cierra ella misma cuando confirme que ya se pagaron. MW-AM-01095 (DERMO ANGEL) sí tiene saldo real pendiente de $1.670.000 y se queda hasta que se pague.
 
 ## Detalles técnicos
 
