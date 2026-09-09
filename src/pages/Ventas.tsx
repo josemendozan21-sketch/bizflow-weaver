@@ -546,8 +546,11 @@ function buildSweatspotMayorSummary(args: {
   ssLogos?: LogoEntry[];
   ssCobroLogo?: boolean;
   ssCostoLogo?: string;
+  productsSubtotal?: number;
+  ivaAmount?: number;
+  priceIncludesTax?: boolean;
 }): OrderSummary {
-  const { form, ssLines, grandTotal, ssAbono, ssEstadoPago, ssIsRecompra, ssNoLogo, ssPaymentProofFile, ssLogos = [], ssCobroLogo, ssCostoLogo } = args;
+  const { form, ssLines, grandTotal, ssAbono, ssEstadoPago, ssIsRecompra, ssNoLogo, ssPaymentProofFile, ssLogos = [], ssCobroLogo, ssCostoLogo, productsSubtotal = 0, ivaAmount = 0, priceIncludesTax = true } = args;
   const abonoNum = ssEstadoPago === "pago_total" ? grandTotal : (parseFloat(ssAbono) || 0);
   const saldo = Math.max(grandTotal - abonoNum, 0);
   const estadoPagoLabel =
