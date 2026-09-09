@@ -441,6 +441,11 @@ function buildMagicalMayorSummary(args: {
     : "Pago pendiente";
 
   const opciones: Array<{ label: string; value: string }> = [];
+  opciones.push({ label: "Subtotal productos", value: formatMoney(productsSubtotal) });
+  opciones.push({
+    label: `IVA ${IVA_RATE}%`,
+    value: priceIncludesTax ? "Incluido en el precio" : formatMoney(ivaAmount),
+  });
   if (isRecompra) opciones.push({ label: "Recompra", value: "Sí" });
   if (noLogo) opciones.push({ label: "Sin logo", value: "Sí" });
   if (dobleTinta) opciones.push({ label: "Doble tinta", value: "Sí" });
