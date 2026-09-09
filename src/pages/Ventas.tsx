@@ -1168,11 +1168,18 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       : "";
     const extraNote = [adicionalNote, logoNote, moldeNote].filter(Boolean).join(" | ");
 
+    // IVA: se calcula sólo sobre la base de productos (no sobre costos adicionales,
+    // cobro de logo, molde ni envío) y se reparte entre las líneas.
+    const lineBases = linesToSubmit.map((line) => (line.isGift ? 0 : parseFloat(line.valorTotal) || 0));
+    const productsBase = lineBases.reduce((s, v) => s + v, 0);
+    const orderIva = computeIva(productsBase, priceIncludesTax);
+    const lineIvas = prorateIva(lineBases, orderIva);
+
     // Calcular totales del pedido completo para prorratear el abono entre líneas.
     // El abono ingresado por el asesor es por el TOTAL del pedido, no por cada línea.
     const lineTotalsForProration = linesToSubmit.map((line, idx) => {
       if (line.isGift) return 0;
-      const base = parseFloat(line.valorTotal) || 0;
+      const base = (parseFloat(line.valorTotal) || 0) + (lineIvas[idx] || 0);
       return idx === 0 ? base + extraCost : base;
     });
     const orderGrandTotal = lineTotalsForProration.reduce((s, v) => s + v, 0);
