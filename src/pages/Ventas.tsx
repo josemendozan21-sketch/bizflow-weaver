@@ -2093,12 +2093,21 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const [ssConfirmOpen, setSsConfirmOpen] = useState(false);
   const tamanos = ["150 ml", "250 ml", "250 ml juguetón", "250 ml con correa", "500 ml", "500 ml con correa"] as const;
 
+  // Base de productos: única base sobre la que se calcula el IVA.
+  const productsSubtotal = useMemo(
+    () => ssLines.reduce((sum, line) => sum + (parseFloat(line.valorTotal) || 0), 0),
+    [ssLines],
+  );
+  const ivaAmount = useMemo(
+    () => computeIva(productsSubtotal, ssPriceIncludesTax),
+    [productsSubtotal, ssPriceIncludesTax],
+  );
+
   // Grand total across all lines
   const grandTotal = useMemo(() => {
-    const linesSum = ssLines.reduce((sum, line) => sum + (parseFloat(line.valorTotal) || 0), 0);
     const logoExtra = ssCobroLogo ? (parseFloat(ssCostoLogo) || 0) : 0;
-    return linesSum + logoExtra;
-  }, [ssLines, ssCobroLogo, ssCostoLogo]);
+    return productsSubtotal + ivaAmount + logoExtra;
+  }, [productsSubtotal, ivaAmount, ssCobroLogo, ssCostoLogo]);
 
   useEffect(() => {
     if (!ssCobroLogo) setSsCostoLogo("");
