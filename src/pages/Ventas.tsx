@@ -2008,6 +2008,9 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             moldeCosto,
             moldeModo,
             logos: mwLogos,
+            productsSubtotal,
+            ivaAmount,
+            priceIncludesTax,
           })}
         />
       </CardContent>
