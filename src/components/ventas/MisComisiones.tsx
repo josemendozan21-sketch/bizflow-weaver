@@ -551,22 +551,42 @@ export default function MisComisiones() {
                           <CommissionStatusBadge status={l.status} />
                         </TableCell>
                         <TableCell className="px-2 text-right" onClick={(e) => e.stopPropagation()}>
-                          <OrderDisputeDialog
-                            orderId={l.order.id}
-                            orderCode={(l.order as any).order_code}
-                            clientName={l.order.client_name}
-                            currentAmount={Number(l.order.total_amount) || 0}
-                            trigger={
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 gap-1 whitespace-nowrap px-2 text-[11px]"
-                                title="Solicitar corrección de valor"
-                              >
-                                <AlertTriangle className="h-3.5 w-3.5" /> Corrección
-                              </Button>
-                            }
-                          />
+                          <div className="flex flex-wrap justify-end gap-1">
+                            <OrderDisputeDialog
+                              orderId={l.order.id}
+                              orderCode={(l.order as any).order_code}
+                              clientName={l.order.client_name}
+                              currentAmount={Number(l.order.total_amount) || 0}
+                              trigger={
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 gap-1 whitespace-nowrap px-2 text-[11px]"
+                                  title="Solicitar corrección de valor"
+                                >
+                                  <AlertTriangle className="h-3.5 w-3.5" /> Corrección
+                                </Button>
+                              }
+                            />
+                            <OrderDisputeDialog
+                              orderId={l.order.id}
+                              orderCode={(l.order as any).order_code}
+                              clientName={l.order.client_name}
+                              currentAmount={Number(l.order.total_amount) || 0}
+                              mode="pago"
+                              suggestedAmount={Number(l.order.total_amount) || 0}
+                              trigger={
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 gap-1 whitespace-nowrap px-2 text-[11px]"
+                                  title="Confirmar que el cliente ya pagó todo"
+                                >
+                                  <CheckCircle2 className="h-3.5 w-3.5" /> Ya pagó
+                                </Button>
+                              }
+                            />
+                          </div>
                         </TableCell>
 
                       </TableRow>

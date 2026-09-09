@@ -2205,6 +2205,7 @@ export type Database = {
           current_amount: number
           evidence_url: string | null
           id: string
+          kind: string
           order_id: string
           proposed_amount: number
           reason: string
@@ -2222,6 +2223,7 @@ export type Database = {
           current_amount?: number
           evidence_url?: string | null
           id?: string
+          kind?: string
           order_id: string
           proposed_amount: number
           reason: string
@@ -2239,6 +2241,7 @@ export type Database = {
           current_amount?: number
           evidence_url?: string | null
           id?: string
+          kind?: string
           order_id?: string
           proposed_amount?: number
           reason?: string

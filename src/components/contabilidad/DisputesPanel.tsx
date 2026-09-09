@@ -147,10 +147,11 @@ export default function DisputesPanel({ orders }: Props) {
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <CardTitle className="text-base">Conciliación de valores</CardTitle>
+            <CardTitle className="text-base">Conciliación de valores y pagos</CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
-              Solicitudes de corrección enviadas por los asesores. Al aprobar se actualiza el
-              valor del pedido y se recalcula la comisión.
+              Solicitudes enviadas por los asesores. Al aprobar una corrección de valor se
+              actualiza el total del pedido; al aprobar una confirmación de pago se registra el
+              pago en el historial sin cambiar el valor. En ambos casos se recalcula la comisión.
             </p>
           </div>
           <div className="flex gap-1">
@@ -217,6 +218,16 @@ export default function DisputesPanel({ orders }: Props) {
                         {fmt(Number(d.proposed_amount))}
                       </TableCell>
                       <TableCell className="max-w-[260px]">
+                        <Badge
+                          variant="outline"
+                          className={
+                            (d as any).kind === "pago"
+                              ? "text-[10px] mb-1 border-emerald-500 text-emerald-700"
+                              : "text-[10px] mb-1"
+                          }
+                        >
+                          {(d as any).kind === "pago" ? "Confirmación de pago" : "Corrección de valor"}
+                        </Badge>
                         <p className="text-xs">{d.reason}</p>
                         {d.evidence_url && (
                           <button
@@ -392,12 +403,21 @@ export default function DisputesPanel({ orders }: Props) {
                         {(o as any).product} · {fmt(Number((o as any).total_amount) || 0)}
                       </p>
                     </div>
-                    <OrderDisputeDialog
-                      orderId={o.id}
-                      orderCode={(o as any).order_code}
-                      clientName={o.client_name}
-                      currentAmount={Number((o as any).total_amount) || 0}
-                    />
+                    <div className="flex flex-wrap justify-end gap-1">
+                      <OrderDisputeDialog
+                        orderId={o.id}
+                        orderCode={(o as any).order_code}
+                        clientName={o.client_name}
+                        currentAmount={Number((o as any).total_amount) || 0}
+                      />
+                      <OrderDisputeDialog
+                        orderId={o.id}
+                        orderCode={(o as any).order_code}
+                        clientName={o.client_name}
+                        currentAmount={Number((o as any).total_amount) || 0}
+                        mode="pago"
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
