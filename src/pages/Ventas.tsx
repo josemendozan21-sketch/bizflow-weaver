@@ -2727,6 +2727,14 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
             <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={addSSLine}>
               <Plus className="h-4 w-4" /> Agregar otro producto
             </Button>
+            <TaxOptionField
+              includesTax={ssPriceIncludesTax}
+              onChange={setSsPriceIncludesTax}
+              productsSubtotal={productsSubtotal}
+              ivaAmount={ivaAmount}
+              otherConcepts={Math.max(grandTotal - productsSubtotal - ivaAmount, 0)}
+              total={grandTotal}
+            />
           </fieldset>
 
           <fieldset className="space-y-4">
