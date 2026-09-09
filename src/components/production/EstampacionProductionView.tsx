@@ -183,15 +183,20 @@ export const EstampacionProductionView = () => {
     const stages = normalizeStages(o as any);
     return stages.includes("estampacion") || o.current_stage === "estampacion";
   };
-  const estampacionOrders = allOrders.filter(
-    (o) =>
-      !TERMINAL_STAGES.includes(o.current_stage) &&
-      belongsToStamping(o) &&
-      (o.current_stage === "estampacion" ||
-        (o.current_stage === "produccion_cuerpos" &&
-          !(o.stamp_size_status === "finalizado" && o.stamp_inkgel_status === "finalizado")) ||
-        (o.stamp_size_status === "finalizado" && o.stamp_inkgel_status === "finalizado"))
+  const isStampingDone = (o: ProductionOrder) =>
+    o.stamp_size_status === "finalizado" && o.stamp_inkgel_status === "finalizado";
+
+  const stampingScope = allOrders.filter(
+    (o) => !TERMINAL_STAGES.includes(o.current_stage) && belongsToStamping(o),
   );
+  // Trabajo real pendiente: la estampación aún no se ha finalizado.
+  const estampacionOrders = stampingScope.filter(
+    (o) =>
+      !isStampingDone(o) &&
+      (o.current_stage === "estampacion" || o.current_stage === "produccion_cuerpos"),
+  );
+  // Ya estampados: se muestran solo como consulta (sin acciones) para no reiniciar el proceso.
+  const finishedOrders = stampingScope.filter(isStampingDone);
 
 
   const q = searchQuery.trim();
@@ -290,8 +295,9 @@ export const EstampacionProductionView = () => {
 
   return (
     <Tabs defaultValue="ordenes" className="space-y-4">
-      <TabsList className="w-full flex lg:grid lg:grid-cols-5">
+      <TabsList className="w-full flex lg:grid lg:grid-cols-6">
         <TabsTrigger value="ordenes">Órdenes ({filteredOrders.length})</TabsTrigger>
+        <TabsTrigger value="finalizadas">Finalizadas ({finishedOrders.length})</TabsTrigger>
         <TabsTrigger value="por_ingresar">Por ingresar ({pendingIntake.length})</TabsTrigger>
         <TabsTrigger value="frios">Productos Fríos ({coldStock.length})</TabsTrigger>
         <TabsTrigger value="termicos">Productos Térmicos ({thermalStock.length})</TabsTrigger>
@@ -364,6 +370,37 @@ export const EstampacionProductionView = () => {
                 </div>
               );
             })}
+          </div>
+        )}
+      </TabsContent>
+
+      <TabsContent value="finalizadas" className="space-y-4">
+        <Alert className="border-emerald-300 bg-emerald-50 text-emerald-800">
+          <Info className="h-4 w-4" />
+          <AlertDescription className="text-xs">
+            Pedidos con la estampación ya finalizada. Se muestran solo para consulta: el pedido
+            continúa su proceso en Producción y no debe volver a estamparse.
+          </AlertDescription>
+        </Alert>
+        {finishedOrders.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">
+            No hay pedidos con estampación finalizada.
+          </p>
+        ) : (
+          <div className="grid gap-4">
+            {finishedOrders.map((order) => (
+              <EstampacionOrderCard
+                key={order.id}
+                order={order}
+                readOnly
+                lineCtx={order.order_id ? lineContext[order.order_id] : undefined}
+                stageLogs={stageLogs.filter((l) => l.production_order_id === order.id)}
+                logoRequests={logoRequests}
+                onStart={() => {}}
+                onFinish={() => {}}
+                finishing={false}
+              />
+            ))}
           </div>
         )}
       </TabsContent>
@@ -618,6 +655,7 @@ function EstampacionOrderCard({
   onStart,
   onFinish,
   finishing,
+  readOnly = false,
 }: {
   order: ProductionOrder;
   lineCtx?: OrderLineContext;
@@ -626,6 +664,7 @@ function EstampacionOrderCard({
   onStart: () => void;
   onFinish: () => void;
   finishing: boolean;
+  readOnly?: boolean;
 }) {
   const queryClient = useQueryClient();
   const badge = STATUS_BADGE[order.stage_status] || STATUS_BADGE.pendiente;
@@ -657,7 +696,7 @@ function EstampacionOrderCard({
 
   // Determine the current stamping step
   const canStartProcess = logoApproved || !hasLogo;
-  const isInProcess = order.stage_status === "en_proceso";
+  const isInProcess = !readOnly && order.stage_status === "en_proceso";
 
   // Step 1: Size approval needed
   const needsSizeUpload = isInProcess && sizeStatus === "pendiente" && !order.stamp_size_photo_url;
@@ -808,8 +847,23 @@ function EstampacionOrderCard({
           </div>
         )}
 
+        {readOnly && (
+          <div className="rounded-md border p-3 space-y-2 text-xs">
+            <p className="font-medium text-emerald-700">Estampación finalizada</p>
+            {order.stamp_size_photo_url && (
+              <img src={order.stamp_size_photo_url} alt="Prueba de tamaño" className="max-h-32 rounded border object-contain" />
+            )}
+            {order.stamp_inkgel_photo_url && (
+              <img src={order.stamp_inkgel_photo_url} alt="Prueba de tinta y gel" className="max-h-32 rounded border object-contain" />
+            )}
+            <p className="text-muted-foreground">
+              Este pedido continúa su proceso en Producción. No requiere acciones de Estampación.
+            </p>
+          </div>
+        )}
+
         <div className="flex gap-2 pt-1">
-          {order.stage_status === "pendiente" && (
+          {!readOnly && order.stage_status === "pendiente" && (
             <Button
               size="sm"
               variant="outline"

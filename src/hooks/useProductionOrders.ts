@@ -565,8 +565,13 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
         .update({
           current_stage: nextStage,
           stage_status: "pendiente",
+          // Al salir de estampación dejamos la etapa marcada como finalizada para que
+          // el pedido no vuelva a aparecer como pendiente en la vista de Estampación.
+          ...(po.current_stage === "estampacion"
+            ? { stamp_size_status: "finalizado", stamp_inkgel_status: "finalizado" }
+            : {}),
           ...(stagesNeedFix ? { stages } : {}),
-        })
+        } as any)
         .eq("id", orderId);
 
       if (error) throw error;
@@ -701,6 +706,9 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
         .update({
           stamp_size_status: "finalizado",
           stamp_inkgel_status: "finalizado",
+          // La etapa de cuerpos sigue en manos de Producción: no la dejamos marcada
+          // como "en proceso" por estampación.
+          stage_status: "pendiente",
         } as any)
         .eq("id", orderId);
       if (stampError) throw stampError;
