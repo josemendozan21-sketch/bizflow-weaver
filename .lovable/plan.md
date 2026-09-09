@@ -16,6 +16,10 @@ Los tres logos abiertos hoy están en la etapa "En revisión". Con el flujo rest
 3. **Aviso claro mientras tanto**
    - Cuando el logo aún no está listo, bajo el archivo se lee: "Diseño sigue trabajando en este logo — puedes pedir cambios, la aprobación se habilita cuando lo marquen como listo".
 
+## Alcance
+
+- Aplica a todos los asesores, tanto de Magical como de Sweatspot: la tarjeta de revisión es la misma para ambas marcas y muestra la marca de cada logo.
+
 ## Detalles técnicos
 
 - Cambio acotado a `src/components/diseno/TrabajoDisenador.tsx`: separar la condición del bloque de revisión del asesor en dos (pedir cambios vs aprobar) en vez de la única condición actual `status === "listo_aprobacion"`.
