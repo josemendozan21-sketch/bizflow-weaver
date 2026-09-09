@@ -82,6 +82,8 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
     const file = e.target.files?.[0];
     if (!file) return;
     setAdjustedFile(file);
+    // Al adjuntar un archivo nuevo, la acción más común es publicarlo.
+    setNewStatus("listo_aprobacion");
     if (file.type === "application/pdf") {
       setAdjustedPreview("pdf:" + file.name);
     } else {
@@ -93,12 +95,13 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
 
   const isPdfPreview = (url: string | null) => url?.startsWith("pdf:") || url?.toLowerCase().endsWith(".pdf");
 
-  const handleSave = async () => {
+  const handleSave = async (statusOverride?: LogoRequestStatus) => {
+    const targetStatus = statusOverride ?? newStatus;
     setUploading(true);
     try {
       const updates: Partial<LogoRequest> & { id: string } = {
         id: req.id,
-        status: newStatus,
+        status: targetStatus,
         design_notes: designNotes.trim() || null,
         designer_id: user?.id,
         designer_name: user?.email || "Diseñador",
@@ -121,7 +124,12 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
         sonnerToast.success("Diseño publicado", {
           description: "El asesor ya puede verlo y aprobarlo.",
         });
+      } else {
+        sonnerToast.success("Guardado", {
+          description: "Sigue en tu trabajo: el asesor aún no puede aprobarlo.",
+        });
       }
+      setNewStatus(targetStatus);
     } catch {
       // handled
     } finally {
@@ -298,20 +306,32 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
               <p className="text-xs font-medium text-muted-foreground">Notas del diseñador</p>
               <Textarea value={designNotes} onChange={(e) => setDesignNotes(e.target.value)} rows={2} placeholder="Notas sobre los cambios realizados..." />
             </div>
-            <div className="flex items-center gap-3">
-              <Select value={newStatus} onValueChange={(v) => setNewStatus(v as LogoRequestStatus)}>
-                <SelectTrigger className="flex-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DESIGNER_STATUSES.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button onClick={handleSave} disabled={uploading}>
-                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-4 w-4" /> Guardar</>}
-              </Button>
+            <div className="space-y-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Select value={newStatus} onValueChange={(v) => setNewStatus(v as LogoRequestStatus)}>
+                  <SelectTrigger className="w-full sm:flex-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DESIGNER_STATUSES.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={() => handleSave("listo_aprobacion")} disabled={uploading}>
+                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="mr-2 h-4 w-4" /> Guardar y enviar a aprobación</>}
+                  </Button>
+                  <Button variant="outline" onClick={() => handleSave()} disabled={uploading}>
+                    <Save className="mr-2 h-4 w-4" /> Guardar como borrador
+                  </Button>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {req.status === "listo_aprobacion"
+                  ? "Publicado: el asesor ya puede aprobarlo."
+                  : "Solo tú lo ves — el asesor aún no puede aprobar."}
+              </p>
             </div>
           </>
         )}
