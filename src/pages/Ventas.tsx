@@ -2308,8 +2308,15 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
     // Process each distinct line as a separate order
     // Calcular totales para prorratear el abono entre líneas (el abono es por el TOTAL del pedido).
     const ssLogoExtra = ssCobroLogo ? (parseFloat(ssCostoLogo) || 0) : 0;
+    // IVA sólo sobre la base de productos (el cobro de logo y el envío quedan fuera).
+    const ssLineBases = linesToSubmit.map((line) => parseFloat(line.valorTotal) || 0);
+    const ssOrderIva = computeIva(
+      ssLineBases.reduce((s, v) => s + v, 0),
+      ssPriceIncludesTax,
+    );
+    const ssLineIvas = prorateIva(ssLineBases, ssOrderIva);
     const ssLineTotals = linesToSubmit.map((line, idx) => {
-      const base = parseFloat(line.valorTotal) || 0;
+      const base = (parseFloat(line.valorTotal) || 0) + (ssLineIvas[idx] || 0);
       return idx === 0 ? base + ssLogoExtra : base;
     });
     const ssGrandTotal = ssLineTotals.reduce((s, v) => s + v, 0);
