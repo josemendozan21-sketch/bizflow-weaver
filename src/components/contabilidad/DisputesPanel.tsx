@@ -217,6 +217,16 @@ export default function DisputesPanel({ orders }: Props) {
                         {fmt(Number(d.proposed_amount))}
                       </TableCell>
                       <TableCell className="max-w-[260px]">
+                        <Badge
+                          variant="outline"
+                          className={
+                            (d as any).kind === "pago"
+                              ? "text-[10px] mb-1 border-emerald-500 text-emerald-700"
+                              : "text-[10px] mb-1"
+                          }
+                        >
+                          {(d as any).kind === "pago" ? "Confirmación de pago" : "Corrección de valor"}
+                        </Badge>
                         <p className="text-xs">{d.reason}</p>
                         {d.evidence_url && (
                           <button
