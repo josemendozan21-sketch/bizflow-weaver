@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ExternalLink, FileQuestion, FileText, Loader2 } from "lucide-react";
+import { Download, ExternalLink, FileQuestion, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 function fileNameFromUrl(url: string): string {
@@ -110,6 +110,10 @@ function PdfThumbnail({ url, name, alt }: { url: string; name: string; alt: stri
     };
   }, [url, visible]);
 
+  const stopPreviewClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.stopPropagation();
+  };
+
   return (
     <div ref={hostRef} className="flex min-h-24 w-full flex-col items-center justify-center gap-2">
       {state !== "error" && (
@@ -124,16 +128,25 @@ function PdfThumbnail({ url, name, alt }: { url: string; name: string; alt: stri
           )}
         </div>
       )}
-      {state === "error" && <FileText className="h-9 w-9 text-destructive" />}
+      {state === "error" && (
+        <div className="flex flex-col items-center gap-1 text-center">
+          <FileText className="h-9 w-9 text-destructive" />
+          <p className="text-xs text-muted-foreground">No se pudo mostrar la vista previa.</p>
+        </div>
+      )}
       <p className="max-w-full truncate text-xs text-muted-foreground" title={name}>{name}</p>
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center text-xs font-medium text-primary hover:underline"
-      >
-        Abrir PDF <ExternalLink className="ml-1 h-3 w-3" />
-      </a>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <Button variant="link" size="sm" className="h-auto p-0 text-xs" asChild>
+          <a href={url} target="_blank" rel="noopener noreferrer" onClick={stopPreviewClick}>
+            Abrir PDF <ExternalLink className="ml-1 h-3 w-3" />
+          </a>
+        </Button>
+        <Button variant="link" size="sm" className="h-auto p-0 text-xs" asChild>
+          <a href={url} download={name} onClick={stopPreviewClick}>
+            Descargar <Download className="ml-1 h-3 w-3" />
+          </a>
+        </Button>
+      </div>
     </div>
   );
 }

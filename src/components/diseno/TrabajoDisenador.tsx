@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -70,6 +70,14 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
   const isDesigner = role === "disenador" || role === "admin";
   const isAdvisor = role === "asesor_comercial" || role === "admin";
 
+  useEffect(() => {
+    if (!adjustedFile) setAdjustedPreview(req.adjusted_logo_url);
+  }, [req.adjusted_logo_url, adjustedFile]);
+
+  useEffect(() => {
+    if (!updateRequest.isPending) setNewStatus(req.status);
+  }, [req.status, updateRequest.isPending]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -98,12 +106,6 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
       if (adjustedFile) {
         updates.adjusted_logo_url = await uploadLogoFile(adjustedFile, "adjusted");
         setAdjustedFile(null);
-        // Al subir un diseño ajustado el logo queda automáticamente disponible
-        // para el asesor: no requiere ninguna acción manual adicional.
-        if (newStatus !== "listo_aprobacion" && newStatus !== "aprobado" && newStatus !== "finalizado") {
-          updates.status = "listo_aprobacion";
-          setNewStatus("listo_aprobacion");
-        }
       }
       await updateRequest.mutateAsync(updates);
 
@@ -315,7 +317,7 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
         )}
 
         {/* Advisor approval/modification — only when adjusted logo exists */}
-        {isAdvisor && (req.adjusted_logo_url || req.status === "listo_aprobacion" || req.additional_instructions?.includes("recompra")) && (
+        {isAdvisor && req.status === "listo_aprobacion" && (req.adjusted_logo_url || req.additional_instructions?.includes("recompra")) && (
           <div className="space-y-3 pt-3 border-t">
             <p className="text-xs font-medium text-muted-foreground">
               Revisión del asesor

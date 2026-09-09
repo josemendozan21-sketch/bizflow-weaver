@@ -131,9 +131,17 @@ export function useUpdateLogoRequest() {
 }
 
 export async function uploadLogoFile(file: File, folder: string): Promise<string> {
-  const ext = file.name.split(".").pop();
+  const declaredExt = file.name.split(".").pop()?.toLowerCase();
+  const mimeExt = file.type === "application/pdf"
+    ? "pdf"
+    : file.type.startsWith("image/")
+      ? file.type.split("/")[1]?.replace("jpeg", "jpg")
+      : undefined;
+  const ext = declaredExt && /^[a-z0-9]+$/.test(declaredExt) ? declaredExt : mimeExt || "file";
   const path = `${folder}/${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from("logo-files").upload(path, file);
+  const { error } = await supabase.storage.from("logo-files").upload(path, file, {
+    contentType: file.type || (ext === "pdf" ? "application/pdf" : undefined),
+  });
   if (error) throw error;
   const { data } = supabase.storage.from("logo-files").getPublicUrl(path);
   return data.publicUrl;
