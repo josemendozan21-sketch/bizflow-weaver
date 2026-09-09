@@ -4,6 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 export type DisputeStatus = "pendiente" | "aprobada" | "rechazada";
+/** "valor" corrige el total del pedido; "pago" confirma que el cliente ya pagó. */
+export type DisputeKind = "valor" | "pago";
 
 export interface OrderValueDispute {
   id: string;
@@ -14,6 +16,7 @@ export interface OrderValueDispute {
   proposed_amount: number;
   reason: string;
   evidence_url: string | null;
+  kind: DisputeKind;
   status: DisputeStatus;
   resolved_by: string | null;
   resolved_by_name: string | null;
