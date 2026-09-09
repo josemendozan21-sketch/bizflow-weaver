@@ -295,8 +295,9 @@ export const EstampacionProductionView = () => {
 
   return (
     <Tabs defaultValue="ordenes" className="space-y-4">
-      <TabsList className="w-full flex lg:grid lg:grid-cols-5">
+      <TabsList className="w-full flex lg:grid lg:grid-cols-6">
         <TabsTrigger value="ordenes">Órdenes ({filteredOrders.length})</TabsTrigger>
+        <TabsTrigger value="finalizadas">Finalizadas ({finishedOrders.length})</TabsTrigger>
         <TabsTrigger value="por_ingresar">Por ingresar ({pendingIntake.length})</TabsTrigger>
         <TabsTrigger value="frios">Productos Fríos ({coldStock.length})</TabsTrigger>
         <TabsTrigger value="termicos">Productos Térmicos ({thermalStock.length})</TabsTrigger>
