@@ -696,7 +696,7 @@ function EstampacionOrderCard({
 
   // Determine the current stamping step
   const canStartProcess = logoApproved || !hasLogo;
-  const isInProcess = order.stage_status === "en_proceso";
+  const isInProcess = !readOnly && order.stage_status === "en_proceso";
 
   // Step 1: Size approval needed
   const needsSizeUpload = isInProcess && sizeStatus === "pendiente" && !order.stamp_size_photo_url;
