@@ -428,8 +428,11 @@ function buildMagicalMayorSummary(args: {
   moldeCosto?: string;
   moldeModo?: "con_pedido" | "separado" | "solo_molde";
   logos?: Array<{ file: File | null; name: string }>;
+  productsSubtotal?: number;
+  ivaAmount?: number;
+  priceIncludesTax?: boolean;
 }): OrderSummary {
-  const { logos = [], form, orderLines, grandTotal, abono, estadoPago, isRecompra, noLogo, dobleTinta, escarcha, costoAdicional, paymentProofFile, cobroLogo, costoLogo, moldeNuevo, moldeNombre, moldeCosto, moldeModo } = args;
+  const { logos = [], form, orderLines, grandTotal, abono, estadoPago, isRecompra, noLogo, dobleTinta, escarcha, costoAdicional, paymentProofFile, cobroLogo, costoLogo, moldeNuevo, moldeNombre, moldeCosto, moldeModo, productsSubtotal = 0, ivaAmount = 0, priceIncludesTax = true } = args;
   const abonoNum = estadoPago === "pago_total" ? grandTotal : (parseFloat(abono) || 0);
   const saldo = Math.max(grandTotal - abonoNum, 0);
   const estadoPagoLabel =
