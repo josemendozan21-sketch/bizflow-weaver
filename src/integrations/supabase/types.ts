@@ -2326,6 +2326,7 @@ export type Database = {
           payment_method: string | null
           payment_proof_url: string | null
           personalization: string | null
+          price_includes_tax: boolean
           product: string
           production_completed_at: string | null
           production_due_date: string | null
@@ -2345,6 +2346,9 @@ export type Database = {
           stamping_completed_at: string | null
           stamping_due_date: string | null
           submission_id: string | null
+          subtotal_amount: number | null
+          tax_amount: number
+          tax_rate: number
           total_amount: number | null
           transportadora: string | null
           unit_price: number | null
@@ -2411,6 +2415,7 @@ export type Database = {
           payment_method?: string | null
           payment_proof_url?: string | null
           personalization?: string | null
+          price_includes_tax?: boolean
           product: string
           production_completed_at?: string | null
           production_due_date?: string | null
@@ -2430,6 +2435,9 @@ export type Database = {
           stamping_completed_at?: string | null
           stamping_due_date?: string | null
           submission_id?: string | null
+          subtotal_amount?: number | null
+          tax_amount?: number
+          tax_rate?: number
           total_amount?: number | null
           transportadora?: string | null
           unit_price?: number | null
@@ -2496,6 +2504,7 @@ export type Database = {
           payment_method?: string | null
           payment_proof_url?: string | null
           personalization?: string | null
+          price_includes_tax?: boolean
           product?: string
           production_completed_at?: string | null
           production_due_date?: string | null
@@ -2515,6 +2524,9 @@ export type Database = {
           stamping_completed_at?: string | null
           stamping_due_date?: string | null
           submission_id?: string | null
+          subtotal_amount?: number | null
+          tax_amount?: number
+          tax_rate?: number
           total_amount?: number | null
           transportadora?: string | null
           unit_price?: number | null
