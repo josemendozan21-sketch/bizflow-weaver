@@ -238,7 +238,7 @@ export default function PaymentConsistencyPanel({
                   <TableHead>Situación</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead className="text-right">Desfase</TableHead>
-                  {canFix && <TableHead className="text-right">Acción</TableHead>}
+                  <TableHead className="text-right">Acción</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -257,8 +257,8 @@ export default function PaymentConsistencyPanel({
                     </TableCell>
                     <TableCell className="text-right">{fmt(Number(r.order.total_amount))}</TableCell>
                     <TableCell className="text-right font-semibold">{fmt(r.gap)}</TableCell>
-                    {canFix && (
-                      <TableCell className="text-right">
+                    <TableCell className="text-right">
+                      {canFix ? (
                         <Button
                           size="sm"
                           variant="outline"
@@ -272,8 +272,17 @@ export default function PaymentConsistencyPanel({
                           )}
                           Registrar saldo
                         </Button>
-                      </TableCell>
-                    )}
+                      ) : (
+                        <OrderDisputeDialog
+                          orderId={r.order.id}
+                          orderCode={r.order.order_code}
+                          clientName={r.order.client_name}
+                          currentAmount={Number(r.order.total_amount) || 0}
+                          mode="pago"
+                          suggestedAmount={Number(r.order.total_amount) || 0}
+                        />
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
