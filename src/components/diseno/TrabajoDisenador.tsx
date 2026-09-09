@@ -82,6 +82,8 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
     const file = e.target.files?.[0];
     if (!file) return;
     setAdjustedFile(file);
+    // Al adjuntar un archivo nuevo, la acción más común es publicarlo.
+    setNewStatus("listo_aprobacion");
     if (file.type === "application/pdf") {
       setAdjustedPreview("pdf:" + file.name);
     } else {
