@@ -1671,6 +1671,14 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 🎁 Adicionar obsequio
               </Button>
             </div>
+            <TaxOptionField
+              includesTax={priceIncludesTax}
+              onChange={setPriceIncludesTax}
+              productsSubtotal={productsSubtotal}
+              ivaAmount={ivaAmount}
+              otherConcepts={Math.max(grandTotal - productsSubtotal - ivaAmount, 0)}
+              total={grandTotal}
+            />
           </fieldset>
 
           <fieldset className="space-y-4">
