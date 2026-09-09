@@ -1200,8 +1200,11 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       const inkColor3 = inkCount >= 3 ? resolveColor(line.inkColor3 || "", line.inkCustom3 || "") : null;
       const glitterColorVal = resolveColor(line.glitterColor || "", line.glitterCustom || "") || null;
       const baseLineTotal = line.isGift ? 0 : (parseFloat(line.valorTotal) || 0);
-      // Sumar el costo adicional sólo a la primera línea (no a obsequios)
-      const lineTotal = (isFirstLine && !line.isGift) ? baseLineTotal + extraCost : baseLineTotal;
+      const lineIva = line.isGift ? 0 : (lineIvas[lineIdx] || 0);
+      // Sumar el IVA de la línea y el costo adicional (sólo primera línea, no obsequios)
+      const lineTotal = (isFirstLine && !line.isGift)
+        ? baseLineTotal + lineIva + extraCost
+        : baseLineTotal + lineIva;
       // Prorratear el abono total proporcionalmente al peso de la línea sobre el total.
       // La última línea no-obsequio recibe el residuo para evitar errores de redondeo.
       let abonoAmount = 0;
