@@ -147,10 +147,11 @@ export default function DisputesPanel({ orders }: Props) {
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <CardTitle className="text-base">Conciliación de valores</CardTitle>
+            <CardTitle className="text-base">Conciliación de valores y pagos</CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
-              Solicitudes de corrección enviadas por los asesores. Al aprobar se actualiza el
-              valor del pedido y se recalcula la comisión.
+              Solicitudes enviadas por los asesores. Al aprobar una corrección de valor se
+              actualiza el total del pedido; al aprobar una confirmación de pago se registra el
+              pago en el historial sin cambiar el valor. En ambos casos se recalcula la comisión.
             </p>
           </div>
           <div className="flex gap-1">
