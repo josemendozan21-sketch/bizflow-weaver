@@ -706,6 +706,9 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
         .update({
           stamp_size_status: "finalizado",
           stamp_inkgel_status: "finalizado",
+          // La etapa de cuerpos sigue en manos de Producción: no la dejamos marcada
+          // como "en proceso" por estampación.
+          stage_status: "pendiente",
         } as any)
         .eq("id", orderId);
       if (stampError) throw stampError;
