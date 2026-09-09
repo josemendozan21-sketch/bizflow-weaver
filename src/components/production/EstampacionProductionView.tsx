@@ -374,6 +374,37 @@ export const EstampacionProductionView = () => {
         )}
       </TabsContent>
 
+      <TabsContent value="finalizadas" className="space-y-4">
+        <Alert className="border-emerald-300 bg-emerald-50 text-emerald-800">
+          <Info className="h-4 w-4" />
+          <AlertDescription className="text-xs">
+            Pedidos con la estampación ya finalizada. Se muestran solo para consulta: el pedido
+            continúa su proceso en Producción y no debe volver a estamparse.
+          </AlertDescription>
+        </Alert>
+        {finishedOrders.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">
+            No hay pedidos con estampación finalizada.
+          </p>
+        ) : (
+          <div className="grid gap-4">
+            {finishedOrders.map((order) => (
+              <EstampacionOrderCard
+                key={order.id}
+                order={order}
+                readOnly
+                lineCtx={order.order_id ? lineContext[order.order_id] : undefined}
+                stageLogs={stageLogs.filter((l) => l.production_order_id === order.id)}
+                logoRequests={logoRequests}
+                onStart={() => {}}
+                onFinish={() => {}}
+                finishing={false}
+              />
+            ))}
+          </div>
+        )}
+      </TabsContent>
+
       <TabsContent value="por_ingresar" className="space-y-3">
         <Alert className="border-blue-300 bg-blue-50 text-blue-800">
           <Info className="h-4 w-4" />
