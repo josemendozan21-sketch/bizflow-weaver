@@ -2957,6 +2957,9 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
             ssLogos,
             ssCobroLogo,
             ssCostoLogo,
+            productsSubtotal,
+            ivaAmount,
+            priceIncludesTax: ssPriceIncludesTax,
           })}
         />
       </CardContent>
