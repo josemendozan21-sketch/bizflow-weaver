@@ -40,6 +40,7 @@ import { buildStages } from "@/lib/orderFlow";
 import { LogoSearchDialog } from "@/components/ventas/LogoSearchDialog";
 import { notifyLogoFlow, type LogoSource } from "@/lib/recompraLogoFlow";
 import { LogoPreview } from "@/components/diseno/LogoPreview";
+import { IVA_RATE, computeIva, prorateIva } from "@/lib/tax";
 type Brand = "sweatspot" | "magical";
 type SaleType = "mayor" | "menor";
 
