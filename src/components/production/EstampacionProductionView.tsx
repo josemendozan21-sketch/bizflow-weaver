@@ -655,6 +655,7 @@ function EstampacionOrderCard({
   onStart,
   onFinish,
   finishing,
+  readOnly = false,
 }: {
   order: ProductionOrder;
   lineCtx?: OrderLineContext;
@@ -663,6 +664,7 @@ function EstampacionOrderCard({
   onStart: () => void;
   onFinish: () => void;
   finishing: boolean;
+  readOnly?: boolean;
 }) {
   const queryClient = useQueryClient();
   const badge = STATUS_BADGE[order.stage_status] || STATUS_BADGE.pendiente;
