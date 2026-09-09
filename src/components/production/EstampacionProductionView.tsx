@@ -183,15 +183,20 @@ export const EstampacionProductionView = () => {
     const stages = normalizeStages(o as any);
     return stages.includes("estampacion") || o.current_stage === "estampacion";
   };
-  const estampacionOrders = allOrders.filter(
-    (o) =>
-      !TERMINAL_STAGES.includes(o.current_stage) &&
-      belongsToStamping(o) &&
-      (o.current_stage === "estampacion" ||
-        (o.current_stage === "produccion_cuerpos" &&
-          !(o.stamp_size_status === "finalizado" && o.stamp_inkgel_status === "finalizado")) ||
-        (o.stamp_size_status === "finalizado" && o.stamp_inkgel_status === "finalizado"))
+  const isStampingDone = (o: ProductionOrder) =>
+    o.stamp_size_status === "finalizado" && o.stamp_inkgel_status === "finalizado";
+
+  const stampingScope = allOrders.filter(
+    (o) => !TERMINAL_STAGES.includes(o.current_stage) && belongsToStamping(o),
   );
+  // Trabajo real pendiente: la estampación aún no se ha finalizado.
+  const estampacionOrders = stampingScope.filter(
+    (o) =>
+      !isStampingDone(o) &&
+      (o.current_stage === "estampacion" || o.current_stage === "produccion_cuerpos"),
+  );
+  // Ya estampados: se muestran solo como consulta (sin acciones) para no reiniciar el proceso.
+  const finishedOrders = stampingScope.filter(isStampingDone);
 
 
   const q = searchQuery.trim();
