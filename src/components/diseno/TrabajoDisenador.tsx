@@ -124,7 +124,12 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
         sonnerToast.success("Diseño publicado", {
           description: "El asesor ya puede verlo y aprobarlo.",
         });
+      } else {
+        sonnerToast.success("Guardado", {
+          description: "Sigue en tu trabajo: el asesor aún no puede aprobarlo.",
+        });
       }
+      setNewStatus(targetStatus);
     } catch {
       // handled
     } finally {
