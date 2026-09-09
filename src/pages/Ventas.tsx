@@ -792,14 +792,23 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     updateLine(lineId, { product: value, type: availableTypes.length === 1 ? availableTypes[0] : "" });
   };
 
+  // Base de productos: única base sobre la que se calcula el IVA.
+  const productsSubtotal = useMemo(
+    () => orderLines.reduce((sum, line) => (line.isGift ? sum : sum + (parseFloat(line.valorTotal) || 0)), 0),
+    [orderLines],
+  );
+  const ivaAmount = useMemo(
+    () => computeIva(productsSubtotal, priceIncludesTax),
+    [productsSubtotal, priceIncludesTax],
+  );
+
   // Grand total across all lines
   const grandTotal = useMemo(() => {
-    const linesSum = orderLines.reduce((sum, line) => line.isGift ? sum : sum + (parseFloat(line.valorTotal) || 0), 0);
     const extra = (dobleTinta || escarcha) ? (parseFloat(costoAdicional) || 0) : 0;
     const logoExtra = cobroLogo ? (parseFloat(costoLogo) || 0) : 0;
     const moldeExtra = (moldeNuevo && moldeModo !== "separado") ? (parseFloat(moldeCosto) || 0) : 0;
-    return linesSum + extra + logoExtra + moldeExtra;
-  }, [orderLines, costoAdicional, dobleTinta, escarcha, cobroLogo, costoLogo, moldeNuevo, moldeCosto, moldeModo]);
+    return productsSubtotal + ivaAmount + extra + logoExtra + moldeExtra;
+  }, [productsSubtotal, ivaAmount, costoAdicional, dobleTinta, escarcha, cobroLogo, costoLogo, moldeNuevo, moldeCosto, moldeModo]);
 
   // Auto-fill abono when pago_total
   useEffect(() => {
