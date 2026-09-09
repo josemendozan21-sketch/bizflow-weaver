@@ -680,6 +680,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [costoAdicional, setCostoAdicional] = usePersistedState("ventas:mw:costoAdicional", "");
+  const [priceIncludesTax, setPriceIncludesTax] = usePersistedState("ventas:mw:priceIncludesTax", true);
   const [cobroLogo, setCobroLogo] = usePersistedState("ventas:mw:cobroLogo", false);
   const [costoLogo, setCostoLogo] = usePersistedState("ventas:mw:costoLogo", "");
   const [mwLogos, setMwLogos] = useState<LogoEntry[]>(() => [makeLogoEntry()]);
