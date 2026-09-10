@@ -414,6 +414,10 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
                 <span className="ml-2 text-orange-600">(Recompra — aprueba si se reutiliza el logo original)</span>
               )}
             </p>
+            <p className="text-xs text-muted-foreground">
+              Si el diseño ya está bien, apruébalo de una vez y pasa a producción. Si necesitas cambios, pídelos con tu
+              comentario.
+            </p>
             {!showModInput ? (
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Button
