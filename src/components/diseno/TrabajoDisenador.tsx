@@ -280,6 +280,13 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {orderClosed && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            Este pedido ya fue despachado o cancelado. El diseño quedó cerrado: no se envía a aprobación ni vuelve a
+            producción.
+          </div>
+        )}
+
         {/* Info from client */}
         {(req.client_comments || req.additional_instructions || req.advisor_feedback) && (
           <div className="space-y-2 p-3 bg-muted/30 rounded-lg text-sm">
