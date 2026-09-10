@@ -1620,6 +1620,56 @@ export type Database = {
         }
         Relationships: []
       }
+      logo_reference_files: {
+        Row: {
+          created_at: string
+          file_name: string | null
+          file_type: string | null
+          file_url: string
+          id: string
+          logo_request_id: string | null
+          note: string | null
+          order_id: string | null
+          stage: string
+          uploaded_by: string | null
+          uploaded_by_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_name?: string | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          logo_request_id?: string | null
+          note?: string | null
+          order_id?: string | null
+          stage?: string
+          uploaded_by?: string | null
+          uploaded_by_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_name?: string | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          logo_request_id?: string | null
+          note?: string | null
+          order_id?: string | null
+          stage?: string
+          uploaded_by?: string | null
+          uploaded_by_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logo_reference_files_logo_request_id_fkey"
+            columns: ["logo_request_id"]
+            isOneToOne: false
+            referencedRelation: "logo_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       logo_request_status_log: {
         Row: {
           changed_by: string | null

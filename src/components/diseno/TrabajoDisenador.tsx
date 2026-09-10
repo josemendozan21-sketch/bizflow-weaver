@@ -1,11 +1,11 @@
 import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LogoRequest, LogoRequestStatus, useUpdateLogoRequest, uploadLogoFile } from "@/hooks/useLogoRequests";
 import { StatusBadge } from "./StatusBadge";
-import { Upload, Loader2, MessageSquare, Info, Save, Check, RotateCcw, Download, FileText } from "lucide-react";
+import { Upload, Loader2, MessageSquare, Info, Save, Check, RotateCcw, Download, FileText, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
@@ -13,16 +13,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { LogoPreview } from "./LogoPreview";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import LogoStatusHistory from "./LogoStatusHistory";
+import ReferenceFilesPanel from "./ReferenceFilesPanel";
+import { uploadReferenceFiles, useInvalidateReferenceFiles } from "@/hooks/useLogoReferenceFiles";
 
 interface Props {
   requests: LogoRequest[];
 }
 
-const DESIGNER_STATUSES: { value: LogoRequestStatus; label: string }[] = [
-  { value: "en_revision", label: "En revisión" },
-  { value: "ajustado", label: "Ajustado" },
-  { value: "listo_aprobacion", label: "Listo para aprobación" },
-];
+/** Estados en los que el asesor tiene la pelota: puede aprobar o pedir cambios. */
+export const ADVISOR_REVIEW_STATUSES: LogoRequestStatus[] = ["en_revision", "ajustado", "listo_aprobacion"];
 
 export function TrabajoDisenador({ requests }: Props) {
   const filtered = requests.filter((r) =>
@@ -55,28 +54,27 @@ export function TrabajoDisenador({ requests }: Props) {
 
 export function DesignerCard({ request: req }: { request: LogoRequest }) {
   const [designNotes, setDesignNotes] = useState(req.design_notes || "");
-  const [newStatus, setNewStatus] = useState<LogoRequestStatus>(req.status);
   const [uploading, setUploading] = useState(false);
+  const [sending, setSending] = useState(false);
   const [adjustedPreview, setAdjustedPreview] = useState<string | null>(req.adjusted_logo_url);
   const [adjustedFile, setAdjustedFile] = useState<File | null>(null);
   const [modFeedback, setModFeedback] = useState("");
+  const [modFiles, setModFiles] = useState<File[]>([]);
   const [showModInput, setShowModInput] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const updateRequest = useUpdateLogoRequest();
+  const invalidateReferences = useInvalidateReferenceFiles();
   const { user, role } = useAuth();
   const { toast } = useToast();
 
   const isDesigner = role === "disenador" || role === "admin";
   const isAdvisor = role === "asesor_comercial" || role === "admin";
+  const awaitingAdvisor = ADVISOR_REVIEW_STATUSES.includes(req.status);
 
   useEffect(() => {
     if (!adjustedFile) setAdjustedPreview(req.adjusted_logo_url);
   }, [req.adjusted_logo_url, adjustedFile]);
-
-  useEffect(() => {
-    if (!updateRequest.isPending) setNewStatus(req.status);
-  }, [req.status, updateRequest.isPending]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -93,12 +91,12 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
 
   const isPdfPreview = (url: string | null) => url?.startsWith("pdf:") || url?.toLowerCase().endsWith(".pdf");
 
+  /** Guarda archivo y notas sin cambiar el estado (trabajo en curso). */
   const handleSave = async () => {
     setUploading(true);
     try {
       const updates: Partial<LogoRequest> & { id: string } = {
         id: req.id,
-        status: newStatus,
         design_notes: designNotes.trim() || null,
         designer_id: user?.id,
         designer_name: user?.email || "Diseñador",
@@ -108,24 +106,61 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
         setAdjustedFile(null);
       }
       await updateRequest.mutateAsync(updates);
-
-      if (updates.status === "listo_aprobacion") {
-        await supabase.from("notifications").insert({
-          target_user_id: req.advisor_id,
-          target_role: "asesor_comercial",
-          title: "Logo listo para tu aprobación",
-          message: `El diseño de ${req.client_name} (${req.brand} · ${req.product}) ya está disponible para revisión y aprobación.`,
-          type: "info",
-          reference_id: req.id,
-        });
-        sonnerToast.success("Diseño publicado", {
-          description: "El asesor ya puede verlo y aprobarlo.",
-        });
-      }
     } catch {
       // handled
     } finally {
       setUploading(false);
+    }
+  };
+
+  /** Envía el diseño al asesor para que lo apruebe o pida cambios. */
+  const handleSendToAdvisor = async () => {
+    setSending(true);
+    try {
+      let adjustedUrl = req.adjusted_logo_url;
+      if (adjustedFile) {
+        adjustedUrl = await uploadLogoFile(adjustedFile, "adjusted");
+        setAdjustedFile(null);
+      }
+      if (!adjustedUrl) {
+        toast({
+          title: "Falta el diseño",
+          description: "Sube el archivo ajustado antes de enviarlo al asesor.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Primera vuelta → "En revisión". Después de un ajuste pedido por el
+      // asesor → "Ajustado", para que se distinga a simple vista.
+      const nextStatus: LogoRequestStatus =
+        req.status === "ajustes_solicitados" || req.advisor_feedback ? "ajustado" : "en_revision";
+
+      await updateRequest.mutateAsync({
+        id: req.id,
+        status: nextStatus,
+        adjusted_logo_url: adjustedUrl,
+        design_notes: designNotes.trim() || null,
+        designer_id: user?.id,
+        designer_name: user?.email || "Diseñador",
+      });
+
+      await supabase.from("notifications").insert({
+        target_user_id: req.advisor_id,
+        target_role: "asesor_comercial",
+        title: nextStatus === "ajustado" ? "Logo ajustado listo para revisar" : "Logo listo para tu aprobación",
+        message: `El diseño de ${req.client_name} (${req.brand} · ${req.product}) está disponible para aprobación o comentarios.`,
+        type: "info",
+        reference_id: req.id,
+      });
+
+      sonnerToast.success("Enviado al asesor", {
+        description: "El asesor ya puede aprobarlo o solicitar modificaciones.",
+      });
+    } catch {
+      // handled
+    } finally {
+      setSending(false);
     }
   };
 
@@ -166,13 +201,45 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
     if (!modFeedback.trim()) return;
     setActionLoading(true);
     try {
+      const note = modFeedback.trim();
+      if (modFiles.length > 0) {
+        const { failed } = await uploadReferenceFiles({
+          files: modFiles,
+          requestId: req.id,
+          orderId: req.order_id || null,
+          stage: "modificacion",
+          note,
+          userId: user?.id || null,
+          userName: user?.email || null,
+        });
+        if (failed > 0) {
+          toast({
+            title: "Algunos archivos no se subieron",
+            description: `${failed} archivo(s) de referencia fallaron. Puedes intentarlo de nuevo.`,
+            variant: "destructive",
+          });
+        }
+        invalidateReferences();
+      }
+
       const existingNotes = req.advisor_feedback ? `${req.advisor_feedback}\n---\n` : "";
       await updateRequest.mutateAsync({
         id: req.id,
         status: "ajustes_solicitados",
-        advisor_feedback: existingNotes + modFeedback.trim(),
+        advisor_feedback: existingNotes + note,
       });
+
+      await supabase.from("notifications").insert({
+        target_user_id: req.designer_id || null,
+        target_role: "disenador",
+        title: "Modificación solicitada por el asesor",
+        message: `${req.client_name} (${req.brand} · ${req.product}): ${note}`,
+        type: "warning",
+        reference_id: req.id,
+      });
+
       setModFeedback("");
+      setModFiles([]);
       setShowModInput(false);
       sonnerToast.info("Modificación solicitada", {
         description: "El diseñador recibirá los nuevos comentarios.",
@@ -291,6 +358,8 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
           </div>
         </div>
 
+        <ReferenceFilesPanel requestId={req.id} />
+
         {/* Designer controls — only for designer/admin */}
         {isDesigner && (
           <>
@@ -298,26 +367,28 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
               <p className="text-xs font-medium text-muted-foreground">Notas del diseñador</p>
               <Textarea value={designNotes} onChange={(e) => setDesignNotes(e.target.value)} rows={2} placeholder="Notas sobre los cambios realizados..." />
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Select value={newStatus} onValueChange={(v) => setNewStatus(v as LogoRequestStatus)}>
-                <SelectTrigger className="w-full sm:flex-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DESIGNER_STATUSES.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button onClick={handleSave} disabled={uploading}>
-                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-4 w-4" /> Guardar</>}
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                onClick={handleSendToAdvisor}
+                disabled={sending || uploading}
+                className="w-full sm:flex-1"
+              >
+                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="mr-2 h-4 w-4" /> Enviar al asesor para aprobación</>}
+              </Button>
+              <Button variant="outline" onClick={handleSave} disabled={uploading || sending} className="w-full sm:w-auto">
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-4 w-4" /> Guardar avance</>}
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground">
+              {awaitingAdvisor
+                ? "Ya está con el asesor. Si subes una nueva versión, vuelve a enviarla."
+                : "Guarda tu avance las veces que quieras; el asesor solo lo ve cuando lo envías."}
+            </p>
           </>
         )}
 
-        {/* Advisor review — modification available whenever there's an adjusted logo; approval only when published */}
-        {isAdvisor && (req.adjusted_logo_url || req.additional_instructions?.includes("recompra")) && !["aprobado", "finalizado"].includes(req.status) && (
+        {/* Advisor review — approve or request changes once the design was sent */}
+        {isAdvisor && (awaitingAdvisor || req.additional_instructions?.includes("recompra")) && !["aprobado", "finalizado"].includes(req.status) && (
           <div className="space-y-3 pt-3 border-t">
             <p className="text-xs font-medium text-muted-foreground">
               Revisión del asesor
@@ -325,27 +396,20 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
                 <span className="ml-2 text-orange-600">(Recompra — aprueba si se reutiliza el logo original)</span>
               )}
             </p>
-            {req.status !== "listo_aprobacion" && (
-              <p className="text-xs text-muted-foreground">
-                Diseño sigue trabajando en este logo — puedes pedir cambios; la aprobación se habilita cuando lo marquen como listo.
-              </p>
-            )}
             {!showModInput ? (
-              <div className="flex gap-3">
-                {req.status === "listo_aprobacion" && (
-                  <Button
-                    onClick={handleApprove}
-                    disabled={actionLoading}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="mr-2 h-4 w-4" /> ✅ Aprobar diseño</>}
-                  </Button>
-                )}
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Button
+                  onClick={handleApprove}
+                  disabled={actionLoading}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="mr-2 h-4 w-4" /> ✅ Aprobar diseño</>}
+                </Button>
                 <Button
                   variant="outline"
                   onClick={() => setShowModInput(true)}
                   disabled={actionLoading}
-                  className={`flex-1 border-orange-400 text-orange-600 hover:bg-orange-50 ${req.status === "listo_aprobacion" ? "" : "bg-orange-500/10"}`}
+                  className="flex-1 border-orange-400 text-orange-600 hover:bg-orange-50"
                 >
                   <RotateCcw className="mr-2 h-4 w-4" /> ✏️ Solicitar modificación
                 </Button>
@@ -358,6 +422,21 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
                   rows={3}
                   placeholder="Describe los cambios que necesitas..."
                 />
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">
+                    Archivos de referencia (opcional): imágenes o PDF que ayuden a Diseño.
+                  </p>
+                  <Input
+                    type="file"
+                    multiple
+                    accept="image/*,application/pdf"
+                    onChange={(e) => setModFiles(Array.from(e.target.files || []))}
+                    className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary"
+                  />
+                  {modFiles.length > 0 && (
+                    <p className="text-xs text-muted-foreground">{modFiles.length} archivo(s) seleccionado(s)</p>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <Button
                     onClick={handleRequestModification}
@@ -366,7 +445,7 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
                   >
                     {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar comentarios"}
                   </Button>
-                  <Button variant="ghost" onClick={() => { setShowModInput(false); setModFeedback(""); }}>
+                  <Button variant="ghost" onClick={() => { setShowModInput(false); setModFeedback(""); setModFiles([]); }}>
                     Cancelar
                   </Button>
                 </div>
