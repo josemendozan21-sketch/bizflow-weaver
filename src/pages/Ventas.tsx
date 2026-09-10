@@ -40,6 +40,7 @@ import { buildStages } from "@/lib/orderFlow";
 import { LogoSearchDialog } from "@/components/ventas/LogoSearchDialog";
 import { notifyLogoFlow, type LogoSource } from "@/lib/recompraLogoFlow";
 import { uploadReferenceFiles } from "@/hooks/useLogoReferenceFiles";
+import { ReferenceFilesInput } from "@/components/ventas/ReferenceFilesInput";
 import { LogoPreview } from "@/components/diseno/LogoPreview";
 import { IVA_RATE, computeIva, prorateIva } from "@/lib/tax";
 import { TaxOptionField } from "@/components/ventas/TaxOptionField";
