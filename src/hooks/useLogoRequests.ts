@@ -150,8 +150,8 @@ export async function uploadLogoFile(file: File, folder: string): Promise<string
 
 export const STATUS_LABELS: Record<LogoRequestStatus, string> = {
   pendiente_diseno: "Pendiente de diseño",
-  en_revision: "En revisión",
-  ajustado: "Ajustado",
+  en_revision: "En revisión del asesor",
+  ajustado: "Ajustado · en revisión del asesor",
   listo_aprobacion: "Listo para aprobación",
   ajustes_solicitados: "Ajustes solicitados",
   aprobado: "Aprobado",
