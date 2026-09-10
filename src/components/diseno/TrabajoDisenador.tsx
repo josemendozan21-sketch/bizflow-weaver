@@ -305,35 +305,39 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
         {/* Logos side by side */}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-muted-foreground">Logo original</p>
-              {isDesigner && (
-                <a
-                  href={req.original_logo_url}
-                  download
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-primary hover:underline flex items-center gap-1"
-                >
-                  <Download className="h-3 w-3" /> Descargar
-                </a>
-              )}
-            </div>
-            <div className="border rounded-lg p-2 bg-muted/20 flex items-center justify-center min-h-[80px]">
-              <LogoPreview url={req.original_logo_url} alt="Original" />
-            </div>
             {[
+              { name: (req as any).logo_name || null, url: req.original_logo_url },
               ...(((req as any).original_logo_url_2 ? [{ name: (req as any).logo_name_2 || null, url: (req as any).original_logo_url_2 }] : [])),
               ...(((req as any).extra_logos as Array<{ name?: string | null; url?: string | null }> | null) || []),
             ]
               .filter((l) => l?.url)
               .map((l, i) => (
-                <div key={`extra-logo-${i}`} className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Logo {i + 2}{l?.name ? ` — ${l.name}` : ""}
-                  </p>
+                <div key={`logo-${i}`} className="space-y-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {i === 0 ? "Logo original" : `Logo ${i + 1}`}
+                      {l?.name ? ` — ${l.name}` : ""}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={l!.url!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline"
+                      >
+                        Abrir
+                      </a>
+                      <a
+                        href={l!.url!}
+                        download={l?.name || undefined}
+                        className="flex items-center gap-1 text-xs text-primary hover:underline"
+                      >
+                        <Download className="h-3 w-3" /> Descargar
+                      </a>
+                    </div>
+                  </div>
                   <div className="border rounded-lg p-2 bg-muted/20 flex items-center justify-center min-h-[80px]">
-                    <LogoPreview url={l!.url!} alt={`Logo ${i + 2}`} />
+                    <LogoPreview url={l!.url!} alt={i === 0 ? "Original" : `Logo ${i + 1}`} />
                   </div>
                 </div>
               ))}
