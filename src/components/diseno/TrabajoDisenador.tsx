@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { LogoRequest, LogoRequestStatus, useUpdateLogoRequest, uploadLogoFile } from "@/hooks/useLogoRequests";
+import { LogoRequest, LogoRequestStatus, isOrderClosed, useUpdateLogoRequest, uploadLogoFile } from "@/hooks/useLogoRequests";
 import { StatusBadge } from "./StatusBadge";
 import { Upload, Loader2, MessageSquare, Info, Save, Check, RotateCcw, Download, FileText, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,8 +24,10 @@ interface Props {
 export const ADVISOR_REVIEW_STATUSES: LogoRequestStatus[] = ["en_revision", "ajustado", "listo_aprobacion"];
 
 export function TrabajoDisenador({ requests }: Props) {
-  const filtered = requests.filter((r) =>
-    ["pendiente_diseno", "en_revision", "ajustado", "ajustes_solicitados", "listo_aprobacion"].includes(r.status)
+  const filtered = requests.filter(
+    (r) =>
+      ["pendiente_diseno", "en_revision", "ajustado", "ajustes_solicitados", "listo_aprobacion"].includes(r.status) &&
+      !isOrderClosed(r)
   );
 
   return (
