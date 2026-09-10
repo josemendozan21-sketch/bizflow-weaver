@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.close_logo_requests_on_order_closed() FROM PUBLIC, anon, authenticated;

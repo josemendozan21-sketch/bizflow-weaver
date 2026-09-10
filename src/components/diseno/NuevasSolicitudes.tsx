@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogoRequest } from "@/hooks/useLogoRequests";
+import { LogoRequest, isOrderClosed } from "@/hooks/useLogoRequests";
 import { StatusBadge } from "./StatusBadge";
 import { CreateRequestDialog } from "./CreateRequestDialog";
 import { format } from "date-fns";
@@ -16,7 +16,7 @@ interface Props {
 export function NuevasSolicitudes({ requests }: Props) {
   const { role } = useAuth();
   const canCreate = role === "admin" || role === "produccion";
-  const filtered = requests.filter((r) => r.status === "pendiente_diseno");
+  const filtered = requests.filter((r) => r.status === "pendiente_diseno" && !isOrderClosed(r));
 
   return (
     <div className="space-y-4">

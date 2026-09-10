@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { LogoRequest, LogoRequestStatus, useUpdateLogoRequest, uploadLogoFile } from "@/hooks/useLogoRequests";
+import { LogoRequest, LogoRequestStatus, isOrderClosed, useUpdateLogoRequest, uploadLogoFile } from "@/hooks/useLogoRequests";
 import { StatusBadge } from "./StatusBadge";
 import { Upload, Loader2, MessageSquare, Info, Save, Check, RotateCcw, Download, FileText, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,8 +24,10 @@ interface Props {
 export const ADVISOR_REVIEW_STATUSES: LogoRequestStatus[] = ["en_revision", "ajustado", "listo_aprobacion"];
 
 export function TrabajoDisenador({ requests }: Props) {
-  const filtered = requests.filter((r) =>
-    ["pendiente_diseno", "en_revision", "ajustado", "ajustes_solicitados", "listo_aprobacion"].includes(r.status)
+  const filtered = requests.filter(
+    (r) =>
+      ["pendiente_diseno", "en_revision", "ajustado", "ajustes_solicitados", "listo_aprobacion"].includes(r.status) &&
+      !isOrderClosed(r)
   );
 
   return (
@@ -71,6 +73,7 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
   const isDesigner = role === "disenador" || role === "admin";
   const isAdvisor = role === "asesor_comercial" || role === "admin";
   const awaitingAdvisor = ADVISOR_REVIEW_STATUSES.includes(req.status);
+  const orderClosed = isOrderClosed(req);
 
   useEffect(() => {
     if (!adjustedFile) setAdjustedPreview(req.adjusted_logo_url);
@@ -115,6 +118,14 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
 
   /** Envía el diseño al asesor para que lo apruebe o pida cambios. */
   const handleSendToAdvisor = async () => {
+    if (orderClosed) {
+      toast({
+        title: "Este pedido ya salió",
+        description: "El pedido está despachado o cancelado, por eso no se puede enviar a aprobación.",
+        variant: "destructive",
+      });
+      return;
+    }
     setSending(true);
     try {
       let adjustedUrl = req.adjusted_logo_url;
@@ -269,6 +280,13 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {orderClosed && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            Este pedido ya fue despachado o cancelado. El diseño quedó cerrado: no se envía a aprobación ni vuelve a
+            producción.
+          </div>
+        )}
+
         {/* Info from client */}
         {(req.client_comments || req.additional_instructions || req.advisor_feedback) && (
           <div className="space-y-2 p-3 bg-muted/30 rounded-lg text-sm">
@@ -388,7 +406,7 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
         )}
 
         {/* Advisor review — approve or request changes once the design was sent */}
-        {isAdvisor && (awaitingAdvisor || req.additional_instructions?.includes("recompra")) && !["aprobado", "finalizado"].includes(req.status) && (
+        {isAdvisor && !orderClosed && (awaitingAdvisor || req.additional_instructions?.includes("recompra")) && !["aprobado", "finalizado"].includes(req.status) && (
           <div className="space-y-3 pt-3 border-t">
             <p className="text-xs font-medium text-muted-foreground">
               Revisión del asesor

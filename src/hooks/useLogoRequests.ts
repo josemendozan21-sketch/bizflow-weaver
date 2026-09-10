@@ -34,7 +34,15 @@ export interface LogoRequest {
   updated_at: string;
   order_id?: string | null;
   order_code?: string | null;
+  /** Estado del pedido asociado (para ocultar solicitudes de pedidos ya cerrados) */
+  order_status?: string | null;
 }
+
+/** Pedidos que ya salieron: sus solicitudes de logo no deben volver a ninguna bandeja. */
+export const CLOSED_ORDER_STATUSES = ["despachado", "entregado", "cancelado"];
+
+export const isOrderClosed = (r: { order_status?: string | null }) =>
+  !!r.order_status && CLOSED_ORDER_STATUSES.includes(r.order_status);
 
 export function useLogoRequests() {
   const qc = useQueryClient();
@@ -59,10 +67,14 @@ export function useLogoRequests() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("logo_requests")
-        .select("*, orders(order_code)")
+        .select("*, orders(order_code, production_status)")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data || []).map((r: any) => ({ ...r, order_code: r.orders?.order_code ?? null })) as LogoRequest[];
+      return (data || []).map((r: any) => ({
+        ...r,
+        order_code: r.orders?.order_code ?? null,
+        order_status: r.orders?.production_status ?? null,
+      })) as LogoRequest[];
     },
     refetchOnWindowFocus: true,
     refetchOnMount: "always",
