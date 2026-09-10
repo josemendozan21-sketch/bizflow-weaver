@@ -34,7 +34,15 @@ export interface LogoRequest {
   updated_at: string;
   order_id?: string | null;
   order_code?: string | null;
+  /** Estado del pedido asociado (para ocultar solicitudes de pedidos ya cerrados) */
+  order_status?: string | null;
 }
+
+/** Pedidos que ya salieron: sus solicitudes de logo no deben volver a ninguna bandeja. */
+export const CLOSED_ORDER_STATUSES = ["despachado", "entregado", "cancelado"];
+
+export const isOrderClosed = (r: { order_status?: string | null }) =>
+  !!r.order_status && CLOSED_ORDER_STATUSES.includes(r.order_status);
 
 export function useLogoRequests() {
   const qc = useQueryClient();
