@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogoRequest } from "@/hooks/useLogoRequests";
+import { LogoRequest, isOrderClosed } from "@/hooks/useLogoRequests";
 import { StatusBadge } from "./StatusBadge";
 import { CreateRequestDialog } from "./CreateRequestDialog";
 import { format } from "date-fns";
