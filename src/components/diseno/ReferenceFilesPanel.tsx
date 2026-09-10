@@ -17,11 +17,33 @@ export function ReferenceFilesPanel({ requestId, orderId, title = "Archivos de r
 
   if (files.length === 0) return null;
 
+  const downloadAll = () => {
+    files.forEach((f, i) => {
+      setTimeout(() => {
+        const a = document.createElement("a");
+        a.href = f.file_url;
+        a.download = f.file_name || "referencia";
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }, i * 400);
+    });
+  };
+
   return (
     <div className="space-y-2 rounded-lg border border-dashed p-3">
-      <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-        <Paperclip className="h-3.5 w-3.5" /> {title} ({files.length})
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <Paperclip className="h-3.5 w-3.5" /> {title} ({files.length})
+        </p>
+        {files.length > 1 && (
+          <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={downloadAll}>
+            Descargar todos <Download className="ml-1 h-3 w-3" />
+          </Button>
+        )}
+      </div>
       <p className="text-[11px] text-muted-foreground">
         Sirven como guía. No reemplazan el logo original ni el ajustado.
       </p>
