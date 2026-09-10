@@ -406,7 +406,7 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
         )}
 
         {/* Advisor review — approve or request changes once the design was sent */}
-        {isAdvisor && (awaitingAdvisor || req.additional_instructions?.includes("recompra")) && !["aprobado", "finalizado"].includes(req.status) && (
+        {isAdvisor && !orderClosed && (awaitingAdvisor || req.additional_instructions?.includes("recompra")) && !["aprobado", "finalizado"].includes(req.status) && (
           <div className="space-y-3 pt-3 border-t">
             <p className="text-xs font-medium text-muted-foreground">
               Revisión del asesor
