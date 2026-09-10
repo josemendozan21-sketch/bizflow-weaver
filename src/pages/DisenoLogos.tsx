@@ -39,7 +39,7 @@ const DisenoLogos = () => {
 
   const pendingCount = requests.filter((r) => r.status === "pendiente_diseno").length;
   const designCount = requests.filter((r) => ["pendiente_diseno", "en_revision", "ajustado", "ajustes_solicitados", "listo_aprobacion"].includes(r.status)).length;
-  const approvalCount = requests.filter((r) => ["aprobado", "listo_aprobacion"].includes(r.status)).length;
+  const approvalCount = requests.filter((r) => ["aprobado", "en_revision", "ajustado", "listo_aprobacion"].includes(r.status)).length;
   const doneCount = requests.filter((r) => r.status === "finalizado").length;
 
   // Estampacion only sees the Aprobación tab (read-only)

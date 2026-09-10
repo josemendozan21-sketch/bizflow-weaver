@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { LogoPreview } from "./LogoPreview";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
-import { DesignerCard } from "./TrabajoDisenador";
+import { ADVISOR_REVIEW_STATUSES, DesignerCard } from "./TrabajoDisenador";
 
 interface Props {
   requests: LogoRequest[];
@@ -21,7 +21,7 @@ interface Props {
 export function AprobacionAsesor({ requests }: Props) {
   const { role } = useAuth();
   const filtered = requests.filter((r) => r.status === "aprobado");
-  const pending = requests.filter((r) => r.status === "listo_aprobacion");
+  const pending = requests.filter((r) => ADVISOR_REVIEW_STATUSES.includes(r.status));
   const canApprove = role === "asesor_comercial" || role === "admin";
 
   return (
@@ -33,7 +33,7 @@ export function AprobacionAsesor({ requests }: Props) {
               Pendientes de tu aprobación ({pending.length})
             </h2>
             <p className="text-xs text-indigo-800">
-              El diseñador ya publicó estos diseños. Apruébalos o solicita modificaciones.
+              Diseño ya te envió estos logos. Apruébalos o solicita modificaciones con tus comentarios.
             </p>
           </div>
           <div className="grid gap-4">

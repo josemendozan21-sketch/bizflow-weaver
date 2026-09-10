@@ -9,6 +9,8 @@ import { Separator } from "@/components/ui/separator";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import { PaymentsList } from "@/components/ventas/PaymentsList";
 import { OrderChangeLogPanel } from "@/components/ventas/OrderChangeLogPanel";
+import ReferenceFilesPanel from "@/components/diseno/ReferenceFilesPanel";
+import OrderDesignHistory from "@/components/diseno/OrderDesignHistory";
 import { useOrderDeliveries } from "@/hooks/useOrderDeliveries";
 import { useOrderCharges } from "@/hooks/useOrderCharges";
 import {
@@ -333,6 +335,10 @@ export default function OrderDetailDialog({ orderId, orderCode, open, onOpenChan
                 </section>
               </>
             )}
+
+            <ReferenceFilesPanel orderId={order.id} />
+
+            <OrderDesignHistory orderId={order.id} />
 
             <OrderChangeLogPanel
               orderId={order.id}

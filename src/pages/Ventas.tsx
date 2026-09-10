@@ -39,6 +39,7 @@ import { OrderConfirmationDialog, type OrderSummary } from "@/components/ventas/
 import { buildStages } from "@/lib/orderFlow";
 import { LogoSearchDialog } from "@/components/ventas/LogoSearchDialog";
 import { notifyLogoFlow, type LogoSource } from "@/lib/recompraLogoFlow";
+import { uploadReferenceFiles } from "@/hooks/useLogoReferenceFiles";
 import { LogoPreview } from "@/components/diseno/LogoPreview";
 import { IVA_RATE, computeIva, prorateIva } from "@/lib/tax";
 import { TaxOptionField } from "@/components/ventas/TaxOptionField";
@@ -701,6 +702,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [cobroLogo, setCobroLogo] = usePersistedState("ventas:mw:cobroLogo", false);
   const [costoLogo, setCostoLogo] = usePersistedState("ventas:mw:costoLogo", "");
   const [mwLogos, setMwLogos] = useState<LogoEntry[]>(() => [makeLogoEntry()]);
+  const [mwRefFiles, setMwRefFiles] = useState<File[]>([]);
   const [clientName, setClientName] = usePersistedState<string>("ventas:mw:clientName", "");
   const [recompraLogoUrl, setRecompraLogoUrl] = usePersistedState<string>("ventas:mw:recompraLogoUrl", "");
   const [recompraMismoLogo, setRecompraMismoLogo] = usePersistedState<"si" | "no">("ventas:mw:recompraMismoLogo", "si");
@@ -1367,6 +1369,24 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       await supabase.from("logo_requests").update({ order_id: firstOrderIdForLogo }).eq("id", logoRequestId);
     }
 
+    // Archivos de apoyo para Diseño (no reemplazan el logo)
+    if (mwRefFiles.length > 0 && (logoRequestId || firstOrderIdForLogo)) {
+      const { failed } = await uploadReferenceFiles({
+        files: mwRefFiles,
+        requestId: logoRequestId,
+        orderId: firstOrderIdForLogo,
+        stage: "creacion",
+        userId: user?.id ?? null,
+        userName: user?.email ?? null,
+      });
+      if (failed > 0) {
+        toast.error("Algunos archivos de referencia no se subieron", {
+          description: `${failed} archivo(s) fallaron. Puedes adjuntarlos luego desde Diseño.`,
+        });
+      }
+      setMwRefFiles([]);
+    }
+
     if (firstOrderIdForLogo && logoSource !== "sin_logo") {
       await notifyLogoFlow({
         orderId: firstOrderIdForLogo,
@@ -1950,6 +1970,21 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 {!(isRecompra && recompraMismoLogo === "si") && (
                   <OrderLogosField logos={mwLogos} onChange={setMwLogos} />
                 )}
+
+                <div className="space-y-1.5 rounded-md border border-dashed p-3">
+                  <Label>Archivos de referencia para Diseño (opcional)</Label>
+                  <Input
+                    type="file"
+                    multiple
+                    accept="image/*,.pdf"
+                    onChange={(e) => setMwRefFiles(Array.from(e.target.files || []))}
+                    className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Imágenes o PDF de apoyo (ej. "el logo horizontal", "agregar esta frase"). No reemplazan el logo del pedido.
+                    {mwRefFiles.length > 0 ? ` — ${mwRefFiles.length} archivo(s) seleccionado(s)` : ""}
+                  </p>
+                </div>
               </div>
             )}
 
@@ -2095,6 +2130,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const [ssCostoLogo, setSsCostoLogo] = usePersistedState("ventas:ss:costoLogo", "");
   const [ssPaymentProofFile, setSsPaymentProofFile] = useState<File | null>(null);
   const [ssLogos, setSsLogos] = useState<LogoEntry[]>(() => [makeLogoEntry()]);
+  const [ssRefFiles, setSsRefFiles] = useState<File[]>([]);
   const [ssRutFileState, setSsRutFileState] = useState<File | null>(null);
   const [ssPriceIncludesTax, setSsPriceIncludesTax] = usePersistedState("ventas:ss:priceIncludesTax", true);
   const ssFormRef = useRef<HTMLFormElement>(null);
@@ -2485,6 +2521,24 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
     if (ssLogoRequestId && ssFirstOrderIdForLogo) {
       await supabase.from("logo_requests").update({ order_id: ssFirstOrderIdForLogo }).eq("id", ssLogoRequestId);
+    }
+
+    // Archivos de apoyo para Diseño (no reemplazan el logo)
+    if (ssRefFiles.length > 0 && (ssLogoRequestId || ssFirstOrderIdForLogo)) {
+      const { failed } = await uploadReferenceFiles({
+        files: ssRefFiles,
+        requestId: ssLogoRequestId,
+        orderId: ssFirstOrderIdForLogo,
+        stage: "creacion",
+        userId: user?.id ?? null,
+        userName: user?.email ?? null,
+      });
+      if (failed > 0) {
+        toast.error("Algunos archivos de referencia no se subieron", {
+          description: `${failed} archivo(s) fallaron. Puedes adjuntarlos luego desde Diseño.`,
+        });
+      }
+      setSsRefFiles([]);
     }
 
     if (ssFirstOrderIdForLogo && ssLogoSource !== "sin_logo") {
@@ -2898,6 +2952,22 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
             )}
             {!ssNoLogo && !(ssIsRecompra && ssRecompraMismoLogo === "si") && (
               <OrderLogosField logos={ssLogos} onChange={setSsLogos} />
+            )}
+            {!ssNoLogo && (
+              <div className="space-y-1.5 rounded-md border border-dashed p-3">
+                <Label>Archivos de referencia para Diseño (opcional)</Label>
+                <Input
+                  type="file"
+                  multiple
+                  accept="image/*,.pdf"
+                  onChange={(e) => setSsRefFiles(Array.from(e.target.files || []))}
+                  className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Imágenes o PDF de apoyo para el diseñador. No reemplazan el logo del pedido.
+                  {ssRefFiles.length > 0 ? ` — ${ssRefFiles.length} archivo(s) seleccionado(s)` : ""}
+                </p>
+              </div>
             )}
             <div className="grid gap-4 sm:grid-cols-2">
               <FileField label="Adjuntar RUT de la empresa (opcional)" name="ss_rut" value={ssRutFileState} onChange={setSsRutFileState} accept="image/*,.pdf" />
