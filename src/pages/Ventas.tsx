@@ -1971,20 +1971,11 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                   <OrderLogosField logos={mwLogos} onChange={setMwLogos} />
                 )}
 
-                <div className="space-y-1.5 rounded-md border border-dashed p-3">
-                  <Label>Archivos de referencia para Diseño (opcional)</Label>
-                  <Input
-                    type="file"
-                    multiple
-                    accept="image/*,.pdf"
-                    onChange={(e) => setMwRefFiles(Array.from(e.target.files || []))}
-                    className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Imágenes o PDF de apoyo (ej. "el logo horizontal", "agregar esta frase"). No reemplazan el logo del pedido.
-                    {mwRefFiles.length > 0 ? ` — ${mwRefFiles.length} archivo(s) seleccionado(s)` : ""}
-                  </p>
-                </div>
+                <ReferenceFilesInput
+                  files={mwRefFiles}
+                  onChange={setMwRefFiles}
+                  hint='Imágenes o PDF de apoyo (ej. "el logo horizontal", "agregar esta frase"). No reemplazan el logo del pedido.'
+                />
               </div>
             )}
 
