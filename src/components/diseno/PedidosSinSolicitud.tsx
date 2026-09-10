@@ -57,11 +57,17 @@ export function PedidosSinSolicitud({ requests }: { requests: LogoRequest[] }) {
 
   const orphans = useMemo(() => {
     const linkedIds = new Set(requests.map((r) => (r as any).order_id).filter(Boolean));
-    const linkedUrls = new Set(
-      requests
-        .map((r) => r.original_logo_url)
-        .filter((u) => !!u && u.startsWith("http")),
-    );
+    // Una recompra puede reutilizar el logo original, el ajustado o uno extra
+    // de un diseño ya hecho; ninguna de esas variantes necesita nuevo diseño.
+    const linkedUrls = new Set<string>();
+    for (const r of requests) {
+      for (const u of [r.original_logo_url, r.adjusted_logo_url]) {
+        if (u && u.startsWith("http")) linkedUrls.add(u);
+      }
+      for (const extra of ((r as any).extra_logos || []) as Array<{ url?: string | null }>) {
+        if (extra?.url && extra.url.startsWith("http")) linkedUrls.add(extra.url);
+      }
+    }
     return orders.filter((o) => {
       if (!OPEN_STATUSES.includes(o.production_status)) return false;
       const hasDesignNeed = (o.logo_url && o.logo_url.startsWith("http")) || !!o.personalization?.trim();
