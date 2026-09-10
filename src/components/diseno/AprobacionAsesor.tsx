@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LogoRequest, useUpdateLogoRequest } from "@/hooks/useLogoRequests";
+import { LogoRequest, isOrderClosed, useUpdateLogoRequest } from "@/hooks/useLogoRequests";
 import { StatusBadge } from "./StatusBadge";
 import { CheckCircle2, FileText, User, Loader2, Download } from "lucide-react";
 import { format } from "date-fns";
@@ -20,8 +20,9 @@ interface Props {
 
 export function AprobacionAsesor({ requests }: Props) {
   const { role } = useAuth();
-  const filtered = requests.filter((r) => r.status === "aprobado");
-  const pending = requests.filter((r) => ADVISOR_REVIEW_STATUSES.includes(r.status));
+  const open = requests.filter((r) => !isOrderClosed(r));
+  const filtered = open.filter((r) => r.status === "aprobado");
+  const pending = open.filter((r) => ADVISOR_REVIEW_STATUSES.includes(r.status));
   const canApprove = role === "asesor_comercial" || role === "admin";
 
   return (
