@@ -67,10 +67,14 @@ export function useLogoRequests() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("logo_requests")
-        .select("*, orders(order_code)")
+        .select("*, orders(order_code, production_status)")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data || []).map((r: any) => ({ ...r, order_code: r.orders?.order_code ?? null })) as LogoRequest[];
+      return (data || []).map((r: any) => ({
+        ...r,
+        order_code: r.orders?.order_code ?? null,
+        order_status: r.orders?.production_status ?? null,
+      })) as LogoRequest[];
     },
     refetchOnWindowFocus: true,
     refetchOnMount: "always",
