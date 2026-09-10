@@ -73,6 +73,7 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
   const isDesigner = role === "disenador" || role === "admin";
   const isAdvisor = role === "asesor_comercial" || role === "admin";
   const awaitingAdvisor = ADVISOR_REVIEW_STATUSES.includes(req.status);
+  const orderClosed = isOrderClosed(req);
 
   useEffect(() => {
     if (!adjustedFile) setAdjustedPreview(req.adjusted_logo_url);
@@ -117,6 +118,14 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
 
   /** Envía el diseño al asesor para que lo apruebe o pida cambios. */
   const handleSendToAdvisor = async () => {
+    if (orderClosed) {
+      toast({
+        title: "Este pedido ya salió",
+        description: "El pedido está despachado o cancelado, por eso no se puede enviar a aprobación.",
+        variant: "destructive",
+      });
+      return;
+    }
     setSending(true);
     try {
       let adjustedUrl = req.adjusted_logo_url;
