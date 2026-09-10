@@ -393,14 +393,11 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
               >
                 {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="mr-2 h-4 w-4" /> Enviar al asesor para aprobación</>}
               </Button>
-              <Button variant="outline" onClick={handleSave} disabled={uploading || sending} className="w-full sm:w-auto">
-                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-4 w-4" /> Guardar avance</>}
-              </Button>
             </div>
             <p className="text-xs text-muted-foreground">
               {awaitingAdvisor
                 ? "Ya está con el asesor. Si subes una nueva versión, vuelve a enviarla."
-                : "Guarda tu avance las veces que quieras; el asesor solo lo ve cuando lo envías."}
+                : "Cuando el diseño esté listo, envíalo al asesor para su aprobación."}
             </p>
           </>
         )}
