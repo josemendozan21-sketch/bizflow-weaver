@@ -2,7 +2,7 @@ import { AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/diseno/StatusBadge";
-import type { LogoRequest } from "@/hooks/useLogoRequests";
+import { isOrderClosed, type LogoRequest } from "@/hooks/useLogoRequests";
 
 const STUCK_STATUSES = ["pendiente_diseno", "en_revision", "ajustes_solicitados", "listo_aprobacion"];
 const STUCK_HOURS = 24;
@@ -11,7 +11,10 @@ const hoursSince = (iso: string) => (Date.now() - new Date(iso).getTime()) / 3_6
 
 export function getStuckLogoRequests(requests: LogoRequest[]) {
   return requests.filter(
-    (r) => STUCK_STATUSES.includes(r.status) && hoursSince(r.updated_at || r.created_at) >= STUCK_HOURS,
+    (r) =>
+      STUCK_STATUSES.includes(r.status) &&
+      !isOrderClosed(r) &&
+      hoursSince(r.updated_at || r.created_at) >= STUCK_HOURS,
   );
 }
 

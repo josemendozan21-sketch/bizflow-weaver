@@ -16,7 +16,7 @@ interface Props {
 export function NuevasSolicitudes({ requests }: Props) {
   const { role } = useAuth();
   const canCreate = role === "admin" || role === "produccion";
-  const filtered = requests.filter((r) => r.status === "pendiente_diseno");
+  const filtered = requests.filter((r) => r.status === "pendiente_diseno" && !isOrderClosed(r));
 
   return (
     <div className="space-y-4">
