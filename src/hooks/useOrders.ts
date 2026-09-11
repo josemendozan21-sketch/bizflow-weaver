@@ -81,6 +81,37 @@ export function getOrderShippingDue(order: PaymentFields): number {
   return Math.max(Number(order.shipping_cost) || 0, 0);
 }
 
+export type ShippingStatusTone = "amber" | "green" | "neutral";
+
+export interface ShippingStatus {
+  mode: string;
+  label: string;
+  tone: ShippingStatusTone;
+  /** Valor del flete que Logística debe cobrar al entregar. */
+  due: number;
+}
+
+/** Etiqueta de envío para Logística (qué cobrar del flete y qué no). */
+export function getShippingStatus(order: PaymentFields): ShippingStatus {
+  const mode = order.shipping_payment_mode || "pendiente";
+  const cost = Math.max(Number(order.shipping_cost) || 0, 0);
+  if (mode === "contraentrega") {
+    return { mode, label: "Envío contraentrega — cobrar flete al cliente", tone: "amber", due: 0 };
+  }
+  if (mode === "por_cobrar") {
+    return {
+      mode,
+      label: `Envío por cobrar $${cost.toLocaleString("es-CO")} — cobrar al entregar`,
+      tone: "amber",
+      due: cost,
+    };
+  }
+  if (mode === "incluido_anticipos") {
+    return { mode, label: "Envío ya pagado (incluido en los anticipos)", tone: "green", due: 0 };
+  }
+  return { mode: "pendiente", label: "Envío sin definir", tone: "neutral", due: 0 };
+}
+
 function isProductFullyPaid(order: PaymentFields): boolean {
   return Boolean(
     order.payment_complete ||
