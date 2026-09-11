@@ -694,7 +694,7 @@ function GroupPaymentSummaryInner({ group }: { group: ShipmentGroup }) {
             </p>
             <p className="text-[11px] text-amber-700/80 dark:text-amber-300/80">
               Productos ${saldoContra.toLocaleString("es-CO")}
-              {group.totalShipping > 0 ? ` + envío $${group.totalShipping.toLocaleString("es-CO")}` : ""}
+              {shippingToCollect > 0 ? ` + envío $${shippingToCollect.toLocaleString("es-CO")}` : ""}
               {paidItems.length > 0 ? ` · ${paidItems.length} item(s) ya pagado(s)` : ""}
             </p>
           </div>
