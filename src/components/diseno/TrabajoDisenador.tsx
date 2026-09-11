@@ -15,6 +15,8 @@ import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import LogoStatusHistory from "./LogoStatusHistory";
 import ReferenceFilesPanel from "./ReferenceFilesPanel";
 import { uploadReferenceFiles, useInvalidateReferenceFiles } from "@/hooks/useLogoReferenceFiles";
+import { normalizeStages, TERMINAL_STAGES } from "@/lib/orderFlow";
+
 
 interface Props {
   requests: LogoRequest[];
