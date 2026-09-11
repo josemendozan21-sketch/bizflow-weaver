@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { getOrderBalance, getOrderPaidAmount, isOrderFullyPaid, useOrders, type Order } from "@/hooks/useOrders";
+import { getOrderBalance, getOrderPaidAmount, getShippingStatus, isOrderFullyPaid, useOrders, type Order } from "@/hooks/useOrders";
 import { useAuth } from "@/contexts/AuthContext";
 import { canEditSection } from "@/lib/rolePermissions";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,7 +39,7 @@ function OrderCodeList({ items }: { items: Order[] }) {
 }
 
 function exportOrdersToCSV(orders: Order[], brandLabel: (b: string) => string, saleLabel: (t: string) => string) {
-  const headers = ["N° Pedido", "Cliente", "Cédula/NIT", "Teléfono", "Email", "Ciudad", "Dirección", "Marca", "Tipo", "Producto", "Unidades", "Entregadas", "Pendientes por entregar", "Método de pago", "Valor total", "Abono", "Saldo pendiente", "Costo envío", "Observaciones"];
+  const headers = ["N° Pedido", "Cliente", "Cédula/NIT", "Teléfono", "Email", "Ciudad", "Dirección", "Marca", "Tipo", "Producto", "Unidades", "Entregadas", "Pendientes por entregar", "Método de pago", "Valor total", "Abono", "Saldo pendiente", "Costo envío", "Estado del envío", "Observaciones"];
   const rows = orders.map((o) => {
     const total = Number(o.total_amount) || 0;
     const abono = getOrderPaidAmount(o);
@@ -70,6 +70,7 @@ function exportOrdersToCSV(orders: Order[], brandLabel: (b: string) => string, s
       abono ? `$${abono.toLocaleString("es-CO")}` : "—",
       saldo > 0 ? `$${saldo.toLocaleString("es-CO")}` : "$0",
       shippingCost ? `$${shippingCost.toLocaleString("es-CO")}` : "—",
+      getShippingStatus(o).label,
       o.observations || "—",
     ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(",");
   });
@@ -228,16 +229,24 @@ function generateLabelsForGroups(groups: ShipmentGroup[]) {
     const saldo = Math.max(g.totalAmount - g.totalAbono, 0);
     const firstItem = g.items[0];
     const advisorInfo = esc(getAdvisorNames(g.items).join(", ") || "No asignado");
+    const gShip = getGroupShipping(g);
     let pagoInfo = "";
     if (g.saleType === "menor") {
       if (firstItem?.payment_method === "contra_entrega") {
-        pagoInfo = `CONTRA ENTREGA: $${(saldo + g.totalShipping).toLocaleString("es-CO")}`;
+        pagoInfo = `CONTRA ENTREGA: $${(saldo + gShip.toCollect).toLocaleString("es-CO")}`;
       } else {
         pagoInfo = "PAGADO";
       }
     } else {
       pagoInfo = saldo <= 0 ? "PAGO COMPLETO" : `SALDO: $${saldo.toLocaleString("es-CO")}`;
     }
+    const envioInfo = gShip.hasCod
+      ? "ENVÍO CONTRAENTREGA — COBRAR FLETE"
+      : gShip.due > 0
+        ? `ENVÍO POR COBRAR: $${gShip.due.toLocaleString("es-CO")}`
+        : gShip.allPending
+          ? "ENVÍO SIN DEFINIR"
+          : "ENVÍO YA PAGADO — NO COBRAR";
     const itemsHtml = g.items
       .map((it) => {
         const details: string[] = [];
@@ -264,6 +273,7 @@ function generateLabelsForGroups(groups: ShipmentGroup[]) {
         <div class="row"><span class="lbl">Contenido (${g.items.length} items, ${g.totalUnits} und):</span></div>
         <div class="items">${itemsHtml}</div>
         <div class="row pago"><span class="lbl">Pago:</span> <span class="val">${pagoInfo}</span></div>
+        <div class="row pago"><span class="lbl">Envío:</span> <span class="val">${envioInfo}</span></div>
         ${g.observations.length ? `<div class="row obs"><span class="lbl">Obs:</span> <span class="val">${esc(g.observations.join(" | "))}</span></div>` : ""}
       </div>
     `;
@@ -595,27 +605,119 @@ function AgingBadge({ days }: { days: number }) {
   return <Badge variant="destructive">{days}d</Badge>;
 }
 
+function ShippingBadge({ order }: { order: Order }) {
+  const s = getShippingStatus(order);
+  const cls =
+    s.tone === "amber"
+      ? "border-amber-400 text-amber-700"
+      : s.tone === "green"
+        ? "border-emerald-400 text-emerald-700"
+        : "border-muted-foreground/30 text-muted-foreground";
+  return (
+    <Badge variant="outline" className={`gap-1 ${cls}`}>
+      <Truck className="h-3 w-3" />
+      {s.label}
+    </Badge>
+  );
+}
+
 function PaymentBadge({ order }: { order: Order }) {
+  const shipping = <ShippingBadge order={order} />;
   if (order.sale_type === "menor") {
-    if (order.payment_method === "pagado") return <Badge className="bg-green-600 hover:bg-green-700">Pagado</Badge>;
+    if (order.payment_method === "pagado")
+      return (
+        <>
+          <Badge className="bg-green-600 hover:bg-green-700">Pagado</Badge>
+          {shipping}
+        </>
+      );
     if (order.payment_method === "contra_entrega") {
       const saldo = getOrderBalance(order);
-      const aCobrar = saldo + (Number(order.shipping_cost) || 0);
+      const s = getShippingStatus(order);
+      const flete = s.mode === "pendiente" ? Number(order.shipping_cost) || 0 : s.due;
+      const aCobrar = saldo + flete;
       return (
-        <Badge variant="outline" className="border-amber-400 text-amber-700">
-          Contra entrega: ${aCobrar.toLocaleString("es-CO")}
-        </Badge>
+        <>
+          <Badge variant="outline" className="border-amber-400 text-amber-700">
+            Contra entrega: ${aCobrar.toLocaleString("es-CO")}
+          </Badge>
+          {shipping}
+        </>
       );
     }
-    return <Badge variant="outline">N/A</Badge>;
+    return (
+      <>
+        <Badge variant="outline">N/A</Badge>
+        {shipping}
+      </>
+    );
   }
   const paid = isOrderFullyPaid(order);
-  if (paid) return <Badge className="bg-green-600 hover:bg-green-700">Pago completo</Badge>;
   const saldo = getOrderBalance(order);
-  return <Badge variant="destructive">Saldo: ${saldo.toLocaleString("es-CO")}</Badge>;
+  return (
+    <>
+      {paid ? (
+        <Badge className="bg-green-600 hover:bg-green-700">Pago completo</Badge>
+      ) : (
+        <Badge variant="destructive">Saldo: ${saldo.toLocaleString("es-CO")}</Badge>
+      )}
+      {shipping}
+    </>
+  );
+}
+
+function getGroupShipping(group: ShipmentGroup) {
+  const statuses = group.items.map((it) => getShippingStatus(it));
+  const hasCod = statuses.some((s) => s.mode === "contraentrega");
+  const due = statuses.reduce((s, x) => s + x.due, 0);
+  const allPending = statuses.length > 0 && statuses.every((s) => s.mode === "pendiente");
+  const allPrepaid = statuses.length > 0 && statuses.every((s) => s.mode === "incluido_anticipos");
+  // Compat: pedidos antiguos sin modo definido siguen usando el costo bruto
+  const toCollect = allPending ? group.totalShipping : due;
+  return { statuses, hasCod, due, allPending, allPrepaid, toCollect };
+}
+
+function GroupShippingLine({ group }: { group: ShipmentGroup }) {
+  const { hasCod, due, allPending, allPrepaid } = getGroupShipping(group);
+  let tone: "amber" | "green" | "neutral" = "neutral";
+  let text = "Envío sin definir — confirmar con el asesor";
+  if (hasCod) {
+    tone = "amber";
+    text = "Envío contraentrega — cobrar el flete al cliente";
+  } else if (due > 0) {
+    tone = "amber";
+    text = `Envío por cobrar $${due.toLocaleString("es-CO")} — cobrar al entregar`;
+  } else if (allPrepaid) {
+    tone = "green";
+    text = "Envío ya pagado (incluido en los anticipos) — no cobrar";
+  } else if (!allPending) {
+    tone = "green";
+    text = "Envío ya pagado — no cobrar";
+  }
+  const cls =
+    tone === "amber"
+      ? "border-amber-400/60 bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300"
+      : tone === "green"
+        ? "border-emerald-400/60 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"
+        : "border-muted bg-muted/40 text-muted-foreground";
+  return (
+    <div className={`mx-4 mt-2 rounded-md border px-3 py-2 flex items-center gap-2 text-sm font-medium ${cls}`}>
+      <Truck className="h-4 w-4 shrink-0" />
+      <span>{text}</span>
+    </div>
+  );
 }
 
 function GroupPaymentSummary({ group }: { group: ShipmentGroup }) {
+  return (
+    <>
+      <GroupPaymentSummaryInner group={group} />
+      <GroupShippingLine group={group} />
+    </>
+  );
+}
+
+function GroupPaymentSummaryInner({ group }: { group: ShipmentGroup }) {
   const saldo = Math.max(group.totalAmount - group.totalAbono, 0);
   if (group.saleType === "menor") {
     const contraItems = group.items.filter((i) => i.payment_method === "contra_entrega");
@@ -627,7 +729,8 @@ function GroupPaymentSummary({ group }: { group: ShipmentGroup }) {
         (s, it) => s + Math.max(Number(it.total_amount || 0) - getOrderPaidAmount(it), 0),
         0,
       );
-      const aCobrar = saldoContra + group.totalShipping;
+      const shippingToCollect = getGroupShipping(group).toCollect;
+      const aCobrar = saldoContra + shippingToCollect;
       return (
         <div className="mx-4 mt-3 rounded-md border border-amber-400/60 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 text-sm">
@@ -642,7 +745,7 @@ function GroupPaymentSummary({ group }: { group: ShipmentGroup }) {
             </p>
             <p className="text-[11px] text-amber-700/80 dark:text-amber-300/80">
               Productos ${saldoContra.toLocaleString("es-CO")}
-              {group.totalShipping > 0 ? ` + envío $${group.totalShipping.toLocaleString("es-CO")}` : ""}
+              {shippingToCollect > 0 ? ` + envío $${shippingToCollect.toLocaleString("es-CO")}` : ""}
               {paidItems.length > 0 ? ` · ${paidItems.length} item(s) ya pagado(s)` : ""}
             </p>
           </div>
@@ -1057,7 +1160,7 @@ function ShipmentGroupCard({
                 <span className="truncate">• {it.product}</span>
                 <AdvisorTag order={it} />
               </span>
-              <div className="flex items-center gap-3 shrink-0">
+              <div className="flex items-center gap-3 flex-wrap justify-end">
                 <span className="text-muted-foreground">{it.quantity} und</span>
                 <PartialDeliveryControl order={it} />
                 <PaymentBadge order={it} />
@@ -1171,7 +1274,7 @@ function PendingGroupCard({
                 <span className="truncate">• {it.product} <span className="text-muted-foreground">— {it.quantity} und</span></span>
                 <AdvisorTag order={it} />
               </span>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 flex-wrap justify-end">
                 <PartialDeliveryControl order={it} />
                 <ProductionStatusBadge status={it.production_status} order={it} />
                 <PaymentBadge order={it} />
