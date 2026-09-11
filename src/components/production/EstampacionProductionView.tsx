@@ -195,8 +195,18 @@ export const EstampacionProductionView = () => {
       !isStampingDone(o) &&
       (o.current_stage === "estampacion" || o.current_stage === "produccion_cuerpos"),
   );
+  // Red de seguridad: pedidos con logo cuya estampación no se ha finalizado pero
+  // que ya avanzaron a otra etapa (p. ej. la ruta se armó sin estampación).
+  // Si no se listan aquí quedan invisibles y no hay dónde subir las muestras.
+  const missedStamping = stampingScope.filter(
+    (o) =>
+      !isStampingDone(o) &&
+      o.current_stage !== "estampacion" &&
+      o.current_stage !== "produccion_cuerpos",
+  );
   // Ya estampados: se muestran solo como consulta (sin acciones) para no reiniciar el proceso.
   const finishedOrders = stampingScope.filter(isStampingDone);
+
 
 
   const q = searchQuery.trim();
