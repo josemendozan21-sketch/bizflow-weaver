@@ -196,7 +196,43 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
           .eq("client_name", req.client_name)
           .eq("brand", req.brand)
           .in("current_stage", ["pendiente", "diseno", "produccion_cuerpos"]);
+
+        // Si Inventarios ya ingresó el pedido ANTES de aprobar el logo, la ruta
+        // quedó armada sin la etapa de estampación y el pedido se vuelve
+        // invisible para Estampación. Reponemos la etapa y devolvemos el pedido
+        // a estampación cuando aún no se ha estampado.
+        const { data: relatedPos } = await supabase
+          .from("production_orders")
+          .select(
+            "id, brand, stages, needs_cuerpos, logo_file, molde, current_stage, stamp_size_status, stamp_inkgel_status",
+          )
+          .eq("client_name", req.client_name)
+          .eq("brand", req.brand);
+
+        for (const po of (relatedPos ?? []) as any[]) {
+          const stampingDone =
+            po.stamp_size_status === "finalizado" && po.stamp_inkgel_status === "finalizado";
+          const stages: string[] = po.stages ?? [];
+          if (
+            stampingDone ||
+            stages.includes("estampacion") ||
+            TERMINAL_STAGES.includes(po.current_stage)
+          ) {
+            continue;
+          }
+          const fixed = normalizeStages({ ...po, logo_file: po.logo_file ?? "pendiente" });
+          if (!fixed.includes("estampacion")) continue;
+          await supabase
+            .from("production_orders")
+            .update({
+              stages: fixed,
+              current_stage: "estampacion",
+              stage_status: "pendiente",
+            } as never)
+            .eq("id", po.id);
+        }
       }
+
 
       sonnerToast.success("Logo aprobado", {
         description: "El pedido avanza a estampación.",
