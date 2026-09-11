@@ -386,6 +386,39 @@ export const EstampacionProductionView = () => {
         )}
       </TabsContent>
 
+      <TabsContent value="muestras_pendientes" className="space-y-4">
+        <Alert className="border-amber-300 bg-amber-50 text-amber-800">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription className="text-xs">
+            Pedidos con logo que ya avanzaron en Producción pero cuya estampación no se ha
+            finalizado. Puedes subir aquí la muestra de tamaño y la de tinta/gel para que el
+            asesor las apruebe.
+          </AlertDescription>
+        </Alert>
+        {missedStamping.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">
+            No hay pedidos con muestras pendientes fuera de la etapa de estampación.
+          </p>
+        ) : (
+          <div className="grid gap-4">
+            {missedStamping.map((order) => (
+              <EstampacionOrderCard
+                key={order.id}
+                order={order}
+                lineCtx={order.order_id ? lineContext[order.order_id] : undefined}
+                stageLogs={stageLogs.filter((l) => l.production_order_id === order.id)}
+                logoRequests={logoRequests}
+                onStart={() => setOperatorPrompt({ mode: "start", orderId: order.id, clientName: order.client_name })}
+                onFinish={() => setOperatorPrompt({ mode: "finish", orderId: order.id, clientName: order.client_name })}
+                finishing={completeStamping.isPending && completeStamping.variables?.orderId === order.id}
+              />
+            ))}
+          </div>
+        )}
+      </TabsContent>
+
+
+
       <TabsContent value="finalizadas" className="space-y-4">
         <Alert className="border-emerald-300 bg-emerald-50 text-emerald-800">
           <Info className="h-4 w-4" />
