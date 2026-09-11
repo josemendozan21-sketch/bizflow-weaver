@@ -678,7 +678,8 @@ function GroupPaymentSummaryInner({ group }: { group: ShipmentGroup }) {
         (s, it) => s + Math.max(Number(it.total_amount || 0) - getOrderPaidAmount(it), 0),
         0,
       );
-      const aCobrar = saldoContra + group.totalShipping;
+      const shippingToCollect = getGroupShipping(group).toCollect;
+      const aCobrar = saldoContra + shippingToCollect;
       return (
         <div className="mx-4 mt-3 rounded-md border border-amber-400/60 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 text-sm">
