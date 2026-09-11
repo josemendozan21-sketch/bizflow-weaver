@@ -595,24 +595,65 @@ function AgingBadge({ days }: { days: number }) {
   return <Badge variant="destructive">{days}d</Badge>;
 }
 
+function ShippingBadge({ order }: { order: Order }) {
+  const s = getShippingStatus(order);
+  const cls =
+    s.tone === "amber"
+      ? "border-amber-400 text-amber-700"
+      : s.tone === "green"
+        ? "border-emerald-400 text-emerald-700"
+        : "border-muted-foreground/30 text-muted-foreground";
+  return (
+    <Badge variant="outline" className={`gap-1 ${cls}`}>
+      <Truck className="h-3 w-3" />
+      {s.label}
+    </Badge>
+  );
+}
+
 function PaymentBadge({ order }: { order: Order }) {
+  const shipping = <ShippingBadge order={order} />;
   if (order.sale_type === "menor") {
-    if (order.payment_method === "pagado") return <Badge className="bg-green-600 hover:bg-green-700">Pagado</Badge>;
+    if (order.payment_method === "pagado")
+      return (
+        <>
+          <Badge className="bg-green-600 hover:bg-green-700">Pagado</Badge>
+          {shipping}
+        </>
+      );
     if (order.payment_method === "contra_entrega") {
       const saldo = getOrderBalance(order);
-      const aCobrar = saldo + (Number(order.shipping_cost) || 0);
+      const s = getShippingStatus(order);
+      const flete = s.mode === "pendiente" ? Number(order.shipping_cost) || 0 : s.due;
+      const aCobrar = saldo + flete;
       return (
-        <Badge variant="outline" className="border-amber-400 text-amber-700">
-          Contra entrega: ${aCobrar.toLocaleString("es-CO")}
-        </Badge>
+        <>
+          <Badge variant="outline" className="border-amber-400 text-amber-700">
+            Contra entrega: ${aCobrar.toLocaleString("es-CO")}
+          </Badge>
+          {shipping}
+        </>
       );
     }
-    return <Badge variant="outline">N/A</Badge>;
+    return (
+      <>
+        <Badge variant="outline">N/A</Badge>
+        {shipping}
+      </>
+    );
   }
   const paid = isOrderFullyPaid(order);
-  if (paid) return <Badge className="bg-green-600 hover:bg-green-700">Pago completo</Badge>;
   const saldo = getOrderBalance(order);
-  return <Badge variant="destructive">Saldo: ${saldo.toLocaleString("es-CO")}</Badge>;
+  return (
+    <>
+      {paid ? (
+        <Badge className="bg-green-600 hover:bg-green-700">Pago completo</Badge>
+      ) : (
+        <Badge variant="destructive">Saldo: ${saldo.toLocaleString("es-CO")}</Badge>
+      )}
+      {shipping}
+    </>
+  );
 }
 
 function getGroupShipping(group: ShipmentGroup) {
