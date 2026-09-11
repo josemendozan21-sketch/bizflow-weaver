@@ -44,22 +44,30 @@ export function OrderShippingPanel({ order, readOnly }: Props) {
     order.shipping_cost != null && Number(order.shipping_cost) > 0 ? String(order.shipping_cost) : "",
   );
   const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
     const m = order.shipping_payment_mode || "pendiente";
     setCod(m === "contraentrega");
     setInAdvances(m === "incluido_anticipos");
     setAmount(order.shipping_cost != null && Number(order.shipping_cost) > 0 ? String(order.shipping_cost) : "");
+    setDirty(false);
   }, [order.shipping_payment_mode, order.shipping_cost]);
 
   const productDue = Math.max((Number(order.total_amount) || 0) - getOrderPaidAmount(order), 0);
   const shippingDue = getOrderShippingDue(order);
   const balance = getOrderBalance(order);
 
-  const handleSave = async () => {
+  const persist = async (nextCod: boolean, nextInAdvances: boolean, nextAmount: string) => {
     setSaving(true);
-    const value = cod ? 0 : Math.max(parseFloat(amount) || 0, 0);
-    const nextMode = cod ? "contraentrega" : inAdvances ? "incluido_anticipos" : value > 0 ? "por_cobrar" : "pendiente";
+    const value = nextCod ? 0 : Math.max(parseFloat(nextAmount) || 0, 0);
+    const nextMode = nextCod
+      ? "contraentrega"
+      : nextInAdvances
+        ? "incluido_anticipos"
+        : value > 0
+          ? "por_cobrar"
+          : "pendiente";
     const { error } = await supabase
       .from("orders")
       .update({
@@ -75,10 +83,13 @@ export function OrderShippingPanel({ order, readOnly }: Props) {
       toast.error("No se pudo guardar el envío", { description: error.message });
       return;
     }
+    setDirty(false);
     queryClient.invalidateQueries({ queryKey: ["orders"] });
     queryClient.invalidateQueries({ queryKey: ["order-detail"] });
-    toast.success("Envío actualizado");
+    toast.success("Envío guardado");
   };
+
+  const handleSave = () => persist(cod, inAdvances, amount);
 
   return (
     <div className="rounded-lg border border-sky-200 bg-sky-50/50 p-3 space-y-3">
@@ -96,6 +107,7 @@ export function OrderShippingPanel({ order, readOnly }: Props) {
                 const next = v === true;
                 setCod(next);
                 if (next) setInAdvances(false);
+                void persist(next, next ? false : inAdvances, next ? "" : amount);
               }}
             />
             <span>Pago contraentrega (el cliente le paga el flete a la transportadora)</span>
@@ -115,20 +127,38 @@ export function OrderShippingPanel({ order, readOnly }: Props) {
                   className="h-8 w-full sm:w-48"
                   value={amount}
                   onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()}
-                  onChange={(e) => setAmount(e.target.value)}
+                  onChange={(e) => {
+                    setAmount(e.target.value);
+                    setDirty(true);
+                  }}
+                  onBlur={() => {
+                    if (dirty) void persist(cod, inAdvances, amount);
+                  }}
                 />
               </div>
               <label className="flex items-center gap-2 text-sm">
-                <Checkbox checked={inAdvances} onCheckedChange={(v) => setInAdvances(v === true)} />
+                <Checkbox
+                  checked={inAdvances}
+                  onCheckedChange={(v) => {
+                    const next = v === true;
+                    setInAdvances(next);
+                    void persist(cod, next, amount);
+                  }}
+                />
                 <span>El valor del envío ya fue incluido en los anticipos</span>
               </label>
             </>
           )}
 
-          <Button size="sm" onClick={handleSave} disabled={saving}>
-            {saving && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}
-            Guardar envío
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={handleSave} disabled={saving}>
+              {saving && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}
+              Guardar envío
+            </Button>
+            {dirty && !saving && (
+              <span className="text-[11px] font-medium text-amber-700">Cambios sin guardar</span>
+            )}
+          </div>
         </div>
       ) : null}
 

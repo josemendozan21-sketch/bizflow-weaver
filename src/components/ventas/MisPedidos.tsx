@@ -839,6 +839,7 @@ function PaymentConfirmDialog({ order }: { order: Order }) {
   };
 
   const saldo = getOrderBalance(order);
+  const shippingUndefined = (order.shipping_payment_mode || "pendiente") === "pendiente";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -861,6 +862,16 @@ function PaymentConfirmDialog({ order }: { order: Order }) {
             <p className="font-semibold text-destructive">Saldo pendiente: ${saldo.toLocaleString("es-CO")}</p>
           </div>
 
+          {shippingUndefined && (
+            <div className="space-y-2">
+              <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800">
+                Antes de autorizar el despacho debes definir el envío: contraentrega, por cobrar o ya incluido en los
+                anticipos. Así Logística sabe si cobra el flete.
+              </div>
+              <OrderShippingPanel order={order} />
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <Label>Soporte de pago del excedente *</Label>
             <Input
@@ -874,7 +885,7 @@ function PaymentConfirmDialog({ order }: { order: Order }) {
           <Button
             className="w-full"
             onClick={handleUploadAndConfirm}
-            disabled={uploading || !file}
+            disabled={uploading || !file || shippingUndefined}
           >
             {uploading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-1" />}
             Confirmar pago y autorizar despacho
