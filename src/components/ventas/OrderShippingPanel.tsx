@@ -56,10 +56,16 @@ export function OrderShippingPanel({ order, readOnly }: Props) {
   const shippingDue = getOrderShippingDue(order);
   const balance = getOrderBalance(order);
 
-  const handleSave = async () => {
+  const persist = async (nextCod: boolean, nextInAdvances: boolean, nextAmount: string) => {
     setSaving(true);
-    const value = cod ? 0 : Math.max(parseFloat(amount) || 0, 0);
-    const nextMode = cod ? "contraentrega" : inAdvances ? "incluido_anticipos" : value > 0 ? "por_cobrar" : "pendiente";
+    const value = nextCod ? 0 : Math.max(parseFloat(nextAmount) || 0, 0);
+    const nextMode = nextCod
+      ? "contraentrega"
+      : nextInAdvances
+        ? "incluido_anticipos"
+        : value > 0
+          ? "por_cobrar"
+          : "pendiente";
     const { error } = await supabase
       .from("orders")
       .update({
@@ -75,10 +81,13 @@ export function OrderShippingPanel({ order, readOnly }: Props) {
       toast.error("No se pudo guardar el envío", { description: error.message });
       return;
     }
+    setDirty(false);
     queryClient.invalidateQueries({ queryKey: ["orders"] });
     queryClient.invalidateQueries({ queryKey: ["order-detail"] });
-    toast.success("Envío actualizado");
+    toast.success("Envío guardado");
   };
+
+  const handleSave = () => persist(cod, inAdvances, amount);
 
   return (
     <div className="rounded-lg border border-sky-200 bg-sky-50/50 p-3 space-y-3">
