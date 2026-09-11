@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { getOrderBalance, getOrderPaidAmount, isOrderFullyPaid, useOrders, type Order } from "@/hooks/useOrders";
+import { getOrderBalance, getOrderPaidAmount, getShippingStatus, isOrderFullyPaid, useOrders, type Order } from "@/hooks/useOrders";
 import { useAuth } from "@/contexts/AuthContext";
 import { canEditSection } from "@/lib/rolePermissions";
 import { supabase } from "@/integrations/supabase/client";
