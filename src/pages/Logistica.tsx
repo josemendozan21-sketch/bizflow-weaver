@@ -39,7 +39,7 @@ function OrderCodeList({ items }: { items: Order[] }) {
 }
 
 function exportOrdersToCSV(orders: Order[], brandLabel: (b: string) => string, saleLabel: (t: string) => string) {
-  const headers = ["N° Pedido", "Cliente", "Cédula/NIT", "Teléfono", "Email", "Ciudad", "Dirección", "Marca", "Tipo", "Producto", "Unidades", "Entregadas", "Pendientes por entregar", "Método de pago", "Valor total", "Abono", "Saldo pendiente", "Costo envío", "Observaciones"];
+  const headers = ["N° Pedido", "Cliente", "Cédula/NIT", "Teléfono", "Email", "Ciudad", "Dirección", "Marca", "Tipo", "Producto", "Unidades", "Entregadas", "Pendientes por entregar", "Método de pago", "Valor total", "Abono", "Saldo pendiente", "Costo envío", "Estado del envío", "Observaciones"];
   const rows = orders.map((o) => {
     const total = Number(o.total_amount) || 0;
     const abono = getOrderPaidAmount(o);
@@ -272,6 +272,7 @@ function generateLabelsForGroups(groups: ShipmentGroup[]) {
         <div class="row"><span class="lbl">Contenido (${g.items.length} items, ${g.totalUnits} und):</span></div>
         <div class="items">${itemsHtml}</div>
         <div class="row pago"><span class="lbl">Pago:</span> <span class="val">${pagoInfo}</span></div>
+        <div class="row pago"><span class="lbl">Envío:</span> <span class="val">${envioInfo}</span></div>
         ${g.observations.length ? `<div class="row obs"><span class="lbl">Obs:</span> <span class="val">${esc(g.observations.join(" | "))}</span></div>` : ""}
       </div>
     `;
