@@ -839,6 +839,7 @@ function PaymentConfirmDialog({ order }: { order: Order }) {
   };
 
   const saldo = getOrderBalance(order);
+  const shippingUndefined = (order.shipping_payment_mode || "pendiente") === "pendiente";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
