@@ -195,8 +195,18 @@ export const EstampacionProductionView = () => {
       !isStampingDone(o) &&
       (o.current_stage === "estampacion" || o.current_stage === "produccion_cuerpos"),
   );
+  // Red de seguridad: pedidos con logo cuya estampación no se ha finalizado pero
+  // que ya avanzaron a otra etapa (p. ej. la ruta se armó sin estampación).
+  // Si no se listan aquí quedan invisibles y no hay dónde subir las muestras.
+  const missedStamping = stampingScope.filter(
+    (o) =>
+      !isStampingDone(o) &&
+      o.current_stage !== "estampacion" &&
+      o.current_stage !== "produccion_cuerpos",
+  );
   // Ya estampados: se muestran solo como consulta (sin acciones) para no reiniciar el proceso.
   const finishedOrders = stampingScope.filter(isStampingDone);
+
 
 
   const q = searchQuery.trim();
@@ -295,10 +305,12 @@ export const EstampacionProductionView = () => {
 
   return (
     <Tabs defaultValue="ordenes" className="space-y-4">
-      <TabsList className="w-full flex lg:grid lg:grid-cols-6">
+      <TabsList className="w-full flex lg:grid lg:grid-cols-7">
         <TabsTrigger value="ordenes">Órdenes ({filteredOrders.length})</TabsTrigger>
+        <TabsTrigger value="muestras_pendientes">Muestras pendientes ({missedStamping.length})</TabsTrigger>
         <TabsTrigger value="finalizadas">Finalizadas ({finishedOrders.length})</TabsTrigger>
         <TabsTrigger value="por_ingresar">Por ingresar ({pendingIntake.length})</TabsTrigger>
+
         <TabsTrigger value="frios">Productos Fríos ({coldStock.length})</TabsTrigger>
         <TabsTrigger value="termicos">Productos Térmicos ({thermalStock.length})</TabsTrigger>
         <TabsTrigger value="cambios">Historial de cambios</TabsTrigger>
@@ -373,6 +385,39 @@ export const EstampacionProductionView = () => {
           </div>
         )}
       </TabsContent>
+
+      <TabsContent value="muestras_pendientes" className="space-y-4">
+        <Alert className="border-amber-300 bg-amber-50 text-amber-800">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription className="text-xs">
+            Pedidos con logo que ya avanzaron en Producción pero cuya estampación no se ha
+            finalizado. Puedes subir aquí la muestra de tamaño y la de tinta/gel para que el
+            asesor las apruebe.
+          </AlertDescription>
+        </Alert>
+        {missedStamping.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">
+            No hay pedidos con muestras pendientes fuera de la etapa de estampación.
+          </p>
+        ) : (
+          <div className="grid gap-4">
+            {missedStamping.map((order) => (
+              <EstampacionOrderCard
+                key={order.id}
+                order={order}
+                lineCtx={order.order_id ? lineContext[order.order_id] : undefined}
+                stageLogs={stageLogs.filter((l) => l.production_order_id === order.id)}
+                logoRequests={logoRequests}
+                onStart={() => setOperatorPrompt({ mode: "start", orderId: order.id, clientName: order.client_name })}
+                onFinish={() => setOperatorPrompt({ mode: "finish", orderId: order.id, clientName: order.client_name })}
+                finishing={completeStamping.isPending && completeStamping.variables?.orderId === order.id}
+              />
+            ))}
+          </div>
+        )}
+      </TabsContent>
+
+
 
       <TabsContent value="finalizadas" className="space-y-4">
         <Alert className="border-emerald-300 bg-emerald-50 text-emerald-800">
