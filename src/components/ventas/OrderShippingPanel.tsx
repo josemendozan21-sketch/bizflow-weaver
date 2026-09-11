@@ -44,12 +44,14 @@ export function OrderShippingPanel({ order, readOnly }: Props) {
     order.shipping_cost != null && Number(order.shipping_cost) > 0 ? String(order.shipping_cost) : "",
   );
   const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
     const m = order.shipping_payment_mode || "pendiente";
     setCod(m === "contraentrega");
     setInAdvances(m === "incluido_anticipos");
     setAmount(order.shipping_cost != null && Number(order.shipping_cost) > 0 ? String(order.shipping_cost) : "");
+    setDirty(false);
   }, [order.shipping_payment_mode, order.shipping_cost]);
 
   const productDue = Math.max((Number(order.total_amount) || 0) - getOrderPaidAmount(order), 0);
