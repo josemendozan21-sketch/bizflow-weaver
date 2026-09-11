@@ -70,6 +70,7 @@ function exportOrdersToCSV(orders: Order[], brandLabel: (b: string) => string, s
       abono ? `$${abono.toLocaleString("es-CO")}` : "—",
       saldo > 0 ? `$${saldo.toLocaleString("es-CO")}` : "$0",
       shippingCost ? `$${shippingCost.toLocaleString("es-CO")}` : "—",
+      getShippingStatus(o).label,
       o.observations || "—",
     ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(",");
   });
