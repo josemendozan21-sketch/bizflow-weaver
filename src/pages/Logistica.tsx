@@ -615,7 +615,58 @@ function PaymentBadge({ order }: { order: Order }) {
   return <Badge variant="destructive">Saldo: ${saldo.toLocaleString("es-CO")}</Badge>;
 }
 
+function getGroupShipping(group: ShipmentGroup) {
+  const statuses = group.items.map((it) => getShippingStatus(it));
+  const hasCod = statuses.some((s) => s.mode === "contraentrega");
+  const due = statuses.reduce((s, x) => s + x.due, 0);
+  const allPending = statuses.length > 0 && statuses.every((s) => s.mode === "pendiente");
+  const allPrepaid = statuses.length > 0 && statuses.every((s) => s.mode === "incluido_anticipos");
+  // Compat: pedidos antiguos sin modo definido siguen usando el costo bruto
+  const toCollect = allPending ? group.totalShipping : due;
+  return { statuses, hasCod, due, allPending, allPrepaid, toCollect };
+}
+
+function GroupShippingLine({ group }: { group: ShipmentGroup }) {
+  const { hasCod, due, allPending, allPrepaid } = getGroupShipping(group);
+  let tone: "amber" | "green" | "neutral" = "neutral";
+  let text = "Envío sin definir — confirmar con el asesor";
+  if (hasCod) {
+    tone = "amber";
+    text = "Envío contraentrega — cobrar el flete al cliente";
+  } else if (due > 0) {
+    tone = "amber";
+    text = `Envío por cobrar $${due.toLocaleString("es-CO")} — cobrar al entregar`;
+  } else if (allPrepaid) {
+    tone = "green";
+    text = "Envío ya pagado (incluido en los anticipos) — no cobrar";
+  } else if (!allPending) {
+    tone = "green";
+    text = "Envío ya pagado — no cobrar";
+  }
+  const cls =
+    tone === "amber"
+      ? "border-amber-400/60 bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300"
+      : tone === "green"
+        ? "border-emerald-400/60 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"
+        : "border-muted bg-muted/40 text-muted-foreground";
+  return (
+    <div className={`mx-4 mt-2 rounded-md border px-3 py-2 flex items-center gap-2 text-sm font-medium ${cls}`}>
+      <Truck className="h-4 w-4 shrink-0" />
+      <span>{text}</span>
+    </div>
+  );
+}
+
 function GroupPaymentSummary({ group }: { group: ShipmentGroup }) {
+  return (
+    <>
+      <GroupPaymentSummaryInner group={group} />
+      <GroupShippingLine group={group} />
+    </>
+  );
+}
+
+function GroupPaymentSummaryInner({ group }: { group: ShipmentGroup }) {
   const saldo = Math.max(group.totalAmount - group.totalAbono, 0);
   if (group.saleType === "menor") {
     const contraItems = group.items.filter((i) => i.payment_method === "contra_entrega");
