@@ -107,6 +107,7 @@ export function OrderShippingPanel({ order, readOnly }: Props) {
                 const next = v === true;
                 setCod(next);
                 if (next) setInAdvances(false);
+                void persist(next, next ? false : inAdvances, next ? "" : amount);
               }}
             />
             <span>Pago contraentrega (el cliente le paga el flete a la transportadora)</span>
@@ -126,20 +127,38 @@ export function OrderShippingPanel({ order, readOnly }: Props) {
                   className="h-8 w-full sm:w-48"
                   value={amount}
                   onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()}
-                  onChange={(e) => setAmount(e.target.value)}
+                  onChange={(e) => {
+                    setAmount(e.target.value);
+                    setDirty(true);
+                  }}
+                  onBlur={() => {
+                    if (dirty) void persist(cod, inAdvances, amount);
+                  }}
                 />
               </div>
               <label className="flex items-center gap-2 text-sm">
-                <Checkbox checked={inAdvances} onCheckedChange={(v) => setInAdvances(v === true)} />
+                <Checkbox
+                  checked={inAdvances}
+                  onCheckedChange={(v) => {
+                    const next = v === true;
+                    setInAdvances(next);
+                    void persist(cod, next, amount);
+                  }}
+                />
                 <span>El valor del envío ya fue incluido en los anticipos</span>
               </label>
             </>
           )}
 
-          <Button size="sm" onClick={handleSave} disabled={saving}>
-            {saving && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}
-            Guardar envío
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={handleSave} disabled={saving}>
+              {saving && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}
+              Guardar envío
+            </Button>
+            {dirty && !saving && (
+              <span className="text-[11px] font-medium text-amber-700">Cambios sin guardar</span>
+            )}
+          </div>
         </div>
       ) : null}
 
