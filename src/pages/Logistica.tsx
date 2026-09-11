@@ -228,16 +228,24 @@ function generateLabelsForGroups(groups: ShipmentGroup[]) {
     const saldo = Math.max(g.totalAmount - g.totalAbono, 0);
     const firstItem = g.items[0];
     const advisorInfo = esc(getAdvisorNames(g.items).join(", ") || "No asignado");
+    const gShip = getGroupShipping(g);
     let pagoInfo = "";
     if (g.saleType === "menor") {
       if (firstItem?.payment_method === "contra_entrega") {
-        pagoInfo = `CONTRA ENTREGA: $${(saldo + g.totalShipping).toLocaleString("es-CO")}`;
+        pagoInfo = `CONTRA ENTREGA: $${(saldo + gShip.toCollect).toLocaleString("es-CO")}`;
       } else {
         pagoInfo = "PAGADO";
       }
     } else {
       pagoInfo = saldo <= 0 ? "PAGO COMPLETO" : `SALDO: $${saldo.toLocaleString("es-CO")}`;
     }
+    const envioInfo = gShip.hasCod
+      ? "ENVÍO CONTRAENTREGA — COBRAR FLETE"
+      : gShip.due > 0
+        ? `ENVÍO POR COBRAR: $${gShip.due.toLocaleString("es-CO")}`
+        : gShip.allPending
+          ? "ENVÍO SIN DEFINIR"
+          : "ENVÍO YA PAGADO — NO COBRAR";
     const itemsHtml = g.items
       .map((it) => {
         const details: string[] = [];
@@ -1150,7 +1158,7 @@ function ShipmentGroupCard({
                 <span className="truncate">• {it.product}</span>
                 <AdvisorTag order={it} />
               </span>
-              <div className="flex items-center gap-3 shrink-0">
+              <div className="flex items-center gap-3 flex-wrap justify-end">
                 <span className="text-muted-foreground">{it.quantity} und</span>
                 <PartialDeliveryControl order={it} />
                 <PaymentBadge order={it} />
@@ -1264,7 +1272,7 @@ function PendingGroupCard({
                 <span className="truncate">• {it.product} <span className="text-muted-foreground">— {it.quantity} und</span></span>
                 <AdvisorTag order={it} />
               </span>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 flex-wrap justify-end">
                 <PartialDeliveryControl order={it} />
                 <ProductionStatusBadge status={it.production_status} order={it} />
                 <PaymentBadge order={it} />
