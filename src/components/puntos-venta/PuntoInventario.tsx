@@ -59,9 +59,11 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
     }
   };
 
+  const activeProducts = useMemo(() => products.filter((p) => p.active !== false), [products]);
+
   const brands = useMemo(() => {
     const map = new Map<string, number>();
-    for (const p of products) {
+    for (const p of activeProducts) {
       const b = (p.brand ?? "Sin marca").trim();
       map.set(b, (map.get(b) || 0) + 1);
     }
