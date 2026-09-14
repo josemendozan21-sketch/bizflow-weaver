@@ -106,6 +106,7 @@ export default function PuntosVenta() {
           {showCalendar && (
             <TabsTrigger value="calendario"><CalendarDays className="h-4 w-4 mr-1" /> Calendario</TabsTrigger>
           )}
+          <TabsTrigger value="historial"><History className="h-4 w-4 mr-1" /> Historial de cambios</TabsTrigger>
         </TabsList>
 
         {!readOnly && (
