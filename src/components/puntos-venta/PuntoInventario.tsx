@@ -101,7 +101,7 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base flex items-center gap-2">
-          <Package className="h-5 w-5 text-primary" /> Catálogo del punto ({products.length})
+          <Package className="h-5 w-5 text-primary" /> Catálogo del punto ({activeProducts.length})
         </CardTitle>
         {canEdit && isAdmin && (
           <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditing(null); }}>
