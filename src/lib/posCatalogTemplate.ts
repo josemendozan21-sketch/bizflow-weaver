@@ -215,8 +215,13 @@ export function buildCatalogDiff(parsed: ParsedRow[], errors: { row: number; mes
       changes.push({ field: "available", label: "Existencias", from: String(Number(existing.available)), to: String(r.available) });
     if ((existing.unit ?? "unidades") !== r.unit)
       changes.push({ field: "unit", label: "Unidad", from: existing.unit || "—", to: r.unit });
+    if ((existing.supplier ?? "") !== (r.supplier ?? ""))
+      changes.push({ field: "supplier", label: "Proveedor", from: existing.supplier || "—", to: r.supplier || "—" });
     if (Boolean(existing.active) !== r.active)
       changes.push({ field: "active", label: "Activo", from: existing.active ? "SÍ" : "NO", to: r.active ? "SÍ" : "NO" });
+    if (r.photo_file)
+      changes.push({ field: "photo_url", label: "Foto", from: existing.photo_url ? "foto actual" : "sin foto", to: r.photo_file });
+
 
     if (changes.length === 0) {
       diff.unchanged++;
