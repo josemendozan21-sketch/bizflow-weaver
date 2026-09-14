@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Store, ShoppingCart, Package, ArrowDownToLine, BarChart3, CalendarDays } from "lucide-react";
+import { Store, ShoppingCart, Package, ArrowDownToLine, BarChart3, CalendarDays, History } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   usePosLocations,
@@ -17,6 +17,8 @@ import { PuntoEntradaForm } from "@/components/puntos-venta/PuntoEntradaForm";
 import { PuntoVentaPOS } from "@/components/puntos-venta/PuntoVentaPOS";
 import { PuntoReportes } from "@/components/puntos-venta/PuntoReportes";
 import { PuntoCalendario } from "@/components/puntos-venta/PuntoCalendario";
+import PosProductChangeLogPanel from "@/components/puntos-venta/PosProductChangeLogPanel";
+import PosCatalogBulkUpdate from "@/components/puntos-venta/PosCatalogBulkUpdate";
 
 export default function PuntosVenta() {
   const { role } = useAuth();
@@ -105,6 +107,7 @@ export default function PuntosVenta() {
           {showCalendar && (
             <TabsTrigger value="calendario"><CalendarDays className="h-4 w-4 mr-1" /> Calendario</TabsTrigger>
           )}
+          <TabsTrigger value="historial"><History className="h-4 w-4 mr-1" /> Historial de cambios</TabsTrigger>
         </TabsList>
 
         {!readOnly && (
@@ -115,7 +118,14 @@ export default function PuntosVenta() {
           </TabsContent>
         )}
 
-        <TabsContent value="inventario">
+        <TabsContent value="inventario" className="space-y-4">
+          {locationId && canEdit && (
+            <PosCatalogBulkUpdate
+              locationId={locationId}
+              locationName={location?.name ?? "punto"}
+              products={products}
+            />
+          )}
           {locationId && <PuntoInventario locationId={locationId} products={products} canEdit={canEdit} />}
         </TabsContent>
 
@@ -145,6 +155,10 @@ export default function PuntosVenta() {
             )}
           </TabsContent>
         )}
+
+        <TabsContent value="historial">
+          {locationId && <PosProductChangeLogPanel locationId={locationId} />}
+        </TabsContent>
       </Tabs>
     </div>
   );

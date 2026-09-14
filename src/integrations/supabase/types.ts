@@ -3049,6 +3049,57 @@ export type Database = {
         }
         Relationships: []
       }
+      pos_product_audit_log: {
+        Row: {
+          action: string
+          brand: string | null
+          category: string | null
+          changed_at: string
+          changed_by: string | null
+          changed_by_email: string | null
+          field: string | null
+          id: string
+          location_id: string | null
+          new_value: string | null
+          old_value: string | null
+          product_id: string | null
+          product_name: string | null
+          source: string | null
+        }
+        Insert: {
+          action: string
+          brand?: string | null
+          category?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          changed_by_email?: string | null
+          field?: string | null
+          id?: string
+          location_id?: string | null
+          new_value?: string | null
+          old_value?: string | null
+          product_id?: string | null
+          product_name?: string | null
+          source?: string | null
+        }
+        Update: {
+          action?: string
+          brand?: string | null
+          category?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          changed_by_email?: string | null
+          field?: string | null
+          id?: string
+          location_id?: string | null
+          new_value?: string | null
+          old_value?: string | null
+          product_id?: string | null
+          product_name?: string | null
+          source?: string | null
+        }
+        Relationships: []
+      }
       pos_products: {
         Row: {
           active: boolean
