@@ -162,7 +162,7 @@ export function parseCatalogFile(buffer: ArrayBuffer): { rows: ParsedRow[]; erro
     }
     const available = parseNumber(r["Existencias"]);
     if (available === null || available < 0) {
-      errors.push({ row: rowNo, message: `"${name}": las existencias no son un número válido` });
+      errors.push({ row: rowNo, message: `"${name}": las existencias deben ser un número igual o mayor a cero` });
       return;
     }
     const brand = String(r["Marca"] ?? "").trim();
@@ -171,12 +171,15 @@ export function parseCatalogFile(buffer: ArrayBuffer): { rows: ParsedRow[]; erro
       name,
       brand: brand || null,
       category: String(r["Categoría"] ?? "").trim() || null,
+      supplier: String(r["Proveedor"] ?? "").trim() || null,
       sale_price: price,
       available,
       unit: String(r["Unidad"] ?? "").trim() || "unidades",
       active: parseBool(r["Activo"]),
+      photo_file: String(r["Foto nueva (nombre del archivo)"] ?? r["Foto nueva"] ?? "").trim() || null,
     });
   });
+
 
   const seen = new Map<string, number>();
   for (const r of rows) {
