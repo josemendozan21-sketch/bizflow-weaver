@@ -59,17 +59,19 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
     }
   };
 
+  const activeProducts = useMemo(() => products.filter((p) => p.active !== false), [products]);
+
   const brands = useMemo(() => {
     const map = new Map<string, number>();
-    for (const p of products) {
+    for (const p of activeProducts) {
       const b = (p.brand ?? "Sin marca").trim();
       map.set(b, (map.get(b) || 0) + 1);
     }
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [products]);
+  }, [activeProducts]);
 
   const filtered = useMemo(() => {
-    let list = products;
+    let list = activeProducts;
     if (selectedBrand) {
       list = list.filter((p) => (p.brand ?? "Sin marca").trim() === selectedBrand);
     }
@@ -82,7 +84,7 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
       );
     }
     return list;
-  }, [products, selectedBrand, search]);
+  }, [activeProducts, selectedBrand, search]);
 
   const handleSave = async (form: Partial<PosProduct> & { name: string; sale_price: number }) => {
     try {
@@ -99,7 +101,7 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base flex items-center gap-2">
-          <Package className="h-5 w-5 text-primary" /> Catálogo del punto ({products.length})
+          <Package className="h-5 w-5 text-primary" /> Catálogo del punto ({activeProducts.length})
         </CardTitle>
         {canEdit && isAdmin && (
           <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditing(null); }}>
@@ -113,7 +115,7 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
         )}
       </CardHeader>
       <CardContent>
-        {products.length === 0 ? (
+        {activeProducts.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">
             Aún no hay productos en este punto. {canEdit ? "Crea el primero." : ""}
           </p>
