@@ -183,8 +183,11 @@ export const EstampacionProductionView = () => {
     const stages = normalizeStages(o as any);
     return stages.includes("estampacion") || o.current_stage === "estampacion";
   };
+  // La estampación se considera terminada cuando ambas muestras están finalizadas
+  // o ya fueron aprobadas por el asesor (no hay nada más que hacer en estampación).
+  const SAMPLE_DONE = ["finalizado", "aprobado"];
   const isStampingDone = (o: ProductionOrder) =>
-    o.stamp_size_status === "finalizado" && o.stamp_inkgel_status === "finalizado";
+    SAMPLE_DONE.includes(o.stamp_size_status ?? "") && SAMPLE_DONE.includes(o.stamp_inkgel_status ?? "");
 
   const stampingScope = allOrders.filter(
     (o) => !TERMINAL_STAGES.includes(o.current_stage) && belongsToStamping(o),
