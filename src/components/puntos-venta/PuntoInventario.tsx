@@ -72,21 +72,41 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [activeProducts]);
 
+  const brandProducts = useMemo(
+    () =>
+      selectedBrand
+        ? activeProducts.filter((p) => (p.brand ?? "Sin marca").trim() === selectedBrand)
+        : activeProducts,
+    [activeProducts, selectedBrand]
+  );
+
+  const suppliers = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const p of brandProducts) {
+      const s = (p.supplier ?? "").trim();
+      if (!s) continue;
+      map.set(s, (map.get(s) || 0) + 1);
+    }
+    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [brandProducts]);
+
   const filtered = useMemo(() => {
-    let list = activeProducts;
-    if (selectedBrand) {
-      list = list.filter((p) => (p.brand ?? "Sin marca").trim() === selectedBrand);
+    let list = brandProducts;
+    if (selectedSupplier) {
+      list = list.filter((p) => (p.supplier ?? "").trim() === selectedSupplier);
     }
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((p) =>
         p.name.toLowerCase().includes(q) ||
         (p.brand ?? "").toLowerCase().includes(q) ||
+        (p.supplier ?? "").toLowerCase().includes(q) ||
         (p.category ?? "").toLowerCase().includes(q)
       );
     }
     return list;
-  }, [activeProducts, selectedBrand, search]);
+  }, [brandProducts, selectedSupplier, search]);
+
 
   const handleSave = async (form: Partial<PosProduct> & { name: string; sale_price: number }) => {
     try {
