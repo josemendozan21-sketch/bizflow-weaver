@@ -126,55 +126,64 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
               <div>
                 <p className="text-sm font-medium mb-2">Selecciona una marca</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                  {brands.map(([brand, count]) => {
-                    const isNutrition = brand.trim().toLowerCase() === "sweatspot nutrición";
-                    const handleClick = () => {
-                      if (isNutrition) {
-                        window.open(`/puntos-venta/nutricion?location=${locationId}`, "_blank");
-                      } else {
-                        setSelectedBrand(brand);
-                      }
-                    };
-                    return (
-                      <button
-                        key={brand}
-                        onClick={handleClick}
-                        className="rounded-lg border p-4 text-left transition hover:bg-accent hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary"
-                      >
-                        <div className="flex items-center gap-2">
-                          {isNutrition ? (
-                            <ExternalLink className="h-4 w-4 text-primary" />
-                          ) : (
-                            <Tag className="h-4 w-4 text-primary" />
-                          )}
-                          <span className="font-semibold text-sm truncate">{brand}</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {count} producto{count !== 1 ? "s" : ""}
-                          {isNutrition ? " · ver proveedores" : ""}
-                        </p>
-                      </button>
-                    );
-                  })}
+                  {brands.map(([brand, count]) => (
+                    <button
+                      key={brand}
+                      onClick={() => { setSelectedBrand(brand); setSelectedSupplier(null); setSearch(""); }}
+                      className="rounded-lg border p-4 text-left transition hover:bg-accent hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Tag className="h-4 w-4 text-primary" />
+                        <span className="font-semibold text-sm truncate">{brand}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {count} producto{count !== 1 ? "s" : ""}
+                      </p>
+                    </button>
+                  ))}
                 </div>
               </div>
             ) : (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => { setSelectedBrand(null); setSearch(""); }}>
+                    <Button variant="outline" size="sm" onClick={() => { setSelectedBrand(null); setSelectedSupplier(null); setSearch(""); }}>
                       ← Todas las marcas
                     </Button>
                     <Badge variant="outline" className="text-sm">{selectedBrand}</Badge>
                   </div>
                   <span className="text-xs text-muted-foreground">{filtered.length} producto{filtered.length !== 1 ? "s" : ""}</span>
                 </div>
+                {suppliers.length > 1 && (
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant={selectedSupplier === null ? "default" : "outline"}
+                      onClick={() => setSelectedSupplier(null)}
+                    >
+                      Todos los proveedores
+                    </Button>
+                    {suppliers.map(([sup, count]) => (
+                      <Button
+                        key={sup}
+                        size="sm"
+                        variant={selectedSupplier === sup ? "default" : "outline"}
+                        onClick={() => setSelectedSupplier(sup)}
+                        className="gap-1"
+                      >
+                        <Truck className="h-3.5 w-3.5" /> {sup}
+                        <span className="text-xs opacity-70">({count})</span>
+                      </Button>
+                    ))}
+                  </div>
+                )}
                 <Input
                   placeholder="Buscar producto…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="max-w-sm"
                 />
+
                 <div className="space-y-2">
                   {filtered.map((p) => {
                     const lowStock = Number(p.available) <= Number(p.min_stock) && Number(p.min_stock) > 0;
