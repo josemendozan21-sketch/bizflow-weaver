@@ -117,7 +117,14 @@ export default function PuntosVenta() {
           </TabsContent>
         )}
 
-        <TabsContent value="inventario">
+        <TabsContent value="inventario" className="space-y-4">
+          {locationId && canEdit && (
+            <PosCatalogBulkUpdate
+              locationId={locationId}
+              locationName={location?.name ?? "punto"}
+              products={products}
+            />
+          )}
           {locationId && <PuntoInventario locationId={locationId} products={products} canEdit={canEdit} />}
         </TabsContent>
 
