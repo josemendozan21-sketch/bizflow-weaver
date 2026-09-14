@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Store, ShoppingCart, Package, ArrowDownToLine, BarChart3, CalendarDays } from "lucide-react";
+import { Store, ShoppingCart, Package, ArrowDownToLine, BarChart3, CalendarDays, History } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   usePosLocations,
@@ -17,6 +17,7 @@ import { PuntoEntradaForm } from "@/components/puntos-venta/PuntoEntradaForm";
 import { PuntoVentaPOS } from "@/components/puntos-venta/PuntoVentaPOS";
 import { PuntoReportes } from "@/components/puntos-venta/PuntoReportes";
 import { PuntoCalendario } from "@/components/puntos-venta/PuntoCalendario";
+import PosProductChangeLogPanel from "@/components/puntos-venta/PosProductChangeLogPanel";
 
 export default function PuntosVenta() {
   const { role } = useAuth();
