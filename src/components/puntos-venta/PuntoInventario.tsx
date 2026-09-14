@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Edit, Package, AlertTriangle, Upload, ImageIcon, Tag, ExternalLink, Camera, Loader2 } from "lucide-react";
+import { Plus, Edit, Package, AlertTriangle, Upload, ImageIcon, Tag, ExternalLink, Camera, Loader2, Truck } from "lucide-react";
 import { PosProduct, useUpsertPosProduct, uploadPosProductPhoto } from "@/hooks/usePuntosVenta";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
