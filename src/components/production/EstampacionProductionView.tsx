@@ -183,32 +183,28 @@ export const EstampacionProductionView = () => {
     const stages = normalizeStages(o as any);
     return stages.includes("estampacion") || o.current_stage === "estampacion";
   };
-  // La estampación se considera terminada cuando ambas muestras están finalizadas
-  // o ya fueron aprobadas por el asesor (no hay nada más que hacer en estampación).
+  // Las muestras se consideran resueltas cuando están finalizadas o ya las aprobó el asesor.
+  // Ojo: esto NO significa que la estampación del pedido esté hecha.
   const SAMPLE_DONE = ["finalizado", "aprobado"];
-  const isStampingDone = (o: ProductionOrder) =>
+  const areSamplesDone = (o: ProductionOrder) =>
     SAMPLE_DONE.includes(o.stamp_size_status ?? "") && SAMPLE_DONE.includes(o.stamp_inkgel_status ?? "");
+  // La estampación solo está terminada cuando el pedido ya salió de la etapa de
+  // estampación (se pulsó "Finalizar estampación") o de producción de cuerpos.
+  const isStageActive = (o: ProductionOrder) =>
+    o.current_stage === "estampacion" || o.current_stage === "produccion_cuerpos";
 
   const stampingScope = allOrders.filter(
     (o) => !TERMINAL_STAGES.includes(o.current_stage) && belongsToStamping(o),
   );
-  // Trabajo real pendiente: la estampación aún no se ha finalizado.
-  const estampacionOrders = stampingScope.filter(
-    (o) =>
-      !isStampingDone(o) &&
-      (o.current_stage === "estampacion" || o.current_stage === "produccion_cuerpos"),
-  );
-  // Red de seguridad: pedidos con logo cuya estampación no se ha finalizado pero
+  // Trabajo real pendiente: el pedido sigue en estampación / cuerpos, tenga o no
+  // las muestras aprobadas (aprobar la muestra no estampa las unidades).
+  const estampacionOrders = stampingScope.filter(isStageActive);
+  // Red de seguridad: pedidos con logo cuyas muestras siguen pendientes pero
   // que ya avanzaron a otra etapa (p. ej. la ruta se armó sin estampación).
   // Si no se listan aquí quedan invisibles y no hay dónde subir las muestras.
-  const missedStamping = stampingScope.filter(
-    (o) =>
-      !isStampingDone(o) &&
-      o.current_stage !== "estampacion" &&
-      o.current_stage !== "produccion_cuerpos",
-  );
+  const missedStamping = stampingScope.filter((o) => !areSamplesDone(o) && !isStageActive(o));
   // Ya estampados: se muestran solo como consulta (sin acciones) para no reiniciar el proceso.
-  const finishedOrders = stampingScope.filter(isStampingDone);
+  const finishedOrders = stampingScope.filter((o) => areSamplesDone(o) && !isStageActive(o));
 
 
 
