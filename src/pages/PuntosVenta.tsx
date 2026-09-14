@@ -147,6 +147,10 @@ export default function PuntosVenta() {
             )}
           </TabsContent>
         )}
+
+        <TabsContent value="historial">
+          {locationId && <PosProductChangeLogPanel locationId={locationId} />}
+        </TabsContent>
       </Tabs>
     </div>
   );
