@@ -54,18 +54,25 @@ export function downloadCatalogTemplate(products: CatalogProduct[], locationName
     Producto: p.name,
     Marca: p.brand ?? "",
     "Categoría": p.category ?? "",
+    Proveedor: p.supplier ?? "",
     "Precio de venta": Number(p.sale_price) || 0,
     Existencias: Number(p.available) || 0,
     Unidad: p.unit ?? "unidades",
     Activo: p.active ? "SÍ" : "NO",
+    "Tiene foto": p.photo_url ? "SÍ" : "NO",
+    "Foto nueva (nombre del archivo)": "",
   }));
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(rows, { header: CATALOG_HEADERS as unknown as string[] });
-  ws["!cols"] = [{ wch: 42 }, { wch: 20 }, { wch: 18 }, { wch: 16 }, { wch: 13 }, { wch: 12 }, { wch: 8 }];
+  ws["!cols"] = [
+    { wch: 46 }, { wch: 22 }, { wch: 18 }, { wch: 20 }, { wch: 16 },
+    { wch: 13 }, { wch: 12 }, { wch: 9 }, { wch: 11 }, { wch: 32 },
+  ];
   XLSX.utils.book_append_sheet(wb, ws, "Catálogo");
 
   const marcas = Array.from(new Set(products.map((p) => (p.brand ?? "").trim()).filter(Boolean))).sort();
+  const sinFoto = products.filter((p) => !p.photo_url).length;
   const instrucciones = [
     ["INSTRUCCIONES PARA ACTUALIZAR EL CATÁLOGO"],
     [""],
@@ -74,15 +81,21 @@ export function downloadCatalogTemplate(products: CatalogProduct[], locationName
     ["3. Si cambias la marca o el nombre, el sistema lo tomará como un producto NUEVO."],
     ["   Para corregir un duplicado: deja la fila correcta y pon NO en 'Activo' en la fila sobrante."],
     ["4. Precio de venta y Existencias: solo números, sin puntos ni el signo $."],
-    ["5. Activo: escribe SÍ para que se pueda vender, NO para ocultarlo (no se borra su historial)."],
-    ["6. Antes de guardar verás en pantalla un resumen de todo lo que va a cambiar."],
+    ["5. Existencias no puede ser negativa: escribe el conteo físico real del producto."],
+    ["6. Activo: escribe SÍ para que se pueda vender, NO para ocultarlo (no se borra su historial)."],
+    ["7. Proveedor: quién surte el producto. Puedes corregirlo desde aquí."],
+    [`8. 'Tiene foto' es informativo (hoy hay ${sinFoto} productos sin foto). No lo edites.`],
+    ["9. 'Foto nueva': escribe el nombre del archivo de la imagen (ej. termo-azul.jpg) y adjunta"],
+    ["   las imágenes al subir el Excel. También puedes adjuntarlas todas juntas en un .zip."],
+    ["10. Antes de guardar verás en pantalla un resumen de todo lo que va a cambiar."],
     [""],
     ["Marcas que ya existen en el punto:"],
     ...marcas.map((m) => [m]),
   ];
   const wsi = XLSX.utils.aoa_to_sheet(instrucciones);
-  wsi["!cols"] = [{ wch: 95 }];
+  wsi["!cols"] = [{ wch: 100 }];
   XLSX.utils.book_append_sheet(wb, wsi, "Instrucciones");
+
 
   const safe = locationName.replace(/\s+/g, "_").toLowerCase();
   XLSX.writeFile(wb, `catalogo_${safe}_${new Date().toISOString().slice(0, 10)}.xlsx`);
