@@ -106,11 +106,14 @@ export interface ParsedRow {
   name: string;
   brand: string | null;
   category: string | null;
+  supplier: string | null;
   sale_price: number;
   available: number;
   unit: string;
   active: boolean;
+  photo_file: string | null;
 }
+
 
 export interface CatalogDiffChange {
   field: string;
