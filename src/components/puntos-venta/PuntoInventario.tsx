@@ -84,7 +84,7 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
       );
     }
     return list;
-  }, [products, selectedBrand, search]);
+  }, [activeProducts, selectedBrand, search]);
 
   const handleSave = async (form: Partial<PosProduct> & { name: string; sale_price: number }) => {
     try {
