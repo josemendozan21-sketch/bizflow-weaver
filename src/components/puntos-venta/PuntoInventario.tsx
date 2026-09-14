@@ -115,7 +115,7 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
         )}
       </CardHeader>
       <CardContent>
-        {products.length === 0 ? (
+        {activeProducts.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">
             Aún no hay productos en este punto. {canEdit ? "Crea el primero." : ""}
           </p>
