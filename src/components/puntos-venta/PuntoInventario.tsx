@@ -68,10 +68,10 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
       map.set(b, (map.get(b) || 0) + 1);
     }
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [products]);
+  }, [activeProducts]);
 
   const filtered = useMemo(() => {
-    let list = products;
+    let list = activeProducts;
     if (selectedBrand) {
       list = list.filter((p) => (p.brand ?? "Sin marca").trim() === selectedBrand);
     }
