@@ -5,21 +5,27 @@ export interface CatalogProduct {
   name: string;
   brand: string | null;
   category: string | null;
+  supplier: string | null;
   sale_price: number;
   available: number;
   unit: string | null;
   active: boolean;
+  photo_url: string | null;
 }
 
 export const CATALOG_HEADERS = [
   "Producto",
   "Marca",
   "Categoría",
+  "Proveedor",
   "Precio de venta",
   "Existencias",
   "Unidad",
   "Activo",
+  "Tiene foto",
+  "Foto nueva (nombre del archivo)",
 ] as const;
+
 
 export const norm = (v: unknown) =>
   String(v ?? "")
