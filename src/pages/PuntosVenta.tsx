@@ -18,6 +18,7 @@ import { PuntoVentaPOS } from "@/components/puntos-venta/PuntoVentaPOS";
 import { PuntoReportes } from "@/components/puntos-venta/PuntoReportes";
 import { PuntoCalendario } from "@/components/puntos-venta/PuntoCalendario";
 import PosProductChangeLogPanel from "@/components/puntos-venta/PosProductChangeLogPanel";
+import PosCatalogBulkUpdate from "@/components/puntos-venta/PosCatalogBulkUpdate";
 
 export default function PuntosVenta() {
   const { role } = useAuth();
