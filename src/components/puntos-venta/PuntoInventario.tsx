@@ -10,6 +10,8 @@ import { Plus, Edit, Package, AlertTriangle, Upload, ImageIcon, Tag, ExternalLin
 import { PosProduct, useUpsertPosProduct, uploadPosProductPhoto } from "@/hooks/usePuntosVenta";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { ReferenceFilterChips, countBy, NO_REFERENCE, NO_SUB_REFERENCE } from "./ReferenceFilterChips";
+import { POS_REFERENCES, subsForReference } from "@/lib/posReferences";
 
 type Props = {
   locationId: string;
