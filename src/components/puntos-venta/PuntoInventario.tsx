@@ -10,6 +10,8 @@ import { Plus, Edit, Package, AlertTriangle, Upload, ImageIcon, Tag, ExternalLin
 import { PosProduct, useUpsertPosProduct, uploadPosProductPhoto } from "@/hooks/usePuntosVenta";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { ReferenceFilterChips, countBy, NO_REFERENCE, NO_SUB_REFERENCE } from "./ReferenceFilterChips";
+import { POS_REFERENCES, subsForReference } from "@/lib/posReferences";
 
 type Props = {
   locationId: string;
@@ -24,6 +26,8 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
   const [open, setOpen] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
   const [selectedSupplier, setSelectedSupplier] = useState<string | null>(null);
+  const [selectedReference, setSelectedReference] = useState<string | null>(null);
+  const [selectedSubReference, setSelectedSubReference] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
   const upsert = useUpsertPosProduct(locationId);
@@ -46,6 +50,8 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
         brand: p.brand,
         supplier: p.supplier,
         category: p.category,
+        reference: p.reference,
+        sub_reference: p.sub_reference,
         sale_price: p.sale_price,
         min_stock: p.min_stock,
         unit: p.unit,
@@ -90,10 +96,40 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [brandProducts]);
 
+  const supplierProducts = useMemo(
+    () =>
+      selectedSupplier
+        ? brandProducts.filter((p) => (p.supplier ?? "").trim() === selectedSupplier)
+        : brandProducts,
+    [brandProducts, selectedSupplier]
+  );
+
+  const references = useMemo(
+    () => countBy(supplierProducts, (p) => p.reference, NO_REFERENCE),
+    [supplierProducts]
+  );
+
+  const referenceProducts = useMemo(
+    () =>
+      selectedReference
+        ? supplierProducts.filter(
+            (p) => ((p.reference ?? "").trim() || NO_REFERENCE) === selectedReference
+          )
+        : supplierProducts,
+    [supplierProducts, selectedReference]
+  );
+
+  const subReferences = useMemo(
+    () => (selectedReference ? countBy(referenceProducts, (p) => p.sub_reference, NO_SUB_REFERENCE) : []),
+    [referenceProducts, selectedReference]
+  );
+
   const filtered = useMemo(() => {
-    let list = brandProducts;
-    if (selectedSupplier) {
-      list = list.filter((p) => (p.supplier ?? "").trim() === selectedSupplier);
+    let list = referenceProducts;
+    if (selectedSubReference) {
+      list = list.filter(
+        (p) => ((p.sub_reference ?? "").trim() || NO_SUB_REFERENCE) === selectedSubReference
+      );
     }
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -101,11 +137,13 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
         p.name.toLowerCase().includes(q) ||
         (p.brand ?? "").toLowerCase().includes(q) ||
         (p.supplier ?? "").toLowerCase().includes(q) ||
+        (p.reference ?? "").toLowerCase().includes(q) ||
+        (p.sub_reference ?? "").toLowerCase().includes(q) ||
         (p.category ?? "").toLowerCase().includes(q)
       );
     }
     return list;
-  }, [brandProducts, selectedSupplier, search]);
+  }, [referenceProducts, selectedSubReference, search]);
 
 
   const handleSave = async (form: Partial<PosProduct> & { name: string; sale_price: number }) => {
@@ -151,7 +189,7 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
                   {brands.map(([brand, count]) => (
                     <button
                       key={brand}
-                      onClick={() => { setSelectedBrand(brand); setSelectedSupplier(null); setSearch(""); }}
+                      onClick={() => { setSelectedBrand(brand); setSelectedSupplier(null); setSelectedReference(null); setSelectedSubReference(null); setSearch(""); }}
                       className="rounded-lg border p-4 text-left transition hover:bg-accent hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary"
                     >
                       <div className="flex items-center gap-2">
@@ -169,7 +207,7 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => { setSelectedBrand(null); setSelectedSupplier(null); setSearch(""); }}>
+                    <Button variant="outline" size="sm" onClick={() => { setSelectedBrand(null); setSelectedSupplier(null); setSelectedReference(null); setSelectedSubReference(null); setSearch(""); }}>
                       ← Todas las marcas
                     </Button>
                     <Badge variant="outline" className="text-sm">{selectedBrand}</Badge>
@@ -181,7 +219,7 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
                     <Button
                       size="sm"
                       variant={selectedSupplier === null ? "default" : "outline"}
-                      onClick={() => setSelectedSupplier(null)}
+                      onClick={() => { setSelectedSupplier(null); setSelectedReference(null); setSelectedSubReference(null); }}
                     >
                       Todos los proveedores
                     </Button>
@@ -190,7 +228,7 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
                         key={sup}
                         size="sm"
                         variant={selectedSupplier === sup ? "default" : "outline"}
-                        onClick={() => setSelectedSupplier(sup)}
+                        onClick={() => { setSelectedSupplier(sup); setSelectedReference(null); setSelectedSubReference(null); }}
                         className="gap-1"
                       >
                         <Truck className="h-3.5 w-3.5" /> {sup}
@@ -199,6 +237,14 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
                     ))}
                   </div>
                 )}
+                <ReferenceFilterChips
+                  references={references}
+                  subReferences={subReferences}
+                  selectedReference={selectedReference}
+                  selectedSubReference={selectedSubReference}
+                  onSelectReference={setSelectedReference}
+                  onSelectSubReference={setSelectedSubReference}
+                />
                 <Input
                   placeholder="Buscar producto…"
                   value={search}
@@ -232,7 +278,8 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
                                 )}
                               </div>
                               <p className="text-xs text-muted-foreground">
-                                {p.category ?? "Sin categoría"} · Costo prom: ${Number(p.avg_cost).toLocaleString()}
+                                {[p.reference, p.sub_reference].filter(Boolean).join(" · ") || "Sin referencia"}
+                                {" · "}Costo prom: ${Number(p.avg_cost).toLocaleString()}
                               </p>
                             </div>
                           </div>
@@ -311,6 +358,8 @@ function ProductDialog({
     brand: product?.brand ?? "",
     supplier: product?.supplier ?? "",
     category: product?.category ?? "",
+    reference: product?.reference ?? "",
+    sub_reference: product?.sub_reference ?? "",
     sale_price: product?.sale_price ?? 0,
     avg_cost: product?.avg_cost ?? 0,
     available: product?.available ?? 0,
@@ -380,6 +429,36 @@ function ProductDialog({
           <div>
             <Label>Categoría</Label>
             <Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Referencia</Label>
+            <Input
+              list="pos-reference-options"
+              value={form.reference}
+              onChange={(e) => setForm({ ...form, reference: e.target.value, sub_reference: "" })}
+              placeholder="Termos, Canguros…"
+            />
+            <datalist id="pos-reference-options">
+              {POS_REFERENCES.map((r) => (
+                <option key={r.label} value={r.label} />
+              ))}
+            </datalist>
+          </div>
+          <div>
+            <Label>Subreferencia</Label>
+            <Input
+              list="pos-sub-reference-options"
+              value={form.sub_reference}
+              onChange={(e) => setForm({ ...form, sub_reference: e.target.value })}
+              placeholder="500 ml, Free belt…"
+            />
+            <datalist id="pos-sub-reference-options">
+              {subsForReference(form.reference).map((s) => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-3">

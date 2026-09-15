@@ -118,6 +118,8 @@ export type PosProduct = {
   brand: string | null;
   supplier: string | null;
   category: string | null;
+  reference: string | null;
+  sub_reference: string | null;
   sale_price: number;
   avg_cost: number;
   available: number;
@@ -350,6 +352,8 @@ export function useUpsertPosProduct(locationId: string) {
             brand: input.brand ?? null,
             supplier: input.supplier ?? null,
             category: input.category ?? null,
+            reference: input.reference ?? null,
+            sub_reference: input.sub_reference ?? null,
             sale_price: input.sale_price,
             min_stock: input.min_stock ?? 0,
             unit: input.unit ?? "unidades",
@@ -371,6 +375,8 @@ export function useUpsertPosProduct(locationId: string) {
           brand: input.brand ?? null,
           supplier: input.supplier ?? null,
           category: input.category ?? null,
+          reference: input.reference ?? null,
+          sub_reference: input.sub_reference ?? null,
           sale_price: input.sale_price,
           avg_cost: input.avg_cost ?? 0,
           available: input.available ?? 0,
