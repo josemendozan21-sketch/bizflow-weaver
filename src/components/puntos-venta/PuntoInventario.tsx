@@ -235,6 +235,14 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
                     ))}
                   </div>
                 )}
+                <ReferenceFilterChips
+                  references={references}
+                  subReferences={subReferences}
+                  selectedReference={selectedReference}
+                  selectedSubReference={selectedSubReference}
+                  onSelectReference={setSelectedReference}
+                  onSelectSubReference={setSelectedSubReference}
+                />
                 <Input
                   placeholder="Buscar producto…"
                   value={search}
