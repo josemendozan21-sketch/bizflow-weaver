@@ -276,7 +276,8 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
                                 )}
                               </div>
                               <p className="text-xs text-muted-foreground">
-                                {p.category ?? "Sin categoría"} · Costo prom: ${Number(p.avg_cost).toLocaleString()}
+                                {[p.reference, p.sub_reference].filter(Boolean).join(" · ") || "Sin referencia"}
+                                {" · "}Costo prom: ${Number(p.avg_cost).toLocaleString()}
                               </p>
                             </div>
                           </div>
