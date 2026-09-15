@@ -274,7 +274,7 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
                               </Button>
                             </DialogTrigger>
                             {editing?.id === p.id && (
-                              <ProductDialog product={editing} onSave={handleSave} loading={upsert.isPending} locationId={locationId} />
+                              <ProductDialog key={p.id} product={p} onSave={handleSave} loading={upsert.isPending} locationId={locationId} />
                             )}
                           </Dialog>
                         )}
