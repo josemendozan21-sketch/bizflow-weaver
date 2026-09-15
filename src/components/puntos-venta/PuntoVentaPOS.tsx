@@ -29,6 +29,8 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
   const [search, setSearch] = useState("");
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
   const [selectedSupplier, setSelectedSupplier] = useState<string | null>(null);
+  const [selectedReference, setSelectedReference] = useState<string | null>(null);
+  const [selectedSubReference, setSelectedSubReference] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState("efectivo");
   const [clientName, setClientName] = useState("");
