@@ -540,6 +540,18 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
               {selectedSupplier ? `${selectedBrand} · ${selectedSupplier}` : selectedBrand}
             </Badge>
           )}
+          {(selectedBrand || isSearching) && (
+            <div className="mt-2">
+              <ReferenceFilterChips
+                references={references}
+                subReferences={subReferences}
+                selectedReference={selectedReference}
+                selectedSubReference={selectedSubReference}
+                onSelectReference={setSelectedReference}
+                onSelectSubReference={setSelectedSubReference}
+              />
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {available.length === 0 ? (
