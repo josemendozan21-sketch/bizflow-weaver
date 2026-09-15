@@ -118,6 +118,8 @@ export type PosProduct = {
   brand: string | null;
   supplier: string | null;
   category: string | null;
+  reference: string | null;
+  sub_reference: string | null;
   sale_price: number;
   avg_cost: number;
   available: number;
