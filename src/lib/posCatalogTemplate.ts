@@ -6,6 +6,8 @@ export interface CatalogProduct {
   brand: string | null;
   category: string | null;
   supplier: string | null;
+  reference: string | null;
+  sub_reference: string | null;
   sale_price: number;
   available: number;
   unit: string | null;
@@ -18,6 +20,8 @@ export const CATALOG_HEADERS = [
   "Marca",
   "Categoría",
   "Proveedor",
+  "Referencia",
+  "Subreferencia",
   "Precio de venta",
   "Existencias",
   "Unidad",
@@ -55,6 +59,8 @@ export function downloadCatalogTemplate(products: CatalogProduct[], locationName
     Marca: p.brand ?? "",
     "Categoría": p.category ?? "",
     Proveedor: p.supplier ?? "",
+    Referencia: p.reference ?? "",
+    Subreferencia: p.sub_reference ?? "",
     "Precio de venta": Number(p.sale_price) || 0,
     Existencias: Number(p.available) || 0,
     Unidad: p.unit ?? "unidades",
@@ -66,8 +72,9 @@ export function downloadCatalogTemplate(products: CatalogProduct[], locationName
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(rows, { header: CATALOG_HEADERS as unknown as string[] });
   ws["!cols"] = [
-    { wch: 46 }, { wch: 22 }, { wch: 18 }, { wch: 20 }, { wch: 16 },
-    { wch: 13 }, { wch: 12 }, { wch: 9 }, { wch: 11 }, { wch: 32 },
+    { wch: 46 }, { wch: 22 }, { wch: 18 }, { wch: 20 }, { wch: 20 },
+    { wch: 20 }, { wch: 16 }, { wch: 13 }, { wch: 12 }, { wch: 9 },
+    { wch: 11 }, { wch: 32 },
   ];
   XLSX.utils.book_append_sheet(wb, ws, "Catálogo");
 
@@ -84,6 +91,7 @@ export function downloadCatalogTemplate(products: CatalogProduct[], locationName
     ["5. Existencias no puede ser negativa: escribe el conteo físico real del producto."],
     ["6. Activo: escribe SÍ para que se pueda vender, NO para ocultarlo (no se borra su historial)."],
     ["7. Proveedor: quién surte el producto. Puedes corregirlo desde aquí."],
+    ["7b. Referencia y Subreferencia agrupan el producto (ej. Termos / 500 ml) y sirven para filtrar."],
     [`8. 'Tiene foto' es informativo (hoy hay ${sinFoto} productos sin foto). No lo edites.`],
     ["9. 'Foto nueva': escribe el nombre del archivo de la imagen (ej. termo-azul.jpg) y adjunta"],
     ["   las imágenes al subir el Excel. También puedes adjuntarlas todas juntas en un .zip."],
@@ -107,6 +115,8 @@ export interface ParsedRow {
   brand: string | null;
   category: string | null;
   supplier: string | null;
+  reference: string | null;
+  sub_reference: string | null;
   sale_price: number;
   available: number;
   unit: string;
@@ -172,6 +182,8 @@ export function parseCatalogFile(buffer: ArrayBuffer): { rows: ParsedRow[]; erro
       brand: brand || null,
       category: String(r["Categoría"] ?? "").trim() || null,
       supplier: String(r["Proveedor"] ?? "").trim() || null,
+      reference: String(r["Referencia"] ?? "").trim() || null,
+      sub_reference: String(r["Subreferencia"] ?? "").trim() || null,
       sale_price: price,
       available,
       unit: String(r["Unidad"] ?? "").trim() || "unidades",
@@ -217,6 +229,10 @@ export function buildCatalogDiff(parsed: ParsedRow[], errors: { row: number; mes
       changes.push({ field: "unit", label: "Unidad", from: existing.unit || "—", to: r.unit });
     if ((existing.supplier ?? "") !== (r.supplier ?? ""))
       changes.push({ field: "supplier", label: "Proveedor", from: existing.supplier || "—", to: r.supplier || "—" });
+    if ((existing.reference ?? "") !== (r.reference ?? ""))
+      changes.push({ field: "reference", label: "Referencia", from: existing.reference || "—", to: r.reference || "—" });
+    if ((existing.sub_reference ?? "") !== (r.sub_reference ?? ""))
+      changes.push({ field: "sub_reference", label: "Subreferencia", from: existing.sub_reference || "—", to: r.sub_reference || "—" });
     if (Boolean(existing.active) !== r.active)
       changes.push({ field: "active", label: "Activo", from: existing.active ? "SÍ" : "NO", to: r.active ? "SÍ" : "NO" });
     if (r.photo_file)
