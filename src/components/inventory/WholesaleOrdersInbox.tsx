@@ -792,8 +792,8 @@ const WholesaleOrdersInbox = () => {
 
           {!isDelivered && kind === "mayor" && !sampleApproved && (
             <div className="text-xs rounded border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-2 text-amber-900 dark:text-amber-200">
-              Esperando aprobación de la muestra por Estampación
-              {role === "admin" ? " — como administrador puedes entregar de todas formas." : ". La entrega de cuerpos está bloqueada."}
+              Pendiente de muestra — envía los cuerpos para que Estampación la prepare. La entrega de
+              producto terminado queda bloqueada hasta que la muestra sea aprobada.
             </div>
           )}
 
