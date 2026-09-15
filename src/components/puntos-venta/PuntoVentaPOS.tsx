@@ -566,7 +566,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
                 {nutritionSuppliers.map(([supplier, items]) => (
                   <button
                     key={supplier}
-                    onClick={() => { setSelectedSupplier(supplier); setSearch(""); }}
+                    onClick={() => { setSelectedSupplier(supplier); setSelectedReference(null); setSelectedSubReference(null); setSearch(""); }}
                     className="rounded-lg border p-4 text-left transition hover:bg-accent hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <div className="flex items-center gap-2">
