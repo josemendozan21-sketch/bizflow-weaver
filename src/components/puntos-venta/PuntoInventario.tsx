@@ -226,7 +226,7 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
                         key={sup}
                         size="sm"
                         variant={selectedSupplier === sup ? "default" : "outline"}
-                        onClick={() => setSelectedSupplier(sup)}
+                        onClick={() => { setSelectedSupplier(sup); setSelectedReference(null); setSelectedSubReference(null); }}
                         className="gap-1"
                       >
                         <Truck className="h-3.5 w-3.5" /> {sup}
