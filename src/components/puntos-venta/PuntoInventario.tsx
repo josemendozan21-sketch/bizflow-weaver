@@ -217,7 +217,7 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
                     <Button
                       size="sm"
                       variant={selectedSupplier === null ? "default" : "outline"}
-                      onClick={() => setSelectedSupplier(null)}
+                      onClick={() => { setSelectedSupplier(null); setSelectedReference(null); setSelectedSubReference(null); }}
                     >
                       Todos los proveedores
                     </Button>
