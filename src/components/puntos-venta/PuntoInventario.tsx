@@ -358,6 +358,8 @@ function ProductDialog({
     brand: product?.brand ?? "",
     supplier: product?.supplier ?? "",
     category: product?.category ?? "",
+    reference: product?.reference ?? "",
+    sub_reference: product?.sub_reference ?? "",
     sale_price: product?.sale_price ?? 0,
     avg_cost: product?.avg_cost ?? 0,
     available: product?.available ?? 0,
