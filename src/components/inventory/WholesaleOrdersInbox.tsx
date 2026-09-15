@@ -836,8 +836,8 @@ const WholesaleOrdersInbox = () => {
               <div className="flex flex-wrap gap-2 pt-1">
                 <Button size="sm" variant={enough ? "default" : "outline"} className="flex-1 min-w-[150px] gap-1.5"
                   onClick={() => openDeliver(o, "estampacion")}
-                  disabled={!enough || sampleBlocked}
-                  title={sampleTitle ?? (enough ? "Enviar cuerpos a Estampación" : "No hay inventario suficiente: solicita producción")}>
+                  disabled={!enough}
+                  title={enough ? "Enviar cuerpos a Estampación" : "No hay inventario suficiente: solicita producción"}>
                   <Paintbrush className="h-3.5 w-3.5" /> Enviar a Estampación
                 </Button>
                 {!enough && (
