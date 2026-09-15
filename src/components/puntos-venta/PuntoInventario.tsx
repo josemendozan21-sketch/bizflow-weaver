@@ -126,13 +126,13 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
           <Package className="h-5 w-5 text-primary" /> Catálogo del punto ({activeProducts.length})
         </CardTitle>
         {canEdit && isAdmin && (
-          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditing(null); }}>
+          <Dialog open={open && !editing} onOpenChange={(v) => { setOpen(v); if (!v) setEditing(null); }}>
             <DialogTrigger asChild>
               <Button size="sm" onClick={() => setEditing(null)}>
                 <Plus className="h-4 w-4 mr-1" /> Nuevo producto
               </Button>
             </DialogTrigger>
-            <ProductDialog product={editing} onSave={handleSave} loading={upsert.isPending} locationId={locationId} />
+            <ProductDialog key="new" product={null} onSave={handleSave} loading={upsert.isPending} locationId={locationId} />
           </Dialog>
         )}
       </CardHeader>
@@ -274,7 +274,7 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
                               </Button>
                             </DialogTrigger>
                             {editing?.id === p.id && (
-                              <ProductDialog product={editing} onSave={handleSave} loading={upsert.isPending} locationId={locationId} />
+                              <ProductDialog key={p.id} product={p} onSave={handleSave} loading={upsert.isPending} locationId={locationId} />
                             )}
                           </Dialog>
                         )}
