@@ -205,7 +205,7 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => { setSelectedBrand(null); setSelectedSupplier(null); setSearch(""); }}>
+                    <Button variant="outline" size="sm" onClick={() => { setSelectedBrand(null); setSelectedSupplier(null); setSelectedReference(null); setSelectedSubReference(null); setSearch(""); }}>
                       ← Todas las marcas
                     </Button>
                     <Badge variant="outline" className="text-sm">{selectedBrand}</Badge>
