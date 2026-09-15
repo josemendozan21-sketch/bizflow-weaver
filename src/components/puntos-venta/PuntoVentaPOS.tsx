@@ -95,19 +95,47 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [available]);
 
-  const filtered = useMemo(
+  const scoped = useMemo(
     () =>
       available
         .filter((p) => !selectedBrand || (p.brand ?? "Sin marca").trim() === selectedBrand)
-        .filter((p) => !selectedSupplier || ((p.supplier ?? "Sin proveedor").trim() || "Sin proveedor") === selectedSupplier)
+        .filter((p) => !selectedSupplier || ((p.supplier ?? "Sin proveedor").trim() || "Sin proveedor") === selectedSupplier),
+    [available, selectedBrand, selectedSupplier]
+  );
+
+  const references = useMemo(() => countBy(scoped, (p) => p.reference, NO_REFERENCE), [scoped]);
+
+  const referenceScoped = useMemo(
+    () =>
+      selectedReference
+        ? scoped.filter((p) => ((p.reference ?? "").trim() || NO_REFERENCE) === selectedReference)
+        : scoped,
+    [scoped, selectedReference]
+  );
+
+  const subReferences = useMemo(
+    () => (selectedReference ? countBy(referenceScoped, (p) => p.sub_reference, NO_SUB_REFERENCE) : []),
+    [referenceScoped, selectedReference]
+  );
+
+  const filtered = useMemo(
+    () =>
+      referenceScoped
+        .filter(
+          (p) =>
+            !selectedSubReference ||
+            ((p.sub_reference ?? "").trim() || NO_SUB_REFERENCE) === selectedSubReference
+        )
         .filter(
           (p) =>
             !search ||
             p.name.toLowerCase().includes(search.toLowerCase()) ||
             (p.brand ?? "").toLowerCase().includes(search.toLowerCase()) ||
-            (p.supplier ?? "").toLowerCase().includes(search.toLowerCase())
+            (p.supplier ?? "").toLowerCase().includes(search.toLowerCase()) ||
+            (p.reference ?? "").toLowerCase().includes(search.toLowerCase()) ||
+            (p.sub_reference ?? "").toLowerCase().includes(search.toLowerCase())
         ),
-    [available, selectedBrand, selectedSupplier, search]
+    [referenceScoped, selectedSubReference, search]
   );
 
   const isNutritionSelected = selectedBrand === NUTRITION_BRAND;
