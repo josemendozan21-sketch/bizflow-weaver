@@ -50,6 +50,8 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
         brand: p.brand,
         supplier: p.supplier,
         category: p.category,
+        reference: p.reference,
+        sub_reference: p.sub_reference,
         sale_price: p.sale_price,
         min_stock: p.min_stock,
         unit: p.unit,
