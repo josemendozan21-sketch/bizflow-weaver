@@ -431,6 +431,36 @@ function ProductDialog({
             <Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
           </div>
         </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Referencia</Label>
+            <Input
+              list="pos-reference-options"
+              value={form.reference}
+              onChange={(e) => setForm({ ...form, reference: e.target.value, sub_reference: "" })}
+              placeholder="Termos, Canguros…"
+            />
+            <datalist id="pos-reference-options">
+              {POS_REFERENCES.map((r) => (
+                <option key={r.label} value={r.label} />
+              ))}
+            </datalist>
+          </div>
+          <div>
+            <Label>Subreferencia</Label>
+            <Input
+              list="pos-sub-reference-options"
+              value={form.sub_reference}
+              onChange={(e) => setForm({ ...form, sub_reference: e.target.value })}
+              placeholder="500 ml, Free belt…"
+            />
+            <datalist id="pos-sub-reference-options">
+              {subsForReference(form.reference).map((s) => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
+          </div>
+        </div>
         <div className="grid grid-cols-3 gap-3">
           <div>
             <Label>Precio venta *</Label>
