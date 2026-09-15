@@ -24,6 +24,8 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
   const [open, setOpen] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
   const [selectedSupplier, setSelectedSupplier] = useState<string | null>(null);
+  const [selectedReference, setSelectedReference] = useState<string | null>(null);
+  const [selectedSubReference, setSelectedSubReference] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
   const upsert = useUpsertPosProduct(locationId);
