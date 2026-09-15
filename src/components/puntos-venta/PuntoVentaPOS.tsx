@@ -69,6 +69,8 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
         brand: product.brand,
         supplier: product.supplier,
         category: product.category,
+        reference: product.reference,
+        sub_reference: product.sub_reference,
         sale_price: product.sale_price,
         min_stock: product.min_stock,
         unit: product.unit,
