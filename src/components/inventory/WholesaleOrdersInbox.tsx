@@ -704,6 +704,8 @@ const WholesaleOrdersInbox = () => {
           : <Badge variant="destructive">Sin stock</Badge>;
 
     const sampleApproved = !o.sample_status || o.sample_status === "muestra_aprobada";
+    // El envío de cuerpos a Estampación (y la solicitud de producción) es previo a la muestra:
+    // solo se bloquean las entregas que cierran el pedido (producto terminado / logística).
     const sampleBlocked = kind === "mayor" && !sampleApproved && role !== "admin";
     const sampleTitle = sampleBlocked ? "Esperando aprobación de la muestra por Estampación" : undefined;
     const SAMPLE_LABEL: Record<string, string> = {
