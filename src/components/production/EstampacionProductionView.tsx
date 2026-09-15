@@ -208,7 +208,9 @@ export const EstampacionProductionView = () => {
   // Si no se listan aquí quedan invisibles y no hay dónde subir las muestras.
   const missedStamping = stampingScope.filter((o) => !areSamplesDone(o) && !isStageActive(o));
   // Ya estampados: se muestran solo como consulta (sin acciones) para no reiniciar el proceso.
-  const finishedOrders = stampingScope.filter((o) => areSamplesDone(o) && !isStageActive(o));
+  const finishedOrders = stampingScope.filter(
+    (o) => isStampingFinished(o) || (areSamplesDone(o) && !isStageActive(o)),
+  );
 
 
 
