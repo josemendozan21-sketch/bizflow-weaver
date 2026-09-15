@@ -386,6 +386,8 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
     } else {
       setSelectedBrand(null);
     }
+    setSelectedReference(null);
+    setSelectedSubReference(null);
     setSearch("");
   };
 
