@@ -3114,7 +3114,9 @@ export type Database = {
           name: string
           notes: string | null
           photo_url: string | null
+          reference: string | null
           sale_price: number
+          sub_reference: string | null
           supplier: string | null
           unit: string
           updated_at: string
@@ -3132,7 +3134,9 @@ export type Database = {
           name: string
           notes?: string | null
           photo_url?: string | null
+          reference?: string | null
           sale_price?: number
+          sub_reference?: string | null
           supplier?: string | null
           unit?: string
           updated_at?: string
@@ -3150,7 +3154,9 @@ export type Database = {
           name?: string
           notes?: string | null
           photo_url?: string | null
+          reference?: string | null
           sale_price?: number
+          sub_reference?: string | null
           supplier?: string | null
           unit?: string
           updated_at?: string
