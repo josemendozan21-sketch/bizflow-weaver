@@ -843,8 +843,7 @@ const WholesaleOrdersInbox = () => {
                 {!enough && (
                   <Button size="sm" variant="default" className="flex-1 min-w-[150px] gap-1.5"
                     onClick={() => openDeliver(o, "produccion")}
-                    disabled={sampleBlocked}
-                    title={sampleTitle ?? "El sistema crea la orden de producción con la referencia y cantidad del pedido"}>
+                    title="El sistema crea la orden de producción con la referencia y cantidad del pedido">
                     <Factory className="h-3.5 w-3.5" /> Solicitar Producción
                   </Button>
                 )}
