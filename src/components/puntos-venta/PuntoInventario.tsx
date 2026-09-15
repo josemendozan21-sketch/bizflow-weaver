@@ -92,10 +92,40 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [brandProducts]);
 
+  const supplierProducts = useMemo(
+    () =>
+      selectedSupplier
+        ? brandProducts.filter((p) => (p.supplier ?? "").trim() === selectedSupplier)
+        : brandProducts,
+    [brandProducts, selectedSupplier]
+  );
+
+  const references = useMemo(
+    () => countBy(supplierProducts, (p) => p.reference, NO_REFERENCE),
+    [supplierProducts]
+  );
+
+  const referenceProducts = useMemo(
+    () =>
+      selectedReference
+        ? supplierProducts.filter(
+            (p) => ((p.reference ?? "").trim() || NO_REFERENCE) === selectedReference
+          )
+        : supplierProducts,
+    [supplierProducts, selectedReference]
+  );
+
+  const subReferences = useMemo(
+    () => (selectedReference ? countBy(referenceProducts, (p) => p.sub_reference, NO_SUB_REFERENCE) : []),
+    [referenceProducts, selectedReference]
+  );
+
   const filtered = useMemo(() => {
-    let list = brandProducts;
-    if (selectedSupplier) {
-      list = list.filter((p) => (p.supplier ?? "").trim() === selectedSupplier);
+    let list = referenceProducts;
+    if (selectedSubReference) {
+      list = list.filter(
+        (p) => ((p.sub_reference ?? "").trim() || NO_SUB_REFERENCE) === selectedSubReference
+      );
     }
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -103,11 +133,13 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
         p.name.toLowerCase().includes(q) ||
         (p.brand ?? "").toLowerCase().includes(q) ||
         (p.supplier ?? "").toLowerCase().includes(q) ||
+        (p.reference ?? "").toLowerCase().includes(q) ||
+        (p.sub_reference ?? "").toLowerCase().includes(q) ||
         (p.category ?? "").toLowerCase().includes(q)
       );
     }
     return list;
-  }, [brandProducts, selectedSupplier, search]);
+  }, [referenceProducts, selectedSubReference, search]);
 
 
   const handleSave = async (form: Partial<PosProduct> & { name: string; sale_price: number }) => {
