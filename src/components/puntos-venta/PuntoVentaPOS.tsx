@@ -12,6 +12,7 @@ import { CartItem, CONSUMIDOR_FINAL, PosProduct, useRegisterPosSale, useRegister
 import { toast } from "sonner";
 import { Customer } from "@/hooks/useCustomers";
 import { CustomerLookupBar } from "@/components/clientes/CustomerLookupBar";
+import { ReferenceFilterChips, countBy, NO_REFERENCE, NO_SUB_REFERENCE } from "./ReferenceFilterChips";
 
 type Props = { locationId: string; products: PosProduct[] };
 const NUTRITION_BRAND = "Sweatspot Nutrición";
