@@ -821,7 +821,7 @@ const WholesaleOrdersInbox = () => {
                     Entregar termos (marcar) {markable ? `(${markableStock})` : "(sin stock)"}
                   </Button>
                   <Button size="sm" variant={markableEnough ? "outline" : "default"} className="flex-1 min-w-[150px] gap-1.5"
-                    disabled={sampleBlocked} title={sampleTitle}
+                    title="Enviar el kit a Estampación"
                     onClick={() => openDeliver(o, "estampacion")}>
                     <Paintbrush className="h-3.5 w-3.5" /> Salir kit
                   </Button>
