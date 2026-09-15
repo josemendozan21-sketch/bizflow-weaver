@@ -704,6 +704,8 @@ const WholesaleOrdersInbox = () => {
           : <Badge variant="destructive">Sin stock</Badge>;
 
     const sampleApproved = !o.sample_status || o.sample_status === "muestra_aprobada";
+    // El envío de cuerpos a Estampación (y la solicitud de producción) es previo a la muestra:
+    // solo se bloquean las entregas que cierran el pedido (producto terminado / logística).
     const sampleBlocked = kind === "mayor" && !sampleApproved && role !== "admin";
     const sampleTitle = sampleBlocked ? "Esperando aprobación de la muestra por Estampación" : undefined;
     const SAMPLE_LABEL: Record<string, string> = {
@@ -790,8 +792,8 @@ const WholesaleOrdersInbox = () => {
 
           {!isDelivered && kind === "mayor" && !sampleApproved && (
             <div className="text-xs rounded border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-2 text-amber-900 dark:text-amber-200">
-              Esperando aprobación de la muestra por Estampación
-              {role === "admin" ? " — como administrador puedes entregar de todas formas." : ". La entrega de cuerpos está bloqueada."}
+              Pendiente de muestra — envía los cuerpos para que Estampación la prepare. La entrega de
+              producto terminado queda bloqueada hasta que la muestra sea aprobada.
             </div>
           )}
 
@@ -819,7 +821,7 @@ const WholesaleOrdersInbox = () => {
                     Entregar termos (marcar) {markable ? `(${markableStock})` : "(sin stock)"}
                   </Button>
                   <Button size="sm" variant={markableEnough ? "outline" : "default"} className="flex-1 min-w-[150px] gap-1.5"
-                    disabled={sampleBlocked} title={sampleTitle}
+                    title="Enviar el kit a Estampación"
                     onClick={() => openDeliver(o, "estampacion")}>
                     <Paintbrush className="h-3.5 w-3.5" /> Salir kit
                   </Button>
@@ -834,15 +836,14 @@ const WholesaleOrdersInbox = () => {
               <div className="flex flex-wrap gap-2 pt-1">
                 <Button size="sm" variant={enough ? "default" : "outline"} className="flex-1 min-w-[150px] gap-1.5"
                   onClick={() => openDeliver(o, "estampacion")}
-                  disabled={!enough || sampleBlocked}
-                  title={sampleTitle ?? (enough ? "Enviar cuerpos a Estampación" : "No hay inventario suficiente: solicita producción")}>
+                  disabled={!enough}
+                  title={enough ? "Enviar cuerpos a Estampación" : "No hay inventario suficiente: solicita producción"}>
                   <Paintbrush className="h-3.5 w-3.5" /> Enviar a Estampación
                 </Button>
                 {!enough && (
                   <Button size="sm" variant="default" className="flex-1 min-w-[150px] gap-1.5"
                     onClick={() => openDeliver(o, "produccion")}
-                    disabled={sampleBlocked}
-                    title={sampleTitle ?? "El sistema crea la orden de producción con la referencia y cantidad del pedido"}>
+                    title="El sistema crea la orden de producción con la referencia y cantidad del pedido">
                     <Factory className="h-3.5 w-3.5" /> Solicitar Producción
                   </Button>
                 )}
