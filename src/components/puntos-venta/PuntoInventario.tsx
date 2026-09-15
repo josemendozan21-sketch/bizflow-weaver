@@ -187,7 +187,7 @@ export function PuntoInventario({ locationId, products, canEdit }: Props) {
                   {brands.map(([brand, count]) => (
                     <button
                       key={brand}
-                      onClick={() => { setSelectedBrand(brand); setSelectedSupplier(null); setSearch(""); }}
+                      onClick={() => { setSelectedBrand(brand); setSelectedSupplier(null); setSelectedReference(null); setSelectedSubReference(null); setSearch(""); }}
                       className="rounded-lg border p-4 text-left transition hover:bg-accent hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary"
                     >
                       <div className="flex items-center gap-2">
