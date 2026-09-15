@@ -198,7 +198,11 @@ export const EstampacionProductionView = () => {
   );
   // Trabajo real pendiente: el pedido sigue en estampación / cuerpos, tenga o no
   // las muestras aprobadas (aprobar la muestra no estampa las unidades).
-  const estampacionOrders = stampingScope.filter(isStageActive);
+  // "Finalizado" lo marca Estampación al terminar el trabajo; "aprobado" es solo la
+  // autorización del asesor y no cierra la etapa.
+  const isStampingFinished = (o: ProductionOrder) =>
+    o.stamp_size_status === "finalizado" && o.stamp_inkgel_status === "finalizado";
+  const estampacionOrders = stampingScope.filter((o) => isStageActive(o) && !isStampingFinished(o));
   // Red de seguridad: pedidos con logo cuyas muestras siguen pendientes pero
   // que ya avanzaron a otra etapa (p. ej. la ruta se armó sin estampación).
   // Si no se listan aquí quedan invisibles y no hay dónde subir las muestras.
