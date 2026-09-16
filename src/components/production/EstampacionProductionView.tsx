@@ -309,6 +309,8 @@ export const EstampacionProductionView = () => {
   );
 
   return (
+    <div className="space-y-4">
+    <UnroutedOrdersPanel readOnly />
     <Tabs defaultValue="ordenes" className="space-y-4">
       <TabsList className="w-full flex lg:grid lg:grid-cols-7">
         <TabsTrigger value="ordenes">Órdenes ({filteredOrders.length})</TabsTrigger>
