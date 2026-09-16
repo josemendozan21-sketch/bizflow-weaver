@@ -729,6 +729,13 @@ const WholesaleOrdersInbox = () => {
                   <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">Recompra</Badge>
                 )}
                 {isDelivered && <Badge variant="secondary">Entregado</Badge>}
+                {!isDelivered && (() => {
+                  const age = Math.floor((Date.now() - new Date(o.created_at).getTime()) / 86_400_000);
+                  if (age < 2) return null;
+                  return age > 5
+                    ? <Badge variant="destructive">Esperando ruteo · {age} días</Badge>
+                    : <Badge variant="outline" className="border-amber-500 text-amber-600">Esperando ruteo · {age} días</Badge>;
+                })()}
                 {kind === "mayor" && o.sample_status && o.sample_status !== "muestra_aprobada" && (
                   <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800">
                     {SAMPLE_LABEL[o.sample_status] ?? o.sample_status}
