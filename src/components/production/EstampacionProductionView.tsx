@@ -648,6 +648,7 @@ export const EstampacionProductionView = () => {
         }}
       />
     </Tabs>
+    </div>
   );
 };
 
