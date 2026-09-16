@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProcessChangeLogPanel from "@/components/production/ProcessChangeLogPanel";
+import UnroutedOrdersPanel from "@/components/production/UnroutedOrdersPanel";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -309,6 +310,8 @@ export const EstampacionProductionView = () => {
   );
 
   return (
+    <div className="space-y-4">
+    <UnroutedOrdersPanel readOnly />
     <Tabs defaultValue="ordenes" className="space-y-4">
       <TabsList className="w-full flex lg:grid lg:grid-cols-7">
         <TabsTrigger value="ordenes">Órdenes ({filteredOrders.length})</TabsTrigger>
@@ -646,6 +649,7 @@ export const EstampacionProductionView = () => {
         }}
       />
     </Tabs>
+    </div>
   );
 };
 

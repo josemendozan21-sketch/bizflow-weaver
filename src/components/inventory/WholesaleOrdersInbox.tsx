@@ -729,6 +729,13 @@ const WholesaleOrdersInbox = () => {
                   <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">Recompra</Badge>
                 )}
                 {isDelivered && <Badge variant="secondary">Entregado</Badge>}
+                {!isDelivered && (() => {
+                  const age = Math.floor((Date.now() - new Date(o.created_at).getTime()) / 86_400_000);
+                  if (age < 2) return null;
+                  return age > 5
+                    ? <Badge variant="destructive">Esperando ruteo · {age} días</Badge>
+                    : <Badge variant="outline" className="border-amber-500 text-amber-600">Esperando ruteo · {age} días</Badge>;
+                })()}
                 {kind === "mayor" && o.sample_status && o.sample_status !== "muestra_aprobada" && (
                   <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800">
                     {SAMPLE_LABEL[o.sample_status] ?? o.sample_status}
@@ -833,6 +840,13 @@ const WholesaleOrdersInbox = () => {
                 </div>
               </div>
             ) : (
+              <>
+              {!enough && (
+                <div className="text-xs rounded border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-2 text-amber-900 dark:text-amber-200">
+                  Inventario insuficiente ({stock ?? 0} / {o.quantity}) — usa <strong>Solicitar Producción</strong> para
+                  los faltantes. Mientras no lo hagas, el pedido no llega a Producción ni a Estampación.
+                </div>
+              )}
               <div className="flex flex-wrap gap-2 pt-1">
                 <Button size="sm" variant={enough ? "default" : "outline"} className="flex-1 min-w-[150px] gap-1.5"
                   onClick={() => openDeliver(o, "estampacion")}
@@ -853,6 +867,7 @@ const WholesaleOrdersInbox = () => {
                   <X className="h-3.5 w-3.5" />
                 </Button>
               </div>
+              </>
             )
           )}
 
