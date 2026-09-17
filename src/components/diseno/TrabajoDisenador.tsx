@@ -76,6 +76,14 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
   const isAdvisor = role === "asesor_comercial" || role === "admin";
   const awaitingAdvisor = ADVISOR_REVIEW_STATUSES.includes(req.status);
   const orderClosed = isOrderClosed(req);
+  // Recompra que reutiliza el logo original: no hay archivo ajustado que revisar,
+  // pero el asesor sí debe poder aprobarlo.
+  const isRecompraReuse =
+    !req.adjusted_logo_url &&
+    (req.from_recompra || !!req.additional_instructions?.toLowerCase().includes("recompra"));
+  // El asesor solo revisa cuando hay algo real que revisar: el diseño ajustado
+  // ya enviado, o una recompra que reutiliza el logo original.
+  const canAdvisorReview = awaitingAdvisor && (!!req.adjusted_logo_url || isRecompraReuse);
 
   useEffect(() => {
     if (!adjustedFile) setAdjustedPreview(req.adjusted_logo_url);
