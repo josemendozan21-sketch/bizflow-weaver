@@ -18,6 +18,20 @@ export interface OrderLineContext {
   productCount: number;
   /** Texto corto que diferencia este producto de los demás del mismo pedido */
   variantLabel: string;
+  /** Unidades de esta línea */
+  quantity: number;
+  /** Unidades de todo el pedido */
+  totalQuantity: number;
+  /** Todas las líneas del pedido completo, en orden */
+  lines: OrderLineSummary[];
+}
+
+export interface OrderLineSummary {
+  orderId: string;
+  orderCode: string | null;
+  variantLabel: string;
+  quantity: number;
+  sampleStatus: string | null;
 }
 
 interface OrderRow {
@@ -30,6 +44,8 @@ interface OrderRow {
   ink_color: string | null;
   glitter_color: string | null;
   silicone_color: string | null;
+  quantity: number | null;
+  sample_status: string | null;
   created_at: string;
 }
 
@@ -57,7 +73,7 @@ export function useOrderLineContext(orderIds: (string | null | undefined)[]) {
     staleTime: 60_000,
     queryFn: async (): Promise<Record<string, OrderLineContext>> => {
       const select =
-        "id, order_code, submission_id, client_name, product, gel_color, ink_color, glitter_color, silicone_color, created_at";
+        "id, order_code, submission_id, client_name, product, gel_color, ink_color, glitter_color, silicone_color, quantity, sample_status, created_at";
       const { data, error } = await supabase.from("orders").select(select).in("id", ids);
       if (error) throw error;
       const base = (data ?? []) as unknown as OrderRow[];
@@ -95,6 +111,14 @@ export function useOrderLineContext(orderIds: (string | null | undefined)[]) {
           if (ac && bc && ac !== bc) return ac.localeCompare(bc);
           return a.created_at.localeCompare(b.created_at);
         });
+        const lines: OrderLineSummary[] = rows.map((r) => ({
+          orderId: r.id,
+          orderCode: r.order_code,
+          variantLabel: buildVariantLabel(r),
+          quantity: Number(r.quantity ?? 0),
+          sampleStatus: r.sample_status ?? null,
+        }));
+        const totalQuantity = lines.reduce((s, l) => s + l.quantity, 0);
         rows.forEach((row, idx) => {
           result[row.id] = {
             orderId: row.id,
@@ -109,6 +133,9 @@ export function useOrderLineContext(orderIds: (string | null | undefined)[]) {
             productIndex: idx + 1,
             productCount: rows.length,
             variantLabel: buildVariantLabel(row),
+            quantity: Number(row.quantity ?? 0),
+            totalQuantity,
+            lines,
           };
         });
       }
