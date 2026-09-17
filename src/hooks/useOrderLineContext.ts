@@ -18,6 +18,20 @@ export interface OrderLineContext {
   productCount: number;
   /** Texto corto que diferencia este producto de los demás del mismo pedido */
   variantLabel: string;
+  /** Unidades de esta línea */
+  quantity: number;
+  /** Unidades de todo el pedido */
+  totalQuantity: number;
+  /** Todas las líneas del pedido completo, en orden */
+  lines: OrderLineSummary[];
+}
+
+export interface OrderLineSummary {
+  orderId: string;
+  orderCode: string | null;
+  variantLabel: string;
+  quantity: number;
+  sampleStatus: string | null;
 }
 
 interface OrderRow {
@@ -30,6 +44,8 @@ interface OrderRow {
   ink_color: string | null;
   glitter_color: string | null;
   silicone_color: string | null;
+  quantity: number | null;
+  sample_status: string | null;
   created_at: string;
 }
 
