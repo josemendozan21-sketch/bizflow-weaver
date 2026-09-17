@@ -133,6 +133,9 @@ export function useOrderLineContext(orderIds: (string | null | undefined)[]) {
             productIndex: idx + 1,
             productCount: rows.length,
             variantLabel: buildVariantLabel(row),
+            quantity: Number(row.quantity ?? 0),
+            totalQuantity,
+            lines,
           };
         });
       }
