@@ -719,12 +719,12 @@ const WholesaleOrdersInbox = () => {
     const sizeApproved = isApprovedStep(approval?.size);
     const inkgelApproved = isApprovedStep(approval?.inkgel);
     const sampleApproved = sizeApproved && inkgelApproved;
-    const sampleBlocked = kind === "mayor" && !sampleApproved && role !== "admin";
+    const sampleBlocked = kind === "mayor" && !sampleApproved;
     const pendingApprovals = [!sizeApproved ? "tamaño" : null, !inkgelApproved ? "tinta/gel" : null].filter(Boolean).join(" y ");
     const sampleTitle = sampleBlocked ? `Esperando aprobación del asesor: ${pendingApprovals}` : undefined;
     const SAMPLE_LABEL: Record<string, string> = {
       pendiente_muestra: "Pendiente de muestra",
-      muestra_enviada: "Muestra enviada",
+      muestra_enviada: "En aprobación del asesor",
       muestra_aprobada: "Muestra aprobada",
       muestra_rechazada: "Muestra rechazada",
     };
