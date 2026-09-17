@@ -33,7 +33,8 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
   const [selectedReference, setSelectedReference] = useState<string | null>(null);
   const [selectedSubReference, setSelectedSubReference] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState("efectivo");
+  const [paymentMethod, setPaymentMethod] = useState("");
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [clientName, setClientName] = useState("");
   const [clientDoc, setClientDoc] = useState("");
   const [clientEmail, setClientEmail] = useState("");
@@ -272,7 +273,24 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
     }
   };
 
+  const requestConfirm = () => {
+    if (cart.length === 0) {
+      toast.error("Agrega productos");
+      return;
+    }
+    if (!isCourtesy && !paymentMethod) {
+      toast.error("Selecciona el método de pago");
+      return;
+    }
+    if (isCourtesy) {
+      void handleConfirm();
+      return;
+    }
+    setConfirmOpen(true);
+  };
+
   const handleConfirm = async () => {
+    setConfirmOpen(false);
     if (cart.length === 0) {
       toast.error("Agrega productos");
       return;
