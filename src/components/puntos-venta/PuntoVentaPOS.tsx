@@ -6,6 +6,16 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ShoppingCart, Plus, Minus, Trash2, Search, UserCheck, ImageIcon, Tag, Camera, X } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { CartItem, CONSUMIDOR_FINAL, PosProduct, useRegisterPosSale, useRegisterPosCourtesy, uploadPosSaleProof, useUpsertPosProduct, uploadPosProductPhoto } from "@/hooks/usePuntosVenta";
@@ -17,6 +27,16 @@ import { ReferenceFilterChips, countBy, NO_REFERENCE, NO_SUB_REFERENCE } from ".
 type Props = { locationId: string; products: PosProduct[] };
 const NUTRITION_BRAND = "Sweatspot Nutrición";
 const DISCOUNT_OPTIONS = [0, 5, 10, 15, 20, 50] as const;
+const PAYMENT_LABEL: Record<string, string> = {
+  efectivo: "Efectivo",
+  tarjeta: "Tarjeta",
+  nequi: "Nequi",
+  bancolombia: "Bancolombia",
+  davivienda: "Davivienda",
+  link_pago: "Link de pago",
+  transferencia: "Transferencia",
+  otro: "Otro",
+};
 
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "")
