@@ -73,7 +73,7 @@ export function useOrderLineContext(orderIds: (string | null | undefined)[]) {
     staleTime: 60_000,
     queryFn: async (): Promise<Record<string, OrderLineContext>> => {
       const select =
-        "id, order_code, submission_id, client_name, product, gel_color, ink_color, glitter_color, silicone_color, created_at";
+        "id, order_code, submission_id, client_name, product, gel_color, ink_color, glitter_color, silicone_color, quantity, sample_status, created_at";
       const { data, error } = await supabase.from("orders").select(select).in("id", ids);
       if (error) throw error;
       const base = (data ?? []) as unknown as OrderRow[];
