@@ -800,7 +800,9 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
           <div>
             <Label>Método de pago</Label>
             <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className={!paymentMethod && !isCourtesy ? "border-amber-500" : undefined}>
+                <SelectValue placeholder="Selecciona el método de pago" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="efectivo">Efectivo</SelectItem>
                 <SelectItem value="tarjeta">Tarjeta</SelectItem>
