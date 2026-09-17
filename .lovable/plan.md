@@ -1,26 +1,24 @@
-# Subir el comprobante de pago después de despachado
+# Comprobante de pago del saldo y regla de "no se despacha sin pago"
 
 ## Qué pasa con SW-VM-01057
 
-El pedido de Natalia Rodríguez Niño está en estado **despachado**, con abono de $500.000 sobre un total de $1.160.000.
+El pedido de Natalia Rodríguez Niño (Sweatspot, $1.160.000, abono $500.000) figura como **despachado**, y en "Mis pedidos" el botón "Subir soporte y confirmar pago" solo aparece mientras el pedido está en estado **listo**. Al quedar como despachado, el bloque de pago desapareció y Valentina se quedó sin forma de adjuntar el comprobante del saldo.
 
-En "Mis pedidos", el botón "Subir soporte y confirmar pago" solo aparece cuando el pedido está en estado **listo**. Apenas Logística lo despacha, el bloque de pago desaparece de la tarjeta y el asesor se queda sin ninguna forma de adjuntar el comprobante del saldo.
+No fue Logística quien lo despachó: en el historial del pedido el estado pasó de "pendiente" directamente a "despachado" el 7 de septiembre, dentro del cierre masivo de pedidos históricos. Lo mismo ocurrió con los otros 4 pedidos que hoy están despachados con saldo: MW-IH-00990, MW-IH-00991, MW-IH-00995 y SW-JM-00421.
 
-El bloque de abonos con "Registrar abono" (que sí permite adjuntar comprobante en cualquier momento) hoy solo se muestra en pedidos marcados como **crédito**, y este no lo está.
-
-Hay 5 pedidos al por mayor en esa misma situación: despachados o entregados, con saldo pendiente y sin manera de subir el soporte.
+La regla sí está aplicada en la pantalla de Logística (un pedido al por mayor solo llega a "listo para despacho" si está pagado completo, salvo los de crédito), pero no existe ninguna barrera en la base de datos, así que un cierre masivo o una corrección de montos posterior puede dejar pedidos despachados con saldo.
 
 ## Qué se va a cambiar
 
-1. **Bloque de pagos siempre disponible mientras haya saldo**: cualquier pedido al por mayor con saldo pendiente muestra el bloque de abonos con "Registrar abono" (monto, fecha, método, comprobante y notas), sin importar si está en producción, listo, despachado o entregado. Ya no depende de que esté marcado como crédito.
-2. **El pedido deja de mostrar saldo al completarse**: al registrar el abono que cubre el saldo, el pedido queda marcado como pagado completo y el bloque pasa a mostrar "Pago completo" con el historial de abonos y sus comprobantes.
-3. **Historial visible**: dentro del bloque se listan los abonos ya registrados con fecha, monto y enlace al comprobante, para que el asesor y Contabilidad vean qué se subió.
-4. **Se conserva el flujo actual antes del despacho**: el botón "Subir soporte y confirmar pago" del pedido en estado listo sigue igual, porque ese es el que autoriza el despacho.
-
-No se modifica ningún pedido existente ni sus montos: solo se habilita la pantalla para que puedan adjuntar lo que falta.
+1. **Regla firme: sin pago completo no hay despacho** — en Magical y en Sweatspot. Se agrega la validación en la base de datos: un pedido al por mayor no puede marcarse como despachado ni recibir fecha de despacho si tiene saldo pendiente. Única excepción, la que ya existe hoy: los pedidos marcados como crédito, que se despachan con su fecha de pago pactada.
+2. **El asesor siempre puede registrar el saldo y su comprobante**: cualquier pedido al por mayor con saldo pendiente muestra el bloque de abonos con "Registrar abono" (monto, fecha, método, comprobante y notas), sin importar la etapa en que esté. Hoy ese bloque solo aparece en pedidos de crédito.
+3. **Historial de abonos visible** en ese bloque: fecha, monto y enlace al comprobante de cada abono, y el pedido queda marcado como pagado completo cuando los abonos cubren el total.
+4. **Los 5 pedidos despachados con saldo quedan señalados**: se marcan como pendientes de regularizar para que el asesor suba el soporte o Contabilidad ajuste el valor; no se les cambia el estado ni se les tocan los montos.
+5. **Se conserva el flujo previo al despacho**: el botón "Subir soporte y confirmar pago" del pedido en estado listo sigue igual, porque es el que autoriza el despacho.
 
 ## Detalles técnicos
 
-- `MisPedidos.tsx`: el render de `CreditPaymentsBlock` deja de filtrarse por `it.is_credit` y pasa a mostrarse para las líneas `sale_type === "mayor"` con saldo pendiente (`!isOrderFullyPaid(it)`) o con abonos ya registrados; se renombra el encabezado a "Abonos del pedido" y se ajusta el estilo para que no lea como bloque exclusivo de crédito.
-- En `CreditPaymentsBlock` se agrega la lista de abonos leyendo `useOrderPayments(order.id)` con enlace a `proof_url`, y se marca `payment_complete = true` en `orders` cuando los abonos cubren el total (el trigger `recalc_order_payments` ya actualiza `abono`).
-- No se tocan las políticas del almacén `payment-proofs`: el rol `asesor_comercial` ya tiene permiso de carga y lectura.
+- Migración: trigger `enforce_payment_before_dispatch()` BEFORE UPDATE en `orders` que lanza excepción cuando `sale_type = 'mayor'`, `is_credit = false`, el nuevo estado es `despachado`/`entregado` o se asigna `dispatched_at`, y `abono < total_amount`. No se aplica a los registros ya despachados (solo a transiciones nuevas) ni a `sale_type = 'menor'`.
+- `MisPedidos.tsx`: `CreditPaymentsBlock` deja de filtrarse por `it.is_credit` y se muestra para líneas `sale_type === "mayor"` con saldo pendiente o con abonos registrados; encabezado neutro "Abonos del pedido".
+- Dentro de ese bloque se listan los abonos con `useOrderPayments(order.id)` y enlace a `proof_url`; al cubrirse el total se actualiza `payment_complete` (el trigger `recalc_order_payments` ya mantiene `abono`).
+- Las políticas del almacén `payment-proofs` no se tocan: `asesor_comercial` ya puede subir y leer.
