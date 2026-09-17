@@ -514,6 +514,11 @@ function OrderGroupCard({
 
   const creditItems = group.items.filter((it) => it.is_credit);
   const hasCredit = creditItems.length > 0;
+  // Bloque de abonos: crédito, o cualquier línea al por mayor con saldo pendiente
+  // (también después del despacho, para que el asesor pueda subir el comprobante).
+  const paymentItems = group.items.filter(
+    (it) => it.is_credit || (it.sale_type === "mayor" && !isOrderFullyPaid(it)),
+  );
 
   const handleDeleteGroup = async () => {
     const ids = group.items.map((it) => it.id);
@@ -735,8 +740,8 @@ function OrderGroupCard({
           <div className="text-xs text-primary">🎨 Solicitud de diseño vinculada</div>
         )}
 
-        {hasCredit && creditItems.map((it) => (
-          <CreditPaymentsBlock key={it.id} order={it} showHeader={creditItems.length > 1} />
+        {paymentItems.map((it) => (
+          <CreditPaymentsBlock key={it.id} order={it} showHeader={paymentItems.length > 1} />
         ))}
 
         <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
