@@ -8,6 +8,13 @@
       "when": 1789661336200,
       "tag": "0000_sync_order_sample_status_from_advisor_approvals",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789662443546,
+      "tag": "0001_pos_sale_audit_log",
+      "breakpoints": true
     }
   ]
 }

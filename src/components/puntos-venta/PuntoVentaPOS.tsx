@@ -6,6 +6,16 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ShoppingCart, Plus, Minus, Trash2, Search, UserCheck, ImageIcon, Tag, Camera, X } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { CartItem, CONSUMIDOR_FINAL, PosProduct, useRegisterPosSale, useRegisterPosCourtesy, uploadPosSaleProof, useUpsertPosProduct, uploadPosProductPhoto } from "@/hooks/usePuntosVenta";
@@ -17,6 +27,16 @@ import { ReferenceFilterChips, countBy, NO_REFERENCE, NO_SUB_REFERENCE } from ".
 type Props = { locationId: string; products: PosProduct[] };
 const NUTRITION_BRAND = "Sweatspot Nutrición";
 const DISCOUNT_OPTIONS = [0, 5, 10, 15, 20, 50] as const;
+const PAYMENT_LABEL: Record<string, string> = {
+  efectivo: "Efectivo",
+  tarjeta: "Tarjeta",
+  nequi: "Nequi",
+  bancolombia: "Bancolombia",
+  davivienda: "Davivienda",
+  link_pago: "Link de pago",
+  transferencia: "Transferencia",
+  otro: "Otro",
+};
 
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "")
@@ -33,7 +53,8 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
   const [selectedReference, setSelectedReference] = useState<string | null>(null);
   const [selectedSubReference, setSelectedSubReference] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState("efectivo");
+  const [paymentMethod, setPaymentMethod] = useState("");
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [clientName, setClientName] = useState("");
   const [clientDoc, setClientDoc] = useState("");
   const [clientEmail, setClientEmail] = useState("");
@@ -272,7 +293,24 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
     }
   };
 
+  const requestConfirm = () => {
+    if (cart.length === 0) {
+      toast.error("Agrega productos");
+      return;
+    }
+    if (!isCourtesy && !paymentMethod) {
+      toast.error("Selecciona el método de pago");
+      return;
+    }
+    if (isCourtesy) {
+      void handleConfirm();
+      return;
+    }
+    setConfirmOpen(true);
+  };
+
   const handleConfirm = async () => {
+    setConfirmOpen(false);
     if (cart.length === 0) {
       toast.error("Agrega productos");
       return;
@@ -354,6 +392,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
         );
       }
       setCart([]);
+      setPaymentMethod("");
       setCustomer(null);
       setClientName("");
       setClientDoc("");
@@ -781,7 +820,9 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
           <div>
             <Label>Método de pago</Label>
             <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className={!paymentMethod && !isCourtesy ? "border-amber-500" : undefined}>
+                <SelectValue placeholder="Selecciona el método de pago" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="efectivo">Efectivo</SelectItem>
                 <SelectItem value="tarjeta">Tarjeta</SelectItem>
@@ -843,8 +884,15 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
             <p className="text-[10px] text-muted-foreground mt-1">Opcional. Foto de lo que se lleva el cliente. También se puede adjuntar luego.</p>
           </div>
           <Button
-            onClick={handleConfirm}
-            disabled={sale.isPending || courtesy.isPending || uploadingProof || uploadingMerch || cart.length === 0}
+            onClick={requestConfirm}
+            disabled={
+              sale.isPending ||
+              courtesy.isPending ||
+              uploadingProof ||
+              uploadingMerch ||
+              cart.length === 0 ||
+              (!isCourtesy && !paymentMethod)
+            }
             className="w-full"
             variant={isCourtesy ? "secondary" : "default"}
           >
@@ -852,8 +900,37 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
               ? "Subiendo foto..."
               : isCourtesy
                 ? (courtesy.isPending ? "Registrando cortesía..." : `Registrar cortesía (costo ${fmt(totalCost)})`)
-                : (sale.isPending ? "Registrando..." : `Cobrar ${fmt(totalAfter)}`)}
+                : !paymentMethod
+                  ? "Selecciona el método de pago"
+                  : (sale.isPending ? "Registrando..." : `Cobrar ${fmt(totalAfter)}`)}
           </Button>
+
+          <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirmar venta</AlertDialogTitle>
+                <AlertDialogDescription asChild>
+                  <div className="space-y-3">
+                    <div className="text-center py-2">
+                      <div className="text-3xl font-bold text-foreground">{fmt(totalAfter)}</div>
+                      <div className="text-lg font-semibold uppercase tracking-wide text-primary">
+                        {PAYMENT_LABEL[paymentMethod] ?? paymentMethod}
+                      </div>
+                    </div>
+                    {proofFile && paymentMethod === "efectivo" && (
+                      <p className="rounded border border-amber-500 bg-amber-500/10 p-2 text-sm text-amber-700">
+                        ¿Seguro que fue en efectivo? Adjuntaste un comprobante de pago.
+                      </p>
+                    )}
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Corregir</AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirm}>Confirmar</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </CardContent>
       </Card>
     </div>

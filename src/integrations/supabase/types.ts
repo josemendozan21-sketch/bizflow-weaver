@@ -3171,6 +3171,51 @@ export type Database = {
           },
         ]
       }
+      pos_sale_audit_log: {
+        Row: {
+          action: string
+          changed_at: string
+          changed_by: string | null
+          changed_by_email: string | null
+          client_name: string | null
+          field: string | null
+          id: string
+          location_id: string | null
+          new_value: string | null
+          old_value: string | null
+          sale_id: string | null
+          total_amount: number | null
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          changed_by?: string | null
+          changed_by_email?: string | null
+          client_name?: string | null
+          field?: string | null
+          id?: string
+          location_id?: string | null
+          new_value?: string | null
+          old_value?: string | null
+          sale_id?: string | null
+          total_amount?: number | null
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          changed_by?: string | null
+          changed_by_email?: string | null
+          client_name?: string | null
+          field?: string | null
+          id?: string
+          location_id?: string | null
+          new_value?: string | null
+          old_value?: string | null
+          sale_id?: string | null
+          total_amount?: number | null
+        }
+        Relationships: []
+      }
       pos_sale_items: {
         Row: {
           brand: string | null
