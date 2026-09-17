@@ -76,6 +76,15 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
   const isAdvisor = role === "asesor_comercial" || role === "admin";
   const awaitingAdvisor = ADVISOR_REVIEW_STATUSES.includes(req.status);
   const orderClosed = isOrderClosed(req);
+  // Recompra que reutiliza el logo original: no hay archivo ajustado que revisar,
+  // pero el asesor sí debe poder aprobarlo.
+  const isRecompraReuse =
+    !req.adjusted_logo_url &&
+    ((req as any).from_recompra === true ||
+      !!req.additional_instructions?.toLowerCase().includes("recompra"));
+  // El asesor solo revisa cuando hay algo real que revisar: el diseño ajustado
+  // ya enviado, o una recompra que reutiliza el logo original.
+  const canAdvisorReview = awaitingAdvisor && (!!req.adjusted_logo_url || isRecompraReuse);
 
   useEffect(() => {
     if (!adjustedFile) setAdjustedPreview(req.adjusted_logo_url);
@@ -410,6 +419,10 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
               <div className="border rounded-lg p-2 bg-muted/20 flex items-center justify-center min-h-[80px]">
                 {adjustedPreview ? (
                   <LogoPreview url={adjustedPreview} alt="Ajustado" />
+                ) : isRecompraReuse ? (
+                  <p className="text-xs text-muted-foreground text-center px-2">
+                    Recompra: se reutiliza el logo original, no hay ajuste pendiente.
+                  </p>
                 ) : (
                   <p className="text-xs text-muted-foreground text-center px-2">El diseñador está trabajando en este logo.</p>
                 )}
@@ -444,12 +457,21 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
           </>
         )}
 
+        {/* Sin diseño enviado todavía: no hay nada que aprobar */}
+        {isAdvisor && !isDesigner && !orderClosed && !canAdvisorReview &&
+          !["aprobado", "finalizado"].includes(req.status) && (
+            <div className="pt-3 border-t text-xs text-muted-foreground">
+              Diseño aún en proceso. Cuando el diseñador envíe la propuesta aparecerán aquí los botones para aprobar o
+              pedir cambios.
+            </div>
+          )}
+
         {/* Advisor review — approve or request changes once the design was sent */}
-        {isAdvisor && !orderClosed && (awaitingAdvisor || req.additional_instructions?.includes("recompra")) && !["aprobado", "finalizado"].includes(req.status) && (
+        {isAdvisor && !orderClosed && canAdvisorReview && !["aprobado", "finalizado"].includes(req.status) && (
           <div className="space-y-3 pt-3 border-t">
             <p className="text-xs font-medium text-muted-foreground">
               Revisión del asesor
-              {!req.adjusted_logo_url && (
+              {isRecompraReuse && (
                 <span className="ml-2 text-orange-600">(Recompra — aprueba si se reutiliza el logo original)</span>
               )}
             </p>
