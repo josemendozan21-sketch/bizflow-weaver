@@ -80,7 +80,8 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
   // pero el asesor sí debe poder aprobarlo.
   const isRecompraReuse =
     !req.adjusted_logo_url &&
-    (req.from_recompra || !!req.additional_instructions?.toLowerCase().includes("recompra"));
+    ((req as any).from_recompra === true ||
+      !!req.additional_instructions?.toLowerCase().includes("recompra"));
   // El asesor solo revisa cuando hay algo real que revisar: el diseño ajustado
   // ya enviado, o una recompra que reutiliza el logo original.
   const canAdvisorReview = awaitingAdvisor && (!!req.adjusted_logo_url || isRecompraReuse);
