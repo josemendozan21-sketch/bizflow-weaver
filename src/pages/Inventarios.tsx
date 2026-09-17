@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Beaker, Warehouse, Store, Tent, Route, History, PackageCheck } from "lucide-react";
+import { Beaker, Warehouse, Store, Tent, Route, History, PackageCheck, ArrowRightLeft, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
@@ -12,7 +12,10 @@ import InventoryTraceabilityPanel from "@/components/inventory/InventoryTraceabi
 import InventoryChangeLogPanel from "@/components/inventory/InventoryChangeLogPanel";
 import OrderRequirementsPanel from "@/components/inventory/OrderRequirementsPanel";
 import BatchReceptionPanel from "@/components/inventory/BatchReceptionPanel";
+import BodegaTransfersPanel from "@/components/inventory/BodegaTransfersPanel";
+import InventoryControlPanel from "@/components/inventory/InventoryControlPanel";
 import ProductionBatchesPanel from "@/components/production/ProductionBatchesPanel";
+
 
 import { useAuth } from "@/contexts/AuthContext";
 
