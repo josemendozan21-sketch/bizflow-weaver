@@ -962,7 +962,7 @@ function CreditPaymentsBlock({ order, showHeader }: { order: Order; showHeader: 
           </div>
         </div>
       </div>
-      {canEditDueDate && (
+      {isCredit && canEditDueDate && (
         <div className="flex items-center gap-2 text-xs">
           <Label className="text-xs">Fecha pactada de pago:</Label>
           <Input
