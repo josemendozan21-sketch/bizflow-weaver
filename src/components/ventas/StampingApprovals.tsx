@@ -149,6 +149,39 @@ export function StampingApprovals() {
                 <p className="text-xs text-muted-foreground">
                   {g.brand === "magical" ? "Magical Warmers" : "Sweatspot"}
                 </p>
+                {(() => {
+                  const ctx = first.order.order_id ? contextById[first.order.order_id] : undefined;
+                  if (!ctx || ctx.lines.length <= 1) return null;
+                  const pendingIds = new Set(g.items.map((i) => i.order.order_id));
+                  return (
+                    <div className="mt-2 rounded-md border bg-muted/40 p-2 space-y-1">
+                      <p className="text-[11px] font-medium">
+                        Pedido completo: {ctx.lines.length} productos · {ctx.totalQuantity} uds
+                      </p>
+                      {ctx.lines.map((l) => (
+                        <div key={l.orderId} className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                          <OrderCodeBadge code={l.orderCode} compact />
+                          <span className="text-muted-foreground">
+                            {l.variantLabel} · {l.quantity} uds
+                          </span>
+                          {pendingIds.has(l.orderId) ? (
+                            <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-800 border-amber-200">
+                              por aprobar aquí
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-[10px]">
+                              {l.sampleStatus === "aprobada"
+                                ? "muestra aprobada"
+                                : l.sampleStatus === "muestra_enviada"
+                                  ? "muestra enviada"
+                                  : "sin muestra aún"}
+                            </Badge>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </CardHeader>
               <CardContent className="space-y-4">
                 {g.items.map((item) => {
