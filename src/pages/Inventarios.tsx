@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Beaker, Warehouse, Store, Tent, Route, History, PackageCheck } from "lucide-react";
+import { Beaker, Warehouse, Store, Tent, Route, History, PackageCheck, ArrowRightLeft, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CategorizedInventoryPanel from "@/components/inventory/CategorizedInventoryPanel";
@@ -12,7 +12,10 @@ import InventoryTraceabilityPanel from "@/components/inventory/InventoryTraceabi
 import InventoryChangeLogPanel from "@/components/inventory/InventoryChangeLogPanel";
 import OrderRequirementsPanel from "@/components/inventory/OrderRequirementsPanel";
 import BatchReceptionPanel from "@/components/inventory/BatchReceptionPanel";
+import BodegaTransfersPanel from "@/components/inventory/BodegaTransfersPanel";
+import InventoryControlPanel from "@/components/inventory/InventoryControlPanel";
 import ProductionBatchesPanel from "@/components/production/ProductionBatchesPanel";
+
 
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -62,9 +65,16 @@ const FullInventoryView = () => {
           <TabsTrigger value="abastecimiento" className="gap-1.5">
             <PackageCheck className="h-4 w-4" /> Abastecimiento
           </TabsTrigger>
+          <TabsTrigger value="control" className="gap-1.5">
+            <ClipboardList className="h-4 w-4" /> Control por referencia
+          </TabsTrigger>
+          <TabsTrigger value="asignaciones" className="gap-1.5">
+            <ArrowRightLeft className="h-4 w-4" /> Asignaciones a puntos
+          </TabsTrigger>
           <TabsTrigger value="trazabilidad" className="gap-1.5">
             <Route className="h-4 w-4" /> Trazabilidad
           </TabsTrigger>
+
           <TabsTrigger value="historial_cambios" className="gap-1.5">
             <History className="h-4 w-4" /> Historial de cambios
           </TabsTrigger>
@@ -87,9 +97,18 @@ const FullInventoryView = () => {
         </TabsContent>
 
 
+        <TabsContent value="control" className="mt-4">
+          <InventoryControlPanel />
+        </TabsContent>
+
+        <TabsContent value="asignaciones" className="mt-4">
+          <BodegaTransfersPanel />
+        </TabsContent>
+
         <TabsContent value="trazabilidad" className="mt-4">
           <InventoryTraceabilityPanel />
         </TabsContent>
+
 
         <TabsContent value="historial_cambios" className="mt-4">
           <InventoryChangeLogPanel />

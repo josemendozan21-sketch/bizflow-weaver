@@ -948,6 +948,7 @@ export type Database = {
           quantity_assigned: number
           quantity_dispatched: number
           quantity_returned: number | null
+          stock_item_id: string | null
           unit_cost: number
           unit_price: number | null
           updated_at: string
@@ -963,6 +964,7 @@ export type Database = {
           quantity_assigned?: number
           quantity_dispatched?: number
           quantity_returned?: number | null
+          stock_item_id?: string | null
           unit_cost?: number
           unit_price?: number | null
           updated_at?: string
@@ -978,6 +980,7 @@ export type Database = {
           quantity_assigned?: number
           quantity_dispatched?: number
           quantity_returned?: number | null
+          stock_item_id?: string | null
           unit_cost?: number
           unit_price?: number | null
           updated_at?: string
@@ -988,6 +991,20 @@ export type Database = {
             columns: ["feria_id"]
             isOneToOne: false
             referencedRelation: "ferias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feria_inventory_stock_item_id_fkey"
+            columns: ["stock_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_control_view"
+            referencedColumns: ["stock_item_id"]
+          },
+          {
+            foreignKeyName: "feria_inventory_stock_item_id_fkey"
+            columns: ["stock_item_id"]
+            isOneToOne: false
+            referencedRelation: "stock_items"
             referencedColumns: ["id"]
           },
         ]
@@ -1533,6 +1550,13 @@ export type Database = {
           supplier?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "inventory_movements_stock_item_id_fkey"
+            columns: ["stock_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_control_view"
+            referencedColumns: ["stock_item_id"]
+          },
           {
             foreignKeyName: "inventory_movements_stock_item_id_fkey"
             columns: ["stock_item_id"]
@@ -3113,9 +3137,11 @@ export type Database = {
           min_stock: number
           name: string
           notes: string | null
+          origin: string
           photo_url: string | null
           reference: string | null
           sale_price: number
+          stock_item_id: string | null
           sub_reference: string | null
           supplier: string | null
           unit: string
@@ -3133,9 +3159,11 @@ export type Database = {
           min_stock?: number
           name: string
           notes?: string | null
+          origin?: string
           photo_url?: string | null
           reference?: string | null
           sale_price?: number
+          stock_item_id?: string | null
           sub_reference?: string | null
           supplier?: string | null
           unit?: string
@@ -3153,9 +3181,11 @@ export type Database = {
           min_stock?: number
           name?: string
           notes?: string | null
+          origin?: string
           photo_url?: string | null
           reference?: string | null
           sale_price?: number
+          stock_item_id?: string | null
           sub_reference?: string | null
           supplier?: string | null
           unit?: string
@@ -3167,6 +3197,20 @@ export type Database = {
             columns: ["location_id"]
             isOneToOne: false
             referencedRelation: "pos_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_products_stock_item_id_fkey"
+            columns: ["stock_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_control_view"
+            referencedColumns: ["stock_item_id"]
+          },
+          {
+            foreignKeyName: "pos_products_stock_item_id_fkey"
+            columns: ["stock_item_id"]
+            isOneToOne: false
+            referencedRelation: "stock_items"
             referencedColumns: ["id"]
           },
         ]
@@ -4277,6 +4321,7 @@ export type Database = {
           min_stock: number
           name: string
           product_type: string | null
+          ref_key: string
           sweatspot_category: string | null
           unit: string
           updated_at: string
@@ -4293,6 +4338,7 @@ export type Database = {
           min_stock?: number
           name: string
           product_type?: string | null
+          ref_key: string
           sweatspot_category?: string | null
           unit?: string
           updated_at?: string
@@ -4309,6 +4355,7 @@ export type Database = {
           min_stock?: number
           name?: string
           product_type?: string | null
+          ref_key?: string
           sweatspot_category?: string | null
           unit?: string
           updated_at?: string
@@ -4360,14 +4407,126 @@ export type Database = {
         }
         Relationships: []
       }
+      web_stock_reservations: {
+        Row: {
+          confirmed_at: string | null
+          created_at: string
+          expires_at: string
+          external_id: string
+          id: string
+          notes: string | null
+          quantity: number
+          ref_key: string
+          released_at: string | null
+          status: string
+          stock_item_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          confirmed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          external_id: string
+          id?: string
+          notes?: string | null
+          quantity: number
+          ref_key: string
+          released_at?: string | null
+          status?: string
+          stock_item_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          confirmed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          external_id?: string
+          id?: string
+          notes?: string | null
+          quantity?: number
+          ref_key?: string
+          released_at?: string | null
+          status?: string
+          stock_item_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "web_stock_reservations_stock_item_id_fkey"
+            columns: ["stock_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_control_view"
+            referencedColumns: ["stock_item_id"]
+          },
+          {
+            foreignKeyName: "web_stock_reservations_stock_item_id_fkey"
+            columns: ["stock_item_id"]
+            isOneToOne: false
+            referencedRelation: "stock_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
-      [_ in never]: never
+      inventory_control_view: {
+        Row: {
+          asignado_ferias: number | null
+          asignado_punto92: number | null
+          brand: string | null
+          category: string | null
+          disponible_bodega: number | null
+          en_proceso: number | null
+          name: string | null
+          product_type: string | null
+          ref_key: string | null
+          stock_item_id: string | null
+          total_controlado: number | null
+        }
+        Insert: {
+          asignado_ferias?: never
+          asignado_punto92?: never
+          brand?: string | null
+          category?: string | null
+          disponible_bodega?: never
+          en_proceso?: never
+          name?: string | null
+          product_type?: string | null
+          ref_key?: string | null
+          stock_item_id?: string | null
+          total_controlado?: never
+        }
+        Update: {
+          asignado_ferias?: never
+          asignado_punto92?: never
+          brand?: string | null
+          category?: string | null
+          disponible_bodega?: never
+          en_proceso?: never
+          name?: string | null
+          product_type?: string | null
+          ref_key?: string | null
+          stock_item_id?: string | null
+          total_controlado?: never
+        }
+        Relationships: []
+      }
     }
     Functions: {
       build_ref_key: {
         Args: {
           _brand: string
+          _color: string
+          _logo: string
+          _name: string
+          _type: string
+        }
+        Returns: string
+      }
+      build_stock_ref_key: {
+        Args: {
+          _brand: string
+          _category: string
           _color: string
           _logo: string
           _name: string
@@ -4393,6 +4552,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      expire_web_reservations: { Args: never; Returns: number }
       finish_production_batch: {
         Args: { _batch_id: string; _produced: number }
         Returns: Json
@@ -4445,6 +4605,7 @@ export type Database = {
         Args: { _customer_id: string }
         Returns: undefined
       }
+      receive_pos_transfer: { Args: { _transfer_id: string }; Returns: Json }
       receive_production_batch: {
         Args: { _batch_id: string; _received: number }
         Returns: Json
@@ -4462,6 +4623,26 @@ export type Database = {
         Returns: Json
       }
       start_production_batch: { Args: { _batch_id: string }; Returns: Json }
+      web_check_availability: {
+        Args: { _ref_keys: string[] }
+        Returns: {
+          available: number
+          brand: string
+          category: string
+          in_process: number
+          name: string
+          ref_key: string
+        }[]
+      }
+      web_confirm_reservation: { Args: { _external_id: string }; Returns: Json }
+      web_release_reservation: {
+        Args: { _external_id: string; _reason?: string }
+        Returns: Json
+      }
+      web_reserve_stock: {
+        Args: { _external_id: string; _quantity: number; _ref_key: string }
+        Returns: Json
+      }
     }
     Enums: {
       app_role:

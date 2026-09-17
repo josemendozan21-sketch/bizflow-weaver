@@ -22,6 +22,20 @@
       "when": 1789662917673,
       "tag": "0002_enforce_payment_before_dispatch",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789674310230,
+      "tag": "0003_bodega_fuente_unica_inventario",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789674369403,
+      "tag": "0004_feria_inventory_match_by_stock_item",
+      "breakpoints": true
     }
   ]
 }
