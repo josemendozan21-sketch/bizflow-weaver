@@ -372,6 +372,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
         );
       }
       setCart([]);
+      setPaymentMethod("");
       setCustomer(null);
       setClientName("");
       setClientDoc("");
