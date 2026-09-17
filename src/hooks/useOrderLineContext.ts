@@ -111,6 +111,14 @@ export function useOrderLineContext(orderIds: (string | null | undefined)[]) {
           if (ac && bc && ac !== bc) return ac.localeCompare(bc);
           return a.created_at.localeCompare(b.created_at);
         });
+        const lines: OrderLineSummary[] = rows.map((r) => ({
+          orderId: r.id,
+          orderCode: r.order_code,
+          variantLabel: buildVariantLabel(r),
+          quantity: Number(r.quantity ?? 0),
+          sampleStatus: r.sample_status ?? null,
+        }));
+        const totalQuantity = lines.reduce((s, l) => s + l.quantity, 0);
         rows.forEach((row, idx) => {
           result[row.id] = {
             orderId: row.id,
