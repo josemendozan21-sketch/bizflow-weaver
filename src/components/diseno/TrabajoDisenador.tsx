@@ -419,6 +419,10 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
               <div className="border rounded-lg p-2 bg-muted/20 flex items-center justify-center min-h-[80px]">
                 {adjustedPreview ? (
                   <LogoPreview url={adjustedPreview} alt="Ajustado" />
+                ) : isRecompraReuse ? (
+                  <p className="text-xs text-muted-foreground text-center px-2">
+                    Recompra: se reutiliza el logo original, no hay ajuste pendiente.
+                  </p>
                 ) : (
                   <p className="text-xs text-muted-foreground text-center px-2">El diseñador está trabajando en este logo.</p>
                 )}
@@ -454,11 +458,11 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
         )}
 
         {/* Advisor review — approve or request changes once the design was sent */}
-        {isAdvisor && !orderClosed && (awaitingAdvisor || req.additional_instructions?.includes("recompra")) && !["aprobado", "finalizado"].includes(req.status) && (
+        {isAdvisor && !orderClosed && canAdvisorReview && !["aprobado", "finalizado"].includes(req.status) && (
           <div className="space-y-3 pt-3 border-t">
             <p className="text-xs font-medium text-muted-foreground">
               Revisión del asesor
-              {!req.adjusted_logo_url && (
+              {isRecompraReuse && (
                 <span className="ml-2 text-orange-600">(Recompra — aprueba si se reutiliza el logo original)</span>
               )}
             </p>
