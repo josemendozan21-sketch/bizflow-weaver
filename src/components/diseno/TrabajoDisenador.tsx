@@ -26,10 +26,11 @@ interface Props {
 export const ADVISOR_REVIEW_STATUSES: LogoRequestStatus[] = ["en_revision", "ajustado", "listo_aprobacion"];
 
 export function TrabajoDisenador({ requests }: Props) {
+  // Solo el trabajo que realmente está en manos del diseñador. Lo que ya se envió
+  // al asesor vive en la pestaña de Aprobación, para no dar la impresión de que
+  // el diseñador sigue trabajando en él.
   const filtered = requests.filter(
-    (r) =>
-      ["pendiente_diseno", "en_revision", "ajustado", "ajustes_solicitados", "listo_aprobacion"].includes(r.status) &&
-      !isOrderClosed(r)
+    (r) => ["pendiente_diseno", "ajustes_solicitados"].includes(r.status) && !isOrderClosed(r)
   );
 
   return (
