@@ -97,9 +97,18 @@ const FullInventoryView = () => {
         </TabsContent>
 
 
+        <TabsContent value="control" className="mt-4">
+          <InventoryControlPanel />
+        </TabsContent>
+
+        <TabsContent value="asignaciones" className="mt-4">
+          <BodegaTransfersPanel />
+        </TabsContent>
+
         <TabsContent value="trazabilidad" className="mt-4">
           <InventoryTraceabilityPanel />
         </TabsContent>
+
 
         <TabsContent value="historial_cambios" className="mt-4">
           <InventoryChangeLogPanel />
