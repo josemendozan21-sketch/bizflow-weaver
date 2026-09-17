@@ -457,6 +457,15 @@ export function DesignerCard({ request: req }: { request: LogoRequest }) {
           </>
         )}
 
+        {/* Sin diseño enviado todavía: no hay nada que aprobar */}
+        {isAdvisor && !isDesigner && !orderClosed && !canAdvisorReview &&
+          !["aprobado", "finalizado"].includes(req.status) && (
+            <div className="pt-3 border-t text-xs text-muted-foreground">
+              Diseño aún en proceso. Cuando el diseñador envíe la propuesta aparecerán aquí los botones para aprobar o
+              pedir cambios.
+            </div>
+          )}
+
         {/* Advisor review — approve or request changes once the design was sent */}
         {isAdvisor && !orderClosed && canAdvisorReview && !["aprobado", "finalizado"].includes(req.status) && (
           <div className="space-y-3 pt-3 border-t">
