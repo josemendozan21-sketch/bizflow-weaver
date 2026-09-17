@@ -3,3 +3,5 @@
 1. **Aplicar catálogo del Punto de la 92 desde Excel** — COMPLETADO (76 actualizaciones/renombres, 3 productos nuevos, 124 retirados; cantidades sin tocar).
 2. **Filtros por referencia y subreferencia en el Punto de la 92** — COMPLETADO (clasificación automática, filtros en inventario y venta, campos en la ficha y en el Excel).
 3. **Unificar flujo de muestras entre Estampación e Inventarios** — COMPLETADO (aprobación real por tamaño y tinta/gel; fabricación en paralelo; entrega de cuerpos bloqueada hasta ambas aprobaciones).
+4. **Método de pago en el Punto de la 92** — COMPLETADO (sin efectivo por defecto, confirmación antes de cobrar, aviso si hay comprobante, historial de cambios de ventas).
+5. **Comprobante del saldo y regla de despacho** — COMPLETADO (bloque de abonos siempre disponible en pedidos al por mayor con saldo; despacho bloqueado en base de datos si el pedido no está pagado, salvo crédito).

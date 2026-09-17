@@ -514,6 +514,11 @@ function OrderGroupCard({
 
   const creditItems = group.items.filter((it) => it.is_credit);
   const hasCredit = creditItems.length > 0;
+  // Bloque de abonos: crédito, o cualquier línea al por mayor con saldo pendiente
+  // (también después del despacho, para que el asesor pueda subir el comprobante).
+  const paymentItems = group.items.filter(
+    (it) => it.is_credit || (it.sale_type === "mayor" && !isOrderFullyPaid(it)),
+  );
 
   const handleDeleteGroup = async () => {
     const ids = group.items.map((it) => it.id);
@@ -735,8 +740,8 @@ function OrderGroupCard({
           <div className="text-xs text-primary">🎨 Solicitud de diseño vinculada</div>
         )}
 
-        {hasCredit && creditItems.map((it) => (
-          <CreditPaymentsBlock key={it.id} order={it} showHeader={creditItems.length > 1} />
+        {paymentItems.map((it) => (
+          <CreditPaymentsBlock key={it.id} order={it} showHeader={paymentItems.length > 1} />
         ))}
 
         <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
@@ -919,14 +924,28 @@ function CreditPaymentsBlock({ order, showHeader }: { order: Order; showHeader: 
     toast.success("Fecha de pago actualizada");
   };
 
+  const isCredit = !!order.is_credit;
+  const dispatchedWithBalance =
+    balance > 0 && ["despachado", "entregado"].includes(order.production_status);
+
   return (
-    <div className="rounded-lg border border-purple-200 bg-purple-50/50 p-3 space-y-2">
+    <div
+      className={`rounded-lg border p-3 space-y-2 ${
+        isCredit ? "border-purple-200 bg-purple-50/50" : "border-border bg-muted/40"
+      }`}
+    >
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-semibold text-purple-900">
+        <p className={`text-xs font-semibold ${isCredit ? "text-purple-900" : "text-foreground"}`}>
           {showHeader ? `Abonos — ${order.product}` : "Abonos del pedido"}
         </p>
         <AddPaymentDialog orderId={order.id} pendingBalance={balance} />
       </div>
+      {dispatchedWithBalance && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-[11px] text-amber-800">
+          Pendiente de regularizar: este pedido ya salió y todavía registra saldo. Sube el comprobante del pago
+          faltante o pide a Contabilidad que ajuste el valor.
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-2 text-xs">
         <div>
           <div className="text-muted-foreground">Total</div>
@@ -943,7 +962,7 @@ function CreditPaymentsBlock({ order, showHeader }: { order: Order; showHeader: 
           </div>
         </div>
       </div>
-      {canEditDueDate && (
+      {isCredit && canEditDueDate && (
         <div className="flex items-center gap-2 text-xs">
           <Label className="text-xs">Fecha pactada de pago:</Label>
           <Input

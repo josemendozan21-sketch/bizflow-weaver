@@ -15,6 +15,13 @@
       "when": 1789662443546,
       "tag": "0001_pos_sale_audit_log",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789662917673,
+      "tag": "0002_enforce_payment_before_dispatch",
+      "breakpoints": true
     }
   ]
 }
