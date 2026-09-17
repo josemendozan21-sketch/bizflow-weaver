@@ -83,15 +83,7 @@ interface PendingIntakeOrder {
   observations?: string | null;
   advisor_id?: string | null;
   delivered_quantity?: number | null;
-  sample_status?: string | null;
 }
-
-const SAMPLE_LABEL: Record<string, string> = {
-  pendiente_muestra: "Pendiente de muestra",
-  muestra_enviada: "Muestra enviada",
-  muestra_aprobada: "Muestra aprobada",
-  muestra_rechazada: "Muestra rechazada",
-};
 
 const STATUS_BADGE: Record<string, { label: string; variant: "secondary" | "default" | "outline" }> = {
   pendiente: { label: "Pendiente", variant: "secondary" },
@@ -135,39 +127,6 @@ export const EstampacionProductionView = () => {
       toast.error((e as Error).message || "No se pudo recibir el pedido");
     } finally {
       setReceivingId(null);
-    }
-  };
-
-  const [sampleBusyId, setSampleBusyId] = useState<string | null>(null);
-
-  const setSampleStatus = async (
-    orderId: string,
-    status: "muestra_enviada" | "muestra_aprobada" | "muestra_rechazada",
-    reason?: string
-  ) => {
-    setSampleBusyId(orderId);
-    try {
-      const { error } = await supabase
-        .from("orders")
-        .update({
-          sample_status: status,
-          sample_approved_at: status === "muestra_aprobada" ? new Date().toISOString() : null,
-          sample_reject_reason: status === "muestra_rechazada" ? reason ?? null : null,
-        } as never)
-        .eq("id", orderId);
-      if (error) throw error;
-      toast.success(
-        status === "muestra_aprobada"
-          ? "Muestra aprobada. Inventarios fue notificado para entregar los cuerpos."
-          : status === "muestra_enviada"
-            ? "Muestra marcada como enviada al cliente."
-            : "Muestra marcada como rechazada."
-      );
-      qc.invalidateQueries({ queryKey: ["orders_pending_intake_estampacion"] });
-    } catch (e) {
-      toast.error((e as Error).message || "No se pudo actualizar el estado de la muestra");
-    } finally {
-      setSampleBusyId(null);
     }
   };
 
@@ -262,7 +221,7 @@ export const EstampacionProductionView = () => {
       const { data, error } = await supabase
         .from("orders")
         .select(
-          "id, order_code, client_name, brand, product, quantity, advisor_name, delivery_date, created_at, production_status, ink_color, ink_count, ink_color_2, ink_color_3, glitter_color, gel_color, silicone_color, logo_url, logo_url_2, logos, logo_count, logo_name, logo_name_2, line_index, line_count, is_recompra, observations, advisor_id, delivered_quantity, sample_status"
+          "id, order_code, client_name, brand, product, quantity, advisor_name, delivery_date, created_at, production_status, ink_color, ink_count, ink_color_2, ink_color_3, glitter_color, gel_color, silicone_color, logo_url, logo_url_2, logos, logo_count, logo_name, logo_name_2, line_index, line_count, is_recompra, observations, advisor_id, delivered_quantity"
         )
         .eq("production_status", "pendiente")
         .is("inventory_archived_at", null)
@@ -557,45 +516,8 @@ export const EstampacionProductionView = () => {
                       </a>
                     </div>
                   )}
-                  <div className="rounded-md border p-2 mt-2 space-y-2">
-                    <p className="text-[11px] font-medium text-muted-foreground">
-                      Muestra: {SAMPLE_LABEL[o.sample_status ?? "pendiente_muestra"]}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1 min-w-[110px]"
-                        disabled={sampleBusyId === o.id}
-                        onClick={() => setSampleStatus(o.id, "muestra_enviada")}
-                      >
-                        Muestra enviada
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="flex-1 min-w-[110px]"
-                        disabled={sampleBusyId === o.id}
-                        onClick={() => setSampleStatus(o.id, "muestra_aprobada")}
-                      >
-                        <CheckCircle2 className="h-3 w-3 mr-1" /> Muestra aprobada
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1 min-w-[110px]"
-                        disabled={sampleBusyId === o.id}
-                        onClick={() => {
-                          const reason = window.prompt("Motivo del rechazo de la muestra:") ?? undefined;
-                          if (reason === undefined) return;
-                          setSampleStatus(o.id, "muestra_rechazada", reason);
-                        }}
-                      >
-                        Muestra rechazada
-                      </Button>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      Inventarios solo puede entregar los cuerpos cuando la muestra está aprobada.
-                    </p>
+                  <div className="rounded-md border p-2 mt-2 text-[11px] text-muted-foreground">
+                    Recibe el pedido para subir las muestras de tamaño y tinta/gel. La aprobación la realiza el asesor.
                   </div>
                   <Button
                     size="sm"

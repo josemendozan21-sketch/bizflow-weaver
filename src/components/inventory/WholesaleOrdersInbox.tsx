@@ -52,6 +52,11 @@ interface MayorOrder {
   sample_status?: string | null;
 }
 
+type SampleApprovalState = {
+  size: string;
+  inkgel: string;
+};
+
 const ACTIVE_STATUSES = [
   "pendiente", "diseno", "produccion_cuerpos", "estampacion",
   "dosificacion", "sellado", "recorte", "empaque", "listo",
@@ -299,7 +304,7 @@ const WholesaleOrdersInbox = () => {
     refetchOnMount: "always",
   });
 
-  const { data: orderStates = { deliveredIds: new Set<string>(), producedIds: new Set<string>(), inProductionIds: new Set<string>() } } = useQuery({
+  const { data: orderStates = { deliveredIds: new Set<string>(), producedIds: new Set<string>(), inProductionIds: new Set<string>(), sampleApprovals: new Map<string, SampleApprovalState>() } } = useQuery({
     queryKey: ["mayor-orders-delivered"],
     queryFn: async () => {
       const [mov, tasks, prodOrders] = await Promise.all([
@@ -307,12 +312,13 @@ const WholesaleOrdersInbox = () => {
           .eq("direction", "entrega").not("order_id", "is", null),
         supabase.from("body_production_tasks").select("order_id,status" as any)
           .not("order_id", "is", null),
-        supabase.from("production_orders").select("order_id,current_stage,completed_at")
+        supabase.from("production_orders").select("order_id,current_stage,completed_at,stamp_size_status,stamp_inkgel_status")
           .not("order_id", "is", null),
       ]);
       const deliveredIds = new Set<string>();
       const producedIds = new Set<string>();
       const inProductionIds = new Set<string>();
+      const sampleApprovals = new Map<string, SampleApprovalState>();
       (mov.data || []).forEach((m: any) => {
         if (!m.order_id) return;
         // Las reservas NO son entregas: el pedido sigue vivo en el flujo
@@ -329,18 +335,23 @@ const WholesaleOrdersInbox = () => {
       });
       // Todo pedido con orden de producción activa ya salió de la bandeja de revisión
       (prodOrders.data || []).forEach((p: any) => {
-        if (!p.order_id || p.completed_at) return;
-        inProductionIds.add(p.order_id);
+        if (!p.order_id) return;
+        sampleApprovals.set(p.order_id, {
+          size: p.stamp_size_status ?? "pendiente",
+          inkgel: p.stamp_inkgel_status ?? "pendiente",
+        });
+        if (!p.completed_at) inProductionIds.add(p.order_id);
       });
       producedIds.forEach((id) => { if (deliveredIds.has(id)) producedIds.delete(id); });
       inProductionIds.forEach((id) => { if (deliveredIds.has(id)) inProductionIds.delete(id); });
-      return { deliveredIds, producedIds, inProductionIds };
+      return { deliveredIds, producedIds, inProductionIds, sampleApprovals };
     },
     refetchInterval: 15_000,
   });
   const deliveredIds = orderStates.deliveredIds;
   const producedIds = orderStates.producedIds;
   const inProductionIds = orderStates.inProductionIds;
+  const sampleApprovals = orderStates.sampleApprovals;
 
   const findStockItem = (o: MayorOrder, category: "producto_terminado" | "cuerpos_referencias" = "producto_terminado") => {
     const norm = (s: string) =>
@@ -671,7 +682,7 @@ const WholesaleOrdersInbox = () => {
     qc.invalidateQueries({ queryKey: ["production_orders"] });
   };
 
-  const renderCard = (o: MayorOrder, isDelivered: boolean, kind: "mayor" | "detal" = "mayor") => {
+  const renderCard = (o: MayorOrder, isDelivered: boolean, kind: "mayor" | "detal" = "mayor", isInProduction = false) => {
     const isManuallyArchived = archivedIds.has(o.id) && !deliveredIds.has(o.id);
     const isSweatspotMayor = kind === "mayor" && o.brand === "sweatspot";
     const item = findStockItem(o, kind === "mayor" ? "cuerpos_referencias" : "producto_terminado");
@@ -703,11 +714,14 @@ const WholesaleOrdersInbox = () => {
           ? <Badge className="bg-amber-500 hover:bg-amber-600 text-white">Stock parcial: {stock} / {o.quantity}</Badge>
           : <Badge variant="destructive">Sin stock</Badge>;
 
-    const sampleApproved = !o.sample_status || o.sample_status === "muestra_aprobada";
-    // El envío de cuerpos a Estampación (y la solicitud de producción) es previo a la muestra:
-    // solo se bloquean las entregas que cierran el pedido (producto terminado / logística).
+    const approval = sampleApprovals.get(o.id);
+    const isApprovedStep = (status?: string) => status === "aprobado" || status === "finalizado";
+    const sizeApproved = isApprovedStep(approval?.size);
+    const inkgelApproved = isApprovedStep(approval?.inkgel);
+    const sampleApproved = sizeApproved && inkgelApproved;
     const sampleBlocked = kind === "mayor" && !sampleApproved && role !== "admin";
-    const sampleTitle = sampleBlocked ? "Esperando aprobación de la muestra por Estampación" : undefined;
+    const pendingApprovals = [!sizeApproved ? "tamaño" : null, !inkgelApproved ? "tinta/gel" : null].filter(Boolean).join(" y ");
+    const sampleTitle = sampleBlocked ? `Esperando aprobación del asesor: ${pendingApprovals}` : undefined;
     const SAMPLE_LABEL: Record<string, string> = {
       pendiente_muestra: "Pendiente de muestra",
       muestra_enviada: "Muestra enviada",
@@ -729,7 +743,8 @@ const WholesaleOrdersInbox = () => {
                   <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">Recompra</Badge>
                 )}
                 {isDelivered && <Badge variant="secondary">Entregado</Badge>}
-                {!isDelivered && (() => {
+                {isInProduction && <Badge variant="secondary">En proceso</Badge>}
+                {!isDelivered && !isInProduction && (() => {
                   const age = Math.floor((Date.now() - new Date(o.created_at).getTime()) / 86_400_000);
                   if (age < 2) return null;
                   return age > 5
@@ -799,8 +814,8 @@ const WholesaleOrdersInbox = () => {
 
           {!isDelivered && kind === "mayor" && !sampleApproved && (
             <div className="text-xs rounded border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-2 text-amber-900 dark:text-amber-200">
-              Pendiente de muestra — envía los cuerpos para que Estampación la prepare. La entrega de
-              producto terminado queda bloqueada hasta que la muestra sea aprobada.
+              Pendiente de aprobación del asesor: <strong>{pendingApprovals}</strong>. Producción puede avanzar en
+              paralelo, pero la entrega de cuerpos a Estampación queda bloqueada hasta aprobar ambos pasos.
             </div>
           )}
 
@@ -828,7 +843,8 @@ const WholesaleOrdersInbox = () => {
                     Entregar termos (marcar) {markable ? `(${markableStock})` : "(sin stock)"}
                   </Button>
                   <Button size="sm" variant={markableEnough ? "outline" : "default"} className="flex-1 min-w-[150px] gap-1.5"
-                    title="Enviar el kit a Estampación"
+                    title={sampleTitle ?? "Enviar el kit a Estampación"}
+                    disabled={sampleBlocked}
                     onClick={() => openDeliver(o, "estampacion")}>
                     <Paintbrush className="h-3.5 w-3.5" /> Salir kit
                   </Button>
@@ -850,8 +866,8 @@ const WholesaleOrdersInbox = () => {
               <div className="flex flex-wrap gap-2 pt-1">
                 <Button size="sm" variant={enough ? "default" : "outline"} className="flex-1 min-w-[150px] gap-1.5"
                   onClick={() => openDeliver(o, "estampacion")}
-                  disabled={!enough}
-                  title={enough ? "Enviar cuerpos a Estampación" : "No hay inventario suficiente: solicita producción"}>
+                  disabled={!enough || sampleBlocked}
+                  title={sampleTitle ?? (enough ? "Enviar cuerpos a Estampación" : "No hay inventario suficiente: solicita producción")}>
                   <Paintbrush className="h-3.5 w-3.5" /> Enviar a Estampación
                 </Button>
                 {!enough && (
@@ -951,7 +967,7 @@ const WholesaleOrdersInbox = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid gap-3 md:grid-cols-2">
-                  {filterOrders(inProduction).map((o) => renderCard(o, true))}
+                  {filterOrders(inProduction).map((o) => renderCard(o, false, "mayor", true))}
                 </div>
               </CardContent>
             </Card>
