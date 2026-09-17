@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1789661336200,
+      "tag": "0000_sync_order_sample_status_from_advisor_approvals",
+      "breakpoints": true
+    }
+  ]
+}
