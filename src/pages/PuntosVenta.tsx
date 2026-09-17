@@ -18,6 +18,7 @@ import { PuntoVentaPOS } from "@/components/puntos-venta/PuntoVentaPOS";
 import { PuntoReportes } from "@/components/puntos-venta/PuntoReportes";
 import { PuntoCalendario } from "@/components/puntos-venta/PuntoCalendario";
 import PosProductChangeLogPanel from "@/components/puntos-venta/PosProductChangeLogPanel";
+import PosSaleChangeLogPanel from "@/components/puntos-venta/PosSaleChangeLogPanel";
 import PosCatalogBulkUpdate from "@/components/puntos-venta/PosCatalogBulkUpdate";
 
 export default function PuntosVenta() {
@@ -156,8 +157,9 @@ export default function PuntosVenta() {
           </TabsContent>
         )}
 
-        <TabsContent value="historial">
+        <TabsContent value="historial" className="space-y-4">
           {locationId && <PosProductChangeLogPanel locationId={locationId} />}
+          {locationId && <PosSaleChangeLogPanel locationId={locationId} />}
         </TabsContent>
       </Tabs>
     </div>
