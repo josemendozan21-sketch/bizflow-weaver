@@ -65,9 +65,16 @@ const FullInventoryView = () => {
           <TabsTrigger value="abastecimiento" className="gap-1.5">
             <PackageCheck className="h-4 w-4" /> Abastecimiento
           </TabsTrigger>
+          <TabsTrigger value="control" className="gap-1.5">
+            <ClipboardList className="h-4 w-4" /> Control por referencia
+          </TabsTrigger>
+          <TabsTrigger value="asignaciones" className="gap-1.5">
+            <ArrowRightLeft className="h-4 w-4" /> Asignaciones a puntos
+          </TabsTrigger>
           <TabsTrigger value="trazabilidad" className="gap-1.5">
             <Route className="h-4 w-4" /> Trazabilidad
           </TabsTrigger>
+
           <TabsTrigger value="historial_cambios" className="gap-1.5">
             <History className="h-4 w-4" /> Historial de cambios
           </TabsTrigger>
