@@ -39,9 +39,9 @@ const DisenoLogos = () => {
 
   // Los pedidos ya despachados/cancelados no vuelven a ninguna bandeja de trabajo.
   const openRequests = requests.filter((r) => !isOrderClosed(r));
-  const pendingCount = openRequests.filter((r) => r.status === "pendiente_diseno").length;
   const designCount = openRequests.filter((r) => ["pendiente_diseno", "ajustes_solicitados"].includes(r.status)).length;
-  const approvalCount = openRequests.filter((r) => ["aprobado", "en_revision", "ajustado", "listo_aprobacion"].includes(r.status)).length;
+  const reviewCount = openRequests.filter((r) => ["en_revision", "ajustado", "listo_aprobacion"].includes(r.status)).length;
+  const approvedCount = openRequests.filter((r) => r.status === "aprobado").length;
   const doneCount = requests.filter((r) => r.status === "finalizado").length;
 
   // Estampacion only sees the Aprobación tab (read-only)
