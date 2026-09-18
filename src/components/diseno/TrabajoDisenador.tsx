@@ -16,6 +16,7 @@ import LogoStatusHistory from "./LogoStatusHistory";
 import ReferenceFilesPanel from "./ReferenceFilesPanel";
 import { uploadReferenceFiles, useInvalidateReferenceFiles } from "@/hooks/useLogoReferenceFiles";
 import { normalizeStages, TERMINAL_STAGES } from "@/lib/orderFlow";
+import { CreateRequestDialog } from "./CreateRequestDialog";
 
 
 interface Props {
@@ -26,6 +27,7 @@ interface Props {
 export const ADVISOR_REVIEW_STATUSES: LogoRequestStatus[] = ["en_revision", "ajustado", "listo_aprobacion"];
 
 export function TrabajoDisenador({ requests }: Props) {
+  const { role } = useAuth();
   // Solo el trabajo que realmente está en manos del diseñador. Lo que ya se envió
   // al asesor vive en la pestaña de Aprobación, para no dar la impresión de que
   // el diseñador sigue trabajando en él.
