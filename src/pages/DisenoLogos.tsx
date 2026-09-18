@@ -19,6 +19,7 @@ const DisenoLogos = () => {
   const { role } = useAuth();
   const isEstampacion = role === "estampacion";
   const [estampSearch, setEstampSearch] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
 
   const filteredForEstampacion = useMemo(() => {
     const q = estampSearch.trim().toLowerCase();
