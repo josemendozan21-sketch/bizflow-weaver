@@ -1063,7 +1063,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const hasLogoFile = !!(logoFile && logoFile.size > 0);
     const hasPersonalization = !!(personalizacion && personalizacion.trim());
     if ((hasLogoFile || hasPersonalization || recompraNeedsDesign) && user && (!reusaLogoAnterior || recompraNeedsDesign) && !noLogo) {
-      const firstLine = linesToValidate[0];
+      const firstLine = linesToValidate[0] ?? orderLines[0];
       const referencia = `${firstLine.product} (${firstLine.type})`;
       const result = await createLogoRequestFromOrder({
         brand: "Magical Warmers",
@@ -1417,7 +1417,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         orderCode: createdCodes[0] ?? null,
         clientName: clientNameValue,
         brandLabel: "Magical Warmers",
-        product: `${linesToValidate[0]?.product ?? ""} (${linesToValidate[0]?.type ?? ""})`.trim(),
+        product: `${(linesToValidate[0] ?? orderLines[0])?.product ?? ""} (${(linesToValidate[0] ?? orderLines[0])?.type ?? ""})`.trim(),
         logoUrl,
         logoSource,
         isRecompra,
