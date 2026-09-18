@@ -11,6 +11,7 @@ import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 
 const DisenoLogos = () => {
@@ -18,6 +19,7 @@ const DisenoLogos = () => {
   const { role } = useAuth();
   const isEstampacion = role === "estampacion";
   const [estampSearch, setEstampSearch] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
 
   const filteredForEstampacion = useMemo(() => {
     const q = estampSearch.trim().toLowerCase();
@@ -39,9 +41,9 @@ const DisenoLogos = () => {
 
   // Los pedidos ya despachados/cancelados no vuelven a ninguna bandeja de trabajo.
   const openRequests = requests.filter((r) => !isOrderClosed(r));
-  const pendingCount = openRequests.filter((r) => r.status === "pendiente_diseno").length;
   const designCount = openRequests.filter((r) => ["pendiente_diseno", "ajustes_solicitados"].includes(r.status)).length;
-  const approvalCount = openRequests.filter((r) => ["aprobado", "en_revision", "ajustado", "listo_aprobacion"].includes(r.status)).length;
+  const reviewCount = openRequests.filter((r) => ["en_revision", "ajustado", "listo_aprobacion"].includes(r.status)).length;
+  const approvedCount = openRequests.filter((r) => r.status === "aprobado").length;
   const doneCount = requests.filter((r) => r.status === "finalizado").length;
 
   // Estampacion only sees the Aprobación tab (read-only)
@@ -93,23 +95,25 @@ const DisenoLogos = () => {
 
 
       <Tabs defaultValue="solicitudes">
-        <TabsList className="w-full flex md:grid md:grid-cols-4">
-          <TabsTrigger value="solicitudes">Solicitudes ({pendingCount})</TabsTrigger>
-          <TabsTrigger value="diseno">Diseñador ({designCount})</TabsTrigger>
-          <TabsTrigger value="aprobacion">Aprobación ({approvalCount})</TabsTrigger>
-          <TabsTrigger value="finalizados">Finalizados ({doneCount})</TabsTrigger>
+        <TabsList className="w-full flex md:grid md:grid-cols-3">
+          <TabsTrigger value="solicitudes">Solicitudes ({designCount})</TabsTrigger>
+          <TabsTrigger value="aprobacion">Por aprobar ({reviewCount})</TabsTrigger>
+          <TabsTrigger value="aprobados">Aprobados ({approvedCount})</TabsTrigger>
         </TabsList>
         <TabsContent value="solicitudes">
-          <NuevasSolicitudes requests={requests} />
-        </TabsContent>
-        <TabsContent value="diseno">
           <TrabajoDisenador requests={requests} />
         </TabsContent>
         <TabsContent value="aprobacion">
-          <AprobacionAsesor requests={requests} />
+          <AprobacionAsesor requests={requests} view="pendientes" />
         </TabsContent>
-        <TabsContent value="finalizados">
-          <DisenosFinalizados requests={requests} />
+        <TabsContent value="aprobados" className="space-y-4">
+          <AprobacionAsesor requests={requests} view="aprobados" />
+          <div>
+            <Button variant="outline" size="sm" onClick={() => setShowHistory((v) => !v)}>
+              {showHistory ? "Ocultar historial" : `Ver historial de finalizados (${doneCount})`}
+            </Button>
+          </div>
+          {showHistory && <DisenosFinalizados requests={requests} />}
         </TabsContent>
       </Tabs>
     </div>

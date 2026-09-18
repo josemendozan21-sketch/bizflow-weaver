@@ -16,6 +16,7 @@ import LogoStatusHistory from "./LogoStatusHistory";
 import ReferenceFilesPanel from "./ReferenceFilesPanel";
 import { uploadReferenceFiles, useInvalidateReferenceFiles } from "@/hooks/useLogoReferenceFiles";
 import { normalizeStages, TERMINAL_STAGES } from "@/lib/orderFlow";
+import { CreateRequestDialog } from "./CreateRequestDialog";
 
 
 interface Props {
@@ -26,6 +27,7 @@ interface Props {
 export const ADVISOR_REVIEW_STATUSES: LogoRequestStatus[] = ["en_revision", "ajustado", "listo_aprobacion"];
 
 export function TrabajoDisenador({ requests }: Props) {
+  const { role } = useAuth();
   // Solo el trabajo que realmente está en manos del diseñador. Lo que ya se envió
   // al asesor vive en la pestaña de Aprobación, para no dar la impresión de que
   // el diseñador sigue trabajando en él.
@@ -35,10 +37,16 @@ export function TrabajoDisenador({ requests }: Props) {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold text-foreground">Trabajo del diseñador</h2>
-        <p className="text-sm text-muted-foreground">{filtered.length} solicitud(es) en proceso</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Solicitudes en diseño</h2>
+          <p className="text-sm text-muted-foreground">
+            {filtered.length} logo(s) pendiente(s) de diseño o con ajustes solicitados
+          </p>
+        </div>
+        {(role === "admin" || role === "produccion") && <CreateRequestDialog />}
       </div>
+
 
       {filtered.length === 0 ? (
         <Card>

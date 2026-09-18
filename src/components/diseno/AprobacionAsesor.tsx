@@ -16,18 +16,48 @@ import { ADVISOR_REVIEW_STATUSES, DesignerCard } from "./TrabajoDisenador";
 
 interface Props {
   requests: LogoRequest[];
+  /** "pendientes" = solo por aprobar, "aprobados" = solo aprobados, "todo" = ambos */
+  view?: "pendientes" | "aprobados" | "todo";
 }
 
-export function AprobacionAsesor({ requests }: Props) {
+export function AprobacionAsesor({ requests, view = "todo" }: Props) {
   const { role } = useAuth();
   const open = requests.filter((r) => !isOrderClosed(r));
   const filtered = open.filter((r) => r.status === "aprobado");
   const pending = open.filter((r) => ADVISOR_REVIEW_STATUSES.includes(r.status));
   const canApprove = role === "asesor_comercial" || role === "admin";
+  const showPending = view !== "aprobados";
+  const showApproved = view !== "pendientes";
+
+  if (showPending && !showApproved) {
+    return (
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Logos por aprobar</h2>
+          <p className="text-sm text-muted-foreground">
+            {pending.length} diseño(s) esperando tu revisión
+          </p>
+        </div>
+        {pending.length === 0 ? (
+          <Card>
+            <CardContent className="py-8 text-center text-muted-foreground">
+              No tienes logos pendientes de aprobación.
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4">
+            {pending.map((req) => (
+              <DesignerCard key={req.id} request={req} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      {canApprove && pending.length > 0 && (
+      {showPending && canApprove && pending.length > 0 && (
         <div className="space-y-3">
           <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-3">
             <h2 className="text-base font-semibold text-indigo-900">
