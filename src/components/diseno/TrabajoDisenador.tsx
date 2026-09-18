@@ -35,10 +35,16 @@ export function TrabajoDisenador({ requests }: Props) {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold text-foreground">Trabajo del diseñador</h2>
-        <p className="text-sm text-muted-foreground">{filtered.length} solicitud(es) en proceso</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Solicitudes en diseño</h2>
+          <p className="text-sm text-muted-foreground">
+            {filtered.length} logo(s) pendiente(s) de diseño o con ajustes solicitados
+          </p>
+        </div>
+        {(role === "admin" || role === "produccion") && <CreateRequestDialog />}
       </div>
+
 
       {filtered.length === 0 ? (
         <Card>
