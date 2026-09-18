@@ -969,11 +969,34 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
     const isSoloMolde = moldeNuevo && moldeModo === "solo_molde";
 
+    // Una línea agregada por accidente y dejada totalmente vacía no debe
+    // bloquear un pedido cuyas demás líneas sí están diligenciadas.
+    const linesToValidate = orderLines.filter((line) =>
+      [
+        line.product,
+        line.type,
+        line.gelColor,
+        line.gelCustom,
+        line.inkColor,
+        line.inkCustom,
+        line.units,
+        line.valorUnitario,
+        line.valorTotal,
+      ].some((value) => String(value || "").trim().length > 0),
+    );
+
     // En modo "solo molde" no validamos líneas de producto
     if (!isSoloMolde) {
-    for (const line of orderLines) {
-      if (!line.product || !line.type) {
-        toast.error("Producto requerido", { description: "Seleccione producto y tipo en todas las líneas." });
+    if (linesToValidate.length === 0) {
+      toast.error("Producto requerido", { description: "Agregue al menos un producto al pedido." });
+      setIsSubmitting(false);
+      return;
+    }
+    for (const [lineIndex, line] of linesToValidate.entries()) {
+      if (!line.product.trim() || !line.type.trim()) {
+        toast.error("Producto requerido", {
+          description: `Revise producto y tipo en la línea ${lineIndex + 1}.`,
+        });
         setIsSubmitting(false);
         return;
       }
@@ -1040,7 +1063,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     const hasLogoFile = !!(logoFile && logoFile.size > 0);
     const hasPersonalization = !!(personalizacion && personalizacion.trim());
     if ((hasLogoFile || hasPersonalization || recompraNeedsDesign) && user && (!reusaLogoAnterior || recompraNeedsDesign) && !noLogo) {
-      const firstLine = orderLines[0];
+      const firstLine = linesToValidate[0];
       const referencia = `${firstLine.product} (${firstLine.type})`;
       const result = await createLogoRequestFromOrder({
         brand: "Magical Warmers",
@@ -1162,7 +1185,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     // Las líneas idénticas pertenecen al mismo producto del pedido. Se consolidan
     // antes de guardar para que Inventarios y Estampación reciban la cantidad total
     // (por ejemplo, 50 + 50 se convierte en una sola orden de 100 unidades).
-    const linesToSubmit = consolidateMagicalLines(orderLines);
+    const linesToSubmit = consolidateMagicalLines(linesToValidate);
     // Si una línea falla, las demás deben guardarse igual (antes se abortaba
     // el pedido completo y se perdían unidades del mismo cliente).
     const failedLines: string[] = [];
@@ -1394,7 +1417,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
         orderCode: createdCodes[0] ?? null,
         clientName: clientNameValue,
         brandLabel: "Magical Warmers",
-        product: `${orderLines[0]?.product ?? ""} (${orderLines[0]?.type ?? ""})`.trim(),
+        product: `${linesToValidate[0]?.product ?? ""} (${linesToValidate[0]?.type ?? ""})`.trim(),
         logoUrl,
         logoSource,
         isRecompra,
@@ -1414,8 +1437,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
     }
 
     const savedCount = linesToSubmit.length - failedLines.length;
-    const giftCount = orderLines.filter((l) => l.isGift).length;
-    const productCount = orderLines.filter((l) => !l.isGift).length;
+    const giftCount = linesToValidate.filter((l) => l.isGift).length;
+    const productCount = linesToValidate.filter((l) => !l.isGift).length;
     const summary = [
       `${productCount} producto(s)`,
       giftCount > 0 ? `${giftCount} obsequio(s)` : "",
