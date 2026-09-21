@@ -1105,6 +1105,8 @@ const WholesaleOrdersInbox = () => {
             <DialogTitle>
               {isSweatspotKit
                 ? "Entregar Kit a Estampación"
+                : delivering?.target === "muestra"
+                ? "Entregar unidades para la muestra"
                 : delivering?.target === "produccion"
                 ? "Solicitar producción de cuerpos"
                 : delivering?.target === "terminado"
@@ -1115,6 +1117,8 @@ const WholesaleOrdersInbox = () => {
             </DialogTitle>
             <DialogDescription>
               {delivering && `${delivering.order.product} — Pedido de ${delivering.order.client_name}`}
+              {delivering?.target === "muestra" &&
+                ` · Máximo ${SAMPLE_MAX_UNITS} uds hasta que el asesor apruebe tamaño y tinta/gel.`}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
