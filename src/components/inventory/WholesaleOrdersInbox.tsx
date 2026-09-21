@@ -837,10 +837,12 @@ const WholesaleOrdersInbox = () => {
 
           {!isDelivered && kind === "mayor" && !sampleApproved && (
             <div className="text-xs rounded border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-2 text-amber-900 dark:text-amber-200">
-              Pendiente de aprobación del asesor: <strong>{pendingApprovals}</strong>. Producción puede avanzar en
-              paralelo, pero la entrega de cuerpos a Estampación queda bloqueada hasta aprobar ambos pasos.
+              Pendiente de aprobación del asesor: <strong>{pendingApprovals}</strong>. Solo puedes entregar hasta{" "}
+              {SAMPLE_MAX_UNITS} uds con <strong>Entregar muestra</strong>; la entrega completa de cuerpos se habilita
+              cuando el asesor apruebe tamaño y tinta/gel. Producción puede avanzar en paralelo.
             </div>
           )}
+
 
           {!isDelivered && (
             kind === "detal" ? (
