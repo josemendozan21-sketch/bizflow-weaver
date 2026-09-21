@@ -1257,17 +1257,29 @@ const WholesaleOrdersInbox = () => {
               </div>
             ) : (
               <div>
-                <Label>{delivering?.target === "produccion" ? "Cantidad a producir" : "Cantidad a enviar"}</Label>
+                <Label>
+                  {delivering?.target === "produccion"
+                    ? "Cantidad a producir"
+                    : delivering?.target === "muestra"
+                    ? "Unidades para la muestra"
+                    : "Cantidad a enviar"}
+                </Label>
                 <Input
                   type="number"
                   value={qty}
                   onChange={(e) => setQty(e.target.value)}
                   min="1"
+                  max={delivering?.target === "muestra" ? SAMPLE_MAX_UNITS : undefined}
                   readOnly={delivering?.target === "produccion"}
                 />
                 {delivering?.target === "produccion" && (
                   <p className="text-[11px] text-muted-foreground mt-1">
                     La orden se crea automáticamente con la referencia y la cantidad del pedido.
+                  </p>
+                )}
+                {delivering?.target === "muestra" && (
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Estas unidades son solo para hacer la muestra; no cuentan como entrega del pedido.
                   </p>
                 )}
               </div>
