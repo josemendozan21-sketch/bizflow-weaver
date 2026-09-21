@@ -25,24 +25,27 @@ import { Loader2, Info, TrendingUp, Clock, CheckCircle2, ChevronLeft, ChevronRig
 import { CommissionExpandButton } from "@/components/commissions/CommissionExpandButton";
 import { CommissionStatusBadge } from "@/components/commissions/CommissionStatusBadge";
 import { CommissionRulesLegend } from "@/components/commissions/CommissionRulesLegend";
-import { PeriodBridgeCard } from "@/components/commissions/PeriodBridgeCard";
+import { MonthAccrualCard } from "@/components/commissions/MonthAccrualCard";
 
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useOrders } from "@/hooks/useOrders";
 import { useAllOrderCharges } from "@/hooks/useOrderCharges";
+import { useAllOrderPayments } from "@/hooks/useOrderPayments";
 import { useAuth } from "@/contexts/AuthContext";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import {
   summarizeAdvisorProgress,
-  summarizePeriodBridge,
-  bridgeSummaryRows,
   BONUS_TIER_1_THRESHOLD,
   BONUS_TIER_1_AMOUNT,
   BONUS_TIER_2_THRESHOLD,
   BONUS_TIER_2_AMOUNT,
   UNLOCK_THRESHOLD,
 } from "@/lib/commissions";
+import {
+  summarizeMonthAccrual,
+  accrualSummaryRows,
+} from "@/lib/commissionAccrual";
 import {
   exportCommissionsCsv,
   exportCommissionsXlsx,
@@ -62,6 +65,7 @@ export default function MisComisiones() {
   const { user } = useAuth();
   const { data: orders = [], isLoading } = useOrders();
   const { data: charges = {} } = useAllOrderCharges();
+  const { data: payments = {} } = useAllOrderPayments();
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
@@ -76,10 +80,10 @@ export default function MisComisiones() {
     [orders, year, month, user?.id, charges]
   );
 
-  // Conciliación "vendido en el mes" vs "liquidado en el mes".
-  const bridge = useMemo(
-    () => summarizePeriodBridge(orders, year, month, user?.id),
-    [orders, year, month, user?.id]
+  // Ventas del mes vs recaudo del mes, y comisión pagable vs retenida.
+  const accrual = useMemo(
+    () => summarizeMonthAccrual(orders, payments, year, month, user?.id, charges),
+    [orders, payments, year, month, user?.id, charges]
   );
 
 
@@ -181,9 +185,10 @@ export default function MisComisiones() {
       { Concepto: "Periodo", Valor: `${MONTHS[month]} ${year}` },
       {
         Concepto: "Criterio del período",
-        Valor: "Fecha de factura (si no hay factura, fecha de venta)",
+        Valor:
+          "Venta por fecha del pedido; comisión causada por fecha de cada abono y pagada con el pedido completo",
       },
-      ...bridgeSummaryRows(bridge),
+      ...accrualSummaryRows(accrual),
       { Concepto: "Pedidos del período", Valor: summary.ordersCount },
       {
         Concepto: "Flete y cargos excluidos de la base",
@@ -307,7 +312,7 @@ export default function MisComisiones() {
 
       </div>
 
-      <PeriodBridgeCard bridge={bridge} />
+      <MonthAccrualCard summary={accrual} />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>

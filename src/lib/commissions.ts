@@ -203,11 +203,13 @@ export type ClientKind = "nuevo" | "recompra";
 export type PeriodBasis = "venta" | "factura";
 
 /**
- * Criterio ÚNICO y oficial: la comisión pertenece al mes de la FACTURA.
- * Si el pedido aún no tiene factura se ubica por fecha de venta y se marca
- * como pendiente de facturar, para que asesor y contabilidad vean lo mismo.
+ * Criterio ÚNICO y oficial: la venta pertenece al mes en que ENTRÓ el pedido
+ * (fecha de venta). Así cada mes muestra lo que realmente se vendió ese mes.
+ * El recaudo y la comisión se causan por la fecha de cada pago (ver
+ * `commissionAccrual.ts`), y la comisión solo se paga cuando el pedido está
+ * 100% pagado, con soportes y despachado.
  */
-export const PERIOD_BASIS: PeriodBasis = "factura";
+export const PERIOD_BASIS: PeriodBasis = "venta";
 
 export interface CommissionContext {
   /** Override manual: forma de pago (default: contado) */
@@ -680,7 +682,7 @@ export interface RetroAdjustmentGroup {
   ajuste: number;
 }
 
-function periodKey(d: Date): string {
+export function periodKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
@@ -838,156 +840,3 @@ export interface PeriodBridgeBucket extends PeriodTotals {
   label: string;
 }
 
-export interface AdvisorPeriodBridge {
-  advisorId: string;
-  advisorName: string;
-  /** Periodo liquidado en formato YYYY-MM */
-  period: string;
-  /** Pedidos tomados en el mes (fecha de venta) */
-  soldInMonth: PeriodTotals;
-  /** Pedidos liquidados en el mes (criterio oficial: fecha de factura) */
-  settledInMonth: PeriodTotals;
-  /** Ventas de este mes que sí se liquidaron en este mes */
-  ownSalesSettled: PeriodTotals;
-  /** Ventas de meses anteriores que se liquidaron en este mes */
-  carriedIn: PeriodBridgeBucket[];
-  /** Ventas de este mes que se liquidarán en otro mes */
-  carriedOut: PeriodBridgeBucket[];
-  carriedInTotal: PeriodTotals;
-  carriedOutTotal: PeriodTotals;
-}
-
-const emptyTotals = (): PeriodTotals => ({ count: 0, total: 0 });
-
-export function summarizePeriodBridge(
-  orders: Order[],
-  year: number,
-  month: number,
-  advisorId?: string,
-  basis: PeriodBasis = PERIOD_BASIS
-): AdvisorPeriodBridge {
-  const start = startOfMonth(new Date(year, month, 1));
-  const end = endOfMonth(new Date(year, month, 1));
-
-  const soldInMonth = emptyTotals();
-  const settledInMonth = emptyTotals();
-  const ownSalesSettled = emptyTotals();
-  const inMap = new Map<string, PeriodBridgeBucket>();
-  const outMap = new Map<string, PeriodBridgeBucket>();
-  let advisorName = "";
-
-  const addToBucket = (
-    map: Map<string, PeriodBridgeBucket>,
-    key: string,
-    total: number
-  ) => {
-    let bucket = map.get(key);
-    if (!bucket) {
-      bucket = { period: key, label: periodLabel(key), count: 0, total: 0 };
-      map.set(key, bucket);
-    }
-    bucket.count += 1;
-    bucket.total += total;
-  };
-
-  for (const o of orders) {
-    if (advisorId && o.advisor_id !== advisorId) continue;
-
-    const sale = getSaleDate(o);
-    const settle = getPeriodDate(o, basis);
-    const sold = isWithinInterval(sale, { start, end });
-    const settled = isWithinInterval(settle, { start, end });
-    if (!sold && !settled) continue;
-
-    if (!advisorName) advisorName = o.advisor_name || "—";
-    const total = num(o.total_amount);
-
-    if (sold) {
-      soldInMonth.count += 1;
-      soldInMonth.total += total;
-    }
-    if (settled) {
-      settledInMonth.count += 1;
-      settledInMonth.total += total;
-    }
-    if (sold && settled) {
-      ownSalesSettled.count += 1;
-      ownSalesSettled.total += total;
-    }
-    // Venta de otro mes que se liquidó aquí.
-    if (settled && !sold) addToBucket(inMap, periodKey(sale), total);
-    // Venta de este mes que se liquidó en otro mes.
-    if (sold && !settled) addToBucket(outMap, periodKey(settle), total);
-  }
-
-  const carriedIn = Array.from(inMap.values()).sort((a, b) =>
-    a.period.localeCompare(b.period)
-  );
-  const carriedOut = Array.from(outMap.values()).sort((a, b) =>
-    a.period.localeCompare(b.period)
-  );
-  const sumBuckets = (arr: PeriodBridgeBucket[]): PeriodTotals =>
-    arr.reduce(
-      (s, b) => ({ count: s.count + b.count, total: s.total + b.total }),
-      emptyTotals()
-    );
-
-  return {
-    advisorId: advisorId || "",
-    advisorName,
-    period: periodKey(start),
-    soldInMonth,
-    settledInMonth,
-    ownSalesSettled,
-    carriedIn,
-    carriedOut,
-    carriedInTotal: sumBuckets(carriedIn),
-    carriedOutTotal: sumBuckets(carriedOut),
-  };
-}
-
-/** Puente por asesor, indexado por advisor_id (para el panel de contabilidad). */
-export function summarizePeriodBridges(
-  orders: Order[],
-  year: number,
-  month: number,
-  basis: PeriodBasis = PERIOD_BASIS
-): Record<string, AdvisorPeriodBridge> {
-  const out: Record<string, AdvisorPeriodBridge> = {};
-  for (const advisorId of Array.from(new Set(orders.map((o) => o.advisor_id)))) {
-    const bridge = summarizePeriodBridge(orders, year, month, advisorId, basis);
-    if (bridge.soldInMonth.count > 0 || bridge.settledInMonth.count > 0) {
-      out[advisorId] = bridge;
-    }
-  }
-  return out;
-}
-
-/** Filas de conciliación para los exportables de Excel y CSV. */
-export function bridgeSummaryRows(
-  b: AdvisorPeriodBridge
-): { Concepto: string; Valor: string | number }[] {
-  const money = (n: number) => Math.round(n).toLocaleString("es-CO");
-  return [
-    {
-      Concepto: "Ventas tomadas en el mes (fecha de venta)",
-      Valor: `${b.soldInMonth.count} pedido(s) · ${money(b.soldInMonth.total)}`,
-    },
-    {
-      Concepto: "Ventas liquidadas en el mes (fecha de factura)",
-      Valor: `${b.settledInMonth.count} pedido(s) · ${money(b.settledInMonth.total)}`,
-    },
-    {
-      Concepto: "De lo liquidado, ventas del propio mes",
-      Valor: `${b.ownSalesSettled.count} pedido(s) · ${money(b.ownSalesSettled.total)}`,
-    },
-    ...b.carriedIn.map((x) => ({
-      Concepto: `Viene liquidarse de ${x.label}`,
-      Valor: `${x.count} pedido(s) · ${money(x.total)}`,
-    })),
-    ...b.carriedOut.map((x) => ({
-      Concepto: `Se liquidará en ${x.label}`,
-      Valor: `${x.count} pedido(s) · ${money(x.total)}`,
-    })),
-  ];
-}

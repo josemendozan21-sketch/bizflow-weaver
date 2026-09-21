@@ -32,13 +32,16 @@ import { ChevronDown, Info, TrendingUp, AlertCircle, Download } from "lucide-rea
 import { CommissionExpandButton } from "@/components/commissions/CommissionExpandButton";
 import { CommissionStatusBadge } from "@/components/commissions/CommissionStatusBadge";
 import { CommissionRulesLegend } from "@/components/commissions/CommissionRulesLegend";
-import { PeriodBridgeCard } from "@/components/commissions/PeriodBridgeCard";
+import { MonthAccrualCard } from "@/components/commissions/MonthAccrualCard";
 import type { Order } from "@/hooks/useOrders";
 import { useAllOrderCharges } from "@/hooks/useOrderCharges";
+import { useAllOrderPayments } from "@/hooks/useOrderPayments";
+import {
+  summarizeMonthAccrualByAdvisor,
+  accrualSummaryRows,
+} from "@/lib/commissionAccrual";
 import {
   summarizeAdvisorMonth,
-  summarizePeriodBridges,
-  bridgeSummaryRows,
   type OrderOverrides,
   type PaymentMode,
   type AdvisorMonthSummary,
@@ -77,16 +80,17 @@ export default function CommissionsPanel({ orders }: Props) {
   const [openAdvisor, setOpenAdvisor] = useState<string | null>(null);
   const [expandedLine, setExpandedLine] = useState<string | null>(null);
   const { data: charges = {} } = useAllOrderCharges();
+  const { data: payments = {} } = useAllOrderPayments();
 
   const summaries = useMemo(
     () => summarizeAdvisorMonth(orders, overrides, year, month, charges),
     [orders, overrides, year, month, charges]
   );
 
-  // Conciliación "vendido en el mes" vs "liquidado en el mes" por asesor.
-  const bridges = useMemo(
-    () => summarizePeriodBridges(orders, year, month),
-    [orders, year, month]
+  // Ventas del mes vs recaudo del mes, y comisión pagable vs retenida.
+  const accruals = useMemo(
+    () => summarizeMonthAccrualByAdvisor(orders, payments, year, month, charges),
+    [orders, payments, year, month, charges]
   );
 
   const setLineOverride = (
@@ -115,9 +119,10 @@ export default function CommissionsPanel({ orders }: Props) {
         { Concepto: "Periodo", Valor: `${MONTHS[month]} ${year}` },
         {
           Concepto: "Criterio del período",
-          Valor: "Fecha de factura (si no hay factura, fecha de venta)",
+          Valor:
+            "Venta por fecha del pedido; comisión causada por fecha de cada abono y pagada con el pedido completo",
         },
-        ...(bridges[a.advisorId] ? bridgeSummaryRows(bridges[a.advisorId]) : []),
+        ...(accruals[a.advisorId] ? accrualSummaryRows(accruals[a.advisorId]) : []),
         { Concepto: "Pedidos del período", Valor: a.grossOrdersCount },
         { Concepto: "Ventas totales (con IVA)", Valor: Math.round(a.grossSalesWithVat) },
         { Concepto: "Pedidos considerados", Valor: a.ordersCount },
@@ -304,8 +309,8 @@ export default function CommissionsPanel({ orders }: Props) {
 
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {bridges[a.advisorId] && (
-                    <PeriodBridgeCard bridge={bridges[a.advisorId]} compact />
+                  {accruals[a.advisorId] && (
+                    <MonthAccrualCard summary={accruals[a.advisorId]} compact />
                   )}
                   {/* KPIs */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
