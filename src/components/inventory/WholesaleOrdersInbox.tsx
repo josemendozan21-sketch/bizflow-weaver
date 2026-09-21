@@ -586,6 +586,10 @@ const WholesaleOrdersInbox = () => {
       toast.error("Cantidad inválida");
       return;
     }
+    if (target === "muestra" && quantity > SAMPLE_MAX_UNITS) {
+      toast.error(`La entrega de muestra permite máximo ${SAMPLE_MAX_UNITS} uds.`);
+      return;
+    }
     setBusy(true);
 
     if (target === "produccion") {
