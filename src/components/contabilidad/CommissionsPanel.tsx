@@ -80,16 +80,17 @@ export default function CommissionsPanel({ orders }: Props) {
   const [openAdvisor, setOpenAdvisor] = useState<string | null>(null);
   const [expandedLine, setExpandedLine] = useState<string | null>(null);
   const { data: charges = {} } = useAllOrderCharges();
+  const { data: payments = {} } = useAllOrderPayments();
 
   const summaries = useMemo(
     () => summarizeAdvisorMonth(orders, overrides, year, month, charges),
     [orders, overrides, year, month, charges]
   );
 
-  // Conciliación "vendido en el mes" vs "liquidado en el mes" por asesor.
-  const bridges = useMemo(
-    () => summarizePeriodBridges(orders, year, month),
-    [orders, year, month]
+  // Ventas del mes vs recaudo del mes, y comisión pagable vs retenida.
+  const accruals = useMemo(
+    () => summarizeMonthAccrualByAdvisor(orders, payments, year, month, charges),
+    [orders, payments, year, month, charges]
   );
 
   const setLineOverride = (
