@@ -682,7 +682,7 @@ export interface RetroAdjustmentGroup {
   ajuste: number;
 }
 
-function periodKey(d: Date): string {
+export function periodKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
