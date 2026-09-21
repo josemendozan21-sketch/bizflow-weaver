@@ -203,11 +203,13 @@ export type ClientKind = "nuevo" | "recompra";
 export type PeriodBasis = "venta" | "factura";
 
 /**
- * Criterio ÚNICO y oficial: la comisión pertenece al mes de la FACTURA.
- * Si el pedido aún no tiene factura se ubica por fecha de venta y se marca
- * como pendiente de facturar, para que asesor y contabilidad vean lo mismo.
+ * Criterio ÚNICO y oficial: la venta pertenece al mes en que ENTRÓ el pedido
+ * (fecha de venta). Así cada mes muestra lo que realmente se vendió ese mes.
+ * El recaudo y la comisión se causan por la fecha de cada pago (ver
+ * `commissionAccrual.ts`), y la comisión solo se paga cuando el pedido está
+ * 100% pagado, con soportes y despachado.
  */
-export const PERIOD_BASIS: PeriodBasis = "factura";
+export const PERIOD_BASIS: PeriodBasis = "venta";
 
 export interface CommissionContext {
   /** Override manual: forma de pago (default: contado) */
