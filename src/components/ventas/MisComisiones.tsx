@@ -65,6 +65,7 @@ export default function MisComisiones() {
   const { user } = useAuth();
   const { data: orders = [], isLoading } = useOrders();
   const { data: charges = {} } = useAllOrderCharges();
+  const { data: payments = {} } = useAllOrderPayments();
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
@@ -79,10 +80,10 @@ export default function MisComisiones() {
     [orders, year, month, user?.id, charges]
   );
 
-  // Conciliación "vendido en el mes" vs "liquidado en el mes".
-  const bridge = useMemo(
-    () => summarizePeriodBridge(orders, year, month, user?.id),
-    [orders, year, month, user?.id]
+  // Ventas del mes vs recaudo del mes, y comisión pagable vs retenida.
+  const accrual = useMemo(
+    () => summarizeMonthAccrual(orders, payments, year, month, user?.id, charges),
+    [orders, payments, year, month, user?.id, charges]
   );
 
 
