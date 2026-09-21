@@ -21,7 +21,11 @@ interface UnroutedOrder {
   advisor_name: string | null;
   advisor_id: string | null;
   delivery_date: string | null;
-  logo_file: string | null;
+  logo_url: string | null;
+  ink_color: string | null;
+  gel_color: string | null;
+  silicone_color: string | null;
+  observations: string | null;
   created_at: string;
 }
 
@@ -38,7 +42,7 @@ export default function UnroutedOrdersPanel({ readOnly = false }: { readOnly?: b
     queryFn: async (): Promise<UnroutedOrder[]> => {
       const { data: pending, error } = await supabase
         .from("orders")
-        .select("id, order_code, brand, client_name, product, quantity, advisor_name, advisor_id, delivery_date, logo_file, created_at")
+        .select("id, order_code, brand, client_name, product, quantity, advisor_name, advisor_id, delivery_date, logo_url, ink_color, gel_color, silicone_color, observations, created_at")
         .in("production_status", ["pendiente", "aprobado"])
         .is("inventory_archived_at", null)
         .order("created_at", { ascending: true });
