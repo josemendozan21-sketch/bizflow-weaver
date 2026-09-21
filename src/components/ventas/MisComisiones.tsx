@@ -25,6 +25,7 @@ import { Loader2, Info, TrendingUp, Clock, CheckCircle2, ChevronLeft, ChevronRig
 import { CommissionExpandButton } from "@/components/commissions/CommissionExpandButton";
 import { CommissionStatusBadge } from "@/components/commissions/CommissionStatusBadge";
 import { CommissionRulesLegend } from "@/components/commissions/CommissionRulesLegend";
+import { PeriodBridgeCard } from "@/components/commissions/PeriodBridgeCard";
 
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -34,6 +35,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import {
   summarizeAdvisorProgress,
+  summarizePeriodBridge,
+  bridgeSummaryRows,
   BONUS_TIER_1_THRESHOLD,
   BONUS_TIER_1_AMOUNT,
   BONUS_TIER_2_THRESHOLD,
@@ -71,6 +74,12 @@ export default function MisComisiones() {
   const summary = useMemo(
     () => summarizeAdvisorProgress(orders, year, month, user?.id, charges),
     [orders, year, month, user?.id, charges]
+  );
+
+  // Conciliación "vendido en el mes" vs "liquidado en el mes".
+  const bridge = useMemo(
+    () => summarizePeriodBridge(orders, year, month, user?.id),
+    [orders, year, month, user?.id]
   );
 
 
@@ -174,6 +183,7 @@ export default function MisComisiones() {
         Concepto: "Criterio del período",
         Valor: "Fecha de factura (si no hay factura, fecha de venta)",
       },
+      ...bridgeSummaryRows(bridge),
       { Concepto: "Pedidos del período", Valor: summary.ordersCount },
       {
         Concepto: "Flete y cargos excluidos de la base",
@@ -297,17 +307,20 @@ export default function MisComisiones() {
 
       </div>
 
+      <PeriodBridgeCard bridge={bridge} />
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Montado en el mes
+              Liquidado en el mes
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{fmt(summary.totalWithVat)}</p>
             <p className="text-xs text-muted-foreground">
-              {summary.ordersCount} pedido(s) · con IVA
+              {summary.ordersCount} pedido(s) · con IVA · sobre este valor se
+              calcula el pago
             </p>
           </CardContent>
         </Card>
