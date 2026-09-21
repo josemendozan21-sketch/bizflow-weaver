@@ -904,6 +904,14 @@ const WholesaleOrdersInbox = () => {
                   title={sampleTitle ?? (enough ? "Enviar cuerpos a Estampación" : "No hay inventario suficiente: solicita producción")}>
                   <Paintbrush className="h-3.5 w-3.5" /> Enviar a Estampación
                 </Button>
+                {sampleBlocked && (
+                  <Button size="sm" variant="secondary" className="flex-1 min-w-[150px] gap-1.5"
+                    disabled={(stock ?? 0) < 1 && !producedReady}
+                    title={`Entrega hasta ${SAMPLE_MAX_UNITS} uds solo para hacer la muestra de tamaño y tinta/gel`}
+                    onClick={() => openDeliver(o, "muestra")}>
+                    <Paintbrush className="h-3.5 w-3.5" /> Entregar muestra
+                  </Button>
+                )}
                 {!enough && (
                   <Button size="sm" variant="default" className="flex-1 min-w-[150px] gap-1.5"
                     onClick={() => openDeliver(o, "produccion")}
