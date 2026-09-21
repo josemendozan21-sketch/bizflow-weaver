@@ -7,4 +7,6 @@
 5. **Comprobante del saldo y regla de despacho** — COMPLETADO (bloque de abonos siempre disponible en pedidos al por mayor con saldo; despacho bloqueado en base de datos si el pedido no está pagado, salvo crédito).
 6. **Bodega como única fuente de verdad** — COMPLETADO (clave estable por referencia, origen bodega/tienda en el Punto 92 sin tocar cantidades, asignaciones atómicas Bodega→punto, servicio de reservas para la tienda web, vista de control y realtime).
    - Pendiente del usuario: conteo físico para corregir las cantidades de Bodega.
+7. **Comisiones: mostrar las dos cifras del mes** — COMPLETADO (tarjeta "Las dos cifras del mes" en Ventas y Contabilidad con el detalle de lo que llega de otros meses y lo que se factura después; mismo detalle en los exportables de Excel y CSV; el pago no cambia).
+
 

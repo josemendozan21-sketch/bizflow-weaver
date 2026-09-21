@@ -32,10 +32,13 @@ import { ChevronDown, Info, TrendingUp, AlertCircle, Download } from "lucide-rea
 import { CommissionExpandButton } from "@/components/commissions/CommissionExpandButton";
 import { CommissionStatusBadge } from "@/components/commissions/CommissionStatusBadge";
 import { CommissionRulesLegend } from "@/components/commissions/CommissionRulesLegend";
+import { PeriodBridgeCard } from "@/components/commissions/PeriodBridgeCard";
 import type { Order } from "@/hooks/useOrders";
 import { useAllOrderCharges } from "@/hooks/useOrderCharges";
 import {
   summarizeAdvisorMonth,
+  summarizePeriodBridges,
+  bridgeSummaryRows,
   type OrderOverrides,
   type PaymentMode,
   type AdvisorMonthSummary,
@@ -80,6 +83,12 @@ export default function CommissionsPanel({ orders }: Props) {
     [orders, overrides, year, month, charges]
   );
 
+  // Conciliación "vendido en el mes" vs "liquidado en el mes" por asesor.
+  const bridges = useMemo(
+    () => summarizePeriodBridges(orders, year, month),
+    [orders, year, month]
+  );
+
   const setLineOverride = (
     orderId: string,
     patch: Partial<{ paymentMode: PaymentMode }>
@@ -108,6 +117,7 @@ export default function CommissionsPanel({ orders }: Props) {
           Concepto: "Criterio del período",
           Valor: "Fecha de factura (si no hay factura, fecha de venta)",
         },
+        ...(bridges[a.advisorId] ? bridgeSummaryRows(bridges[a.advisorId]) : []),
         { Concepto: "Pedidos del período", Valor: a.grossOrdersCount },
         { Concepto: "Ventas totales (con IVA)", Valor: Math.round(a.grossSalesWithVat) },
         { Concepto: "Pedidos considerados", Valor: a.ordersCount },
@@ -294,6 +304,9 @@ export default function CommissionsPanel({ orders }: Props) {
 
                 </CardHeader>
                 <CardContent className="space-y-3">
+                  {bridges[a.advisorId] && (
+                    <PeriodBridgeCard bridge={bridges[a.advisorId]} compact />
+                  )}
                   {/* KPIs */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
                     <KpiBox
