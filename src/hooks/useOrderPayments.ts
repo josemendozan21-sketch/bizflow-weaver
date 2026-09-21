@@ -101,3 +101,30 @@ export async function uploadPaymentProof(orderId: string, file: File): Promise<s
   const { data } = supabase.storage.from("payment-proofs").getPublicUrl(path);
   return data.publicUrl;
 }
+/**
+ * Todos los abonos registrados, agrupados por pedido. Se usa para causar la
+ * comisión en el mes en que se recibió cada pago.
+ */
+export function useAllOrderPayments() {
+  return useQuery({
+    queryKey: ["order_payments_all"],
+    queryFn: async () => {
+      const rows: { order_id: string; amount: number; payment_date: string; proof_url: string | null }[] = [];
+      const pageSize = 1000;
+      for (let page = 0; ; page++) {
+        const { data, error } = await supabase
+          .from("order_payments" as any)
+          .select("order_id, amount, payment_date, proof_url")
+          .range(page * pageSize, page * pageSize + pageSize - 1);
+        if (error) throw error;
+        const chunk = (data as unknown as typeof rows) || [];
+        rows.push(...chunk);
+        if (chunk.length < pageSize) break;
+      }
+      const map: Record<string, typeof rows> = {};
+      for (const r of rows) (map[r.order_id] ||= []).push(r);
+      return map;
+    },
+    staleTime: 60_000,
+  });
+}
