@@ -67,14 +67,18 @@ const ACTIVE_STATUSES = [
 // no debe aparecer en la bandeja de reserva/despacho.
 const INBOX_PENDING_STATUSES = ["pendiente", "diseno"];
 
-type Target = "estampacion" | "produccion" | "logistica" | "terminado";
+type Target = "estampacion" | "produccion" | "logistica" | "terminado" | "muestra";
 
 const TARGET_LABEL: Record<Target, string> = {
   estampacion: "Estampación",
   produccion: "Producción",
   logistica: "Logística",
   terminado: "Logística (producto terminado)",
+  muestra: "Estampación (muestra)",
 };
+
+/** Máximo de unidades que Inventarios puede entregar para hacer la muestra. */
+const SAMPLE_MAX_UNITS = 5;
 
 type BandejaTab = "mayor" | "detal" | "entregados";
 
@@ -480,7 +484,11 @@ const WholesaleOrdersInbox = () => {
 
   const openDeliver = (order: MayorOrder, target: Target) => {
     setDelivering({ order, target });
-    setQty(String(order.quantity));
+    setQty(
+      target === "muestra"
+        ? String(Math.max(1, Math.min(2, Number(order.quantity) || 1)))
+        : String(order.quantity)
+    );
     setObs("");
     setPartialQty("");
     setPlastico("frio");
@@ -578,6 +586,10 @@ const WholesaleOrdersInbox = () => {
       toast.error("Cantidad inválida");
       return;
     }
+    if (target === "muestra" && quantity > SAMPLE_MAX_UNITS) {
+      toast.error(`La entrega de muestra permite máximo ${SAMPLE_MAX_UNITS} uds.`);
+      return;
+    }
     setBusy(true);
 
     if (target === "produccion") {
@@ -627,12 +639,13 @@ const WholesaleOrdersInbox = () => {
       if (error) { toast.error(error.message); return; }
       toast.success(`Entregado a Logística (${lineRows.length} ${lineRows.length === 1 ? "ítem" : "ítems"}).`);
     } else {
-      const cat = target === "estampacion" ? "cuerpos_referencias" : "producto_terminado";
-      const isSweatspotMarkable = target === "terminado" && order.brand === "sweatspot";
-      const item = isSweatspotMarkable
+      const isSample = target === "muestra";
+      const cat = target === "estampacion" || isSample ? "cuerpos_referencias" : "producto_terminado";
+      const useMarkable = order.brand === "sweatspot" && (target === "terminado" || isSample);
+      const item = useMarkable
         ? findSweatspotMarkableStock(order)
         : findStockItem(order, cat);
-      if (isSweatspotMarkable && !item) {
+      if (useMarkable && !item) {
         setBusy(false);
         toast.error("No hay termos SIN LOGO que coincidan con color y tamaño. Usa Salir kit.");
         return;
@@ -644,23 +657,32 @@ const WholesaleOrdersInbox = () => {
           order: order as unknown as FlowOrder,
           stockItemId: item?.id ?? null,
           itemName: item?.name ?? order.product,
-          category: cat,
+          category: useMarkable ? (item?.category ?? cat) : cat,
           quantity,
           userId: user.id,
           userName: user.email,
-          note: obs || undefined,
+          note: isSample
+            ? `MUESTRA de tamaño y tinta/gel${obs ? ` — ${obs}` : ""}`
+            : obs || undefined,
         });
-        await ensureProductionOrder(order as unknown as FlowOrder, { needsCuerpos: false });
+        await ensureProductionOrder(order as unknown as FlowOrder, {
+          needsCuerpos: false,
+          sampleOnly: isSample,
+        });
       } catch (e: any) {
         setBusy(false);
         toast.error(e.message);
         return;
       }
       setBusy(false);
-      toast.success(`${quantity} uds enviadas a ${TARGET_LABEL.estampacion}.`);
+      toast.success(
+        isSample
+          ? `${quantity} uds entregadas para la muestra. La entrega del resto se habilita cuando el asesor apruebe tamaño y tinta/gel.`
+          : `${quantity} uds enviadas a ${TARGET_LABEL.estampacion}.`
+      );
     }
 
-    if (target !== "produccion") {
+    if (target !== "produccion" && target !== "muestra") {
       const totalUnits = target === "logistica" && lineRows.length > 0
         ? lineRows.reduce((sum, r) => sum + (Number(r.qty) || 0), 0)
         : quantity;
@@ -673,6 +695,7 @@ const WholesaleOrdersInbox = () => {
         }
       }
     }
+
 
     setDelivering(null);
     qc.invalidateQueries({ queryKey: ["orders"] });
@@ -814,10 +837,12 @@ const WholesaleOrdersInbox = () => {
 
           {!isDelivered && kind === "mayor" && !sampleApproved && (
             <div className="text-xs rounded border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-2 text-amber-900 dark:text-amber-200">
-              Pendiente de aprobación del asesor: <strong>{pendingApprovals}</strong>. Producción puede avanzar en
-              paralelo, pero la entrega de cuerpos a Estampación queda bloqueada hasta aprobar ambos pasos.
+              Pendiente de aprobación del asesor: <strong>{pendingApprovals}</strong>. Solo puedes entregar hasta{" "}
+              {SAMPLE_MAX_UNITS} uds con <strong>Entregar muestra</strong>; la entrega completa de cuerpos se habilita
+              cuando el asesor apruebe tamaño y tinta/gel. Producción puede avanzar en paralelo.
             </div>
           )}
+
 
           {!isDelivered && (
             kind === "detal" ? (
@@ -848,6 +873,15 @@ const WholesaleOrdersInbox = () => {
                     onClick={() => openDeliver(o, "estampacion")}>
                     <Paintbrush className="h-3.5 w-3.5" /> Salir kit
                   </Button>
+                  {sampleBlocked && (
+                    <Button size="sm" variant="secondary" className="flex-1 min-w-[150px] gap-1.5"
+                      disabled={!markable}
+                      title={`Entrega hasta ${SAMPLE_MAX_UNITS} uds solo para hacer la muestra`}
+                      onClick={() => openDeliver(o, "muestra")}>
+                      <Paintbrush className="h-3.5 w-3.5" /> Entregar muestra
+                    </Button>
+                  )}
+
                   <Button size="sm" variant="outline" className="gap-1.5"
                     title="Quitar de la bandeja"
                     onClick={() => setConfirmArchive({ id: o.id, clientName: o.client_name })}>
@@ -870,6 +904,14 @@ const WholesaleOrdersInbox = () => {
                   title={sampleTitle ?? (enough ? "Enviar cuerpos a Estampación" : "No hay inventario suficiente: solicita producción")}>
                   <Paintbrush className="h-3.5 w-3.5" /> Enviar a Estampación
                 </Button>
+                {sampleBlocked && (
+                  <Button size="sm" variant="secondary" className="flex-1 min-w-[150px] gap-1.5"
+                    disabled={(stock ?? 0) < 1 && !producedReady}
+                    title={`Entrega hasta ${SAMPLE_MAX_UNITS} uds solo para hacer la muestra de tamaño y tinta/gel`}
+                    onClick={() => openDeliver(o, "muestra")}>
+                    <Paintbrush className="h-3.5 w-3.5" /> Entregar muestra
+                  </Button>
+                )}
                 {!enough && (
                   <Button size="sm" variant="default" className="flex-1 min-w-[150px] gap-1.5"
                     onClick={() => openDeliver(o, "produccion")}
@@ -1063,6 +1105,8 @@ const WholesaleOrdersInbox = () => {
             <DialogTitle>
               {isSweatspotKit
                 ? "Entregar Kit a Estampación"
+                : delivering?.target === "muestra"
+                ? "Entregar unidades para la muestra"
                 : delivering?.target === "produccion"
                 ? "Solicitar producción de cuerpos"
                 : delivering?.target === "terminado"
@@ -1073,6 +1117,8 @@ const WholesaleOrdersInbox = () => {
             </DialogTitle>
             <DialogDescription>
               {delivering && `${delivering.order.product} — Pedido de ${delivering.order.client_name}`}
+              {delivering?.target === "muestra" &&
+                ` · Máximo ${SAMPLE_MAX_UNITS} uds hasta que el asesor apruebe tamaño y tinta/gel.`}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -1211,17 +1257,29 @@ const WholesaleOrdersInbox = () => {
               </div>
             ) : (
               <div>
-                <Label>{delivering?.target === "produccion" ? "Cantidad a producir" : "Cantidad a enviar"}</Label>
+                <Label>
+                  {delivering?.target === "produccion"
+                    ? "Cantidad a producir"
+                    : delivering?.target === "muestra"
+                    ? "Unidades para la muestra"
+                    : "Cantidad a enviar"}
+                </Label>
                 <Input
                   type="number"
                   value={qty}
                   onChange={(e) => setQty(e.target.value)}
                   min="1"
+                  max={delivering?.target === "muestra" ? SAMPLE_MAX_UNITS : undefined}
                   readOnly={delivering?.target === "produccion"}
                 />
                 {delivering?.target === "produccion" && (
                   <p className="text-[11px] text-muted-foreground mt-1">
                     La orden se crea automáticamente con la referencia y la cantidad del pedido.
+                  </p>
+                )}
+                {delivering?.target === "muestra" && (
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Estas unidades son solo para hacer la muestra; no cuentan como entrega del pedido.
                   </p>
                 )}
               </div>
