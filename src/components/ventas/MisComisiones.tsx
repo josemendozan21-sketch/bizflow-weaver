@@ -25,24 +25,27 @@ import { Loader2, Info, TrendingUp, Clock, CheckCircle2, ChevronLeft, ChevronRig
 import { CommissionExpandButton } from "@/components/commissions/CommissionExpandButton";
 import { CommissionStatusBadge } from "@/components/commissions/CommissionStatusBadge";
 import { CommissionRulesLegend } from "@/components/commissions/CommissionRulesLegend";
-import { PeriodBridgeCard } from "@/components/commissions/PeriodBridgeCard";
+import { MonthAccrualCard } from "@/components/commissions/MonthAccrualCard";
 
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useOrders } from "@/hooks/useOrders";
 import { useAllOrderCharges } from "@/hooks/useOrderCharges";
+import { useAllOrderPayments } from "@/hooks/useOrderPayments";
 import { useAuth } from "@/contexts/AuthContext";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import {
   summarizeAdvisorProgress,
-  summarizePeriodBridge,
-  bridgeSummaryRows,
   BONUS_TIER_1_THRESHOLD,
   BONUS_TIER_1_AMOUNT,
   BONUS_TIER_2_THRESHOLD,
   BONUS_TIER_2_AMOUNT,
   UNLOCK_THRESHOLD,
 } from "@/lib/commissions";
+import {
+  summarizeMonthAccrual,
+  accrualSummaryRows,
+} from "@/lib/commissionAccrual";
 import {
   exportCommissionsCsv,
   exportCommissionsXlsx,
