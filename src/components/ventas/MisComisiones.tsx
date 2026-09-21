@@ -312,7 +312,7 @@ export default function MisComisiones() {
 
       </div>
 
-      <PeriodBridgeCard bridge={bridge} />
+      <MonthAccrualCard summary={accrual} />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
