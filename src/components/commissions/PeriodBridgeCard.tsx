@@ -54,7 +54,7 @@ export function PeriodBridgeCard({
   const equal = Math.abs(soldInMonth.total - settledInMonth.total) < 1;
 
   return (
-    <Card className="border-primary/20">
+    <Card className="border-primary/20" data-testid="period-bridge">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm flex items-center gap-2">
           <ArrowLeftRight className="h-4 w-4" /> Las dos cifras del mes
