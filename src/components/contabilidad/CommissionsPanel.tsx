@@ -32,13 +32,16 @@ import { ChevronDown, Info, TrendingUp, AlertCircle, Download } from "lucide-rea
 import { CommissionExpandButton } from "@/components/commissions/CommissionExpandButton";
 import { CommissionStatusBadge } from "@/components/commissions/CommissionStatusBadge";
 import { CommissionRulesLegend } from "@/components/commissions/CommissionRulesLegend";
-import { PeriodBridgeCard } from "@/components/commissions/PeriodBridgeCard";
+import { MonthAccrualCard } from "@/components/commissions/MonthAccrualCard";
 import type { Order } from "@/hooks/useOrders";
 import { useAllOrderCharges } from "@/hooks/useOrderCharges";
+import { useAllOrderPayments } from "@/hooks/useOrderPayments";
+import {
+  summarizeMonthAccrualByAdvisor,
+  accrualSummaryRows,
+} from "@/lib/commissionAccrual";
 import {
   summarizeAdvisorMonth,
-  summarizePeriodBridges,
-  bridgeSummaryRows,
   type OrderOverrides,
   type PaymentMode,
   type AdvisorMonthSummary,
