@@ -484,7 +484,11 @@ const WholesaleOrdersInbox = () => {
 
   const openDeliver = (order: MayorOrder, target: Target) => {
     setDelivering({ order, target });
-    setQty(String(order.quantity));
+    setQty(
+      target === "muestra"
+        ? String(Math.max(1, Math.min(2, Number(order.quantity) || 1)))
+        : String(order.quantity)
+    );
     setObs("");
     setPartialQty("");
     setPlastico("frio");
