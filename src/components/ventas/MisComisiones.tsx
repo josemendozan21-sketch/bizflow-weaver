@@ -185,9 +185,10 @@ export default function MisComisiones() {
       { Concepto: "Periodo", Valor: `${MONTHS[month]} ${year}` },
       {
         Concepto: "Criterio del período",
-        Valor: "Fecha de factura (si no hay factura, fecha de venta)",
+        Valor:
+          "Venta por fecha del pedido; comisión causada por fecha de cada abono y pagada con el pedido completo",
       },
-      ...bridgeSummaryRows(bridge),
+      ...accrualSummaryRows(accrual),
       { Concepto: "Pedidos del período", Valor: summary.ordersCount },
       {
         Concepto: "Flete y cargos excluidos de la base",
