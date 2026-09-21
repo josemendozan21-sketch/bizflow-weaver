@@ -873,6 +873,15 @@ const WholesaleOrdersInbox = () => {
                     onClick={() => openDeliver(o, "estampacion")}>
                     <Paintbrush className="h-3.5 w-3.5" /> Salir kit
                   </Button>
+                  {sampleBlocked && (
+                    <Button size="sm" variant="secondary" className="flex-1 min-w-[150px] gap-1.5"
+                      disabled={!markable}
+                      title={`Entrega hasta ${SAMPLE_MAX_UNITS} uds solo para hacer la muestra`}
+                      onClick={() => openDeliver(o, "muestra")}>
+                      <Paintbrush className="h-3.5 w-3.5" /> Entregar muestra
+                    </Button>
+                  )}
+
                   <Button size="sm" variant="outline" className="gap-1.5"
                     title="Quitar de la bandeja"
                     onClick={() => setConfirmArchive({ id: o.id, clientName: o.client_name })}>
