@@ -639,12 +639,13 @@ const WholesaleOrdersInbox = () => {
       if (error) { toast.error(error.message); return; }
       toast.success(`Entregado a Logística (${lineRows.length} ${lineRows.length === 1 ? "ítem" : "ítems"}).`);
     } else {
-      const cat = target === "estampacion" ? "cuerpos_referencias" : "producto_terminado";
-      const isSweatspotMarkable = target === "terminado" && order.brand === "sweatspot";
-      const item = isSweatspotMarkable
+      const isSample = target === "muestra";
+      const cat = target === "estampacion" || isSample ? "cuerpos_referencias" : "producto_terminado";
+      const useMarkable = order.brand === "sweatspot" && (target === "terminado" || isSample);
+      const item = useMarkable
         ? findSweatspotMarkableStock(order)
         : findStockItem(order, cat);
-      if (isSweatspotMarkable && !item) {
+      if (useMarkable && !item) {
         setBusy(false);
         toast.error("No hay termos SIN LOGO que coincidan con color y tamaño. Usa Salir kit.");
         return;
@@ -656,23 +657,32 @@ const WholesaleOrdersInbox = () => {
           order: order as unknown as FlowOrder,
           stockItemId: item?.id ?? null,
           itemName: item?.name ?? order.product,
-          category: cat,
+          category: useMarkable ? (item?.category ?? cat) : cat,
           quantity,
           userId: user.id,
           userName: user.email,
-          note: obs || undefined,
+          note: isSample
+            ? `MUESTRA de tamaño y tinta/gel${obs ? ` — ${obs}` : ""}`
+            : obs || undefined,
         });
-        await ensureProductionOrder(order as unknown as FlowOrder, { needsCuerpos: false });
+        await ensureProductionOrder(order as unknown as FlowOrder, {
+          needsCuerpos: false,
+          sampleOnly: isSample,
+        });
       } catch (e: any) {
         setBusy(false);
         toast.error(e.message);
         return;
       }
       setBusy(false);
-      toast.success(`${quantity} uds enviadas a ${TARGET_LABEL.estampacion}.`);
+      toast.success(
+        isSample
+          ? `${quantity} uds entregadas para la muestra. La entrega del resto se habilita cuando el asesor apruebe tamaño y tinta/gel.`
+          : `${quantity} uds enviadas a ${TARGET_LABEL.estampacion}.`
+      );
     }
 
-    if (target !== "produccion") {
+    if (target !== "produccion" && target !== "muestra") {
       const totalUnits = target === "logistica" && lineRows.length > 0
         ? lineRows.reduce((sum, r) => sum + (Number(r.qty) || 0), 0)
         : quantity;
@@ -685,6 +695,7 @@ const WholesaleOrdersInbox = () => {
         }
       }
     }
+
 
     setDelivering(null);
     qc.invalidateQueries({ queryKey: ["orders"] });
