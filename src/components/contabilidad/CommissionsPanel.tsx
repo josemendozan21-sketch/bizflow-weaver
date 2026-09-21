@@ -309,8 +309,8 @@ export default function CommissionsPanel({ orders }: Props) {
 
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {bridges[a.advisorId] && (
-                    <PeriodBridgeCard bridge={bridges[a.advisorId]} compact />
+                  {accruals[a.advisorId] && (
+                    <MonthAccrualCard summary={accruals[a.advisorId]} compact />
                   )}
                   {/* KPIs */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
