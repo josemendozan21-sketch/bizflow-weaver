@@ -67,14 +67,18 @@ const ACTIVE_STATUSES = [
 // no debe aparecer en la bandeja de reserva/despacho.
 const INBOX_PENDING_STATUSES = ["pendiente", "diseno"];
 
-type Target = "estampacion" | "produccion" | "logistica" | "terminado";
+type Target = "estampacion" | "produccion" | "logistica" | "terminado" | "muestra";
 
 const TARGET_LABEL: Record<Target, string> = {
   estampacion: "Estampación",
   produccion: "Producción",
   logistica: "Logística",
   terminado: "Logística (producto terminado)",
+  muestra: "Estampación (muestra)",
 };
+
+/** Máximo de unidades que Inventarios puede entregar para hacer la muestra. */
+const SAMPLE_MAX_UNITS = 5;
 
 type BandejaTab = "mayor" | "detal" | "entregados";
 
