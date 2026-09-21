@@ -119,9 +119,10 @@ export default function CommissionsPanel({ orders }: Props) {
         { Concepto: "Periodo", Valor: `${MONTHS[month]} ${year}` },
         {
           Concepto: "Criterio del período",
-          Valor: "Fecha de factura (si no hay factura, fecha de venta)",
+          Valor:
+            "Venta por fecha del pedido; comisión causada por fecha de cada abono y pagada con el pedido completo",
         },
-        ...(bridges[a.advisorId] ? bridgeSummaryRows(bridges[a.advisorId]) : []),
+        ...(accruals[a.advisorId] ? accrualSummaryRows(accruals[a.advisorId]) : []),
         { Concepto: "Pedidos del período", Valor: a.grossOrdersCount },
         { Concepto: "Ventas totales (con IVA)", Valor: Math.round(a.grossSalesWithVat) },
         { Concepto: "Pedidos considerados", Valor: a.ordersCount },
