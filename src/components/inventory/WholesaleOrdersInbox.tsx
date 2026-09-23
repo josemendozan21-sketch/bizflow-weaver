@@ -899,7 +899,7 @@ const WholesaleOrdersInbox = () => {
               </div>
             ) : (
               <>
-              {!enough && (
+              {!enough && !isInProduction && (
                 <div className="text-xs rounded border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-2 text-amber-900 dark:text-amber-200">
                   Inventario insuficiente ({stock ?? 0} / {o.quantity}) — usa <strong>Solicitar Producción</strong> para
                   los faltantes. Mientras no lo hagas, el pedido no llega a Producción ni a Estampación.
@@ -920,7 +920,7 @@ const WholesaleOrdersInbox = () => {
                     <Paintbrush className="h-3.5 w-3.5" /> Entregar muestra
                   </Button>
                 )}
-                {!enough && (
+                {!enough && !isInProduction && (
                   <Button size="sm" variant="default" className="flex-1 min-w-[150px] gap-1.5"
                     onClick={() => openDeliver(o, "produccion")}
                     title="El sistema crea la orden de producción con la referencia y cantidad del pedido">
