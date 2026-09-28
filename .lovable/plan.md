@@ -1,25 +1,26 @@
-# Fotos de producto finalizado: varias por pedido y por línea
+# Fotos de producto finalizado: una por cada producto/color del pedido
 
 ## Qué encontré
 
-Cuando Producción/Empaque finaliza un pedido, el diálogo de finalización (`CompletionDialog`) permite subir **una sola foto** y se guarda en `production_orders.finished_photo_url` (una foto por línea de pedido). Además, la tarjeta del asesor en Mis Pedidos (`MisPedidos.tsx`, línea 644) solo muestra `completionInfos[0]`: la primera foto de la primera línea. Por eso en pedidos de dos productos (gafas + flores) o dos colores, Pilar solo ve una foto.
+Al finalizar, el diálogo de "Producto finalizado" permite subir una sola foto, que queda guardada en la línea que se finaliza. Además, la tarjeta del asesor en Mis Pedidos solo muestra la foto de la primera línea. Por eso, en un pedido de gafas + flores o de dos colores, Pilar solo ve una foto.
 
 ## Qué se va a hacer
 
-1. **Subir varias fotos al finalizar:** en el diálogo de "Producto finalizado" se podrán adjuntar varias fotos (no solo una), con vista previa y opción de quitar alguna antes de confirmar. Se guardan todas en la orden de producción.
-2. **La tarjeta del asesor muestra todas las fotos de todas las líneas:** en vez de solo la primera, se muestra una mini-galería con cada foto, indicando a qué producto/color corresponde (nombre de la línea), más quién empacó y el conteo de cada línea. Cada foto se puede abrir en grande.
-3. **Sin cambios de flujo:** Producción sigue finalizando igual; solo gana la opción de adjuntar más fotos. Las fotos ya subidas en pedidos anteriores se siguen mostrando.
+1. **Una foto obligatoria por cada producto o color:** al finalizar, el diálogo muestra una casilla de foto por cada línea del pedido (por ejemplo "Gafas grandes (Frío) · 50 uds" y "Flor (Frío) · 50 uds"). Si el pedido tiene 2 productos o colores, se piden 2 fotos; si tiene 3, se piden 3. No deja confirmar hasta subirlas todas. Funciona igual que las fotos de muestra para aprobación del asesor.
+2. **Conteo por línea:** cada casilla lleva su propio conteo final, y quien empacó se registra una sola vez.
+3. **La tarjeta del asesor muestra todas las fotos:** una foto por producto o color, cada una con su nombre, su conteo y quién empacó. Cada foto se abre en grande.
+4. **Pedidos anteriores:** las fotos que ya se subieron se siguen viendo igual.
 
 ## Detalles técnicos
 
-- Migración: agregar `finished_photo_urls text[]` a `production_orders` (o tabla hija `production_order_photos` con `production_order_id`, `photo_url`, `created_at`); backfill desde `finished_photo_url` para no perder lo existente. Mantener `finished_photo_url` como la primera foto por compatibilidad.
-- `src/components/production/CompletionDialog.tsx`: input de archivos múltiple, previews, subida secuencial al bucket existente, `onConfirm` recibe `photoUrls: string[]`.
-- `src/hooks/useProductionOrders.ts` (`completionData`): guardar arreglo de fotos; registrar cada foto en el historial como hoy.
-- `src/components/ventas/MisPedidos.tsx`: `completionInfos` ya agrupa por línea; reemplazar el render de `completionInfos[0]` por un mapeo de todas las líneas y todas sus fotos, con etiqueta de producto/color por línea.
+- No hay cambios en la base de datos: cada línea ya tiene su propia orden de producción con `finished_photo_url`, `packager_name` y `final_count`.
+- `CompletionDialog.tsx`: recibe las líneas hermanas del pedido (mismo `order_group`, con el mismo helper que usa la tarjeta de aprobación de muestras). Muestra un campo de foto y de conteo por línea, todos obligatorios, y `onConfirm` devuelve `{ orderId, photoUrl, finalCount }[]` más `packagerName`.
+- `useProductionOrders.ts`: guarda la foto de cada línea en su propia orden de producción. Solo avanza la etapa de la línea que se está finalizando; las demás solo reciben la foto y el conteo si todavía no los tienen.
+- `MisPedidos.tsx` (línea ~644): recorre `completionInfos` completo en lugar de mostrar solo `[0]`, con la etiqueta de producto y color de cada línea.
 
 ## Verificación
 
-- Finalizar un pedido de prueba con 3 fotos y confirmar que la tarjeta del asesor muestra las 3.
-- Pedido de dos líneas (dos colores): cada línea con su foto, todas visibles en la tarjeta.
-- Pedido antiguo con una sola foto: sigue mostrándose igual.
-- Typecheck.
+- Pedido de 2 productos: el diálogo pide 2 fotos, bloquea si falta una y el asesor ve las 2.
+- Pedido de 2 colores: igual, una foto por color.
+- Pedido de una sola línea: sigue pidiendo 1 foto.
+- Pedido antiguo: la foto existente sigue visible. Revisión de tipos.
