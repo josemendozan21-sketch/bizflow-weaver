@@ -60,7 +60,7 @@ export function CompletionDialog({ open, onClose, order, onConfirm }: Completion
     },
   });
 
-  const { data: ctxMap } = useOrderLineContext(open && currentPo?.order_id ? [currentPo.order_id] : []);
+  const { contextById: ctxMap } = useOrderLineContext(open && currentPo?.order_id ? [currentPo.order_id] : []);
   const ctx = currentPo?.order_id ? (ctxMap as any)?.[currentPo.order_id] : undefined;
   const lineIds: string[] = ctx?.lines?.map((l: any) => l.orderId) ?? [];
 
