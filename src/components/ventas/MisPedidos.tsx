@@ -509,8 +509,15 @@ function OrderGroupCard({
 
   // Foto(s) de producto finalizado para cualquier línea del grupo
   const completionInfos = group.items
-    .map((it) => completionMap.get(it.id))
-    .filter((c): c is { photoUrl: string | null; packagerName: string | null; finalCount: number | null } => !!c);
+    .map((it) => {
+      const c = completionMap.get(it.id);
+      if (!c) return null;
+      const label = [it.product, it.gel_color ? `Gel ${it.gel_color}` : null, it.silicone_color ? `Silicona ${it.silicone_color}` : null]
+        .filter(Boolean)
+        .join(" · ");
+      return { ...c, label };
+    })
+    .filter((c): c is { photoUrl: string | null; packagerName: string | null; finalCount: number | null; label: string } => !!c);
 
   const creditItems = group.items.filter((it) => it.is_credit);
   const hasCredit = creditItems.length > 0;
@@ -641,28 +648,42 @@ function OrderGroupCard({
         <StampingByProduct items={group.items} stampingMap={stampingMap} />
 
         {/* Foto(s) producto finalizado */}
-        {completionInfos.length > 0 && completionInfos[0].photoUrl && (
+        {completionInfos.some((c) => c.photoUrl) && (
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2">
             <div className="flex items-center gap-2 text-sm font-medium text-foreground">
               <Camera className="h-4 w-4 text-primary" />
               Producto finalizado
+              {completionInfos.length > 1 && (
+                <span className="text-xs text-muted-foreground font-normal">
+                  ({completionInfos.filter((c) => c.photoUrl).length} de {group.items.length} fotos)
+                </span>
+              )}
             </div>
-            <a href={completionInfos[0].photoUrl} target="_blank" rel="noopener noreferrer">
-              <img src={completionInfos[0].photoUrl} alt="Producto finalizado" className="rounded-md max-h-48 w-full object-cover cursor-pointer hover:opacity-90 transition-opacity" />
-            </a>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              {completionInfos[0].packagerName && (
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <User className="h-3 w-3" />
-                  Empacó: <span className="font-medium text-foreground">{completionInfos[0].packagerName}</span>
+            <div className={completionInfos.length > 1 ? "grid grid-cols-1 sm:grid-cols-2 gap-3" : ""}>
+              {completionInfos.filter((c) => c.photoUrl).map((c, i) => (
+                <div key={i} className="space-y-1">
+                  {isMultiLine && c.label && (
+                    <div className="text-xs font-medium text-foreground truncate">{c.label}</div>
+                  )}
+                  <a href={c.photoUrl!} target="_blank" rel="noopener noreferrer">
+                    <img src={c.photoUrl!} alt={c.label || "Producto finalizado"} className="rounded-md max-h-48 w-full object-cover cursor-pointer hover:opacity-90 transition-opacity" />
+                  </a>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                    {c.packagerName && (
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <User className="h-3 w-3" />
+                        Empacó: <span className="font-medium text-foreground">{c.packagerName}</span>
+                      </div>
+                    )}
+                    {c.finalCount && (
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <Package className="h-3 w-3" />
+                        Conteo: <span className="font-medium text-foreground">{c.finalCount} uds</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
-              {completionInfos[0].finalCount && (
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <Package className="h-3 w-3" />
-                  Conteo: <span className="font-medium text-foreground">{completionInfos[0].finalCount} uds</span>
-                </div>
-              )}
+              ))}
             </div>
           </div>
         )}
