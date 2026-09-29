@@ -28,6 +28,7 @@ import { matchesQuery } from "@/lib/search";
 import { useOrderCharges } from "@/hooks/useOrderCharges";
 import OrderChargesEditor from "./OrderChargesEditor";
 import OrderChangeLogPanel from "./OrderChangeLogPanel";
+import { AddLogoToOrder } from "./AddLogoToOrder";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import DeliveryProgressBadge from "@/components/common/DeliveryProgressBadge";
 
@@ -1172,6 +1173,10 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
             <p><strong>Tipo:</strong> {order.sale_type === "mayor" ? "Al por mayor" : "Al por menor"}</p>
             <p><strong>Etapa actual:</strong> {PRODUCTION_STATUS_LABELS[order.production_status] || order.production_status}</p>
           </div>
+
+          {!isLocked && order.sale_type === "mayor" && !order.logo_url && ((order as any).logo_count ?? 0) === 0 && (
+            <AddLogoToOrder order={order} onDone={() => setOpen(false)} />
+          )}
 
           {isLocked && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 flex gap-2">
