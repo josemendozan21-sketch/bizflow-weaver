@@ -752,9 +752,12 @@ const WholesaleOrdersInbox = () => {
     const sizeApproved = isApprovedStep(approval?.size);
     const inkgelApproved = isApprovedStep(approval?.inkgel);
     const noLogo = !o.logo_url && (o.logo_source === "sin_logo" || !o.logo_source);
-    const sampleApproved = noLogo || (sizeApproved && inkgelApproved);
+    // Sin logo no hay muestra de tamaño, pero sí de color de gel / escarcha.
+    const sampleApproved = noLogo ? inkgelApproved : sizeApproved && inkgelApproved;
     const sampleBlocked = kind === "mayor" && !sampleApproved;
-    const pendingApprovals = [!sizeApproved ? "tamaño" : null, !inkgelApproved ? "tinta/gel" : null].filter(Boolean).join(" y ");
+    const pendingApprovals = noLogo
+      ? !inkgelApproved ? "color de gel/escarcha" : ""
+      : [!sizeApproved ? "tamaño" : null, !inkgelApproved ? "tinta/gel" : null].filter(Boolean).join(" y ");
     const sampleTitle = sampleBlocked ? `Esperando aprobación del asesor: ${pendingApprovals}` : undefined;
     const SAMPLE_LABEL: Record<string, string> = {
       pendiente_muestra: "Pendiente de muestra",

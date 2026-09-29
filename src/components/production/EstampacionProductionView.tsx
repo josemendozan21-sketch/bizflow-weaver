@@ -140,6 +140,11 @@ export const EstampacionProductionView = () => {
   // Incluye los que están en producción de cuerpos para poder adelantar la muestra, y
   // los que ya avanzaron con la estampación finalizada (para que no desaparezcan sin rastro).
   const belongsToStamping = (o: ProductionOrder) => {
+    // Pedido al por mayor sin logo: igual necesita muestra de color de gel / escarcha.
+    const colorSamplePending =
+      !o.logo_file && o.stamp_size_status === "aprobado" &&
+      !["aprobado", "finalizado"].includes(o.stamp_inkgel_status ?? "");
+    if (colorSamplePending) return true;
     const stages = normalizeStages(o as any);
     return stages.includes("estampacion") || o.current_stage === "estampacion";
   };
@@ -674,15 +679,19 @@ function EstampacionOrderCard({
   const canStartProcess = logoApproved || !hasLogo;
   const isInProcess = !readOnly && order.stage_status === "en_proceso";
 
+  // Pedido sin logo: solo muestra de color de gel / escarcha (tamaño no aplica).
+  const colorOnly = !readOnly && !order.logo_file;
+  const canUpload = isInProcess || colorOnly;
+
   // Step 1: Size approval needed
   const needsSizeUpload = isInProcess && sizeStatus === "pendiente" && !order.stamp_size_photo_url;
   const sizeWaitingApproval = isInProcess && sizeStatus === "pendiente" && !!order.stamp_size_photo_url;
-  const sizeApproved = sizeStatus === "aprobado";
+  const sizeApproved = sizeStatus === "aprobado" || sizeStatus === "finalizado";
   const sizeRejected = sizeStatus === "rechazado";
 
   // Step 2: Ink/gel approval needed (only after size is approved)
-  const needsInkgelUpload = isInProcess && sizeApproved && inkgelStatus === "pendiente" && !order.stamp_inkgel_photo_url;
-  const inkgelWaitingApproval = isInProcess && sizeApproved && inkgelStatus === "pendiente" && !!order.stamp_inkgel_photo_url;
+  const needsInkgelUpload = canUpload && sizeApproved && inkgelStatus === "pendiente" && !order.stamp_inkgel_photo_url;
+  const inkgelWaitingApproval = canUpload && sizeApproved && inkgelStatus === "pendiente" && !!order.stamp_inkgel_photo_url;
   const inkgelApproved = inkgelStatus === "aprobado";
   const inkgelRejected = inkgelStatus === "rechazado";
 
