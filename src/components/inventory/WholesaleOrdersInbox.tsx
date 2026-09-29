@@ -50,6 +50,8 @@ interface MayorOrder {
   is_recompra?: boolean | null;
   delivered_quantity?: number | null;
   sample_status?: string | null;
+  logo_url?: string | null;
+  logo_source?: string | null;
 }
 
 type SampleApprovalState = {
@@ -283,7 +285,7 @@ const WholesaleOrdersInbox = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id,order_code,line_index,line_count,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color,is_recompra,delivered_quantity,sample_status")
+        .select("id,order_code,line_index,line_count,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color,is_recompra,delivered_quantity,sample_status,logo_url,logo_source")
         .eq("sale_type", "mayor")
         .gte("created_at", "2026-05-15")
         .order("created_at", { ascending: false });
@@ -298,7 +300,7 @@ const WholesaleOrdersInbox = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id,order_code,line_index,line_count,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color,is_recompra,delivered_quantity,sample_status")
+        .select("id,order_code,line_index,line_count,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color,is_recompra,delivered_quantity,sample_status,logo_url,logo_source")
         .in("sale_type", ["menor", "detal"])
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -749,7 +751,8 @@ const WholesaleOrdersInbox = () => {
     const isApprovedStep = (status?: string) => status === "aprobado" || status === "finalizado";
     const sizeApproved = isApprovedStep(approval?.size);
     const inkgelApproved = isApprovedStep(approval?.inkgel);
-    const sampleApproved = sizeApproved && inkgelApproved;
+    const noLogo = !o.logo_url && (o.logo_source === "sin_logo" || !o.logo_source);
+    const sampleApproved = noLogo || (sizeApproved && inkgelApproved);
     const sampleBlocked = kind === "mayor" && !sampleApproved;
     const pendingApprovals = [!sizeApproved ? "tamaño" : null, !inkgelApproved ? "tinta/gel" : null].filter(Boolean).join(" y ");
     const sampleTitle = sampleBlocked ? `Esperando aprobación del asesor: ${pendingApprovals}` : undefined;
@@ -782,7 +785,7 @@ const WholesaleOrdersInbox = () => {
                     ? <Badge variant="destructive">Esperando ruteo · {age} días</Badge>
                     : <Badge variant="outline" className="border-amber-500 text-amber-600">Esperando ruteo · {age} días</Badge>;
                 })()}
-                {kind === "mayor" && o.sample_status && o.sample_status !== "muestra_aprobada" && (
+                {kind === "mayor" && !noLogo && o.sample_status && o.sample_status !== "muestra_aprobada" && (
                   <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800">
                     {SAMPLE_LABEL[o.sample_status] ?? o.sample_status}
                   </Badge>
