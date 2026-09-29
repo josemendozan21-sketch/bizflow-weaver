@@ -43,6 +43,13 @@
       "when": 1789680820257,
       "tag": "0005_fix_ajuste_movement_no_double_discount",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790704787093,
+      "tag": "0006_no_logo_orders_need_color_sample",
+      "breakpoints": true
     }
   ]
 }
