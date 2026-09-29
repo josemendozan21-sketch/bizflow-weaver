@@ -85,7 +85,7 @@ export function AddLogoToOrder({ order, onDone }: { order: any; onDone?: () => v
             ...(moveBack ? { current_stage: "estampacion", stage_status: "pendiente" } : {}),
           } as any)
           .eq("id", po.id);
-        if (moveBack) await supabase.from("orders").update({ production_status: "estampacion" }).eq("id", order.id);
+        if (moveBack || po.current_stage === "estampacion") await supabase.from("orders").update({ production_status: "estampacion" }).eq("id", order.id);
       }
 
       await supabase.from("notifications").insert([
