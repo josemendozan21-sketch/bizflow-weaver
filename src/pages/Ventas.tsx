@@ -1264,15 +1264,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           abonoAsignado += abonoAmount;
         }
       }
-      const matchedConfig = getMatchedConfig(line.product, line.type);
-
-      // Discount gel
-      const gelResult = await discountStockDB("gel", quantity * (matchedConfig?.gramsPerUnit || 60));
-      if (gelResult.success) {
-        console.log("[Ventas] Gel discount:", gelResult.message);
-      } else {
-        toast.warning("Inventario de gel", { description: gelResult.message });
-      }
+      // Mezcla Gel ya no se descuenta al guardar el pedido: Inventarios registra
+      // la salida real de cada bolsa desde "Entradas y salidas".
 
       // Accounting store
       useAccountingStore.getState().addOrder({
