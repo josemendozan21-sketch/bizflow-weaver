@@ -747,7 +747,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   );
 
   const materialConfigs = useInventoryStore((s) => s.materialConfigs);
-  const { reserveBodyStock: reserveBodyStockDB, discountStock: discountStockDB, stockItems: inventoryStockItems } = useInventory();
+  const { reserveBodyStock: reserveBodyStockDB, stockItems: inventoryStockItems } = useInventory();
 
   // Catálogo unificado de referencias (misma fuente que Inventarios)
   const magicalCatalog = useMemo(
