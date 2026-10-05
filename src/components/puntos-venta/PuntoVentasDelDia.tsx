@@ -1,3 +1,4 @@
+import { formatSalePayment } from "@/lib/pettyCash";
 import { useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -214,7 +215,7 @@ export function PuntoVentasDelDia({ sales, location, locationId }: Props) {
                           {its.map((i) => `${i.quantity}× ${i.product_name}`).join(", ")}
                         </td>
                         <td className="text-right font-medium">${Number(s.total_amount).toLocaleString()}</td>
-                        <td className="text-xs">{s.payment_method ?? "—"}</td>
+                        <td className="text-xs">{formatSalePayment(s)}</td>
                         <td className="text-xs">
                           <input
                             ref={(el) => { inputsRef.current[s.id] = el; }}

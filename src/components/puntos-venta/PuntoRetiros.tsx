@@ -17,7 +17,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { openSignedUrl } from "@/lib/signedUrl";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { computePosCash, isCashMethod } from "@/lib/pettyCash";
+import { computePosCash, saleAmountFor } from "@/lib/pettyCash";
 import {
   useSedePettyExpenses,
   useSedeCashCounts,
@@ -53,7 +53,6 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
   const [countNotes, setCountNotes] = useState("");
 
   const today = new Date().toISOString().slice(0, 10);
-  const isCash = isCashMethod;
   const lastCount = counts[0] ?? null;
   const cash = computePosCash({
     cashBase,
@@ -63,8 +62,8 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
     expenses: posExpenses,
   });
   const cashSalesToday = sales
-    .filter((s) => s.sale_date.slice(0, 10) === today && isCash(s.payment_method))
-    .reduce((a, b) => a + Number(b.total_amount), 0);
+    .filter((s) => s.sale_date.slice(0, 10) === today)
+    .reduce((a, b) => a + saleAmountFor(b, "efectivo"), 0);
   const cashSalesAll = cash.cashSales;
   const approvedRetiros = cash.retiros;
   const approvedConsignaciones = cash.consignaciones;
@@ -80,8 +79,8 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
     dayMap.set(d, row);
   };
   sales
-    .filter((s) => isCash(s.payment_method) && after(s.sale_date))
-    .forEach((s) => bump(s.sale_date.slice(0, 10), "sales", Number(s.total_amount)));
+    .filter((s) => after(s.sale_date) && saleAmountFor(s, "efectivo") > 0)
+    .forEach((s) => bump(s.sale_date.slice(0, 10), "sales", saleAmountFor(s, "efectivo")));
   withdrawals
     .filter((w) => w.status !== "rechazado" && after(String(w.created_at)))
     .forEach((w) =>

@@ -203,7 +203,7 @@ export interface PosCashInput {
   cashBase: number;
   /** Último arqueo de la sede (efectivo contado y fecha), si existe. */
   lastCount?: { counted_amount: number; created_at: string } | null;
-  sales: { sale_date: string; payment_method: string | null; total_amount: number }[];
+  sales: { sale_date: string; payment_method: string | null; total_amount: number; payment_breakdown?: unknown }[];
   withdrawals: {
     created_at: string;
     amount: number;
@@ -217,6 +217,36 @@ export interface PosCashInput {
 export const isCashMethod = (m: string | null | undefined) =>
   (m ?? "").toLowerCase().split("+").some((p) => p.trim() === "efectivo");
 
+export type PaymentPart = { method: string; amount: number };
+type SaleLike = { payment_method: string | null; total_amount: number; payment_breakdown?: unknown };
+
+/** Partes del pago de una venta. Ventas antiguas sin desglose: todo al primer método. */
+export function salePaymentParts(s: SaleLike): PaymentPart[] {
+  const b = s.payment_breakdown;
+  if (Array.isArray(b) && b.length > 0) {
+    return b.map((p: any) => ({ method: String(p.method ?? "").toLowerCase(), amount: Number(p.amount) || 0 }));
+  }
+  const first = (s.payment_method ?? "").toLowerCase().split("+")[0]?.trim() ?? "";
+  return [{ method: first, amount: Number(s.total_amount) || 0 }];
+}
+
+/** Valor de la venta pagado con un método dado. */
+export const saleAmountFor = (s: SaleLike, method: string) =>
+  salePaymentParts(s).filter((p) => p.method === method).reduce((a, p) => a + p.amount, 0);
+
+const PAY_LABEL: Record<string, string> = {
+  efectivo: "Efectivo", tarjeta: "Tarjeta", nequi: "Nequi", bancolombia: "Bancolombia",
+  davivienda: "Davivienda", link_pago: "Link de pago", transferencia: "Transferencia", otro: "Otro",
+};
+/** Texto legible: "Nequi $80.000 + Efectivo $61.000" o "Tarjeta". */
+export function formatSalePayment(s: SaleLike): string {
+  const parts = salePaymentParts(s);
+  if (parts.length <= 1) return PAY_LABEL[parts[0]?.method] ?? s.payment_method ?? "—";
+  return parts
+    .map((p) => `${PAY_LABEL[p.method] ?? p.method} $${Math.round(p.amount).toLocaleString("es-CO")}`)
+    .join(" + ");
+}
+
 /**
  * Efectivo en caja del punto = último arqueo (o base) + ventas en efectivo posteriores
  * − retiros − consignaciones − gastos en efectivo. Los movimientos rechazados se ignoran;
@@ -229,8 +259,8 @@ export function computePosCash({ cashBase, lastCount, sales, withdrawals, expens
   const after = (d: string) => +new Date(d) > since;
 
   const cashSales = sales
-    .filter((s) => isCashMethod(s.payment_method) && after(s.sale_date))
-    .reduce((a, s) => a + Number(s.total_amount), 0);
+    .filter((s) => after(s.sale_date))
+    .reduce((a, s) => a + saleAmountFor(s, "efectivo"), 0);
 
   const live = withdrawals.filter((w) => w.status !== "rechazado" && after(w.created_at));
   const retiros = live

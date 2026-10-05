@@ -1,3 +1,4 @@
+import { formatSalePayment } from "@/lib/pettyCash";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { PosSale, PosSaleItem } from "@/hooks/usePuntosVenta";
@@ -85,7 +86,7 @@ export function buildSalePdf(opts: {
   endY += 22;
 
   doc.setFont("helvetica", "normal").setFontSize(10);
-  doc.text(`Método de pago: ${sale.payment_method ?? "—"}`, margin, endY); endY += 14;
+  doc.text(`Método de pago: ${formatSalePayment(sale)}`, margin, endY); endY += 14;
   doc.text(`Atendido por: ${sale.recorded_by_name ?? "—"}`, margin, endY); endY += 14;
   if (sale.notes) { doc.text(`Notas: ${sale.notes}`, margin, endY); endY += 14; }
 
