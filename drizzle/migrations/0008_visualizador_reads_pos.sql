@@ -1,0 +1,10 @@
+CREATE POLICY "Visualizador views pos_locations" ON public.pos_locations FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'visualizador'::app_role));
+CREATE POLICY "Visualizador views pos_products" ON public.pos_products FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'visualizador'::app_role));
+CREATE POLICY "Visualizador views pos_sales" ON public.pos_sales FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'visualizador'::app_role));
+CREATE POLICY "Visualizador views pos_sale_items" ON public.pos_sale_items FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'visualizador'::app_role));
+CREATE POLICY "Visualizador views pos_inventory_movements" ON public.pos_inventory_movements FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'visualizador'::app_role));
+CREATE POLICY "Visualizador views pos_calendar_events" ON public.pos_calendar_events FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'visualizador'::app_role));
+CREATE POLICY "Visualizador views pos_cash_withdrawals" ON public.pos_cash_withdrawals FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'visualizador'::app_role));
+CREATE POLICY "Visualizador views pos_location_assignments" ON public.pos_location_assignments FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'visualizador'::app_role));
+CREATE POLICY "Visualizador views pos_product_audit_log" ON public.pos_product_audit_log FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'visualizador'::app_role));
+CREATE POLICY "Visualizador views pos_sale_audit_log" ON public.pos_sale_audit_log FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'visualizador'::app_role));
