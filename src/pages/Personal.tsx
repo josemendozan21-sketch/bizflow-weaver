@@ -14,13 +14,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 
-type Area = "estampacion" | "produccion" | "logistica";
+type Area = "estampacion" | "produccion" | "logistica" | "punto_92";
 
 interface StaffMember {
   id: string;
   full_name: string;
   area: Area;
   active: boolean;
+  staff_role?: string | null;
 }
 
 interface AttendanceRow {
@@ -38,6 +39,7 @@ const AREA_LABEL: Record<Area, string> = {
   estampacion: "Estampación",
   produccion: "Producción",
   logistica: "Logística",
+  punto_92: "Punto 92 (Chico)",
 };
 
 // Meta semanal: 44h hasta el 14 de junio de 2026; 42h a partir del 15 de junio.
