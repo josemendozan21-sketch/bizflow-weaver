@@ -14,13 +14,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 
-type Area = "estampacion" | "produccion" | "logistica";
+type Area = "estampacion" | "produccion" | "logistica" | "punto_92";
 
 interface StaffMember {
   id: string;
   full_name: string;
   area: Area;
   active: boolean;
+  staff_role?: string | null;
 }
 
 interface AttendanceRow {
@@ -38,6 +39,7 @@ const AREA_LABEL: Record<Area, string> = {
   estampacion: "Estampación",
   produccion: "Producción",
   logistica: "Logística",
+  punto_92: "Punto 92 (Chico)",
 };
 
 // Meta semanal: 44h hasta el 14 de junio de 2026; 42h a partir del 15 de junio.
@@ -93,6 +95,7 @@ export default function Personal() {
     role === "produccion" ? "produccion" :
     role === "estampacion" ? "estampacion" :
     role === "logistica" ? "logistica" :
+    role === "pos_punto" ? "punto_92" :
     "produccion";
 
   const [area, setArea] = useState<Area>(defaultArea);
@@ -120,6 +123,7 @@ export default function Personal() {
               <TabsList>
                 <TabsTrigger value="estampacion">Estampación</TabsTrigger>
                 <TabsTrigger value="produccion">Producción</TabsTrigger>
+                <TabsTrigger value="punto_92">Punto 92 (Chico)</TabsTrigger>
                 <TabsTrigger value="logistica">Logística</TabsTrigger>
               </TabsList>
               <TabsContent value={area} className="mt-4">
@@ -184,12 +188,51 @@ function TodayMarking({ area }: { area: Area }) {
   const att = attendanceQuery.data ?? [];
 
   return (
-    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-      {staff.map((m) => {
-        const row = att.find((a) => a.staff_id === m.id) || null;
-        return <StaffCard key={m.id} member={m} attendance={row} onChange={refresh} />;
-      })}
+    <div className="space-y-3">
+      {area === "punto_92" && (
+        <AddOtherStaff onAdded={() => queryClient.invalidateQueries({ queryKey: ["staff_members", area] })} />
+      )}
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+        {staff.map((m) => {
+          const row = att.find((a) => a.staff_id === m.id) || null;
+          return <StaffCard key={m.id} member={m} attendance={row} onChange={refresh} />;
+        })}
+      </div>
     </div>
+  );
+}
+
+function AddOtherStaff({ onAdded }: { onAdded: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [first, setFirst] = useState("");
+  const [last, setLast] = useState("");
+  const [saving, setSaving] = useState(false);
+  const save = async () => {
+    const name = `${first.trim()} ${last.trim()}`.trim();
+    if (!first.trim() || !last.trim()) { toast.error("Escribe nombre y apellido"); return; }
+    setSaving(true);
+    const { error } = await supabase.from("staff_members").insert({
+      full_name: name, area: "punto_92", staff_role: "Reemplazo / otro",
+    });
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`${name} agregado`);
+    setFirst(""); setLast(""); setOpen(false); onAdded();
+  };
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm"><Users className="h-4 w-4 mr-1" />Otro: registrar mi nombre</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Registrar otra persona</DialogTitle></DialogHeader>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div><Label>Nombre</Label><Input value={first} onChange={(e) => setFirst(e.target.value)} /></div>
+          <div><Label>Apellido</Label><Input value={last} onChange={(e) => setLast(e.target.value)} /></div>
+        </div>
+        <Button onClick={save} disabled={saving}>Guardar</Button>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -210,7 +253,10 @@ function StaffCard({
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base">{member.full_name}</CardTitle>
+          <div className="min-w-0">
+            <CardTitle className="text-base">{member.full_name}</CardTitle>
+            {member.staff_role && <p className="text-xs text-muted-foreground">{member.staff_role}</p>}
+          </div>
           {hasCheckIn && !hasCheckOut && <Badge>Trabajando</Badge>}
           {hasCheckOut && <Badge variant="outline">Finalizó</Badge>}
           {!hasCheckIn && <Badge variant="secondary">Pendiente</Badge>}
@@ -590,7 +636,7 @@ function WeeklyReport() {
         </CardContent>
       </Card>
 
-      {(["estampacion", "produccion", "logistica"] as Area[]).map((area) => {
+      {(["estampacion", "produccion", "logistica", "punto_92"] as Area[]).map((area) => {
         const members = staff.filter((s) => s.area === area);
         if (members.length === 0) return null;
         return (
