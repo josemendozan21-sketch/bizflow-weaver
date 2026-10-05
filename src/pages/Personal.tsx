@@ -470,7 +470,7 @@ function ClockActionDialog({
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="flex gap-2">
+          {member.area !== "punto_92" && <div className="flex gap-2">
             <Button
               type="button"
               size="sm"
@@ -487,9 +487,9 @@ function ClockActionDialog({
             >
               <Upload className="h-3 w-3 mr-1" /> Subir archivo
             </Button>
-          </div>
+          </div>}
 
-          {mode === "camera" ? (
+          {mode === "camera" || member.area === "punto_92" ? (
             <div className="space-y-2">
               <Label>Captura desde la cámara *</Label>
               {!file ? (
