@@ -64,6 +64,13 @@
       "when": 1791226050597,
       "tag": "0008_visualizador_reads_pos",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791236756711,
+      "tag": "0009_pos_sales_payment_breakdown",
+      "breakpoints": true
     }
   ]
 }

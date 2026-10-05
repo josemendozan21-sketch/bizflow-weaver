@@ -3329,6 +3329,7 @@ export type Database = {
           location_id: string
           merchandise_photo_url: string | null
           notes: string | null
+          payment_breakdown: Json | null
           payment_method: string | null
           payment_proof_url: string | null
           recorded_by: string
@@ -3351,6 +3352,7 @@ export type Database = {
           location_id: string
           merchandise_photo_url?: string | null
           notes?: string | null
+          payment_breakdown?: Json | null
           payment_method?: string | null
           payment_proof_url?: string | null
           recorded_by: string
@@ -3373,6 +3375,7 @@ export type Database = {
           location_id?: string
           merchandise_photo_url?: string | null
           notes?: string | null
+          payment_breakdown?: Json | null
           payment_method?: string | null
           payment_proof_url?: string | null
           recorded_by?: string
