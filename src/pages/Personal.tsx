@@ -87,15 +87,20 @@ function hoursBetween(a: string | null, b: string | null) {
   return Math.max(0, (new Date(b).getTime() - new Date(a).getTime()) / 3600000);
 }
 
-export default function Personal() {
+export default function Personal({ initialArea, readOnly: readOnlyProp }: { initialArea?: Area; readOnly?: boolean } = {}) {
   const { role } = useAuth();
   const isAdmin = role === "admin";
+  const isViewer = role === "contabilidad" || role === "visualizador";
+  const canViewAll = isAdmin || isViewer;
+  const readOnly = readOnlyProp ?? isViewer;
 
   const defaultArea: Area =
+    initialArea ? initialArea :
     role === "produccion" ? "produccion" :
     role === "estampacion" ? "estampacion" :
     role === "logistica" ? "logistica" :
     role === "pos_punto" ? "punto_92" :
+    isViewer ? "punto_92" :
     "produccion";
 
   const [area, setArea] = useState<Area>(defaultArea);
@@ -114,28 +119,28 @@ export default function Personal() {
       <Tabs defaultValue="marcacion" className="space-y-4">
         <TabsList>
           <TabsTrigger value="marcacion">Marcación de hoy</TabsTrigger>
-          {isAdmin && <TabsTrigger value="reporte">Reporte semanal</TabsTrigger>}
+          {canViewAll && <TabsTrigger value="reporte">Reporte semanal</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="marcacion" className="space-y-4">
-          {isAdmin ? (
+          {canViewAll ? (
             <Tabs value={area} onValueChange={(v) => setArea(v as Area)}>
-              <TabsList>
+              <TabsList className="w-full justify-start overflow-x-auto overflow-y-hidden">
                 <TabsTrigger value="estampacion">Estampación</TabsTrigger>
                 <TabsTrigger value="produccion">Producción</TabsTrigger>
                 <TabsTrigger value="punto_92">Punto 92 (Chico)</TabsTrigger>
                 <TabsTrigger value="logistica">Logística</TabsTrigger>
               </TabsList>
               <TabsContent value={area} className="mt-4">
-                <TodayMarking area={area} />
+                <TodayMarking area={area} readOnly={readOnly} />
               </TabsContent>
             </Tabs>
           ) : (
-            <TodayMarking area={defaultArea} />
+            <TodayMarking area={defaultArea} readOnly={readOnly} />
           )}
         </TabsContent>
 
-        {isAdmin && (
+        {canViewAll && (
           <TabsContent value="reporte">
             <WeeklyReport />
           </TabsContent>
@@ -145,7 +150,7 @@ export default function Personal() {
   );
 }
 
-function TodayMarking({ area }: { area: Area }) {
+function TodayMarking({ area, readOnly = false }: { area: Area; readOnly?: boolean }) {
   const today = todayBogota();
   const queryClient = useQueryClient();
 
@@ -189,13 +194,17 @@ function TodayMarking({ area }: { area: Area }) {
 
   return (
     <div className="space-y-3">
-      {area === "punto_92" && (
+      {area === "punto_92" && !readOnly && (
         <AddOtherStaff onAdded={() => queryClient.invalidateQueries({ queryKey: ["staff_members", area] })} />
       )}
+      {readOnly && (
+        <p className="text-xs text-muted-foreground">Modo consulta: puedes ver las marcaciones, pero no registrar ingreso ni salida.</p>
+      )}
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+        {staff.length === 0 && <p className="text-sm text-muted-foreground">No hay personal registrado en esta sede.</p>}
         {staff.map((m) => {
           const row = att.find((a) => a.staff_id === m.id) || null;
-          return <StaffCard key={m.id} member={m} attendance={row} onChange={refresh} />;
+          return <StaffCard key={m.id} member={m} attendance={row} onChange={refresh} readOnly={readOnly} />;
         })}
       </div>
     </div>
@@ -240,10 +249,12 @@ function StaffCard({
   member,
   attendance,
   onChange,
+  readOnly = false,
 }: {
   member: StaffMember;
   attendance: AttendanceRow | null;
   onChange: () => void;
+  readOnly?: boolean;
 }) {
   const hasCheckIn = !!attendance?.check_in_at;
   const hasCheckOut = !!attendance?.check_out_at;
@@ -297,7 +308,7 @@ function StaffCard({
             <span>{attendance.notes}</span>
           </p>
         )}
-        <div className="flex gap-2">
+        {!readOnly && <div className="flex gap-2">
           {!hasCheckIn && (
             <ClockActionDialog
               type="in"
@@ -314,7 +325,7 @@ function StaffCard({
               onDone={onChange}
             />
           )}
-        </div>
+        </div>}
       </CardContent>
     </Card>
   );
