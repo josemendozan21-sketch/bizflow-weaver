@@ -50,6 +50,13 @@
       "when": 1790704787093,
       "tag": "0006_no_logo_orders_need_color_sample",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791213692673,
+      "tag": "0007_staff_punto_92",
+      "breakpoints": true
     }
   ]
 }

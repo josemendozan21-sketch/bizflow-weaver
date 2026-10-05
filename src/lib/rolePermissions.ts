@@ -14,7 +14,7 @@ const ROLE_ROUTES: Record<AppRole, string[]> = {
   logistica: ["/logistica", "/eventos", "/ferias", "/galeria", "/personal", "/documentos"],
   feria_pos: ["/feria-pos"],
   inventarios: ["/inventarios"],
-  pos_punto: ["/puntos-venta", "/clientes"],
+  pos_punto: ["/puntos-venta", "/clientes", "/personal"],
   community_manager: ["/redes", "/eventos"],
   visualizador: ["/", "/ventas", "/inventarios", "/diseno-logos", "/produccion", "/logistica", "/contabilidad", "/costos", "/eventos", "/ferias", "/galeria", "/feria-pos", "/presupuesto", "/puntos-venta", "/personal", "/documentos", "/clientes", "/redes"],
 };
@@ -31,7 +31,7 @@ const ROLE_EDIT_SECTIONS: Record<AppRole, string[]> = {
   logistica: ["/logistica", "/personal"],
   feria_pos: ["/feria-pos"],
   inventarios: ["/inventarios"],
-  pos_punto: ["/puntos-venta", "/clientes"],
+  pos_punto: ["/puntos-venta", "/clientes", "/personal"],
   community_manager: ["/redes"],
   visualizador: [],
 };
