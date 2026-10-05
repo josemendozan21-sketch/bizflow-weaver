@@ -97,7 +97,7 @@ export default function PuntosVenta() {
       )}
 
       <Tabs defaultValue={readOnly ? "reportes" : "vender"}>
-        <TabsList>
+        <TabsList className="w-full justify-start overflow-x-auto overflow-y-hidden">
           {!readOnly && (
             <TabsTrigger value="vender"><ShoppingCart className="h-4 w-4 mr-1" /> Vender</TabsTrigger>
           )}
