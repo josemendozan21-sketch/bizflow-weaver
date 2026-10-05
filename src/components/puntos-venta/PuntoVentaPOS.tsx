@@ -54,6 +54,11 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
   const [selectedSubReference, setSelectedSubReference] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState("");
+  const [splitOn, setSplitOn] = useState(false);
+  const [splitParts, setSplitParts] = useState<{ method: string; amount: string }[]>([
+    { method: "", amount: "" },
+    { method: "", amount: "" },
+  ]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [clientName, setClientName] = useState("");
   const [clientDoc, setClientDoc] = useState("");
@@ -293,13 +298,39 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
     }
   };
 
+  const splitClean = splitParts
+    .map((p) => ({ method: p.method, amount: Math.round(Number(p.amount) || 0) }))
+    .filter((p) => p.method || p.amount > 0);
+  const splitAssigned = splitClean.reduce((a, p) => a + p.amount, 0);
+  const splitMissing = Math.round(totalAfter) - splitAssigned;
+  const splitIssue =
+    splitClean.length < 2
+      ? "Agrega al menos dos métodos de pago"
+      : splitClean.some((p) => !p.method || p.amount <= 0)
+        ? "Cada línea de pago necesita método y valor"
+        : splitMissing !== 0
+          ? splitMissing > 0
+            ? `Falta asignar ${fmt(splitMissing)}`
+            : `Sobran ${fmt(-splitMissing)}`
+          : "";
+  const splitValid = splitIssue === "";
+  const hasPayment = splitOn ? splitValid : !!paymentMethod;
+  const paymentSummary = splitOn
+    ? splitClean.map((p) => `${PAYMENT_LABEL[p.method] ?? p.method} ${fmt(p.amount)}`).join(" + ")
+    : (PAYMENT_LABEL[paymentMethod] ?? paymentMethod);
+  const allCash = splitOn ? splitClean.every((p) => p.method === "efectivo") : paymentMethod === "efectivo";
+
   const requestConfirm = () => {
     if (cart.length === 0) {
       toast.error("Agrega productos");
       return;
     }
-    if (!isCourtesy && !paymentMethod) {
+    if (!isCourtesy && !splitOn && !paymentMethod) {
       toast.error("Selecciona el método de pago");
+      return;
+    }
+    if (!isCourtesy && splitOn && !splitValid) {
+      toast.error(splitIssue);
       return;
     }
     if (isCourtesy) {
@@ -366,7 +397,8 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
       }
       await sale.mutateAsync({
         items: cart,
-        payment_method: paymentMethod,
+        payment_method: splitOn ? "mixto" : paymentMethod,
+        payments: splitOn ? splitClean : undefined,
         client_name: clientName || undefined,
         client_document: clientDoc || undefined,
         client_email: clientEmail || undefined,
@@ -393,6 +425,8 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
       }
       setCart([]);
       setPaymentMethod("");
+      setSplitOn(false);
+      setSplitParts([{ method: "", amount: "" }, { method: "", amount: "" }]);
       setCustomer(null);
       setClientName("");
       setClientDoc("");
@@ -818,7 +852,15 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
             <Input value={clientAddress} onChange={(e) => setClientAddress(e.target.value)} />
           </div>
           <div>
-            <Label>Método de pago</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label>Método de pago</Label>
+              {!isCourtesy && (
+                <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setSplitOn((v) => !v)}>
+                  {splitOn ? "Un solo método" : "Dividir pago"}
+                </Button>
+              )}
+            </div>
+            {!splitOn ? (
             <Select value={paymentMethod} onValueChange={setPaymentMethod}>
               <SelectTrigger className={!paymentMethod && !isCourtesy ? "border-amber-500" : undefined}>
                 <SelectValue placeholder="Selecciona el método de pago" />
@@ -834,6 +876,64 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
                 <SelectItem value="otro">Otro</SelectItem>
               </SelectContent>
             </Select>
+            ) : (
+              <div className="space-y-2 rounded border p-2">
+                {splitParts.map((part, i) => (
+                  <div key={i} className="flex gap-2 items-center">
+                    <Select
+                      value={part.method}
+                      onValueChange={(v) => setSplitParts((ps) => ps.map((p, j) => (j === i ? { ...p, method: v } : p)))}
+                    >
+                      <SelectTrigger className="flex-1 min-w-0"><SelectValue placeholder="Método" /></SelectTrigger>
+                      <SelectContent>
+                <SelectItem value="efectivo">Efectivo</SelectItem>
+                <SelectItem value="tarjeta">Tarjeta</SelectItem>
+                <SelectItem value="nequi">Nequi</SelectItem>
+                <SelectItem value="bancolombia">Bancolombia</SelectItem>
+                <SelectItem value="davivienda">Davivienda</SelectItem>
+                <SelectItem value="link_pago">Link de pago</SelectItem>
+                <SelectItem value="transferencia">Transferencia</SelectItem>
+                <SelectItem value="otro">Otro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      placeholder="Valor"
+                      className="w-28"
+                      value={part.amount}
+                      onChange={(e) => setSplitParts((ps) => ps.map((p, j) => (j === i ? { ...p, amount: e.target.value } : p)))}
+                    />
+                    {splitParts.length > 2 && (
+                      <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => setSplitParts((ps) => ps.filter((_, j) => j !== i))}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => setSplitParts((ps) => [...ps, { method: "", amount: "" }])}>
+                    + Agregar método
+                  </Button>
+                  {splitMissing > 0 && splitParts.some((p) => !p.amount) && (
+                    <Button
+                      type="button" size="sm" variant="ghost" className="h-7 text-xs"
+                      onClick={() => {
+                        const idx = splitParts.findIndex((p) => !p.amount);
+                        setSplitParts((ps) => ps.map((p, j) => (j === idx ? { ...p, amount: String(splitMissing) } : p)));
+                      }}
+                    >
+                      Completar con lo que falta
+                    </Button>
+                  )}
+                </div>
+                <p className={`text-xs ${splitValid ? "text-muted-foreground" : "text-amber-600"}`}>
+                  Total {fmt(totalAfter)} · Asignado {fmt(splitAssigned)} ·{" "}
+                  {splitMissing >= 0 ? `Falta ${fmt(splitMissing)}` : `Sobra ${fmt(-splitMissing)}`}
+                </p>
+              </div>
+            )}
           </div>
           <div>
             <Label>Notas</Label>
@@ -891,7 +991,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
               uploadingProof ||
               uploadingMerch ||
               cart.length === 0 ||
-              (!isCourtesy && !paymentMethod)
+              (!isCourtesy && !hasPayment)
             }
             className="w-full"
             variant={isCourtesy ? "secondary" : "default"}
@@ -900,8 +1000,8 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
               ? "Subiendo foto..."
               : isCourtesy
                 ? (courtesy.isPending ? "Registrando cortesía..." : `Registrar cortesía (costo ${fmt(totalCost)})`)
-                : !paymentMethod
-                  ? "Selecciona el método de pago"
+                : !hasPayment
+                  ? (splitOn ? splitIssue : "Selecciona el método de pago")
                   : (sale.isPending ? "Registrando..." : `Cobrar ${fmt(totalAfter)}`)}
           </Button>
 
@@ -914,10 +1014,10 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
                     <div className="text-center py-2">
                       <div className="text-3xl font-bold text-foreground">{fmt(totalAfter)}</div>
                       <div className="text-lg font-semibold uppercase tracking-wide text-primary">
-                        {PAYMENT_LABEL[paymentMethod] ?? paymentMethod}
+                        {paymentSummary}
                       </div>
                     </div>
-                    {proofFile && paymentMethod === "efectivo" && (
+                    {proofFile && allCash && (
                       <p className="rounded border border-amber-500 bg-amber-500/10 p-2 text-sm text-amber-700">
                         ¿Seguro que fue en efectivo? Adjuntaste un comprobante de pago.
                       </p>
