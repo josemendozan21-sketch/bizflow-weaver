@@ -57,6 +57,13 @@
       "when": 1791213692673,
       "tag": "0007_staff_punto_92",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791226050597,
+      "tag": "0008_visualizador_reads_pos",
+      "breakpoints": true
     }
   ]
 }
