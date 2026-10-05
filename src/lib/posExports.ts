@@ -1,3 +1,4 @@
+import { formatSalePayment } from "@/lib/pettyCash";
 import JSZip from "jszip";
 import { buildSalePdf, saleDocType, type InvoiceLocation } from "./posInvoicePdf";
 import type { PosSale, PosSaleItem } from "@/hooks/usePuntosVenta";
@@ -26,7 +27,7 @@ export function downloadCsvDay(opts: {
       String(subtotal),
       String(Number(s.discount || 0)),
       String(Number(s.total_amount)),
-      s.payment_method ?? "",
+      formatSalePayment(s),
       s.recorded_by_name ?? "",
     ];
   });

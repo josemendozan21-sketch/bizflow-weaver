@@ -141,6 +141,7 @@ export type PosSale = {
   client_city?: string | null;
   discount: number;
   payment_method: string | null;
+  payment_breakdown?: unknown;
   total_amount: number;
   total_cost: number;
   notes: string | null;
@@ -571,6 +572,7 @@ export function useRegisterPosSale(locationId: string) {
       customer_id?: string | null;
       discount?: number;
       split?: { method: string; amount: number };
+      payments?: { method: string; amount: number }[];
       notes?: string;
       override_unit_prices?: Record<string, number>;
       payment_proof_url?: string | null;
@@ -591,16 +593,13 @@ export function useRegisterPosSale(locationId: string) {
         0
       );
 
-      // Build payment_method label (supports split)
-      const paymentLabel =
-        input.split && input.split.amount > 0 && input.split.amount < total_amount
-          ? `${input.payment_method}+${input.split.method}`
-          : input.payment_method;
-
-      const splitNote =
-        input.split && input.split.amount > 0 && input.split.amount < total_amount
-          ? `Pago mixto: ${input.payment_method} $${(total_amount - input.split.amount).toLocaleString()} + ${input.split.method} $${input.split.amount.toLocaleString()}`
-          : null;
+      // Pago dividido: N métodos con su valor
+      const parts = (input.payments ?? []).filter((p) => p.method && p.amount > 0);
+      const isMixed = parts.length > 1;
+      const paymentLabel = isMixed ? parts.map((p) => p.method).join("+") : input.payment_method;
+      const splitNote = isMixed
+        ? `Pago mixto: ${parts.map((p) => `${p.method} $${p.amount.toLocaleString("es-CO")}`).join(" + ")}`
+        : null;
       const finalNotes = [input.notes ?? null, splitNote].filter(Boolean).join(" | ") || null;
 
       const { data: sale, error: sErr } = await supabase
@@ -616,6 +615,7 @@ export function useRegisterPosSale(locationId: string) {
           customer_id: input.customer_id ?? null,
           discount,
           payment_method: paymentLabel,
+          payment_breakdown: isMixed ? parts : null,
           total_amount,
           total_cost,
           notes: finalNotes,

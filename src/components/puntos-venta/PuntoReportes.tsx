@@ -11,7 +11,7 @@ import { PuntoRetiros } from "./PuntoRetiros";
 import { PuntoContabilidadExport } from "./PuntoContabilidadExport";
 import type { InvoiceLocation } from "@/lib/posInvoicePdf";
 import { useAuth } from "@/contexts/AuthContext";
-import { computePosCash } from "@/lib/pettyCash";
+import { computePosCash , saleAmountFor, formatSalePayment } from "@/lib/pettyCash";
 import { useSedePettyExpenses, useSedeCashCounts } from "@/hooks/usePosPettyCash";
 
 type Props = {
@@ -49,8 +49,7 @@ export function PuntoReportes({ sales, movements, products, locationId, location
     );
     const byMethod = (m: string) =>
       todaySales
-        .filter((s) => methodMatches(s.payment_method, m))
-        .reduce((a, b) => a + Number(b.total_amount), 0);
+        .reduce((a, b) => a + saleAmountFor(b, m), 0);
     const cash = computePosCash({
       cashBase,
       lastCount: counts[0] ?? null,
@@ -137,7 +136,7 @@ export function PuntoReportes({ sales, movements, products, locationId, location
                   <div className="flex-1 min-w-0">
                     <p className="font-medium">${Number(s.total_amount).toLocaleString()}</p>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(s.sale_date).toLocaleString()} · {s.payment_method ?? "—"}
+                      {new Date(s.sale_date).toLocaleString()} · {formatSalePayment(s)}
                       {s.client_name ? ` · ${s.client_name}` : ""}
                     </p>
                   </div>
