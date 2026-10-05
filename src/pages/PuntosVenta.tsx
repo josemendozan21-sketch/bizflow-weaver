@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Store, ShoppingCart, Package, ArrowDownToLine, BarChart3, CalendarDays, History } from "lucide-react";
+import { Store, ShoppingCart, Package, ArrowDownToLine, BarChart3, CalendarDays, History, Clock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   usePosLocations,
@@ -19,6 +19,7 @@ import { PuntoReportes } from "@/components/puntos-venta/PuntoReportes";
 import { PuntoCalendario } from "@/components/puntos-venta/PuntoCalendario";
 import PosProductChangeLogPanel from "@/components/puntos-venta/PosProductChangeLogPanel";
 import PosSaleChangeLogPanel from "@/components/puntos-venta/PosSaleChangeLogPanel";
+import Personal from "@/pages/Personal";
 import PosCatalogBulkUpdate from "@/components/puntos-venta/PosCatalogBulkUpdate";
 
 export default function PuntosVenta() {
@@ -96,7 +97,7 @@ export default function PuntosVenta() {
       )}
 
       <Tabs defaultValue={readOnly ? "reportes" : "vender"}>
-        <TabsList>
+        <TabsList className="w-full justify-start overflow-x-auto overflow-y-hidden">
           {!readOnly && (
             <TabsTrigger value="vender"><ShoppingCart className="h-4 w-4 mr-1" /> Vender</TabsTrigger>
           )}
@@ -107,6 +108,9 @@ export default function PuntosVenta() {
           <TabsTrigger value="reportes"><BarChart3 className="h-4 w-4 mr-1" /> Reportes</TabsTrigger>
           {showCalendar && (
             <TabsTrigger value="calendario"><CalendarDays className="h-4 w-4 mr-1" /> Calendario</TabsTrigger>
+          )}
+          {showCalendar && (isPos || isAdmin) && (
+            <TabsTrigger value="personal"><Clock className="h-4 w-4 mr-1" /> Ingreso y salida</TabsTrigger>
           )}
           <TabsTrigger value="historial"><History className="h-4 w-4 mr-1" /> Historial de cambios</TabsTrigger>
         </TabsList>
@@ -154,6 +158,12 @@ export default function PuntosVenta() {
             {locationId && (
               <PuntoCalendario locationId={locationId} canEdit={canEdit} />
             )}
+          </TabsContent>
+        )}
+
+        {showCalendar && (isPos || isAdmin) && (
+          <TabsContent value="personal">
+            <Personal />
           </TabsContent>
         )}
 
