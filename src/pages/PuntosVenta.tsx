@@ -29,9 +29,10 @@ export default function PuntosVenta() {
 
   const isAdmin = role === "admin";
   const isContabilidad = role === "contabilidad";
+  const isVisualizador = role === "visualizador";
   const isPos = role === "pos_punto";
   const canEdit = isAdmin || isPos;
-  const readOnly = isContabilidad;
+  const readOnly = isContabilidad || isVisualizador;
 
   const eligible = useMemo(() => {
     if (isPos) return locations.filter((l) => l.id === myLocationId);
@@ -109,7 +110,7 @@ export default function PuntosVenta() {
           {showCalendar && (
             <TabsTrigger value="calendario"><CalendarDays className="h-4 w-4 mr-1" /> Calendario</TabsTrigger>
           )}
-          {showCalendar && (isPos || isAdmin) && (
+          {showCalendar && (isPos || isAdmin || readOnly) && (
             <TabsTrigger value="personal"><Clock className="h-4 w-4 mr-1" /> Ingreso y salida</TabsTrigger>
           )}
           <TabsTrigger value="historial"><History className="h-4 w-4 mr-1" /> Historial de cambios</TabsTrigger>
@@ -161,9 +162,9 @@ export default function PuntosVenta() {
           </TabsContent>
         )}
 
-        {showCalendar && (isPos || isAdmin) && (
+        {showCalendar && (isPos || isAdmin || readOnly) && (
           <TabsContent value="personal">
-            <Personal />
+            <Personal initialArea="punto_92" readOnly={readOnly} />
           </TabsContent>
         )}
 
