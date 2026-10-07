@@ -220,8 +220,14 @@ function AddOtherStaff({ area, onAdded }: { area: Area; onAdded: () => void }) {
     const name = `${first.trim()} ${last.trim()}`.trim();
     if (!first.trim() || !last.trim()) { toast.error("Escribe nombre y apellido"); return; }
     setSaving(true);
+    const roleByArea: Record<Area, string> = {
+      punto_92: "Reemplazo / otro",
+      produccion: "Producción",
+      estampacion: "Estampación",
+      logistica: "Logística",
+    };
     const { error } = await supabase.from("staff_members").insert({
-      full_name: name, area, staff_role: area === "punto_92" ? "Reemplazo / otro" : "Nuevo / otro",
+      full_name: name, area, staff_role: roleByArea[area],
     });
     setSaving(false);
     if (error) { toast.error(error.message); return; }
