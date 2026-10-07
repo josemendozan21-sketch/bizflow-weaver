@@ -194,8 +194,8 @@ function TodayMarking({ area, readOnly = false }: { area: Area; readOnly?: boole
 
   return (
     <div className="space-y-3">
-      {area === "punto_92" && !readOnly && (
-        <AddOtherStaff onAdded={() => queryClient.invalidateQueries({ queryKey: ["staff_members", area] })} />
+      {!readOnly && (
+        <AddOtherStaff area={area} onAdded={() => queryClient.invalidateQueries({ queryKey: ["staff_members", area] })} />
       )}
       {readOnly && (
         <p className="text-xs text-muted-foreground">Modo consulta: puedes ver las marcaciones, pero no registrar ingreso ni salida.</p>
@@ -211,7 +211,7 @@ function TodayMarking({ area, readOnly = false }: { area: Area; readOnly?: boole
   );
 }
 
-function AddOtherStaff({ onAdded }: { onAdded: () => void }) {
+function AddOtherStaff({ area, onAdded }: { area: Area; onAdded: () => void }) {
   const [open, setOpen] = useState(false);
   const [first, setFirst] = useState("");
   const [last, setLast] = useState("");
@@ -221,7 +221,7 @@ function AddOtherStaff({ onAdded }: { onAdded: () => void }) {
     if (!first.trim() || !last.trim()) { toast.error("Escribe nombre y apellido"); return; }
     setSaving(true);
     const { error } = await supabase.from("staff_members").insert({
-      full_name: name, area: "punto_92", staff_role: "Reemplazo / otro",
+      full_name: name, area, staff_role: area === "punto_92" ? "Reemplazo / otro" : "Nuevo / otro",
     });
     setSaving(false);
     if (error) { toast.error(error.message); return; }
