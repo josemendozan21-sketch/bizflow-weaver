@@ -8,6 +8,6 @@
 - La persona nueva sale en el Reporte semanal con sus horas.
 
 ## Detalles técnicos
-- Insertar en `staff_members`: full_name "Sergio Andres Romero Chaves", area 'produccion', staff_role 'Nuevo / otro'.
+- Insertar en `staff_members`: full_name "Jeison David Suarez Gomez", area 'produccion', staff_role 'Nuevo / otro'.
 - RLS: cambiar la política INSERT para que cada rol pueda insertar en su área (`produccion`→produccion, `estampacion`→estampacion, `logistica`→logistica, `pos_punto`→punto_92, admin cualquiera).
 - `Personal.tsx`: mostrar `AddOtherStaff` en todas las áreas cuando `!readOnly`, pasarle `area` como prop en vez de 'punto_92' fijo.
