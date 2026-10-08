@@ -826,6 +826,98 @@ function getErrorMessage(err: unknown) {
     : "Error desconocido";
 }
 
+const NOT_SHIPPED_REASONS = [
+  "El cliente ya no lo quiso",
+  "Cliente no responde",
+  "Dirección errada / no se pudo entregar",
+  "Otro",
+];
+
+function NotShippedDialog({ group }: { group: ShipmentGroup }) {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [detail, setDetail] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const confirm = async () => {
+    if (!reason || !detail.trim()) return;
+    setSaving(true);
+    const who = user?.email ?? "Logística";
+    const date = format(new Date(), "dd/MM/yyyy");
+    const note = `No se envió (${date}, ${who}): ${reason} — ${detail.trim()}`;
+    for (const it of group.items) {
+      const { error } = await supabase
+        .from("orders")
+        .update({
+          production_status: "cancelado",
+          observations: [it.observations, note].filter(Boolean).join("\n"),
+        })
+        .eq("id", it.id);
+      if (error) {
+        setSaving(false);
+        toast.error("No se pudo marcar", { description: error.message });
+        return;
+      }
+    }
+    try {
+      const advisorIds = Array.from(new Set(group.items.map((it) => it.advisor_id).filter(Boolean)));
+      const msg = `${group.clientName} — ${reason}: ${detail.trim()}. Gestionar devolución si el cliente ya pagó.`;
+      const notifs: any[] = [
+        { target_role: "admin", title: "Pedido no enviado", message: msg, type: "pedido_no_enviado", reference_id: group.allIds[0] },
+        { target_role: "contabilidad", title: "Pedido no enviado", message: msg, type: "pedido_no_enviado", reference_id: group.allIds[0] },
+        ...advisorIds.map((id) => ({
+          target_role: "asesor_comercial", target_user_id: id, title: "Tu pedido no se envió",
+          message: msg, type: "pedido_no_enviado", reference_id: group.allIds[0],
+        })),
+      ];
+      await supabase.from("notifications").insert(notifs);
+    } catch (e) {
+      console.error(e);
+    }
+    setSaving(false);
+    setOpen(false);
+    setReason("");
+    setDetail("");
+    queryClient.invalidateQueries({ queryKey: ["orders"] });
+    toast.success("Marcado como no enviado", { description: `${group.clientName} salió de la lista de despachos.` });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline"><PackageX className="h-4 w-4 mr-1" /> No se envió</Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Marcar como no enviado</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          El envío de <span className="font-semibold text-foreground">{group.clientName}</span> ({group.items.length} item(s)) quedará cancelado y saldrá de despachos. Se avisará al asesor.
+        </p>
+        <div className="space-y-2">
+          <Label>Motivo</Label>
+          <div className="grid gap-2">
+            {NOT_SHIPPED_REASONS.map((r) => (
+              <Button key={r} type="button" size="sm" variant={reason === r ? "default" : "outline"} className="justify-start" onClick={() => setReason(r)}>
+                {r}
+              </Button>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label>Explique qué pasó</Label>
+          <Textarea value={detail} onChange={(e) => setDetail(e.target.value)} placeholder="Ej: el cliente llamó y canceló la compra" />
+        </div>
+        <Button variant="destructive" onClick={confirm} disabled={saving || !reason || !detail.trim()}>
+          {saving ? "Guardando…" : "Confirmar: no se envió"}
+        </Button>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function GroupDispatchDialog({ group }: { group: ShipmentGroup }) {
   const [open, setOpen] = useState(false);
   const [transportadora, setTransportadora] = useState("");
@@ -1147,6 +1239,7 @@ function ShipmentGroupCard({
             phone={group.clientPhone || ""}
             advisorName={getAdvisorNames(group.items).join(", ") || "No asignado"}
           />
+          {canEdit && <NotShippedDialog group={group} />}
           {canEdit && <GroupDispatchDialog group={group} />}
         </div>
       </div>
