@@ -218,6 +218,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
   const clampPct = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
   const discountedUnitPrice = (productId: string, salePrice: number) => {
     const pct = clampPct(itemDiscounts[productId] ?? 0);
+    if (pct <= 0) return Number(salePrice);
     return Math.round(Number(salePrice) * (1 - pct / 100));
   };
   const overrideUnitPrices = useMemo(() => {

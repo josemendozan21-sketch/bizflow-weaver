@@ -74,12 +74,14 @@ export function buildSalePdf(opts: {
 
   // @ts-ignore
   let endY = (doc as any).lastAutoTable.finalY + 16;
-  const subtotal = items.reduce((a, b) => a + Number(b.line_total), 0);
+  const total = Number(sale.total_amount);
+  const disc = Math.round(Number(sale.discount) || 0);
+  const subtotal = disc >= 1 ? total + disc : items.reduce((a, b) => a + Number(b.line_total), 0);
   const right = 612 - margin;
   doc.setFontSize(10);
-  doc.text(`Subtotal: $${subtotal.toLocaleString()}`, right, endY, { align: "right" }); endY += 14;
-  if (Number(sale.discount) > 0) {
-    doc.text(`Descuento: − $${Number(sale.discount).toLocaleString()}`, right, endY, { align: "right" }); endY += 14;
+  doc.text(`Subtotal: $${Math.round(subtotal).toLocaleString()}`, right, endY, { align: "right" }); endY += 14;
+  if (disc >= 1) {
+    doc.text(`Descuento: − $${disc.toLocaleString()}`, right, endY, { align: "right" }); endY += 14;
   }
   doc.setFont("helvetica", "bold").setFontSize(12);
   doc.text(`Total: $${Number(sale.total_amount).toLocaleString()}`, right, endY, { align: "right" });
