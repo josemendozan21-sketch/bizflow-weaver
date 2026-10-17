@@ -185,13 +185,13 @@ export function PuntoVentasDelDia({ sales, location, locationId }: Props) {
                   {filtered.map((s) => {
                     const tipo = saleDocType(s.payment_method);
                     const its = itemsBySale[s.id] ?? [];
-                    const hasDiscount = Number(s.discount ?? 0) > 0;
+                    const hasDiscount = Number(s.discount ?? 0) >= 1;
                     return (
                       <tr
                         key={s.id}
                         className={
                           hasDiscount
-                            ? "border-b bg-destructive/10 text-destructive-foreground/90"
+                            ? "border-b bg-destructive/10 text-foreground"
                             : "border-b"
                         }
                         title={hasDiscount ? `Venta con descuento de $${Number(s.discount).toLocaleString()}` : undefined}
