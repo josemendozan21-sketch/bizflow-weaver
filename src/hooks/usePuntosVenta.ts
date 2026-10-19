@@ -88,7 +88,7 @@ export type PosCashWithdrawal = {
   location_id: string;
   amount: number;
   concept: string;
-  movement_type: "retiro" | "consignacion";
+  movement_type: "retiro" | "consignacion" | "pago_proveedor";
   requested_by: string;
   requested_by_name: string | null;
   proof_url: string | null;
