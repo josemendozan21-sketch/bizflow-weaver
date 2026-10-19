@@ -21,13 +21,15 @@ type Props = {
   locationId: string;
   location: InvoiceLocation;
   cashBase?: number;
+  cashMin?: number;
+  cashMax?: number;
 };
 
 function methodMatches(method: string | null | undefined, target: string) {
   return (method ?? "").toLowerCase().split("+").some((p) => p.trim() === target);
 }
 
-export function PuntoReportes({ sales, movements, products, locationId, location, cashBase = 0 }: Props) {
+export function PuntoReportes({ sales, movements, products, locationId, location, cashBase = 0, cashMin, cashMax }: Props) {
   const { data: withdrawals = [] } = usePosCashWithdrawals(locationId);
   const { data: posExpenses = [] } = useSedePettyExpenses("chico");
   const { data: counts = [] } = useSedeCashCounts("chico");
@@ -154,7 +156,7 @@ export function PuntoReportes({ sales, movements, products, locationId, location
       </TabsContent>
 
       <TabsContent value="retiros">
-        <PuntoRetiros locationId={locationId} cashBase={cashBase} />
+        <PuntoRetiros locationId={locationId} cashBase={cashBase} cashMin={cashMin} cashMax={cashMax} />
       </TabsContent>
 
       {canExport && (

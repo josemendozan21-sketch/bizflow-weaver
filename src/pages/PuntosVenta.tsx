@@ -150,6 +150,8 @@ export default function PuntosVenta() {
               locationId={locationId}
               location={{ name: location.name, city: location.city, address: location.address }}
               cashBase={Number(location.cash_base ?? 0)}
+              cashMin={Number((location as any).cash_min ?? 200000)}
+              cashMax={Number((location as any).cash_max_custody ?? 400000)}
             />
           )}
         </TabsContent>
