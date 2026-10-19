@@ -87,7 +87,7 @@ export function SettlementsView({ orders, mode, advisorId: fixedAdvisor, readOnl
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-muted-foreground [text-wrap:pretty]">
-            La comisión se causa en el mes en que el pedido queda <b>al 100%</b> (pago total, soporte de pago y despacho) y se paga el <b>mes siguiente</b>. Sin IVA, sin flete ni cargos adicionales. Los bonos se calculan sobre lo completado en el mes.
+            La comisión se causa en el mes en que el pedido queda <b>al 100%</b> (pago total con comprobante; el despacho no se exige) y se paga el <b>mes siguiente</b>. Sin IVA, sin flete ni cargos adicionales. Los bonos se calculan sobre lo completado en el mes.
           </p>
           <div className="flex flex-wrap gap-2">
             <Select value={payPeriod} onValueChange={setPayPeriod}>

@@ -27,9 +27,15 @@ const base = (over: Partial<Order>): Order =>
   }) as Order;
 
 describe("liquidación de comisiones", () => {
-  it("sin despacho el pedido no está al 100% y no se liquida", () => {
+  it("pagado al 100% con comprobante y sin despacho sí se liquida", () => {
     const o = base({ dispatched_at: null });
-    expect(getCompletionDate(o, {})).toBeNull();
+    const pays = { o1: [{ order_id: "o1", amount: 1190000, payment_date: "2026-10-15" }] };
+    const s = buildSettlement({ orders: [o], payments: pays, advisorId: "a1", payPeriod: "2026-11" });
+    expect(s.current).toHaveLength(1);
+  });
+
+  it("sin comprobante de pago no se liquida", () => {
+    const o = base({ payment_proof_url: null });
     const s = buildSettlement({ orders: [o], payments: {}, advisorId: "a1", payPeriod: "2026-11" });
     expect(s.current).toHaveLength(0);
     expect(s.pending).toHaveLength(1);
@@ -51,9 +57,10 @@ describe("liquidación de comisiones", () => {
   });
 
   it("el mes es el de la fecha en que quedó al 100%, no el de venta", () => {
-    const o = base({ created_at: "2026-10-30T10:00:00", dispatched_at: "2026-11-03T10:00:00" });
-    expect(buildSettlement({ orders: [o], payments: {}, advisorId: "a1", payPeriod: "2026-11" }).current).toHaveLength(0);
-    expect(buildSettlement({ orders: [o], payments: {}, advisorId: "a1", payPeriod: "2026-12" }).current).toHaveLength(1);
+    const o = base({ created_at: "2026-10-30T10:00:00", dispatched_at: null });
+    const p = { o1: [{ order_id: "o1", amount: 1190000, payment_date: "2026-11-03" }] };
+    expect(buildSettlement({ orders: [o], payments: p, advisorId: "a1", payPeriod: "2026-11" }).current).toHaveLength(0);
+    expect(buildSettlement({ orders: [o], payments: p, advisorId: "a1", payPeriod: "2026-12" }).current).toHaveLength(1);
   });
 
   it("un pedido no liquidado de un mes anterior llega como pendiente anterior, y no se repite si ya fue liquidado", () => {

@@ -12,8 +12,8 @@ export function CommissionRulesLegend() {
       label: "Período",
       text: (
         <>
-          El de la <b>factura</b>; si el pedido aún no tiene factura, se muestra
-          en su mes de venta y queda pendiente de facturar.
+          El mes en que el pedido quedó <b>pagado al 100%</b>; se paga el mes
+          siguiente.
         </>
       ),
     },
@@ -21,8 +21,8 @@ export function CommissionRulesLegend() {
       label: "Causa comisión",
       text: (
         <>
-          Pedido <b>pagado o facturado</b>; con abono parcial, se causa
-          proporcional a lo abonado.
+          Solo con <b>pago total y comprobante</b>. No se paga por abonos y el
+          despacho no se exige.
         </>
       ),
     },
