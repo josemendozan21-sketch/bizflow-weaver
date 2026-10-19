@@ -8,7 +8,7 @@
 ## Qué cambia
 1. **Una sola cifra.** La tarjeta de Chicó en Contabilidad mostrará el mismo efectivo en caja que ve Eliana, con su detalle: base o último arqueo, ventas en efectivo, retiros, consignaciones y gastos.
 2. **Límites de caja:**
-   - **Máximo de custodia: $400.000.** Al llegar o pasar de ese monto aparece la alerta "Límite de caja menor alcanzado", con la responsable (Eliana) y el saldo actual, para coordinar con Jose o Jamie. Se notifica a Jose, Jamie y Contabilidad.
+   - **Máximo de custodia: $400.000.** Al llegar o pasar de ese monto aparece la alerta "Límite de caja menor alcanzado", con la responsable (Eliana) y el saldo actual, para coordinar con Jose o Yeimy. Se notifica a Jose, Yeimy y Contabilidad.
    - **Mínimo: $200.000.** Si el saldo baja de ese monto, aparece una alerta de caja por debajo del mínimo. **No se bloquea ningún pago.**
    - Los límites quedan guardados como configuración del punto, para poder cambiarlos después.
 3. **Gestión de la alerta** (la ven Eliana y Contabilidad), con dos opciones:
