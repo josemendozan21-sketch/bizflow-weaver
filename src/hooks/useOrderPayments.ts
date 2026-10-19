@@ -109,12 +109,12 @@ export function useAllOrderPayments() {
   return useQuery({
     queryKey: ["order_payments_all"],
     queryFn: async () => {
-      const rows: { order_id: string; amount: number; payment_date: string; proof_url: string | null }[] = [];
+      const rows: { order_id: string; amount: number; payment_date: string; proof_url: string | null; notes?: string | null }[] = [];
       const pageSize = 1000;
       for (let page = 0; ; page++) {
         const { data, error } = await supabase
           .from("order_payments" as any)
-          .select("order_id, amount, payment_date, proof_url")
+          .select("order_id, amount, payment_date, proof_url, notes")
           .range(page * pageSize, page * pageSize + pageSize - 1);
         if (error) throw error;
         const chunk = (data as unknown as typeof rows) || [];

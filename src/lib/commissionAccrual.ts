@@ -40,6 +40,7 @@ export interface PaymentRow {
   amount: number | string | null;
   payment_date: string | null;
   proof_url?: string | null;
+  notes?: string | null;
 }
 
 export type PaymentsByOrder = Record<string, PaymentRow[]>;

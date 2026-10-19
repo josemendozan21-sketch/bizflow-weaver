@@ -71,4 +71,10 @@ describe("liquidación de comisiones", () => {
     const s = buildSettlement({ orders: [o], payments: {}, advisorId: "a1", payPeriod: "2026-11" });
     expect(s.bonus).toBe(150_000);
   });
+
+  it("el saldo cargado por la corrección del 3-sep no mueve el mes de la comisión", () => {
+    const o = base({ dispatched_at: "2026-07-10T10:00:00", created_at: "2026-07-01T10:00:00" });
+    const pays = { o1: [{ order_id: "o1", amount: 500000, payment_date: "2026-09-03", notes: "Saldo final confirmado por el asesor (corrección automática 2026-09-03)" }] };
+    expect(getCompletionDate(o, pays)?.getMonth()).toBe(6);
+  });
 });
