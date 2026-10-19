@@ -91,7 +91,7 @@ export interface PosSaleItemLike {
 }
 export interface PosWithdrawalLike {
   created_at: string;
-  movement_type: "retiro" | "consignacion";
+  movement_type: "retiro" | "consignacion" | "pago_proveedor";
   amount: number;
   concept: string;
   requested_by_name: string | null;

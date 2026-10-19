@@ -3020,8 +3020,140 @@ export type Database = {
           },
         ]
       }
+      pos_cash_alert_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_name: string | null
+          alert_id: string
+          balance: number | null
+          created_at: string
+          id: string
+          note: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_name?: string | null
+          alert_id: string
+          balance?: number | null
+          created_at?: string
+          id?: string
+          note?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_name?: string | null
+          alert_id?: string
+          balance?: number | null
+          created_at?: string
+          id?: string
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_cash_alert_log_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "pos_cash_alerts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pos_cash_alerts: {
+        Row: {
+          action: string | null
+          alert_type: string
+          assigned_to: string | null
+          balance_at_open: number
+          due_date: string | null
+          id: string
+          location_id: string
+          notes: string | null
+          opened_at: string
+          opened_by: string | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          action?: string | null
+          alert_type: string
+          assigned_to?: string | null
+          balance_at_open: number
+          due_date?: string | null
+          id?: string
+          location_id: string
+          notes?: string | null
+          opened_at?: string
+          opened_by?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          action?: string | null
+          alert_type?: string
+          assigned_to?: string | null
+          balance_at_open?: number
+          due_date?: string | null
+          id?: string
+          location_id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pos_cash_corrections: {
+        Row: {
+          corrected_at: string
+          corrected_by: string | null
+          corrected_by_name: string | null
+          id: string
+          new_amount: number
+          old_amount: number
+          reason: string
+          record_id: string
+          source_table: string
+        }
+        Insert: {
+          corrected_at?: string
+          corrected_by?: string | null
+          corrected_by_name?: string | null
+          id?: string
+          new_amount: number
+          old_amount: number
+          reason: string
+          record_id: string
+          source_table: string
+        }
+        Update: {
+          corrected_at?: string
+          corrected_by?: string | null
+          corrected_by_name?: string | null
+          id?: string
+          new_amount?: number
+          old_amount?: number
+          reason?: string
+          record_id?: string
+          source_table?: string
+        }
+        Relationships: []
+      }
       pos_cash_withdrawals: {
         Row: {
+          alert_id: string | null
           amount: number
           approved_at: string | null
           approved_by: string | null
@@ -3040,6 +3172,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          alert_id?: string | null
           amount: number
           approved_at?: string | null
           approved_by?: string | null
@@ -3058,6 +3191,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          alert_id?: string | null
           amount?: number
           approved_at?: string | null
           approved_by?: string | null
@@ -3260,6 +3394,8 @@ export type Database = {
         Row: {
           address: string | null
           cash_base: number
+          cash_max_custody: number
+          cash_min: number
           city: string
           created_at: string
           id: string
@@ -3271,6 +3407,8 @@ export type Database = {
         Insert: {
           address?: string | null
           cash_base?: number
+          cash_max_custody?: number
+          cash_min?: number
           city: string
           created_at?: string
           id?: string
@@ -3282,6 +3420,8 @@ export type Database = {
         Update: {
           address?: string | null
           cash_base?: number
+          cash_max_custody?: number
+          cash_min?: number
           city?: string
           created_at?: string
           id?: string
@@ -4772,6 +4912,10 @@ export type Database = {
         Args: { _amount: number; _item_id: string; _reason?: string }
         Returns: Json
       }
+      correct_cash_amount: {
+        Args: { _amount: number; _id: string; _reason: string; _table: string }
+        Returns: Json
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -4821,6 +4965,10 @@ export type Database = {
           source_queue: string
         }
         Returns: number
+      }
+      open_pos_cash_alert: {
+        Args: { _balance: number; _location_id: string; _type: string }
+        Returns: string
       }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }

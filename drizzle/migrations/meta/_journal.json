@@ -85,6 +85,13 @@
       "when": 1792436614276,
       "tag": "0011_settlement_item_paid_date",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792445596058,
+      "tag": "0012_pos_cash_limits_alerts_corrections",
+      "breakpoints": true
     }
   ]
 }
