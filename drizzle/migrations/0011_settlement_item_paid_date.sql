@@ -1,0 +1,1 @@
+ALTER TABLE public.commission_settlement_items ADD COLUMN paid_date date;

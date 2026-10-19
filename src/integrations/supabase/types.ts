@@ -502,6 +502,7 @@ export type Database = {
           is_carryover: boolean
           order_code: string | null
           order_id: string
+          paid_date: string | null
           rate: number
           sale_date: string | null
           settlement_id: string
@@ -517,6 +518,7 @@ export type Database = {
           is_carryover?: boolean
           order_code?: string | null
           order_id: string
+          paid_date?: string | null
           rate?: number
           sale_date?: string | null
           settlement_id: string
@@ -532,6 +534,7 @@ export type Database = {
           is_carryover?: boolean
           order_code?: string | null
           order_id?: string
+          paid_date?: string | null
           rate?: number
           sale_date?: string | null
           settlement_id?: string
