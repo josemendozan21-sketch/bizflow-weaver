@@ -75,6 +75,20 @@ export function getCompletionDate(o: Order, payments?: PaymentsByOrder): Date | 
   return new Date(Math.max(...dates.map((d) => d.getTime())));
 }
 
+/** Fecha del último pago real del cliente (sin contar la corrección del 3-sep). */
+export function getFullPaymentDate(o: Order, payments?: PaymentsByOrder): Date | null {
+  let max: Date | null = null;
+  const rows = payments?.[o.id] || [];
+  // Si el saldo se cargó con la corrección del 3-sep, no se sabe cuándo se pagó completo.
+  if (rows.some((r) => isBackfillPayment(r.notes))) return null;
+  for (const r of rows) {
+    if (Number(r.amount || 0) <= 0) continue;
+    const d = parse(r.payment_date);
+    if (d && (!max || d > max)) max = d;
+  }
+  return max;
+}
+
 export const causationPeriodOf = (completed: Date) => periodKey(completed);
 export const expectedPayPeriod = (causation: string) => shiftPeriod(causation, 1);
 
@@ -82,6 +96,8 @@ export interface SettlementLine {
   order: Order;
   saleDate: Date;
   completedDate: Date;
+  /** Fecha del último pago real del cliente (pago completo) */
+  paidDate: Date | null;
   causationPeriod: string;
   expectedPayPeriod: string;
   base: number;
@@ -177,6 +193,7 @@ export function buildSettlement(params: {
       order: d.o,
       saleDate: getSaleDate(d.o),
       completedDate: d.completed,
+      paidDate: getFullPaymentDate(d.o, payments),
       causationPeriod: d.period,
       expectedPayPeriod: expectedPayPeriod(d.period),
       base,

@@ -170,7 +170,7 @@ function LinesTable({ lines, title }: { lines: { code: string; client: string; s
         <Table>
           <TableHeader><TableRow>
             <TableHead>Pedido</TableHead><TableHead>Cliente</TableHead><TableHead>Venta</TableHead><TableHead>Al 100%</TableHead>
-            <TableHead>Mes comisión</TableHead><TableHead>Pago esperado</TableHead><TableHead className="text-right">Base sin IVA</TableHead><TableHead className="text-right">%</TableHead><TableHead className="text-right">Comisión</TableHead>
+            <TableHead>Mes comisión</TableHead><TableHead>Pago completo</TableHead><TableHead className="text-right">Base sin IVA</TableHead><TableHead className="text-right">%</TableHead><TableHead className="text-right">Comisión</TableHead>
           </TableRow></TableHeader>
           <TableBody>
             {lines.length === 0 && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground text-xs">Sin pedidos</TableCell></TableRow>}
@@ -181,7 +181,7 @@ function LinesTable({ lines, title }: { lines: { code: string; client: string; s
                 <TableCell className="whitespace-nowrap">{l.sale}</TableCell>
                 <TableCell className="whitespace-nowrap">{l.completed}</TableCell>
                 <TableCell className="whitespace-nowrap">{periodLabel(l.period)}</TableCell>
-                <TableCell className="whitespace-nowrap">{periodLabel(l.pay)}</TableCell>
+                <TableCell className="whitespace-nowrap">{l.pay}</TableCell>
                 <TableCell className="text-right">{money(l.base)}</TableCell>
                 <TableCell className="text-right">{(l.rate * 100).toFixed(1)}%</TableCell>
                 <TableCell className="text-right font-medium">{money(l.amount)}</TableCell>
@@ -217,9 +217,9 @@ function AdvisorSettlement(props: any) {
   const total = existing ? Number(existing.total_amount) : draft.total;
   const myLogs = logs.filter((l) => existing && l.settlement_id === existing.id);
 
-  const toRow = (l: SettlementLine) => ({ code: l.order.order_code || l.order.id.slice(0, 8), client: l.order.client_name, sale: fmtD(l.saleDate), completed: fmtD(l.completedDate), period: l.causationPeriod, pay: l.expectedPayPeriod, base: l.base, rate: l.rate, amount: l.amount });
+  const toRow = (l: SettlementLine) => ({ code: l.order.order_code || l.order.id.slice(0, 8), client: l.order.client_name, sale: fmtD(l.saleDate), completed: fmtD(l.completedDate), period: l.causationPeriod, pay: fmtD(l.paidDate), base: l.base, rate: l.rate, amount: l.amount });
   const savedRows = (carry: boolean) => savedItems.filter((i) => existing && i.settlement_id === existing.id && i.is_carryover === carry)
-    .map((i) => ({ code: i.order_code || i.order_id.slice(0, 8), client: i.client_name || "", sale: fmtD(i.sale_date), completed: fmtD(i.completed_date), period: i.causation_period, pay: shiftPeriod(i.causation_period, 1), base: Number(i.base_amount), rate: Number(i.rate), amount: Number(i.amount) }));
+    .map((i) => ({ code: i.order_code || i.order_id.slice(0, 8), client: i.client_name || "", sale: fmtD(i.sale_date), completed: fmtD(i.completed_date), period: i.causation_period, pay: fmtD(i.paid_date), base: Number(i.base_amount), rate: Number(i.rate), amount: Number(i.amount) }));
 
   const curRows = showSaved ? savedRows(false) : draft.current.map(toRow);
   const carryRows = showSaved ? savedRows(true) : draft.carryover.map(toRow);

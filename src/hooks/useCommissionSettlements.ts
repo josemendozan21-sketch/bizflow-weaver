@@ -22,7 +22,7 @@ export interface Settlement {
 }
 export interface SettlementItem {
   id: string; settlement_id: string; order_id: string; order_code: string | null; client_name: string | null;
-  sale_date: string | null; completed_date: string | null; causation_period: string; base_amount: number;
+  sale_date: string | null; completed_date: string | null; paid_date?: string | null; causation_period: string; base_amount: number;
   rate: number; amount: number; is_carryover: boolean;
 }
 export interface Payout {
@@ -93,6 +93,7 @@ export function useSettlementActions() {
       const items = [...p.draft.current, ...p.draft.carryover].map((l) => ({
         settlement_id: id, order_id: l.order.id, order_code: l.order.order_code || null, client_name: l.order.client_name,
         sale_date: l.saleDate.toISOString().slice(0, 10), completed_date: l.completedDate.toISOString().slice(0, 10),
+        paid_date: l.paidDate ? l.paidDate.toISOString().slice(0, 10) : null,
         causation_period: l.causationPeriod, base_amount: Math.round(l.base), rate: l.rate, amount: Math.round(l.amount),
         is_carryover: l.isCarryover,
       }));
