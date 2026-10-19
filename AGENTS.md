@@ -1,1 +1,1 @@
-- Commission settlement logic lives only in src/lib/commissionSettlement.ts (pay at 100%, causation = completion month, paid next month); settled orders are snapshotted in commission_settlement_items so each order is paid once.
+- Commission settlement logic lives only in src/lib/commissionSettlement.ts (pay only at 100% = full payment + proof, causation = month of last real payment, paid next month); settled orders are snapshotted in commission_settlement_items so each order is paid once.
