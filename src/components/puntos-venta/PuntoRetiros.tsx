@@ -18,6 +18,9 @@ import { toast } from "sonner";
 import { openSignedUrl } from "@/lib/signedUrl";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { computePosCash, saleAmountFor } from "@/lib/pettyCash";
+import { parseCOP, formatCOPInput } from "@/lib/money";
+import { CashAlertPanel, CorrectAmountButton } from "./CashAlertPanel";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useSedePettyExpenses,
   useSedeCashCounts,
@@ -25,9 +28,12 @@ import {
   useCreateSedeCashCount,
 } from "@/hooks/usePosPettyCash";
 
-type Props = { locationId: string; cashBase?: number };
+type Props = { locationId: string; cashBase?: number; cashMin?: number; cashMax?: number };
 
-export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
+export function PuntoRetiros({ locationId, cashBase = 0, cashMin = 200000, cashMax = 400000 }: Props) {
+  const qc = useQueryClient();
+  const [alertId, setAlertId] = useState<string | null>(null);
+  const refreshCash = () => { qc.invalidateQueries({ queryKey: ["pos_cash_withdrawals", locationId] }); qc.invalidateQueries({ queryKey: ["petty_cash_expenses_sede", "chico"] }); qc.invalidateQueries({ queryKey: ["petty_cash_counts_sede", "chico"] }); };
   const { role } = useAuth();
   const isAdmin = role === "admin" || role === "contabilidad";
   const isPos = role === "pos_punto";
@@ -42,7 +48,7 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
   const createCount = useCreateSedeCashCount("chico");
 
   const [showForm, setShowForm] = useState(false);
-  const [movementType, setMovementType] = useState<"retiro" | "consignacion" | "gasto">("retiro");
+  const [movementType, setMovementType] = useState<"retiro" | "consignacion" | "gasto" | "pago_proveedor">("retiro");
   const [amount, setAmount] = useState("");
   const [concept, setConcept] = useState("");
   const [notes, setNotes] = useState("");
@@ -86,7 +92,7 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
     .forEach((w) =>
       bump(
         String(w.created_at).slice(0, 10),
-        (w.movement_type ?? "retiro") === "consignacion" ? "consignaciones" : "retiros",
+        (w.movement_type ?? "retiro") === "consignacion" ? "consignaciones" : (w.movement_type === "pago_proveedor" ? "gastos" : "retiros"),
         Number(w.amount)
       )
     );
@@ -105,11 +111,11 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
   const cashOnHand = cash.cashOnHand;
 
   const reset = () => {
-    setAmount(""); setConcept(""); setNotes(""); setFile(null); setShowForm(false); setMovementType("retiro");
+    setAmount(""); setConcept(""); setNotes(""); setFile(null); setShowForm(false); setMovementType("retiro"); setAlertId(null);
   };
 
   const submit = async () => {
-    const amt = parseFloat(amount);
+    const amt = parseCOP(amount);
     if (!amt || amt <= 0) { toast.error("Monto inválido"); return; }
     if (!concept.trim()) { toast.error("Indica el motivo / qué se retira"); return; }
     try {
@@ -125,8 +131,8 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
         });
         toast.success("Gasto registrado, pendiente de aprobación de contabilidad");
       } else {
-        await create.mutateAsync({ amount: amt, concept, notes, proof_url, movement_type: movementType });
-        toast.success(`${movementType === "retiro" ? "Retiro" : "Consignación"} registrado, pendiente de aprobación`);
+        await create.mutateAsync({ amount: amt, concept, notes, proof_url, movement_type: movementType, alert_id: alertId });
+        toast.success(`${movementType === "retiro" ? "Retiro" : movementType === "pago_proveedor" ? "Pago a proveedor" : "Consignación"} registrado, pendiente de aprobación`);
       }
       reset();
     } catch (e: any) {
@@ -137,7 +143,7 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
   };
 
   const submitCount = async () => {
-    const counted = parseFloat(countedAmount);
+    const counted = parseCOP(countedAmount);
     if (isNaN(counted) || counted < 0) { toast.error("Monto contado inválido"); return; }
     try {
       await createCount.mutateAsync({
@@ -174,6 +180,9 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
         )}
       </CardHeader>
       <CardContent className="space-y-4">
+        <CashAlertPanel locationId={locationId} balance={cashOnHand} min={cashMin} max={cashMax}
+          canAct={isPos || isAdmin}
+          onSupplierPayment={(id) => { setAlertId(id); setMovementType("pago_proveedor"); setShowForm(true); }} />
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <div className="rounded-lg border p-3">
             <div className="text-xs text-muted-foreground flex items-center gap-1"><Banknote className="h-3 w-3" /> Efectivo en caja</div>
@@ -207,6 +216,7 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
             <div className="text-xs text-muted-foreground flex items-center gap-1"><ArrowUpCircle className="h-3 w-3" /> Retiros</div>
             <div className="text-lg font-bold">${approvedRetiros.toLocaleString()}</div>
             <div className="text-[10px] text-muted-foreground mt-1">Consignaciones: ${approvedConsignaciones.toLocaleString()}</div>
+            {cash.pagosProveedor > 0 && <div className="text-[10px] text-muted-foreground">Pagos a proveedores: ${cash.pagosProveedor.toLocaleString()}</div>}
           </div>
           <div className="rounded-lg border p-3">
             <div className="text-xs text-muted-foreground">Gastos en efectivo</div>
@@ -227,7 +237,8 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
             </div>
             <div>
               <Label>Efectivo contado</Label>
-              <Input type="number" min={0} value={countedAmount} onChange={(e) => setCountedAmount(e.target.value)} />
+              <Input inputMode="numeric" value={countedAmount} onChange={(e) => setCountedAmount(e.target.value)} placeholder="Ej: 215.400" />
+              {countedAmount && <p className="text-xs text-muted-foreground mt-1">Se guardará como <b>{formatCOPInput(parseCOP(countedAmount))}</b></p>}
             </div>
             <div className="md:col-span-2">
               <Label>Observaciones (opcional)</Label>
@@ -252,12 +263,14 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
                   <SelectItem value="retiro">Retiro de efectivo</SelectItem>
                   <SelectItem value="consignacion">Consignación</SelectItem>
                   <SelectItem value="gasto">Gasto en efectivo del punto</SelectItem>
+                  <SelectItem value="pago_proveedor">Pago a proveedor</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
               <Label>Monto</Label>
-              <Input type="number" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} />
+              <Input inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Ej: 24.100" />
+              {amount && <p className="text-xs text-muted-foreground mt-1">Se guardará como <b>{formatCOPInput(parseCOP(amount))}</b></p>}
             </div>
             <div>
               <Label>
@@ -265,7 +278,9 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
                   ? "Motivo / qué se retira"
                   : movementType === "gasto"
                     ? "Concepto del gasto"
-                    : "Concepto / banco destino"}
+                    : movementType === "pago_proveedor"
+                      ? "Proveedor y concepto"
+                      : "Concepto / banco destino"}
               </Label>
               <Input value={concept} onChange={(e) => setConcept(e.target.value)}
                 placeholder={movementType === "retiro"
@@ -341,6 +356,8 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
                     <Badge variant="outline" className="capitalize">
                       {(w.movement_type ?? "retiro") === "consignacion" ? (
                         <><ArrowDownCircle className="h-3 w-3 mr-1" /> Consignación</>
+                      ) : w.movement_type === "pago_proveedor" ? (
+                        <><ArrowUpCircle className="h-3 w-3 mr-1" /> Pago a proveedor</>
                       ) : (
                         <><ArrowUpCircle className="h-3 w-3 mr-1" /> Retiro</>
                       )}
@@ -364,6 +381,9 @@ export function PuntoRetiros({ locationId, cashBase = 0 }: Props) {
                     className="text-xs inline-flex items-center gap-1 text-primary hover:underline">
                     <Paperclip className="h-3 w-3" /> Soporte
                   </button>
+                )}
+                {isAdmin && (
+                  <CorrectAmountButton table="pos_cash_withdrawals" id={w.id} current={Number(w.amount)} onDone={refreshCash} />
                 )}
                 {isAdmin && w.status === "pendiente" && (
                   <div className="flex gap-1">

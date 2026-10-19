@@ -302,13 +302,15 @@ export function useCreateCashWithdrawal(locationId: string) {
       concept: string;
       proof_url?: string | null;
       notes?: string;
-      movement_type?: "retiro" | "consignacion";
+      movement_type?: "retiro" | "consignacion" | "pago_proveedor";
+      alert_id?: string | null;
     }) => {
       const { error } = await supabase.from("pos_cash_withdrawals" as any).insert({
         location_id: locationId,
         amount: input.amount,
         concept: input.concept,
         movement_type: input.movement_type ?? "retiro",
+        alert_id: input.alert_id ?? null,
         proof_url: input.proof_url ?? null,
         notes: input.notes ?? null,
         requested_by: user!.id,

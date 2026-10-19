@@ -144,7 +144,6 @@ export function CashAlertPanel({ locationId, balance, min, max, responsible = "E
                 update.mutate({ id: dlg.alert.id, patch: { status: "recogida_solicitada", action: "recogida", assigned_to: who, due_date: date, notes: note || null }, action: "recogida_solicitada", note: `${who} · ${date}${note ? " · " + note : ""}` });
               } else {
                 if (!note.trim()) { toast.error("Escribe cómo se resolvió"); return; }
-                const { data: _ } = { data: null };
                 supabase.auth.getUser().then(({ data: u }) =>
                   update.mutate({ id: dlg.alert.id, patch: { status: "resuelta", resolved_at: new Date().toISOString(), resolved_by: u.user?.id, resolution_note: note }, action: "resuelta", note }));
               }

@@ -269,6 +269,9 @@ export function computePosCash({ cashBase, lastCount, sales, withdrawals, expens
   const consignaciones = live
     .filter((w) => w.movement_type === "consignacion")
     .reduce((a, w) => a + Number(w.amount), 0);
+  const pagosProveedor = live
+    .filter((w) => w.movement_type === "pago_proveedor")
+    .reduce((a, w) => a + Number(w.amount), 0);
   const pending = live
     .filter((w) => w.status === "pendiente")
     .reduce((a, w) => a + Number(w.amount), 0);
@@ -288,8 +291,9 @@ export function computePosCash({ cashBase, lastCount, sales, withdrawals, expens
     retiros,
     consignaciones,
     gastos,
+    pagosProveedor,
     pending,
     gastosPendientes,
-    cashOnHand: base + cashSales - retiros - consignaciones - gastos,
+    cashOnHand: base + cashSales - retiros - consignaciones - pagosProveedor - gastos,
   };
 }
