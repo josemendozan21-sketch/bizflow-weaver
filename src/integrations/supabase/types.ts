@@ -407,6 +407,56 @@ export type Database = {
           },
         ]
       }
+      commission_payouts: {
+        Row: {
+          advisor_id: string
+          amount: number
+          created_at: string
+          id: string
+          notes: string | null
+          paid_at: string
+          pay_period: string
+          proof_url: string | null
+          reference: string | null
+          registered_by: string | null
+          settlement_id: string | null
+        }
+        Insert: {
+          advisor_id: string
+          amount: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string
+          pay_period: string
+          proof_url?: string | null
+          reference?: string | null
+          registered_by?: string | null
+          settlement_id?: string | null
+        }
+        Update: {
+          advisor_id?: string
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string
+          pay_period?: string
+          proof_url?: string | null
+          reference?: string | null
+          registered_by?: string | null
+          settlement_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_payouts_settlement_id_fkey"
+            columns: ["settlement_id"]
+            isOneToOne: false
+            referencedRelation: "commission_settlements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commission_rules: {
         Row: {
           active: boolean
@@ -436,6 +486,172 @@ export type Database = {
           notes?: string | null
           percentage?: number
           sale_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      commission_settlement_items: {
+        Row: {
+          amount: number
+          base_amount: number
+          causation_period: string
+          client_name: string | null
+          completed_date: string | null
+          created_at: string
+          id: string
+          is_carryover: boolean
+          order_code: string | null
+          order_id: string
+          rate: number
+          sale_date: string | null
+          settlement_id: string
+        }
+        Insert: {
+          amount?: number
+          base_amount?: number
+          causation_period: string
+          client_name?: string | null
+          completed_date?: string | null
+          created_at?: string
+          id?: string
+          is_carryover?: boolean
+          order_code?: string | null
+          order_id: string
+          rate?: number
+          sale_date?: string | null
+          settlement_id: string
+        }
+        Update: {
+          amount?: number
+          base_amount?: number
+          causation_period?: string
+          client_name?: string | null
+          completed_date?: string | null
+          created_at?: string
+          id?: string
+          is_carryover?: boolean
+          order_code?: string | null
+          order_id?: string
+          rate?: number
+          sale_date?: string | null
+          settlement_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_settlement_items_settlement_id_fkey"
+            columns: ["settlement_id"]
+            isOneToOne: false
+            referencedRelation: "commission_settlements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_settlement_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_name: string | null
+          amount: number | null
+          created_at: string
+          id: string
+          note: string | null
+          settlement_id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_name?: string | null
+          amount?: number | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          settlement_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_name?: string | null
+          amount?: number | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          settlement_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_settlement_log_settlement_id_fkey"
+            columns: ["settlement_id"]
+            isOneToOne: false
+            referencedRelation: "commission_settlements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_settlements: {
+        Row: {
+          adjustment_amount: number
+          advisor_id: string
+          advisor_name: string | null
+          approved_at: string | null
+          approved_by: string | null
+          bonus_amount: number
+          carryover_amount: number
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          current_amount: number
+          dispute_note: string | null
+          disputed_at: string | null
+          id: string
+          notes: string | null
+          pay_period: string
+          returned_note: string | null
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          adjustment_amount?: number
+          advisor_id: string
+          advisor_name?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          bonus_amount?: number
+          carryover_amount?: number
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          current_amount?: number
+          dispute_note?: string | null
+          disputed_at?: string | null
+          id?: string
+          notes?: string | null
+          pay_period: string
+          returned_note?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          adjustment_amount?: number
+          advisor_id?: string
+          advisor_name?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          bonus_amount?: number
+          carryover_amount?: number
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          current_amount?: number
+          dispute_note?: string | null
+          disputed_at?: string | null
+          id?: string
+          notes?: string | null
+          pay_period?: string
+          returned_note?: string | null
+          status?: string
+          total_amount?: number
           updated_at?: string
         }
         Relationships: []
@@ -4519,6 +4735,10 @@ export type Database = {
       }
     }
     Functions: {
+      advisor_respond_settlement: {
+        Args: { _confirm: boolean; _note: string; _settlement_id: string }
+        Returns: Json
+      }
       build_ref_key: {
         Args: {
           _brand: string
