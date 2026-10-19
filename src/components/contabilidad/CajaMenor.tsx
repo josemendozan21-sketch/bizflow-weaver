@@ -551,7 +551,7 @@ function EditExpenseDialog({ expense, onClose, onSaved }: {
 
   const handleSave = async () => {
     if (!expense) return;
-    const val = parseFloat(amount);
+    const val = parseCOP(amount);
     if (!val || val <= 0) { toast.error("Ingrese un monto válido"); return; }
     if (!description.trim()) { toast.error("Describa el gasto"); return; }
     setSaving(true);
@@ -652,7 +652,7 @@ function FundDialog({ open, onClose, userId, defaultSede, onSaved }: {
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
-    const val = parseFloat(amount);
+    const val = parseCOP(amount);
     if (!val || val <= 0) { toast.error("Ingrese un monto válido"); return; }
     setSaving(true);
     try {
@@ -746,7 +746,7 @@ function EditFundDialog({ fund, onClose, onSaved }: {
 
   const handleSave = async () => {
     if (!fund) return;
-    const val = parseFloat(amount);
+    const val = parseCOP(amount);
     if (!val || val <= 0) { toast.error("Ingrese un monto válido"); return; }
     setSaving(true);
     try {
@@ -831,7 +831,7 @@ function ExpenseDialog({ open, onClose, defaultSede, balanceFor, userId, userNam
   const currentBalance = balanceFor(sede);
 
   const handleSave = async () => {
-    const val = parseFloat(amount);
+    const val = parseCOP(amount);
     if (!val || val <= 0) { toast.error("Ingrese un monto válido"); return; }
     if (!description.trim()) { toast.error("Describa para qué es el gasto"); return; }
     if (!requestedBy.trim()) { toast.error("Indique quién solicitó el dinero"); return; }
@@ -953,7 +953,7 @@ function CountDialog({ open, onClose, defaultSede, expectedFor, userId, userName
   const [saving, setSaving] = useState(false);
 
   const expected = expectedFor(sede);
-  const countedNum = parseFloat(counted);
+  const countedNum = parseCOP(counted);
   const difference = Number.isFinite(countedNum) ? countedNum - expected : 0;
 
   const handleSave = async () => {
