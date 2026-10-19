@@ -53,6 +53,10 @@ export function isExcludedOrder(o: Order): boolean {
   );
 }
 
+export function isBackfillPayment(notes?: string | null): boolean {
+  return Boolean(notes && notes.includes("corrección automática 2026-09-03"));
+}
+
 /** Fecha en que el pedido quedó al 100%, o null si aún no lo está. */
 export function getCompletionDate(o: Order, payments?: PaymentsByOrder): Date | null {
   if (isExcludedOrder(o)) return null;
@@ -61,6 +65,9 @@ export function getCompletionDate(o: Order, payments?: PaymentsByOrder): Date | 
   const dispatched = parse(o.dispatched_at);
   if (dispatched) dates.push(dispatched);
   for (const r of payments?.[o.id] || []) {
+    // La corrección masiva del 3-sep-2026 registró saldos viejos con esa fecha:
+    // no indica cuándo se cobró, así que no mueve el mes de la comisión.
+    if (isBackfillPayment(r.notes)) continue;
     const d = parse(r.payment_date);
     if (d && Number(r.amount || 0) > 0) dates.push(d);
   }
