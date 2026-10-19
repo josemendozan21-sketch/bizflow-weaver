@@ -94,7 +94,6 @@ export function useSettlementActions() {
         settlement_id: id, order_id: l.order.id, order_code: l.order.order_code || null, client_name: l.order.client_name,
         sale_date: l.saleDate.toISOString().slice(0, 10), completed_date: l.completedDate.toISOString().slice(0, 10),
         paid_date: l.paidDate ? l.paidDate.toISOString().slice(0, 10) : null,
-        paid_date: l.paidDate ? l.paidDate.toISOString().slice(0, 10) : null,
         causation_period: l.causationPeriod, base_amount: Math.round(l.base), rate: l.rate, amount: Math.round(l.amount),
         is_carryover: l.isCarryover,
       }));
