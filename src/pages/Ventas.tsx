@@ -200,7 +200,8 @@ const Ventas = () => {
         </TabsContent>
 
         {showCommissions && (
-          <TabsContent value="comisiones" className="mt-4">
+          <TabsContent value="comisiones" className="mt-4 space-y-6">
+            <MisLiquidaciones />
             <MisComisiones />
           </TabsContent>
         )}

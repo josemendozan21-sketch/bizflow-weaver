@@ -545,6 +545,7 @@ const Contabilidad = () => {
           {!isReadOnly && <TabsTrigger value="analisis"><BarChart3 className="h-4 w-4 mr-1" />Análisis mensual</TabsTrigger>}
           {!isReadOnly && <TabsTrigger value="asesores"><Users className="h-4 w-4 mr-1" />Ventas por asesor</TabsTrigger>}
           {!isReadOnly && <TabsTrigger value="comisiones"><Percent className="h-4 w-4 mr-1" />Comisiones</TabsTrigger>}
+          <TabsTrigger value="liquidaciones"><Users className="h-4 w-4 mr-1" />Contabilidad y Asesores</TabsTrigger>
           {!isReadOnly && <TabsTrigger value="cumplimiento"><Target className="h-4 w-4 mr-1" />Cumplimiento</TabsTrigger>}
           <TabsTrigger value="pendientes">Pendientes ({pending.length})</TabsTrigger>
           <TabsTrigger value="facturar">Facturar ({toInvoice.length})</TabsTrigger>
@@ -576,6 +577,10 @@ const Contabilidad = () => {
             <CommissionsPanel orders={allOrders} />
           </TabsContent>
         )}
+
+        <TabsContent value="liquidaciones">
+          <SettlementsView orders={allOrders} mode="contabilidad" readOnly={isReadOnly} />
+        </TabsContent>
 
         {!isReadOnly && (
           <TabsContent value="cumplimiento">

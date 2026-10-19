@@ -47,7 +47,7 @@ export function SettlementsView({ orders, mode, advisorId: fixedAdvisor, readOnl
     while (p >= min) { out.push(p); p = shiftPeriod(p, -1); }
     return out;
   }, [nowP]);
-  const [payPeriod, setPayPeriod] = useState(shiftPeriod(nowP, 1) > periods[0] ? periods[0] : nowP < periods[periods.length - 1] ? periods[periods.length - 1] : nowP);
+  const [payPeriod, setPayPeriod] = useState(periods.includes(nowP) ? nowP : periods[0]);
 
   const advisors = useMemo(() => {
     const m = new Map<string, string>();
