@@ -26,9 +26,12 @@ import { getPayability, type PaymentsByOrder } from "@/lib/commissionAccrual";
  * 5. Nada se paga parcial ni por abono.
  */
 
-/** Primer mes de causación que se liquida en la plataforma.
- *  Lo anterior se pagó por fuera y se maneja con ajustes manuales. */
+/** Desde este mes de causación se arrastran pendientes automáticamente.
+ *  Antes se pagó por fuera: esos meses se pueden consultar y liquidar,
+ *  pero no se suman solos como "pendientes anteriores". */
 export const SETTLEMENT_START_PERIOD = "2026-10";
+/** Primer mes de causación consultable (inicio de la plataforma). */
+export const HISTORY_START_PERIOD = "2026-04";
 
 function parse(v: unknown): Date | null {
   if (!v) return null;
@@ -157,7 +160,8 @@ export function buildSettlement(params: {
   const current: SettlementLine[] = [];
   const carryover: SettlementLine[] = [];
   for (const d of done) {
-    if (d.period > causation || d.period < start) continue;
+    if (d.period > causation) continue;
+    if (d.period < causation && d.period < start) continue;
     if (settled.has(d.o.id)) continue;
     const unlocked = (completedByPeriod.get(d.period) || 0) >= UNLOCK_THRESHOLD;
     const rate = rateFor(d.o, unlocked);
@@ -177,7 +181,7 @@ export function buildSettlement(params: {
   }
 
   const completedTotal = completedByPeriod.get(causation) || 0;
-  const bonus = causation >= start ? bonusFor(completedTotal) : 0;
+  const bonus = bonusFor(completedTotal);
   const currentAmount = current.reduce((s, l) => s + l.amount, 0);
   const carryoverAmount = carryover.reduce((s, l) => s + l.amount, 0);
   const sortL = (a: SettlementLine, b: SettlementLine) => a.completedDate.getTime() - b.completedDate.getTime();

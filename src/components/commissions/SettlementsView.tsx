@@ -13,7 +13,7 @@ import { type Order } from "@/hooks/useOrders";
 import { useAllOrderPayments } from "@/hooks/useOrderPayments";
 import { useAllOrderCharges } from "@/hooks/useOrderCharges";
 import { useSettlementActions, useSettlementData, type Settlement } from "@/hooks/useCommissionSettlements";
-import { buildSettlement, shiftPeriod, SETTLEMENT_STATUS_LABEL, SETTLEMENT_START_PERIOD, type SettlementLine } from "@/lib/commissionSettlement";
+import { buildSettlement, shiftPeriod, SETTLEMENT_STATUS_LABEL, HISTORY_START_PERIOD, type SettlementLine } from "@/lib/commissionSettlement";
 import { periodKey, periodLabel } from "@/lib/commissions";
 import { format } from "date-fns";
 
@@ -43,7 +43,7 @@ export function SettlementsView({ orders, mode, advisorId: fixedAdvisor, readOnl
   const periods = useMemo(() => {
     const out: string[] = [];
     let p = shiftPeriod(nowP, 1);
-    const min = shiftPeriod(SETTLEMENT_START_PERIOD, 1);
+    const min = shiftPeriod(HISTORY_START_PERIOD, 1);
     while (p >= min) { out.push(p); p = shiftPeriod(p, -1); }
     return out;
   }, [nowP]);
