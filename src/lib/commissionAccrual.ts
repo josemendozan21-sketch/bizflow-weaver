@@ -31,8 +31,8 @@ import {
  * 2. El RECAUDO (y por lo tanto la comisión causada) pertenece al mes de cada
  *    pago: si un pedido se abonó mitad en julio y mitad en agosto, cada mitad
  *    queda en su mes.
- * 3. La comisión solo se PAGA cuando el pedido está 100% pagado, con soportes
- *    de pago y despachado. Mientras tanto queda causada pero retenida.
+ * 3. La comisión solo se PAGA cuando el pedido está 100% pagado y con soporte
+ *    de pago (el despacho no se exige). Mientras tanto queda causada pero retenida.
  */
 
 export interface PaymentRow {
@@ -108,7 +108,6 @@ export function getPayability(
   const hasProof =
     Boolean(o.payment_proof_url) || rows.some((r) => Boolean(r.proof_url));
   if (!hasProof) missing.push("soporte de pago");
-  if (!(o as any).dispatched_at) missing.push("despacho");
   return { payable: missing.length === 0, missing };
 }
 
@@ -346,7 +345,7 @@ export function accrualSummaryRows(
     })),
     { Concepto: "Comisión causada por el recaudo", Valor: Math.round(s.commissionAccrued) },
     {
-      Concepto: "Comisión lista para pago (pedido completo y despachado)",
+      Concepto: "Comisión lista para pago (pedido pagado al 100% con comprobante)",
       Valor: Math.round(s.commissionPayable),
     },
     {
