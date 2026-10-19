@@ -50,7 +50,12 @@ import {
   withRunningBalance,
   sedeSummary,
   formatCOP,
+  computePosCash,
 } from "@/lib/pettyCash";
+import { parseCOP } from "@/lib/money";
+import { usePosLocations, usePosSales, usePosCashWithdrawals } from "@/hooks/usePuntosVenta";
+import { useSedeCashCounts } from "@/hooks/usePosPettyCash";
+import { cashAlertState } from "@/lib/money";
 
 /** Badge de sede bien diferenciable: Toberín azul, Chicó violeta. */
 function SedeBadge({ sede }: { sede: string | null | undefined }) {
@@ -126,7 +131,23 @@ export default function CajaMenor() {
   const movements = buildMovements(funds, allExpenses);
   const toberin = sedeSummary(movements, "toberin");
   const chico = sedeSummary(movements, "chico");
-  const totalBalance = toberin.balance + chico.balance;
+  // Chicó: el efectivo real del punto (base/arqueo + ventas efectivo − retiros − consignaciones − pagos − gastos).
+  const { data: posLocations = [] } = usePosLocations();
+  const posLoc: any = posLocations[0] ?? null;
+  const { data: posSales = [] } = usePosSales(posLoc?.id ?? null);
+  const { data: posWithdrawals = [] } = usePosCashWithdrawals(posLoc?.id ?? null);
+  const { data: chicoCounts = [] } = useSedeCashCounts("chico");
+  const chicoCash = computePosCash({
+    cashBase: Number(posLoc?.cash_base ?? 0),
+    lastCount: chicoCounts[0] ?? null,
+    sales: posSales as any,
+    withdrawals: posWithdrawals as any,
+    expenses: allExpenses.filter((e) => e.sede === "chico"),
+  });
+  const chicoMin = Number(posLoc?.cash_min ?? 200000);
+  const chicoMax = Number(posLoc?.cash_max_custody ?? 400000);
+  const chicoAlert = cashAlertState(chicoCash.cashOnHand, chicoMin, chicoMax);
+  const totalBalance = toberin.balance + chicoCash.cashOnHand;
 
   const pendingPos = allExpenses.filter(
     (e) => (e.status ?? "aprobado") === "pendiente" && (e.origin ?? "contabilidad") === "punto",
@@ -206,6 +227,29 @@ export default function CajaMenor() {
         </Card>
         {SEDES.map((s) => {
           const sum = summaryFor(s.value);
+          if (s.value === "chico") return (
+            <Card key={s.value}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">{s.label}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1">
+                <p className={`text-2xl font-bold ${chicoCash.cashOnHand <= 0 ? "text-destructive" : "text-foreground"}`}>
+                  {formatCOP(chicoCash.cashOnHand)}
+                </p>
+                <p className="text-[11px] text-muted-foreground [text-wrap:pretty]">
+                  {chicoCash.baseFromCount ? "Último arqueo" : "Base"} {formatCOP(chicoCash.base)} + ventas efectivo {formatCOP(chicoCash.cashSales)} − retiros {formatCOP(chicoCash.retiros)} − consignaciones {formatCOP(chicoCash.consignaciones)}{chicoCash.pagosProveedor ? ` − pagos proveedores ${formatCOP(chicoCash.pagosProveedor)}` : ""} − gastos {formatCOP(chicoCash.gastos)}
+                </p>
+                <p className="text-[11px] text-muted-foreground">Mismo efectivo que ve el Punto de la 92.</p>
+                {chicoAlert !== "ok" && (
+                  <p className="text-[11px] font-semibold text-destructive">
+                    {chicoAlert === "max"
+                      ? `Límite de custodia (${formatCOP(chicoMax)}) alcanzado: coordinar recogida o pago a proveedores con Jose o Yeimy.`
+                      : `Por debajo del mínimo de caja (${formatCOP(chicoMin)}).`}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          );
           return (
             <Card key={s.value}>
               <CardHeader className="pb-2">
@@ -595,7 +639,7 @@ function EditExpenseDialog({ expense, onClose, onSaved }: {
           </div>
           <div className="space-y-2">
             <Label>Monto *</Label>
-            <Input type="number" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            <Input inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} />
           </div>
           <div className="space-y-2">
             <Label>Descripción *</Label>
@@ -705,7 +749,7 @@ function FundDialog({ open, onClose, userId, defaultSede, onSaved }: {
           </div>
           <div className="space-y-2">
             <Label>Monto *</Label>
-            <Input type="number" min="0" placeholder="Ej: 500000" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            <Input inputMode="numeric" placeholder="Ej: 500000" value={amount} onChange={(e) => setAmount(e.target.value)} />
           </div>
           <div className="space-y-2">
             <Label>Notas (opcional)</Label>
@@ -793,7 +837,7 @@ function EditFundDialog({ fund, onClose, onSaved }: {
           </div>
           <div className="space-y-2">
             <Label>Monto *</Label>
-            <Input type="number" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            <Input inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} />
           </div>
           <div className="space-y-2">
             <Label>Notas</Label>
@@ -898,7 +942,7 @@ function ExpenseDialog({ open, onClose, defaultSede, balanceFor, userId, userNam
           </div>
           <div className="space-y-2">
             <Label>Monto *</Label>
-            <Input type="number" min="0" placeholder="Ej: 50000" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            <Input inputMode="numeric" placeholder="Ej: 50000" value={amount} onChange={(e) => setAmount(e.target.value)} />
           </div>
           <div className="space-y-2">
             <Label>¿Para qué? *</Label>
@@ -1018,7 +1062,7 @@ function CountDialog({ open, onClose, defaultSede, expectedFor, userId, userName
           </div>
           <div className="space-y-2">
             <Label>Efectivo contado *</Label>
-            <Input type="number" min="0" value={counted} onChange={(e) => setCounted(e.target.value)} />
+            <Input inputMode="numeric" value={counted} onChange={(e) => setCounted(e.target.value)} />
           </div>
           {Number.isFinite(countedNum) && (
             <div className={`text-sm font-semibold ${difference === 0 ? "text-muted-foreground" : difference > 0 ? "text-primary" : "text-destructive"}`}>
