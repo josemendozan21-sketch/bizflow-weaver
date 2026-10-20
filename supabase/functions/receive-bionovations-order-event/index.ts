@@ -66,7 +66,6 @@ Deno.serve(async (req) => {
       if (b.action_type === 'note') {
         if (!comment) return json({ error: 'La nota no tiene comentario' }, 400)
         await log('client_note', null, `Nota: ${comment}`, comment)
-        await sb.from('order_change_log').select('id').limit(0)
         for (const role of ['disenador', 'estampacion']) {
           await sb.from('notifications').insert({
             target_role: role, title: 'Nota del cliente web',
