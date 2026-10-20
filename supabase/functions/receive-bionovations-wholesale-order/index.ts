@@ -226,7 +226,7 @@ Deno.serve(async (req) => {
       if (orderCode) row.order_code = orderCode
       const { data, error } = await sb.from('orders').insert(row).select('id, order_code').single()
       if (error) {
-        if (error.code === '23505' && i === 0) {
+        if ((error.code === '23505' || error.code === 'P0001') && i === 0) {
           const again = await findExisting()
           return json({ ok: true, duplicate: true, order_code: again[0]?.order_code ?? null, order_ids: again.map((o) => o.id) })
         }
