@@ -1,5 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { buildOrderIdentity } from '../../../supabase/functions/receive-bionovations-wholesale-order/orderIdentity';
+import { buildStages } from '../orderFlow';
+
+vi.mock('@/integrations/supabase/client', () => ({ supabase: {} }));
 
 describe('Bionovations wholesale identity', () => {
   it('accepts Sweat Spot with the normal pending production flow', () => {
@@ -18,5 +21,10 @@ describe('Bionovations wholesale identity', () => {
     const rows = ['250 ml', '500 ml'].map(size => buildOrderIdentity('sweatspot', { product: 'Termo', size }, 'same-group'));
     expect(rows.map(row => row.submission_id)).toEqual(['same-group', 'same-group']);
     expect(rows.every(row => !Object.prototype.hasOwnProperty.call(row, 'order_code'))).toBe(true);
+  });
+  it('keeps all six thermo manufacturing phases in the Sweat Spot flow', () => {
+    expect(buildStages('sweatspot', { hasLogo: true, needsCuerpos: true, product: 'Termo 500 ml' })).toEqual([
+      'estampacion', 'produccion_tubos', 'elaboracion_esquinas', 'ensamble_cuello', 'sello_base', 'refile', 'colocacion_boquilla', 'listo',
+    ]);
   });
 });
