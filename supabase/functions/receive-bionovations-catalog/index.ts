@@ -13,7 +13,7 @@ Deno.serve(createCatalogHandler({
     // Paginate without filtering quantities: include references with zero stock.
     for (let offset = 0; ; offset += 1000) {
       const { data, error } = await sb.from('stock_items')
-        .select('name, brand, category, product_type')
+        .select('name, brand, category, product_type, color')
         .order('id').range(offset, offset + 999)
       if (error) throw error
       items.push(...(data ?? []))

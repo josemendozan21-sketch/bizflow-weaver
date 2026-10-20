@@ -2721,6 +2721,7 @@ export type Database = {
           payment_reference: string | null
           personalization: string | null
           price_includes_tax: boolean
+          print_type: string | null
           product: string
           production_completed_at: string | null
           production_due_date: string | null
@@ -2812,6 +2813,7 @@ export type Database = {
           payment_reference?: string | null
           personalization?: string | null
           price_includes_tax?: boolean
+          print_type?: string | null
           product: string
           production_completed_at?: string | null
           production_due_date?: string | null
@@ -2903,6 +2905,7 @@ export type Database = {
           payment_reference?: string | null
           personalization?: string | null
           price_includes_tax?: boolean
+          print_type?: string | null
           product?: string
           production_completed_at?: string | null
           production_due_date?: string | null

@@ -1,5 +1,7 @@
 # Tareas en curso
 
+8. **Conexión Bionovations para Sweat Spot** — COMPLETADO: entradas desplegadas, print_type por línea o pedido, catálogo y siliconas, líneas agrupadas sin escribir order_code. Prueba real de dos líneas, reserva, solicitud Sweatspot y reenvío sin duplicados; los seis avisos de termos entregados a la tienda. La sesión disponible es de asesora y no permite revisar solicitudes del asesor web en Diseño.
+
 1. **Aplicar catálogo del Punto de la 92 desde Excel** — COMPLETADO (76 actualizaciones/renombres, 3 productos nuevos, 124 retirados; cantidades sin tocar).
 2. **Filtros por referencia y subreferencia en el Punto de la 92** — COMPLETADO (clasificación automática, filtros en inventario y venta, campos en la ficha y en el Excel).
 3. **Unificar flujo de muestras entre Estampación e Inventarios** — COMPLETADO (aprobación real por tamaño y tinta/gel; fabricación en paralelo; entrega de cuerpos bloqueada hasta ambas aprobaciones).

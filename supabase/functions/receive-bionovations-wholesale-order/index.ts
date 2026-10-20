@@ -1,9 +1,10 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { z } from 'npm:zod@3'
+import { buildOrderIdentity } from './orderIdentity.ts'
 
 // Pedidos de Bionovations Direct: se tratan exactamente como si un asesor
-// los creara en Ventas (Magical al por mayor).
+// los creara en Ventas (Magical o Sweat Spot al por mayor).
 const ADVISOR_ID = '00000000-0000-0000-0000-000000000003'
 const ADVISOR_NAME = 'Bionovations Mayorista Web'
 const IVA_RATE = 19
@@ -20,6 +21,8 @@ const LogoIn = z.object({ name: str, url: z.string().trim().url().max(2000) })
 const Line = z.object({
   product: z.string().trim().min(1).max(200),
   type: str, // Frío / Térmico
+  size: str, // Sweat Spot: tamaño del termo
+  print_type: z.enum(['full', 'basica']).optional().nullable(),
   quantity: z.number().int().positive(),
   unit_price: z.number().nonnegative().optional().nullable(),
   ink_count: z.number().int().min(1).max(3).optional().nullable(),
@@ -30,6 +33,8 @@ const Line = z.object({
   is_gift: z.boolean().optional().default(false),
 })
 const Body = z.object({
+  brand: z.enum(['magical', 'sweatspot']).optional().default('magical'),
+  print_type: z.enum(['full', 'basica']).optional().nullable(),
   external_order_id: z.string().trim().min(1).max(200),
   client_name: z.string().trim().min(1).max(200),
   client_nit: str, client_phone: str, client_email: str,
@@ -49,14 +54,6 @@ const Body = z.object({
   observations: str,
   lines: z.array(Line).min(1).max(50),
 })
-
-function normType(t?: string | null): string | null {
-  if (!t) return null
-  const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-  if (n.startsWith('frio')) return 'Frío'
-  if (n.startsWith('term') || n.startsWith('calor')) return 'Térmico'
-  return t.trim()
-}
 
 function prorate(bases: number[], total: number): number[] {
   const out = bases.map(() => 0)
@@ -105,10 +102,13 @@ Deno.serve(async (req) => {
     const parsed = Body.safeParse(await req.json().catch(() => null))
     if (!parsed.success) return json({ error: parsed.error.flatten() }, 400)
     const b = parsed.data
+    const isSS = b.brand === 'sweatspot'
+    const brandLabel = isSS ? 'Sweatspot' : 'Magical Warmers'
+    const submissionId = crypto.randomUUID()
 
     const sb = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       { auth: { persistSession: false } },
     )
 
@@ -147,8 +147,8 @@ Deno.serve(async (req) => {
 
     // ---- Totales / IVA / abono ----
     const typed = b.lines.map((l) => {
-      const t = normType(l.type)
-      return { ...l, referencia: t ? `${l.product} (${t})` : l.product }
+      const identity = buildOrderIdentity(b.brand, l, submissionId, b.print_type)
+      return { ...l, identity, referencia: identity.product }
     })
     const bases = typed.map((l) => (l.is_gift ? 0 : (l.unit_price ?? 0) * l.quantity))
     const productsBase = bases.reduce((s, v) => s + v, 0)
@@ -166,7 +166,7 @@ Deno.serve(async (req) => {
       const l = typed[i]
       const inkCount = l.ink_count ?? (l.ink_color_3 ? 3 : l.ink_color_2 ? 2 : 1)
       const row: Record<string, unknown> = {
-        brand: 'magical',
+        ...l.identity,
         sale_type: 'mayor',
         client_name: b.client_name,
         client_nit: b.client_nit ?? null,
@@ -190,7 +190,7 @@ Deno.serve(async (req) => {
         ink_color_3: inkCount >= 3 ? l.ink_color_3 ?? null : null,
         glitter_color: l.glitter_color ?? null,
         silicone_color: l.silicone_color ?? null,
-        gel_color: l.gel_color ?? null,
+        gel_color: isSS ? null : l.gel_color ?? null,
         logo_url: logos[0]?.url ?? null,
         logo_url_2: logos[1]?.url ?? null,
         logo_name: logos[0]?.name ?? null,
@@ -204,6 +204,7 @@ Deno.serve(async (req) => {
         personalization: l.personalization ?? null,
         observations: [
           b.made_to_order ? 'BAJO PEDIDO' : null,
+          isSS ? `Impresión ${l.identity.print_type === 'basica' ? 'básica' : 'full'}` : null,
           b.observations, l.observations,
           l.is_gift ? '🎁 OBSEQUIO' : null,
         ].filter(Boolean).join(' | ') || null,
@@ -223,7 +224,6 @@ Deno.serve(async (req) => {
         line_index: i + 1,
         line_count: typed.length,
       }
-      if (orderCode) row.order_code = orderCode
       const { data, error } = await sb.from('orders').insert(row).select('id, order_code').single()
       if (error) {
         if ((error.code === '23505' || error.code === 'P0001') && i === 0) {
@@ -237,7 +237,7 @@ Deno.serve(async (req) => {
       orderCode = orderCode ?? data.order_code
 
       // Avisos de pedido nuevo (igual que createOrderNotifications)
-      const shortDesc = `${l.quantity} uds de ${l.referencia} — Magical Warmers para ${b.client_name}`
+      const shortDesc = `${l.quantity} uds de ${l.referencia} — ${brandLabel} para ${b.client_name}`
       const notifs: Array<Record<string, unknown>> = [
         { target_role: 'inventarios', title: 'Nuevo pedido — revisar inventario', message: `Nuevo pedido: ${shortDesc}`, type: 'nuevo_pedido', reference_id: data.id },
         { target_role: 'contabilidad', title: 'Nuevo pedido registrado', message: `Pedido al por mayor: ${shortDesc}`, type: 'nuevo_pedido', reference_id: data.id },
@@ -245,7 +245,7 @@ Deno.serve(async (req) => {
       ]
       if (logoSource === 'nuevo') {
         notifs.push(
-          { target_role: 'disenador', title: 'Nueva solicitud de diseño', message: `Logo pendiente para ${b.client_name} — ${l.referencia} (Magical Warmers)`, type: 'diseno_logo', reference_id: data.id },
+          { target_role: 'disenador', title: 'Nueva solicitud de diseño', message: `Logo pendiente para ${b.client_name} — ${l.referencia} (${brandLabel})`, type: 'diseno_logo', reference_id: data.id },
           { target_role: 'estampacion', title: 'Pedido con logo en preparación', message: `Próximo trabajo: ${shortDesc}. Pendiente aprobación de diseño.`, type: 'nuevo_pedido', reference_id: data.id },
         )
       }
@@ -260,7 +260,7 @@ Deno.serve(async (req) => {
     // Solicitud de diseño (igual que createLogoRequestFromOrder)
     if (logoSource === 'nuevo' || (b.is_recompra && reuse && b.logo_instructions)) {
       const { data: lr, error: lrErr } = await sb.from('logo_requests').insert({
-        brand: 'Magical Warmers',
+        brand: brandLabel,
         client_name: b.client_name,
         logo_name: logos.map((l) => l.name).filter(Boolean).slice(0, 2).join(' + ') || null,
         product: typed[0].referencia,
@@ -285,7 +285,7 @@ Deno.serve(async (req) => {
 
     // Trazabilidad del logo (igual que notifyLogoFlow)
     if (logoSource !== 'sin_logo') {
-      const base = `${codeLabel} — ${b.client_name} · ${typed[0].referencia} (Magical Warmers)`
+      const base = `${codeLabel} — ${b.client_name} · ${typed[0].referencia} (${brandLabel})`
       const extraNotifs = logoSource === 'reutilizado'
         ? [{ target_role: 'estampacion', title: 'Recompra con el mismo logo', message: `${base}. Se reutiliza el logo ya aprobado; el archivo está disponible en el pedido.`, type: 'nuevo_pedido', reference_id: firstId }]
         : [
