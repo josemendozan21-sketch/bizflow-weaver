@@ -12,7 +12,7 @@ const json = (body: unknown, status = 200) =>
 const Decision = z.object({
   type: z.literal('client_decision'),
   external_order_id: z.string().trim().min(1).max(200),
-  action_type: z.enum(['logo_design', 'stamp_size', 'stamp_inkgel']),
+  action_type: z.enum(['logo_design', 'stamp_size', 'stamp_inkgel', 'note']),
   decision: z.enum(['aprobado', 'ajustes', 'nota']),
   comment: z.string().trim().max(4000).optional().nullable(),
   actor: z.string().trim().max(100).optional().nullable(),
@@ -63,6 +63,17 @@ Deno.serve(async (req) => {
 
     if (b.type === 'client_decision') {
       const comment = b.comment?.trim() || null
+      if (b.action_type === 'note') {
+        if (!comment) return json({ error: 'La nota no tiene comentario' }, 400)
+        await log('client_note', null, `Nota: ${comment}`, comment)
+        for (const role of ['disenador', 'estampacion']) {
+          await sb.from('notifications').insert({
+            target_role: role, title: 'Nota del cliente web',
+            message: `${label}: ${comment}`, type: 'nuevo_pedido', reference_id: first.id,
+          })
+        }
+        return json({ ok: true, applied: 'nota' })
+      }
       if (b.action_type === 'logo_design') {
         const { data: lr } = await sb
           .from('logo_requests')
@@ -95,7 +106,18 @@ Deno.serve(async (req) => {
         .from('production_orders')
         .select(`id, ${statusCol}, stamp_advisor_feedback`)
         .in('order_id', ids)
-      if (!pos?.length) return json({ error: 'El pedido aún no tiene orden de producción' }, 409)
+      if (!pos?.length) {
+        // Aún no hay orden de producción ni foto: se guarda la decisión para Estampación.
+        const stepLbl = step === 'size' ? 'tamaño' : 'tinta y gel'
+        await log(statusCol, null, `Decisión anticipada: ${b.decision}${comment ? ` · ${comment}` : ''}`, comment)
+        await sb.from('notifications').insert({
+          target_role: 'estampacion',
+          title: `Cliente web (${stepLbl}): ${b.decision}`,
+          message: `${label}${comment ? `: ${comment}` : ''}. Aún sin orden de producción; quedó en el historial del pedido.`,
+          type: 'nuevo_pedido', reference_id: first.id,
+        })
+        return json({ ok: true, applied: b.decision, pending_production_order: true })
+      }
       const upd: Record<string, unknown> = {}
       if (comment) upd.stamp_advisor_feedback = `[${ACTOR}] ${comment}`
       if (b.decision === 'aprobado') {
