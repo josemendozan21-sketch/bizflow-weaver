@@ -32,7 +32,7 @@ describe("Bionovations read-only catalog", () => {
     const handler = createCatalogHandler({ token: "test-only", headers: {}, readStock: async () => [stock("Colorante Verde")] });
     const response = await handler(new Request("https://example.test", { headers: { "x-webhook-token": "test-only" } }));
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ inks: [], gels: ["Verde"], glitters: [], references: [] });
+    expect(await response.json()).toEqual({ inks: [], gels: ["Verde"], glitters: [], references: [], sweatspot_references: [], silicones: [] });
   });
   it("rejects every write method without reading inventory", async () => {
     const readStock = vi.fn(async () => []);
@@ -41,5 +41,19 @@ describe("Bionovations read-only catalog", () => {
       expect((await handler(new Request("https://example.test", { method, headers: { "x-webhook-token": "test-only" } }))).status).toBe(405);
     }
     expect(readStock).not.toHaveBeenCalled();
+  });
+  it("includes Sweat Spot references regardless of quantities and excludes raw materials", () => {
+    expect(buildWebCatalog([
+      stock("Termo 500 ml", "producto_terminado", null, "sweatspot"),
+      stock("Termo 500 ml", "cuerpos_referencias", null, "sweatspot"),
+      stock("Termo 250 ml juguetón", "cuerpos_referencias", null, "sweatspot"),
+      stock("Boquillas", "materia_prima", null, "sweatspot"),
+    ]).sweatspot_references).toEqual(["Termo 250 ml juguetón", "Termo 500 ml"]);
+  });
+  it("returns silicone colors without prefix or volume, deduplicated", () => {
+    expect(buildWebCatalog([
+      stock("Silicona Azul 250ml"), stock("Silicona Azul 500ml"),
+      { ...stock("Silicona SKU"), color: "Rosado" }, stock("Silicona Verde", "producto_terminado"),
+    ]).silicones).toEqual(["Azul", "Rosado"]);
   });
 });

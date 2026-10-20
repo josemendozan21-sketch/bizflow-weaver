@@ -3,6 +3,7 @@ export interface CatalogStock {
   brand: string;
   category: string;
   product_type: string | null;
+  color?: string | null;
 }
 
 type ProductType = "Frío" | "Térmico";
@@ -36,6 +37,12 @@ export function buildWebCatalog(items: CatalogStock[]) {
     inks: colors(/^tinta\b/i, /^tinta\s*(pvc)?\s*/i),
     gels: colors(/^colorante\b/i, /^colorante\s*/i),
     glitters: colors(/^escarcha\b/i, /^escarcha\s*/i),
+    silicones: [...new Set(materials.filter((item) => /^silicona\b/i.test(item.name))
+      .map((item) => item.color?.trim() || item.name.replace(/^silicona\s*/i, "").replace(/\s*\d+\s*ml\b.*$/i, "").trim())
+      .filter(Boolean))].sort((a, b) => a.localeCompare(b, "es")),
+    sweatspot_references: [...new Set(items
+      .filter((item) => normalize(item.brand).startsWith("sweat") && ["producto_terminado", "cuerpos_referencias"].includes(item.category))
+      .map((item) => item.name.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es")),
     references: [...references].sort(([a], [b]) => a.localeCompare(b, "es", { sensitivity: "base" }))
       .map(([name, types]) => ({ name, types: (["Frío", "Térmico"] as ProductType[]).filter((type) => types.has(type)) })),
   };
