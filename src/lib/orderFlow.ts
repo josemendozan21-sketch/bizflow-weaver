@@ -194,6 +194,7 @@ export async function ensureProductionOrder(
     payload.logo_type = printType === "basica" ? "impresion_basica" : "impresion_full";
     payload.silicone_color = order.silicone_color ?? null;
     payload.thermo_size = thermoSizeOf(order.product);
+    payload.molde = order.product;
   } else {
     payload.gel_color = order.gel_color ?? null;
     payload.molde = order.product;
