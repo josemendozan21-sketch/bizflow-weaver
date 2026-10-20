@@ -92,6 +92,13 @@
       "when": 1792445596058,
       "tag": "0012_pos_cash_limits_alerts_corrections",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792520178707,
+      "tag": "0013_wholesale_web_orders_inventory_filters",
+      "breakpoints": true
     }
   ]
 }
