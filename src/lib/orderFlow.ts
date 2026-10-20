@@ -189,7 +189,7 @@ export async function ensureProductionOrder(
     if (!printType) {
       const { data: parent } = await supabase.from("orders")
         .select("print_type").eq("id", order.id).maybeSingle();
-      printType = parent?.print_type;
+      printType = parent?.print_type === "basica" ? "basica" : "full";
     }
     payload.logo_type = printType === "basica" ? "impresion_basica" : "impresion_full";
     payload.silicone_color = order.silicone_color ?? null;
