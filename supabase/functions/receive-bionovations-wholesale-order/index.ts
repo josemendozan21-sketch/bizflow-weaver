@@ -300,6 +300,7 @@ Deno.serve(async (req) => {
         old_value: null,
         new_value: `${logoSource === 'nuevo' ? 'Logo NUEVO' : 'Logo reutilizado'}${logos[0]?.url ? ` — ${logos[0].url}` : ''}`,
         changed_by: ADVISOR_ID,
+        changed_by_name: ADVISOR_NAME,
       })
       if (clErr) console.warn('Change log error:', clErr.message)
     }
