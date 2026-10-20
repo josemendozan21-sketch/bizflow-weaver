@@ -17,6 +17,6 @@ describe('Bionovations wholesale identity', () => {
   it('groups multiple lines without assigning generated order_code', () => {
     const rows = ['250 ml', '500 ml'].map(size => buildOrderIdentity('sweatspot', { product: 'Termo', size }, 'same-group'));
     expect(rows.map(row => row.submission_id)).toEqual(['same-group', 'same-group']);
-    expect(rows.every(row => !Object.hasOwn(row, 'order_code'))).toBe(true);
+    expect(rows.every(row => !Object.prototype.hasOwnProperty.call(row, 'order_code'))).toBe(true);
   });
 });
