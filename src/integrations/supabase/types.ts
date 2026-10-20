@@ -2596,6 +2596,7 @@ export type Database = {
           invoice_number: string | null
           invoice_status: string
           is_credit: boolean
+          is_made_to_order: boolean
           is_recompra: boolean
           line_count: number | null
           line_index: number | null
@@ -2618,6 +2619,7 @@ export type Database = {
           payment_due_date: string | null
           payment_method: string | null
           payment_proof_url: string | null
+          payment_reference: string | null
           personalization: string | null
           price_includes_tax: boolean
           product: string
@@ -2685,6 +2687,7 @@ export type Database = {
           invoice_number?: string | null
           invoice_status?: string
           is_credit?: boolean
+          is_made_to_order?: boolean
           is_recompra?: boolean
           line_count?: number | null
           line_index?: number | null
@@ -2707,6 +2710,7 @@ export type Database = {
           payment_due_date?: string | null
           payment_method?: string | null
           payment_proof_url?: string | null
+          payment_reference?: string | null
           personalization?: string | null
           price_includes_tax?: boolean
           product: string
@@ -2774,6 +2778,7 @@ export type Database = {
           invoice_number?: string | null
           invoice_status?: string
           is_credit?: boolean
+          is_made_to_order?: boolean
           is_recompra?: boolean
           line_count?: number | null
           line_index?: number | null
@@ -2796,6 +2801,7 @@ export type Database = {
           payment_due_date?: string | null
           payment_method?: string | null
           payment_proof_url?: string | null
+          payment_reference?: string | null
           personalization?: string | null
           price_includes_tax?: boolean
           product?: string
@@ -5009,6 +5015,25 @@ export type Database = {
           in_process: number
           name: string
           ref_key: string
+        }[]
+      }
+      web_check_availability_v2: {
+        Args: {
+          _brand: string
+          _categories: string[]
+          _kind: string
+          _ref_keys: string[]
+        }
+        Returns: {
+          available: number
+          brand: string
+          category: string
+          color: string
+          in_process: number
+          name: string
+          product_type: string
+          ref_key: string
+          unit: string
         }[]
       }
       web_confirm_reservation: { Args: { _external_id: string }; Returns: Json }
