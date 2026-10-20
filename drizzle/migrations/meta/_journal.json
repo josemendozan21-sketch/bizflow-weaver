@@ -99,6 +99,13 @@
       "when": 1792520178707,
       "tag": "0013_wholesale_web_orders_inventory_filters",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792521756237,
+      "tag": "0014_bionovations_two_way_events",
+      "breakpoints": true
     }
   ]
 }

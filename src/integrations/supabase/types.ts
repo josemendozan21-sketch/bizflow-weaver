@@ -1048,6 +1048,51 @@ export type Database = {
         }
         Relationships: []
       }
+      external_order_events: {
+        Row: {
+          attempts: number
+          created_at: string
+          event_id: string
+          external_order_id: string
+          id: string
+          kind: string
+          last_error: string | null
+          next_attempt_at: string
+          order_id: string | null
+          payload: Json
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          event_id?: string
+          external_order_id: string
+          id?: string
+          kind: string
+          last_error?: string | null
+          next_attempt_at?: string
+          order_id?: string | null
+          payload: Json
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          event_id?: string
+          external_order_id?: string
+          id?: string
+          kind?: string
+          last_error?: string | null
+          next_attempt_at?: string
+          order_id?: string | null
+          payload?: Json
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       feria_commissions: {
         Row: {
           advisor_id: string | null
@@ -2172,6 +2217,60 @@ export type Database = {
           target_user_id?: string | null
           title?: string
           type?: string
+        }
+        Relationships: []
+      }
+      order_balance_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          external_order_id: string
+          external_payment_id: string
+          id: string
+          method: string | null
+          order_id: string
+          payment_reference: string | null
+          proof_url: string | null
+          reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewed_by_name: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          external_order_id: string
+          external_payment_id: string
+          id?: string
+          method?: string | null
+          order_id: string
+          payment_reference?: string | null
+          proof_url?: string | null
+          reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          external_order_id?: string
+          external_payment_id?: string
+          id?: string
+          method?: string | null
+          order_id?: string
+          payment_reference?: string | null
+          proof_url?: string | null
+          reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_name?: string | null
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -4888,6 +4987,10 @@ export type Database = {
         Args: { _confirm: boolean; _note: string; _settlement_id: string }
         Returns: Json
       }
+      apply_balance_payment: {
+        Args: { _by_name: string; _id: string }
+        Returns: undefined
+      }
       build_ref_key: {
         Args: {
           _brand: string
@@ -4930,6 +5033,10 @@ export type Database = {
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
+      }
+      enqueue_external_order_event: {
+        Args: { _kind: string; _order_id: string; _payload: Json }
+        Returns: undefined
       }
       expire_web_reservations: { Args: never; Returns: number }
       finish_production_batch: {
@@ -5005,7 +5112,12 @@ export type Database = {
         Args: { _batch_id: string; _reason: string }
         Returns: Json
       }
+      review_balance_payment: {
+        Args: { _approve: boolean; _id: string; _reason: string }
+        Returns: Json
+      }
       start_production_batch: { Args: { _batch_id: string }; Returns: Json }
+      wake_order_event_dispatcher: { Args: never; Returns: undefined }
       web_check_availability: {
         Args: { _ref_keys: string[] }
         Returns: {
