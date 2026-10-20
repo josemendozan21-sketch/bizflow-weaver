@@ -44,8 +44,16 @@ export function shiftPeriod(period: string, delta: number): string {
   return periodKey(new Date(y, m - 1 + delta, 1));
 }
 
+/** Canales web automáticos: no generan comisión. */
+export const SYSTEM_WEB_ADVISOR_IDS = new Set([
+  "00000000-0000-0000-0000-000000000001", // Sweatspot Web
+  "00000000-0000-0000-0000-000000000002", // Magical Warmers Web
+  "00000000-0000-0000-0000-000000000003", // Bionovations Mayorista Web
+]);
+
 export function isExcludedOrder(o: Order): boolean {
   return (
+    SYSTEM_WEB_ADVISOR_IDS.has(o.advisor_id) ||
     isGiftOrder(o) ||
     Number(o.total_amount || 0) <= 0 ||
     Boolean(o.returned_at) ||

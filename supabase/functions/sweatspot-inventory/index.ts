@@ -41,7 +41,17 @@ Deno.serve(async (req) => {
         : raw
           ? [String(raw)]
           : null
-      const { data, error } = await supabase.rpc('web_check_availability', { _ref_keys: refKeys })
+      // Filtros opcionales: brand (magical|sweatspot), categories[], kind (gel|silicona|tinta|escarcha)
+      const brandRaw = b.brand ? String(b.brand).toLowerCase() : null
+      const brand = brandRaw ? (brandRaw.startsWith('magical') ? 'magical' : brandRaw.startsWith('sweat') ? 'sweatspot' : brandRaw) : null
+      const categories = Array.isArray(b.categories) ? b.categories.map((c) => String(c)) : b.category ? [String(b.category)] : null
+      const kind = b.kind ? String(b.kind).toLowerCase() : null
+      if (kind && !['gel', 'silicona', 'tinta', 'escarcha'].includes(kind)) {
+        return json({ error: 'kind must be gel | silicona | tinta | escarcha' }, 400)
+      }
+      const { data, error } = await supabase.rpc('web_check_availability_v2', {
+        _ref_keys: refKeys, _brand: brand, _categories: categories, _kind: kind,
+      })
       if (error) return json({ error: error.message }, 500)
       return json({ success: true, items: data ?? [] })
     }
