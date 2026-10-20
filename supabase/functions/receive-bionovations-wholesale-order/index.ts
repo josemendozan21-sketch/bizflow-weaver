@@ -1,6 +1,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { z } from 'npm:zod@3'
+import { buildOrderIdentity } from './orderIdentity.ts'
 
 // Pedidos de Bionovations Direct: se tratan exactamente como si un asesor
 // los creara en Ventas (Magical o Sweat Spot al por mayor).
@@ -33,6 +34,7 @@ const Line = z.object({
 })
 const Body = z.object({
   brand: z.enum(['magical', 'sweatspot']).optional().default('magical'),
+  print_type: z.enum(['full', 'basica']).optional().nullable(),
   external_order_id: z.string().trim().min(1).max(200),
   client_name: z.string().trim().min(1).max(200),
   client_nit: str, client_phone: str, client_email: str,
@@ -52,14 +54,6 @@ const Body = z.object({
   observations: str,
   lines: z.array(Line).min(1).max(50),
 })
-
-function normType(t?: string | null): string | null {
-  if (!t) return null
-  const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-  if (n.startsWith('frio')) return 'Frío'
-  if (n.startsWith('term') || n.startsWith('calor')) return 'Térmico'
-  return t.trim()
-}
 
 function prorate(bases: number[], total: number): number[] {
   const out = bases.map(() => 0)
@@ -113,8 +107,8 @@ Deno.serve(async (req) => {
     const submissionId = crypto.randomUUID()
 
     const sb = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       { auth: { persistSession: false } },
     )
 
@@ -153,13 +147,8 @@ Deno.serve(async (req) => {
 
     // ---- Totales / IVA / abono ----
     const typed = b.lines.map((l) => {
-      if (isSS) {
-        const size = l.size?.trim()
-        const referencia = size ? `Termo ${size.replace(/^termo\s*/i, '')}` : l.product
-        return { ...l, referencia }
-      }
-      const t = normType(l.type)
-      return { ...l, referencia: t ? `${l.product} (${t})` : l.product }
+      const identity = buildOrderIdentity(b.brand, l, submissionId, b.print_type)
+      return { ...l, identity, referencia: identity.product }
     })
     const bases = typed.map((l) => (l.is_gift ? 0 : (l.unit_price ?? 0) * l.quantity))
     const productsBase = bases.reduce((s, v) => s + v, 0)
@@ -177,9 +166,7 @@ Deno.serve(async (req) => {
       const l = typed[i]
       const inkCount = l.ink_count ?? (l.ink_color_3 ? 3 : l.ink_color_2 ? 2 : 1)
       const row: Record<string, unknown> = {
-        brand: b.brand,
-        submission_id: submissionId,
-        print_type: isSS ? (l.print_type ?? 'full') : null,
+        ...l.identity,
         sale_type: 'mayor',
         client_name: b.client_name,
         client_nit: b.client_nit ?? null,
@@ -217,7 +204,7 @@ Deno.serve(async (req) => {
         personalization: l.personalization ?? null,
         observations: [
           b.made_to_order ? 'BAJO PEDIDO' : null,
-          isSS ? `Impresión ${(l.print_type ?? 'full') === 'basica' ? 'básica' : 'full'}` : null,
+          isSS ? `Impresión ${l.identity.print_type === 'basica' ? 'básica' : 'full'}` : null,
           b.observations, l.observations,
           l.is_gift ? '🎁 OBSEQUIO' : null,
         ].filter(Boolean).join(' | ') || null,

@@ -29,6 +29,7 @@ export interface FlowOrder {
   advisor_id?: string | null;
   delivery_date?: string | null;
   order_code?: string | null;
+  print_type?: "full" | "basica" | null;
 }
 
 
@@ -184,6 +185,13 @@ export async function ensureProductionOrder(
   };
 
   if (order.brand === "sweatspot") {
+    let printType = order.print_type;
+    if (!printType) {
+      const { data: parent } = await supabase.from("orders")
+        .select("print_type").eq("id", order.id).maybeSingle();
+      printType = parent?.print_type;
+    }
+    payload.logo_type = printType === "basica" ? "impresion_basica" : "impresion_full";
     payload.silicone_color = order.silicone_color ?? null;
     payload.thermo_size = thermoSizeOf(order.product);
   } else {
