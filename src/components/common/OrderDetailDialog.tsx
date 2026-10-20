@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import { PaymentsList } from "@/components/ventas/PaymentsList";
+import BalancePaymentsReview from "@/components/ventas/BalancePaymentsReview";
 import { OrderChangeLogPanel } from "@/components/ventas/OrderChangeLogPanel";
 import ReferenceFilesPanel from "@/components/diseno/ReferenceFilesPanel";
 import OrderDesignHistory from "@/components/diseno/OrderDesignHistory";
@@ -157,6 +158,12 @@ export default function OrderDetailDialog({ orderId, orderCode, open, onOpenChan
                 <Field label="Última actualización" value={date(order.updated_at, true)} />
                 <Field label="Devuelto" value={order.returned_at ? date(order.returned_at) : "—"} />
               </div>
+              {(order as { external_order_id?: string | null }).external_order_id &&
+                order.advisor_id === "00000000-0000-0000-0000-000000000003" && (
+                  <BalancePaymentsReview
+                    externalOrderId={(order as { external_order_id?: string }).external_order_id as string}
+                  />
+                )}
             </section>
 
             <Separator />
