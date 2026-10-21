@@ -5134,6 +5134,7 @@ export type Database = {
         Args: { _reason: string; _reservation_id: string }
         Returns: Json
       }
+      remind_pending_cod_confirmations: { Args: never; Returns: number }
       resolve_order_value_dispute: {
         Args: { _approve: boolean; _dispute_id: string; _note?: string }
         Returns: Json
