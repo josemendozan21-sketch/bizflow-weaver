@@ -21,3 +21,4 @@
 ## 9. Comisiones claras + confirmación contraentrega (en curso)
 - Resumen de una línea por asesor (Contabilidad) y tarjeta grande (asesor); quitar pantallas antiguas.
 - Contraentrega: asesor confirma cobrado/no cobrado tras despacho; solo suma si cobrado.
+- [x] Panel de comisiones con 8 cifras, tabla de pendientes, filtros y fecha de pago día 20 (mié/vie) — documento de Jose Mario
