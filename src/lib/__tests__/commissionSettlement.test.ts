@@ -119,3 +119,16 @@ describe("resumen simple", () => {
     expect(s.proximaMeta?.falta).toBe(6_000_000);
   });
 });
+
+import { scheduledPayDate } from "@/lib/commissionSettlement";
+describe("scheduledPayDate", () => {
+  it("usa el 20 si es miércoles o viernes", () => {
+    expect(scheduledPayDate("2026-11-20".slice(0, 7)).getDate()).toBe(20); // vie 20 nov 2026
+  });
+  it("si el 20 no es miércoles ni viernes, pasa al siguiente", () => {
+    // 20 oct 2026 es martes → miércoles 21
+    expect(scheduledPayDate("2026-10").getDate()).toBe(21);
+    // 20 dic 2026 es domingo → miércoles 23
+    expect(scheduledPayDate("2026-12").getDate()).toBe(23);
+  });
+});
