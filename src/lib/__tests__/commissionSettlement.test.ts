@@ -85,3 +85,37 @@ describe("liquidación de comisiones", () => {
     expect(getCompletionDate(o, pays)?.getMonth()).toBe(6);
   });
 });
+
+import { summarizeSettlement } from "@/lib/commissionSettlement";
+
+describe("contraentrega", () => {
+  const pays = { o1: [{ order_id: "o1", amount: 1190000, payment_date: "2026-10-15", proof_url: "p" }] };
+  const cod = (over: Partial<Order>) => base({ payment_method: "contra_entrega", ...over } as Partial<Order>);
+
+  it("pendiente de confirmar no suma y dice por qué", () => {
+    const s = buildSettlement({ orders: [cod({ cod_confirmation: "pendiente" } as any)], payments: pays, advisorId: "a1", payPeriod: "2026-11" });
+    expect(s.current).toHaveLength(0);
+    expect(s.pending[0].reason).toBe("Falta confirmar entrega contraentrega");
+  });
+
+  it("no cobrada no suma y muestra el motivo", () => {
+    const s = buildSettlement({ orders: [cod({ cod_confirmation: "no_cobrado", cod_reason: "Devolución" } as any)], payments: pays, advisorId: "a1", payPeriod: "2026-11" });
+    expect(s.current).toHaveLength(0);
+    expect(s.pending[0].reason).toBe("No suma: contraentrega no cobrada — Devolución");
+  });
+
+  it("cobrada suma en el mes de la confirmación", () => {
+    const o = cod({ cod_confirmation: "cobrado", cod_confirmed_at: "2026-11-03T10:00:00" } as any);
+    expect(buildSettlement({ orders: [o], payments: pays, advisorId: "a1", payPeriod: "2026-11" }).current).toHaveLength(0);
+    expect(buildSettlement({ orders: [o], payments: pays, advisorId: "a1", payPeriod: "2026-12" }).current).toHaveLength(1);
+  });
+});
+
+describe("resumen simple", () => {
+  it("a pagar = comisión + bono, en pesos enteros", () => {
+    const s = summarizeSettlement({ payPeriod: "2026-11", causationPeriod: "2026-10", current: [], carryover: [], pending: [],
+      currentAmount: 1521228.4, carryoverAmount: 0, completedTotal: 12_000_000, bonus: 250000, total: 0 });
+    expect(s.aPagar).toBe(1771228);
+    expect(s.proximaMeta?.falta).toBe(6_000_000);
+  });
+});
