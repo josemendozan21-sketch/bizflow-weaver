@@ -363,7 +363,7 @@ export interface CommissionOverview {
 export function buildCommissionOverview(params: {
   orders: Order[]; payments: PaymentsByOrder; charges?: ChargesMap; advisorId: string; period: string;
   settlements: { id: string; status: string; advisor_id: string }[];
-  items: { settlement_id: string; order_id: string; amount: number | string }[];
+  items: { id?: string; settlement_id: string; order_id: string; amount: number | string }[];
   payouts: LedgerPayment[];
   allocations?: LedgerAllocation[];
 }): CommissionOverview {

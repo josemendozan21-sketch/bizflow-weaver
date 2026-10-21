@@ -13,11 +13,14 @@ import { parseCOP } from "@/lib/money";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Download, FileText, Plus, RotateCcw } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const money = (n: number) => `$${Math.round(n).toLocaleString("es-CO")}`;
 const states: Record<string,string> = {legacy_unreviewed:"Histórico por revisar",pending:"Pendiente de conciliación",partial:"Conciliado parcialmente",reconciled:"Conciliado",reversed:"Anulado"};
 interface Props { advisors:{id:string;name:string}[]; advisorId?:string; period:string; editable:boolean }
 export function CommissionPayments({advisors,advisorId,period,editable}:Props) {
+  const {role} = useAuth();
+  editable = editable && (role === "admin" || role === "contabilidad");
   const {data} = useSettlementData();
   const actions = useSettlementActions();
   const {toast} = useToast();

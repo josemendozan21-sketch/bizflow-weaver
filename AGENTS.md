@@ -1,3 +1,4 @@
 - Commission settlement logic lives only in src/lib/commissionSettlement.ts (pay only at 100% = full payment + proof, causation = month of last real payment, paid next month); settled orders are snapshotted in commission_settlement_items so each order is paid once.
+- Commission payouts use an allocation ledger managed atomically by manage_commission_payment; only confirmed, active allocations reduce balances, preserving unreviewed legacy payments and auditable reversals without duplicate deductions.
 - The Bionovations read-only catalog reads stock_items exclusively; its isolated catalog mapper mirrors Ventas prefix/type normalization and is covered by webCatalog tests to prevent unintended writes or exposure of other inventory fields.
 - Bionovations wholesale order identities are mapped by a pure edge-function helper; line groups share submission_id and never assign generated order_code, so both brands use the normal database coding and inventory triggers.
