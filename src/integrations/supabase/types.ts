@@ -407,44 +407,198 @@ export type Database = {
           },
         ]
       }
-      commission_payouts: {
+      commission_opening_balances: {
         Row: {
           advisor_id: string
           amount: number
           created_at: string
+          created_by: string
           id: string
-          notes: string | null
-          paid_at: string
+          note: string
           pay_period: string
-          proof_url: string | null
-          reference: string | null
-          registered_by: string | null
-          settlement_id: string | null
+          proof_url: string
         }
         Insert: {
           advisor_id: string
           amount: number
           created_at?: string
+          created_by?: string
           id?: string
-          notes?: string | null
-          paid_at?: string
+          note: string
           pay_period: string
-          proof_url?: string | null
-          reference?: string | null
-          registered_by?: string | null
-          settlement_id?: string | null
+          proof_url: string
         }
         Update: {
           advisor_id?: string
           amount?: number
           created_at?: string
+          created_by?: string
+          id?: string
+          note?: string
+          pay_period?: string
+          proof_url?: string
+        }
+        Relationships: []
+      }
+      commission_payment_allocations: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string
+          id: string
+          opening_balance_id: string | null
+          payout_id: string
+          settlement_id: string | null
+          settlement_item_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string
+          id?: string
+          opening_balance_id?: string | null
+          payout_id: string
+          settlement_id?: string | null
+          settlement_item_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string
+          id?: string
+          opening_balance_id?: string | null
+          payout_id?: string
+          settlement_id?: string | null
+          settlement_item_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_payment_allocations_opening_balance_id_fkey"
+            columns: ["opening_balance_id"]
+            isOneToOne: false
+            referencedRelation: "commission_opening_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_payment_allocations_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: false
+            referencedRelation: "commission_payouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_payment_allocations_settlement_id_fkey"
+            columns: ["settlement_id"]
+            isOneToOne: false
+            referencedRelation: "commission_settlements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_payment_allocations_settlement_item_id_fkey"
+            columns: ["settlement_item_id"]
+            isOneToOne: false
+            referencedRelation: "commission_settlement_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_payment_audit: {
+        Row: {
+          action: string
+          actor_id: string
+          actor_name: string | null
+          created_at: string
+          details: Json
+          id: string
+          note: string | null
+          payout_id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string
+          actor_name?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+          note?: string | null
+          payout_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          actor_name?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+          note?: string | null
+          payout_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_payment_audit_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: false
+            referencedRelation: "commission_payouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_payouts: {
+        Row: {
+          advisor_id: string
+          amount: number
+          confirmed_at: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          paid_at: string
+          pay_period: string
+          payment_kind: string
+          proof_hash: string | null
+          proof_url: string | null
+          reconciliation_status: string
+          reference: string | null
+          registered_by: string | null
+          request_key: string | null
+          reversed_at: string | null
+          settlement_id: string | null
+        }
+        Insert: {
+          advisor_id: string
+          amount: number
+          confirmed_at?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string
+          pay_period: string
+          payment_kind?: string
+          proof_hash?: string | null
+          proof_url?: string | null
+          reconciliation_status?: string
+          reference?: string | null
+          registered_by?: string | null
+          request_key?: string | null
+          reversed_at?: string | null
+          settlement_id?: string | null
+        }
+        Update: {
+          advisor_id?: string
+          amount?: number
+          confirmed_at?: string | null
+          created_at?: string
           id?: string
           notes?: string | null
           paid_at?: string
           pay_period?: string
+          payment_kind?: string
+          proof_hash?: string | null
           proof_url?: string | null
+          reconciliation_status?: string
           reference?: string | null
           registered_by?: string | null
+          request_key?: string | null
+          reversed_at?: string | null
           settlement_id?: string | null
         }
         Relationships: [
@@ -5100,6 +5254,7 @@ export type Database = {
       }
       is_pos_for_feria: { Args: { _feria_id: string }; Returns: boolean }
       is_pos_for_location: { Args: { _location_id: string }; Returns: boolean }
+      manage_commission_payment: { Args: { _payload: Json }; Returns: string }
       move_to_dlq: {
         Args: {
           dlq_name: string
