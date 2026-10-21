@@ -22,3 +22,4 @@
 - Resumen de una línea por asesor (Contabilidad) y tarjeta grande (asesor); quitar pantallas antiguas.
 - Contraentrega: asesor confirma cobrado/no cobrado tras despacho; solo suma si cobrado.
 - [x] Panel de comisiones con 8 cifras, tabla de pendientes, filtros y fecha de pago día 20 (mié/vie) — documento de Jose Mario
+- [x] Contraentregas anteriores (129, sin estado): se dejan como están, siguen sumando; el ajuste lo hacen los asesores manualmente (decisión Santiago, 21-oct).
