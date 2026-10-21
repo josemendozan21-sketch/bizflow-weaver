@@ -51,3 +51,30 @@ Las reglas de porcentajes, los bonos, el 100% (pago total + comprobante) y los p
 - `SettlementsView.tsx` se reorganiza en `SettlementSummaryTable` (contabilidad), `AdvisorPayCard` (asesor) y `SettlementDetail` (compartido).
 - Se retiran `MisComisiones` de `Ventas.tsx` y `CommissionsPanel` de `Contabilidad.tsx`. Los archivos se conservan sin usar hasta confirmar.
 - Se actualiza el Excel de comisiones (`commissionExports.ts`) con las mismas columnas del resumen.
+
+---
+
+# Ventas contraentrega: el asesor confirma la entrega y el cobro antes de que cuenten
+
+## Problema
+Hoy hay 129 pedidos marcados como "Contra entrega". Hoy cuentan para la comisión como cualquier otro pedido, aunque nadie haya confirmado que el cliente recibió y pagó.
+
+## Cómo va a funcionar
+1. **Logística despacha** el pedido contraentrega, como hoy.
+2. Le llega al asesor un **aviso**: "Confirma la entrega de [cliente] — pedido [código], valor a cobrar $X". Además, en sus Comisiones aparece un bloque **"Contraentregas por confirmar"**.
+3. El asesor responde con uno de dos botones:
+   - **"Recibido y pagado"**: escribe una nota y adjunta un comprobante si lo hay (guía entregada, foto, consignación de la transportadora). El pedido **suma** a la comisión del mes en que se confirma.
+   - **"No se entregó / no pagó"**: elige el motivo (devolución, rechazó el pedido, no lo encontraron, otro) y escribe una nota. El pedido **no suma** y queda marcado "No suma: contraentrega no cobrada — [motivo]".
+4. **Mientras no confirme**, el pedido aparece en "Te faltan para cobrar" con la razón **"Falta confirmar entrega contraentrega"**, y no suma.
+5. **Contabilidad** ve en el detalle de cada asesor la misma marca, y puede confirmar o revertir con una nota si el asesor se equivoca. Todo queda en el historial del pedido: quién, cuándo y qué respondió.
+6. Si pasan 7 días desde el despacho sin respuesta, se le repite el aviso al asesor y se le avisa a Contabilidad.
+
+## Pedidos contraentrega anteriores
+Esta regla aplica **de ahora en adelante**. Los pedidos contraentrega ya incluidos en liquidaciones pagadas no se tocan. Para los que todavía no se han liquidado, propongo pedir la confirmación también, para no pagar algo no cobrado. Lo confirmo contigo antes de aplicarlo.
+
+## Detalles técnicos
+- Columnas nuevas en `orders`: `cod_confirmation` ('pendiente' | 'cobrado' | 'no_cobrado'), `cod_confirmed_at`, `cod_confirmed_by`, `cod_reason`, `cod_proof_url`.
+- Un trigger, al pasar el pedido a despachado con `payment_method = 'contra_entrega'`, pone el estado en 'pendiente' y crea la notificación al asesor.
+- Una función con permisos acotados `confirm_cod_delivery(_order_id, _received, _reason, _proof)`: solo puede usarla el asesor dueño del pedido, admin o contabilidad. Escribe en `order_change_log`.
+- `commissionSettlement.ts`: un pedido contraentrega solo es 100% si `cod_confirmation = 'cobrado'`. La fecha de causación es `cod_confirmed_at`. Si es 'no_cobrado', se excluye con su motivo visible. Se agregan pruebas para los tres estados.
+- Recordatorio a los 7 días mediante la revisión programada que ya existe.
