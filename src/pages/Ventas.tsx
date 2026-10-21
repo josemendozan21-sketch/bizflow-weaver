@@ -21,7 +21,6 @@ import { toast } from "sonner";
 import QuotationGenerator from "@/components/ventas/QuotationGenerator";
 import { MisPedidos } from "@/components/ventas/MisPedidos";
 import { AdvisorSummary } from "@/components/ventas/AdvisorSummary";
-import MisComisiones from "@/components/ventas/MisComisiones";
 import MisLiquidaciones from "@/components/ventas/MisLiquidaciones";
 import { SalesCalendar } from "@/components/ventas/SalesCalendar";
 import { createLogoRequestFromOrder } from "@/lib/createLogoRequestFromOrder";
@@ -203,7 +202,6 @@ const Ventas = () => {
         {showCommissions && (
           <TabsContent value="comisiones" className="mt-4 space-y-6">
             <MisLiquidaciones />
-            <MisComisiones />
           </TabsContent>
         )}
 

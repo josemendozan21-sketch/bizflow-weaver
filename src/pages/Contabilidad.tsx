@@ -16,7 +16,7 @@ import { Upload, Download, Clock, FileText, ExternalLink, BarChart3, Wallet, Tra
 import AccountingDashboard from "@/components/contabilidad/AccountingDashboard";
 import MonthlyAnalysis from "@/components/contabilidad/MonthlyAnalysis";
 import CajaMenor from "@/components/contabilidad/CajaMenor";
-import CommissionsPanel from "@/components/contabilidad/CommissionsPanel";
+import { CommissionPanel } from "@/components/commissions/CommissionPanel";
 import AdvisorSalesPanel from "@/components/contabilidad/AdvisorSalesPanel";
 import AreaCompliancePanel from "@/components/contabilidad/AreaCompliancePanel";
 import { getOrderPaidAmount, isOrderFullyPaid, useOrders, type Order } from "@/hooks/useOrders";
@@ -575,7 +575,7 @@ const Contabilidad = () => {
 
         {!isReadOnly && (
           <TabsContent value="comisiones">
-            <CommissionsPanel orders={allOrders} />
+            <CommissionPanel orders={allOrders} mode="contabilidad" />
           </TabsContent>
         )}
 
