@@ -109,6 +109,14 @@ describe("contraentrega", () => {
     expect(buildSettlement({ orders: [o], payments: pays, advisorId: "a1", payPeriod: "2026-11" }).current).toHaveLength(0);
     expect(buildSettlement({ orders: [o], payments: pays, advisorId: "a1", payPeriod: "2026-12" }).current).toHaveLength(1);
   });
+
+  it("un contraentrega anterior a la regla (sin estado) sigue sumando con la regla general", () => {
+    const o = cod({});
+    const s = buildSettlement({ orders: [o], payments: pays, advisorId: "a1", payPeriod: "2026-11" });
+    expect(s.current).toHaveLength(1);
+    expect(s.pending).toHaveLength(0);
+    expect(getCompletionDate(o, pays)?.getMonth()).toBe(9);
+  });
 });
 
 describe("resumen simple", () => {
