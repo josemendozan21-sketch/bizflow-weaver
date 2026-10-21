@@ -1,7 +1,7 @@
 # Tareas en curso
 
 ## 10. Registro y conciliación de pagos históricos de comisiones
-- [ ] Auditar estructuras y pantallas existentes y presentar el plan de mínimos cambios.
+- [x] Auditar estructuras y pantallas existentes; plan preparado para aprobación.
 - En espera de aprobación: implementación y cualquier cambio de saldos históricos; no aplicar migraciones antes.
 
 8. **Conexión Bionovations para Sweat Spot** — COMPLETADO: entradas desplegadas, print_type por línea o pedido, catálogo y siliconas, líneas agrupadas sin escribir order_code. Prueba real de dos líneas, reserva, solicitud Sweatspot y reenvío sin duplicados; los seis avisos de termos entregados a la tienda. La sesión disponible es de asesora y no permite revisar solicitudes del asesor web en Diseño.
