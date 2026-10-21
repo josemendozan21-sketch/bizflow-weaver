@@ -308,3 +308,117 @@ export function summarizeSettlement(d: SettlementDraft): SettlementSummary {
     proximaMeta: next ? { ...next, falta: r(next.threshold - d.completedTotal) } : null,
   };
 }
+
+// ================= Panel de comisiones (asesor y Contabilidad) =================
+
+/** Día de pago: 20 del mes de pago; si no es miércoles o viernes, el primer miércoles o viernes siguiente. */
+export function scheduledPayDate(payPeriod: string): Date {
+  const [y, m] = payPeriod.split("-").map(Number);
+  const d = new Date(y, m - 1, 20, 12);
+  while (d.getDay() !== 3 && d.getDay() !== 5) d.setDate(d.getDate() + 1);
+  return d;
+}
+
+export type OrderCommissionStatus =
+  | "pendiente_pago" | "pago_parcial" | "falta_soporte" | "falta_entrega" | "no_suma"
+  | "lista" | "en_revision" | "aprobada" | "pagada";
+
+export const ORDER_STATUS_INFO: Record<OrderCommissionStatus, { label: string; help: string }> = {
+  pendiente_pago: { label: "Pendiente de pago", help: "El cliente aún no ha pagado nada." },
+  pago_parcial: { label: "Pago parcial", help: "Hay un abono; falta el saldo del cliente." },
+  falta_soporte: { label: "Falta comprobante de pago", help: "El pago está completo pero falta el comprobante." },
+  falta_entrega: { label: "Falta confirmar entrega", help: "Contraentrega: confirma que el cliente recibió y pagó." },
+  no_suma: { label: "No suma", help: "Contraentrega no cobrada: esta venta no genera comisión." },
+  lista: { label: "Lista para liquidar", help: "Cumple todo. Entra en la próxima liquidación." },
+  en_revision: { label: "En revisión de Contabilidad", help: "Contabilidad está revisando la liquidación." },
+  aprobada: { label: "Aprobada", help: "Contabilidad aprobó; falta la transferencia." },
+  pagada: { label: "Pagada", help: "La comisión ya fue transferida." },
+};
+
+export interface OrderCommissionRow {
+  order: Order;
+  saleDate: Date;
+  base: number;          // valor antes de IVA
+  rate: number;
+  estimated: number;     // comisión total estimada
+  collected: number;     // recaudado (con IVA)
+  balance: number;       // saldo del cliente
+  caused: number;        // comisión respaldada por pagos
+  future: number;        // comisión aún no causada
+  status: OrderCommissionStatus;
+  completedDate: Date | null;
+}
+
+export interface CommissionOverview {
+  rows: OrderCommissionRow[];
+  cards: {
+    ventasMes: number; recaudadoMes: number; futuras: number; causadas: number;
+    pendientesRequisitos: number; disponibles: number; aprobadas: number; pagadas: number;
+  };
+}
+
+/** Un cálculo, mismas cifras para asesor y Contabilidad. Las 8 cifras no se suman entre sí. */
+export function buildCommissionOverview(params: {
+  orders: Order[]; payments: PaymentsByOrder; charges?: ChargesMap; advisorId: string; period: string;
+  settlements: { id: string; status: string; advisor_id: string }[];
+  items: { settlement_id: string; order_id: string; amount: number | string }[];
+  payouts: { advisor_id: string; amount: number | string }[];
+}): CommissionOverview {
+  const { orders, payments, charges, advisorId, period } = params;
+  const stById = new Map(params.settlements.filter((s) => s.advisor_id === advisorId).map((s) => [s.id, s.status]));
+  const itemByOrder = new Map<string, { status: string; amount: number }>();
+  for (const i of params.items) {
+    const st = stById.get(i.settlement_id);
+    if (st) itemByOrder.set(i.order_id, { status: st, amount: Number(i.amount || 0) });
+  }
+  const rows: OrderCommissionRow[] = [];
+  let ventasMes = 0, recaudadoMes = 0;
+  for (const o of orders) {
+    if (o.advisor_id !== advisorId || isExcludedOrder(o)) continue;
+    const total = Number(o.total_amount || 0);
+    const base = getCommissionableTotal(o, charges) / IVA_DIVISOR;
+    const rate = rateFor(o, false);
+    const rowsP = (payments[o.id] || []).filter((r) => Number(r.amount || 0) > 0);
+    const collected = Math.min(Math.max(Number(o.abono || 0), rowsP.reduce((s, r) => s + Number(r.amount || 0), 0)), total);
+    for (const r of rowsP) if (r.payment_date && r.payment_date.slice(0, 7) === period) recaudadoMes += Number(r.amount || 0);
+    const saleDate = getSaleDate(o);
+    if (periodKey(saleDate) === period) ventasMes += base;
+    const completedDate = getCompletionDate(o, payments);
+    const settled = itemByOrder.get(o.id);
+    const estimated = settled ? settled.amount : base * rate;
+    const cod = codStatus(o);
+    let status: OrderCommissionStatus;
+    if (cod === "no_cobrado") status = "no_suma";
+    else if (settled) status = settled.status === "en_revision" ? "en_revision"
+      : settled.status === "pendiente_pago" || settled.status === "pendiente_liquidacion" ? "aprobada" : "pagada";
+    else if (completedDate) status = "lista";
+    else {
+      const missing = getPayability(o, payments).missing;
+      if (missing.includes("pago total")) status = collected > 0 ? "pago_parcial" : "pendiente_pago";
+      else if (missing.includes("soporte de pago")) status = "falta_soporte";
+      else status = "falta_entrega";
+    }
+    const ratio = total > 0 ? collected / total : 0;
+    const caused = status === "no_suma" ? 0 : estimated * Math.min(ratio, 1);
+    rows.push({
+      order: o, saleDate, base, rate, estimated: status === "no_suma" ? 0 : estimated, collected,
+      balance: Math.max(total - collected, 0), caused, future: status === "no_suma" ? 0 : Math.max(estimated - caused, 0),
+      status, completedDate,
+    });
+  }
+  const sum = (f: (r: OrderCommissionRow) => number) => Math.round(rows.reduce((s, r) => s + f(r), 0));
+  const blocked: OrderCommissionStatus[] = ["pendiente_pago", "pago_parcial", "falta_soporte", "falta_entrega"];
+  return {
+    rows: rows.sort((a, b) => b.saleDate.getTime() - a.saleDate.getTime()),
+    cards: {
+      ventasMes: Math.round(ventasMes),
+      recaudadoMes: Math.round(recaudadoMes),
+      futuras: sum((r) => (blocked.includes(r.status) ? r.future : 0)),
+      causadas: sum((r) => r.caused),
+      pendientesRequisitos: sum((r) => (blocked.includes(r.status) ? r.caused : 0)),
+      disponibles: sum((r) => (r.status === "lista" ? r.estimated : 0)),
+      aprobadas: sum((r) => (r.status === "aprobada" || r.status === "en_revision" ? r.estimated : 0)),
+      pagadas: Math.round(params.payouts.filter((p) => p.advisor_id === advisorId).reduce((s, p) => s + Number(p.amount || 0), 0)),
+    },
+  };
+}
