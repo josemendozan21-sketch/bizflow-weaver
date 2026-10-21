@@ -2671,6 +2671,12 @@ export type Database = {
           client_name: string
           client_nit: string | null
           client_phone: string | null
+          cod_confirmation: string | null
+          cod_confirmed_at: string | null
+          cod_confirmed_by: string | null
+          cod_confirmed_by_name: string | null
+          cod_proof_url: string | null
+          cod_reason: string | null
           created_at: string
           credit_dispatched_pending_payment: boolean
           delivered_quantity: number
@@ -2763,6 +2769,12 @@ export type Database = {
           client_name: string
           client_nit?: string | null
           client_phone?: string | null
+          cod_confirmation?: string | null
+          cod_confirmed_at?: string | null
+          cod_confirmed_by?: string | null
+          cod_confirmed_by_name?: string | null
+          cod_proof_url?: string | null
+          cod_reason?: string | null
           created_at?: string
           credit_dispatched_pending_payment?: boolean
           delivered_quantity?: number
@@ -2855,6 +2867,12 @@ export type Database = {
           client_name?: string
           client_nit?: string | null
           client_phone?: string | null
+          cod_confirmation?: string | null
+          cod_confirmed_at?: string | null
+          cod_confirmed_by?: string | null
+          cod_confirmed_by_name?: string | null
+          cod_proof_url?: string | null
+          cod_reason?: string | null
           created_at?: string
           credit_dispatched_pending_payment?: boolean
           delivered_quantity?: number
@@ -5016,6 +5034,15 @@ export type Database = {
         Returns: string
       }
       canonical_reference_name: { Args: { _name: string }; Returns: string }
+      confirm_cod_delivery: {
+        Args: {
+          _order_id: string
+          _proof_url: string
+          _reason: string
+          _received: boolean
+        }
+        Returns: Json
+      }
       confirm_order_requirement: {
         Args: { _confirm_quantity?: number; _requirement_id: string }
         Returns: Json
@@ -5107,6 +5134,7 @@ export type Database = {
         Args: { _reason: string; _reservation_id: string }
         Returns: Json
       }
+      remind_pending_cod_confirmations: { Args: never; Returns: number }
       resolve_order_value_dispute: {
         Args: { _approve: boolean; _dispute_id: string; _note?: string }
         Returns: Json

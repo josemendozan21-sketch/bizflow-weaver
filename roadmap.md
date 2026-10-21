@@ -17,3 +17,7 @@
 - Diagnóstico guardado en .lovable/plan.md (no se modificó nada).
 - Bloqueado: Excel original de Eliana con cierres diarios + confirmar si los tres $24.100 son una sola salida.
 - Sin explicar: $114.100. Faltan registrar pagos del 21 oct ($568.950).
+
+## 9. Comisiones claras + confirmación contraentrega (en curso)
+- Resumen de una línea por asesor (Contabilidad) y tarjeta grande (asesor); quitar pantallas antiguas.
+- Contraentrega: asesor confirma cobrado/no cobrado tras despacho; solo suma si cobrado.

@@ -4,6 +4,10 @@ import {
   IVA_DIVISOR,
   UNLOCK_THRESHOLD,
   bonusFor,
+  BONUS_TIER_1_THRESHOLD,
+  BONUS_TIER_1_AMOUNT,
+  BONUS_TIER_2_THRESHOLD,
+  BONUS_TIER_2_AMOUNT,
   getCommissionRate,
   getCommissionableTotal,
   getDefaultPaymentMode,
@@ -18,9 +22,9 @@ import { getPayability, type PaymentsByOrder } from "@/lib/commissionAccrual";
 /**
  * Liquidación mensual de comisiones — regla única de la plataforma.
  *
- * 1. Un pedido está al 100% cuando tiene pago total, soporte de pago y despacho.
- * 2. La comisión pertenece al mes en que el pedido quedó al 100%
- *    (la fecha más tardía entre el último pago y el despacho).
+ * 1. Un pedido está al 100% cuando tiene pago total y soporte de pago (contraentrega: además
+ *    confirmación de cobro del asesor).
+ * 2. La comisión pertenece al mes del último pago real (contraentrega: de la confirmación).
  * 3. Lo causado en un mes se paga el mes siguiente.
  * 4. Los bonos se calculan sobre lo que quedó al 100% en el mes de causación.
  * 5. Nada se paga parcial ni por abono.
@@ -61,6 +65,28 @@ export function isExcludedOrder(o: Order): boolean {
   );
 }
 
+/**
+ * Contraentrega: desde que Logística despacha, el pedido queda "pendiente" hasta que el asesor
+ * confirme que el cliente recibió y pagó. Solo suma si queda "cobrado" (mes = fecha de confirmación).
+ * Pedidos anteriores a la regla (sin estado) siguen la regla general.
+ */
+export type CodStatus = "pendiente" | "cobrado" | "no_cobrado" | null;
+export function codStatus(o: Order): CodStatus {
+  if (o.payment_method !== "contra_entrega") return null;
+  return ((o as any).cod_confirmation as CodStatus) ?? null;
+}
+
+/** Una sola razón, en palabras simples, de por qué un pedido aún no suma. */
+export function pendingReason(o: Order, missing: string[]): string {
+  const cod = codStatus(o);
+  if (cod === "no_cobrado") return `No suma: contraentrega no cobrada${(o as any).cod_reason ? ` — ${(o as any).cod_reason}` : ""}`;
+  const saldo = Math.max(Number(o.total_amount || 0) - Number(o.abono || 0), 0);
+  if (missing.includes("pago total")) return saldo > 0 ? `Falta saldo $${Math.round(saldo).toLocaleString("es-CO")}` : "Falta pago total";
+  if (missing.includes("soporte de pago")) return "Falta comprobante";
+  if (cod === "pendiente") return "Falta confirmar entrega contraentrega";
+  return missing[0] || "Pendiente";
+}
+
 export function isBackfillPayment(notes?: string | null): boolean {
   return Boolean(notes && notes.includes("corrección automática 2026-09-03"));
 }
@@ -69,6 +95,9 @@ export function isBackfillPayment(notes?: string | null): boolean {
 export function getCompletionDate(o: Order, payments?: PaymentsByOrder): Date | null {
   if (isExcludedOrder(o)) return null;
   if (!getPayability(o, payments).payable) return null;
+  const cod = codStatus(o);
+  if (cod === "pendiente" || cod === "no_cobrado") return null;
+  if (cod === "cobrado") return parse((o as any).cod_confirmed_at) || new Date();
   const real = getFullPaymentDate(o, payments);
   if (real) return real;
   // Sin fecha real de pago (corrección del 3-sep o pedido histórico sin pagos):
@@ -111,6 +140,8 @@ export interface PendingLine {
   order: Order;
   saleDate: Date;
   missing: string[];
+  /** Una sola razón legible */
+  reason: string;
 }
 
 export interface SettlementDraft {
@@ -169,7 +200,8 @@ export function buildSettlement(params: {
   for (const o of mine) {
     const completed = getCompletionDate(o, payments);
     if (!completed) {
-      pending.push({ order: o, saleDate: getSaleDate(o), missing: getPayability(o, payments).missing });
+      const missing = getPayability(o, payments).missing;
+      pending.push({ order: o, saleDate: getSaleDate(o), missing, reason: pendingReason(o, missing) });
       continue;
     }
     done.push({ o, completed, period: causationPeriodOf(completed), net: getCommissionableTotal(o, charges) });
@@ -232,3 +264,47 @@ export const SETTLEMENT_STATUS_LABEL: Record<string, string> = {
   en_revision: "En revisión",
   saldado: "Saldado",
 };
+
+export const BONUS_GOALS = [
+  { threshold: BONUS_TIER_1_THRESHOLD, amount: BONUS_TIER_1_AMOUNT },
+  { threshold: BONUS_TIER_2_THRESHOLD, amount: BONUS_TIER_2_AMOUNT },
+];
+
+export interface SettlementSummary {
+  ventas: number;
+  pedidos: number;
+  comision: number;
+  bono: number;
+  aPagar: number;
+  porMarca: { brand: string; ventas: number; pedidos: number; comision: number }[];
+  faltantes: { count: number; valor: number };
+  /** Próxima meta de bono (o null si ya alcanzó todas) */
+  proximaMeta: { threshold: number; amount: number; falta: number } | null;
+}
+
+/** Resumen simple para mostrar: lo mismo para Contabilidad y para el asesor. Montos al peso. */
+export function summarizeSettlement(d: SettlementDraft): SettlementSummary {
+  const lines = [...d.current, ...d.carryover];
+  const r = Math.round;
+  const by = new Map<string, { brand: string; ventas: number; pedidos: number; comision: number }>();
+  for (const l of lines) {
+    const b = l.order.brand === "sweatspot" ? "Sweat Spot" : "Magical";
+    const e = by.get(b) || { brand: b, ventas: 0, pedidos: 0, comision: 0 };
+    e.ventas += Number(l.order.total_amount || 0); e.pedidos += 1; e.comision += l.amount;
+    by.set(b, e);
+  }
+  const comision = r(d.currentAmount + d.carryoverAmount);
+  const bono = r(d.bonus);
+  const next = BONUS_GOALS.find((g) => d.completedTotal < g.threshold);
+  const pend = d.pending.filter((p) => codStatus(p.order) !== "no_cobrado");
+  return {
+    ventas: r(lines.reduce((s, l) => s + Number(l.order.total_amount || 0), 0)),
+    pedidos: lines.length,
+    comision,
+    bono,
+    aPagar: comision + bono,
+    porMarca: Array.from(by.values()).map((e) => ({ ...e, ventas: r(e.ventas), comision: r(e.comision) })),
+    faltantes: { count: pend.length, valor: r(pend.reduce((s, p) => s + Number(p.order.total_amount || 0), 0)) },
+    proximaMeta: next ? { ...next, falta: r(next.threshold - d.completedTotal) } : null,
+  };
+}
