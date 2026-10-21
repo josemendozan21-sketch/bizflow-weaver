@@ -12,3 +12,8 @@
 7. **Comisiones: mostrar las dos cifras del mes** — COMPLETADO (tarjeta "Las dos cifras del mes" en Ventas y Contabilidad con el detalle de lo que llega de otros meses y lo que se factura después; mismo detalle en los exportables de Excel y CSV; el pago no cambia).
 
 
+
+## En espera: conciliación caja Punto 92 (21 oct)
+- Diagnóstico guardado en .lovable/plan.md (no se modificó nada).
+- Bloqueado: Excel original de Eliana con cierres diarios + confirmar si los tres $24.100 son una sola salida.
+- Sin explicar: $114.100. Faltan registrar pagos del 21 oct ($568.950).
