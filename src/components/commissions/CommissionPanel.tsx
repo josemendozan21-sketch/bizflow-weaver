@@ -219,7 +219,8 @@ export function CommissionPanel({ orders, advisorId: fixed, mode }: Props) {
               <Row k="Saldo pendiente" v={money(detail.balance)} />
               <Row k="Comprobante" v={detail.order.payment_proof_url ? "Sí" : (payments[detail.order.id] || []).some((p) => p.proof_url) ? "Sí" : "No"} />
               <Row k="Despacho" v={fmtD(detail.order.dispatched_at ? new Date(detail.order.dispatched_at) : null)} />
-              {detail.order.payment_method === "contra_entrega" && <Row k="Contraentrega" v={(detail.order as any).cod_confirmation || "sin confirmar"} />}
+              {detail.order.payment_method === "contra_entrega" && <Row k="Contraentrega" v={({ cobrado: "Recibido y pagado", no_cobrado: "No cobrado", pendiente: "Por confirmar" } as Record<string, string>)[(detail.order as any).cod_confirmation] || "Sin confirmar"} />}
+              {(detail.order as any).cod_reason && <Row k="Nota / motivo" v={(detail.order as any).cod_reason} />}
               <Row k="Fecha venta" v={fmtD(detail.saleDate)} />
               <Row k="Quedó al 100%" v={fmtD(detail.completedDate)} />
               {detail.completedDate && <Row k="Pago estimado" v={format(scheduledPayDate(shiftPeriod(periodKey(detail.completedDate), 1)), "dd/MM/yyyy") + " (si Contabilidad aprueba)"} />}
