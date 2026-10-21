@@ -13,7 +13,7 @@ import { type Order } from "@/hooks/useOrders";
 import { useAllOrderPayments } from "@/hooks/useOrderPayments";
 import { useAllOrderCharges } from "@/hooks/useOrderCharges";
 import { useSettlementActions, useSettlementData, type Settlement } from "@/hooks/useCommissionSettlements";
-import { buildSettlement, shiftPeriod, SETTLEMENT_STATUS_LABEL, HISTORY_START_PERIOD, type SettlementLine } from "@/lib/commissionSettlement";
+import { appliedToSettlement, buildSettlement, shiftPeriod, SETTLEMENT_STATUS_LABEL, HISTORY_START_PERIOD, type SettlementLine } from "@/lib/commissionSettlement";
 import { periodKey, periodLabel } from "@/lib/commissions";
 import { format } from "date-fns";
 
@@ -71,11 +71,11 @@ export function SettlementsView({ orders, mode, advisorId: fixedAdvisor, readOnl
     if (mode !== "contabilidad") return [];
     return advisors.map((a) => {
       const { existing, draft } = draftFor(a.id);
-      const paid = payouts.filter((p) => existing && p.settlement_id === existing.id).reduce((s, p) => s + Number(p.amount), 0);
+      const paid = existing ? appliedToSettlement(existing.id,payouts,data?.allocations || [],items) : 0;
       return { ...a, existing, draft, paid };
     }).filter((r) => r.existing || r.draft.total > 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [advisors, orders, payments, charges, settlements, items, payouts, payPeriod, mode]);
+  }, [advisors, orders, payments, charges, settlements, items, payouts, data, payPeriod, mode]);
 
   if (lp || ls) return <p className="text-sm text-muted-foreground p-4">Cargando liquidaciones…</p>;
 
@@ -152,6 +152,7 @@ export function SettlementsView({ orders, mode, advisorId: fixedAdvisor, readOnl
           {...draftFor(advisorId)}
           payouts={payouts.filter((p) => p.advisor_id === advisorId)}
           savedItems={items}
+          allocations={data?.allocations || []}
           logs={data?.logs || []}
           history={settlements.filter((s) => s.advisor_id === advisorId)}
           actions={actions}
@@ -195,25 +196,20 @@ function LinesTable({ lines, title }: { lines: { code: string; client: string; s
 }
 
 function AdvisorSettlement(props: any) {
-  const { mode, readOnly, advisorName, advisorId, existing, draft, payouts, savedItems, logs, history, actions, toast } = props as {
+  const { mode, readOnly, advisorName, advisorId, existing, draft, payouts, savedItems, allocations, logs, history, actions, toast } = props as {
     mode: "contabilidad" | "asesor"; readOnly?: boolean; advisorName: string; advisorId: string; existing?: Settlement;
-    draft: ReturnType<typeof buildSettlement>; payouts: any[]; savedItems: any[]; logs: any[]; history: Settlement[];
+    draft: ReturnType<typeof buildSettlement>; payouts: any[]; savedItems: any[]; allocations: any[]; logs: any[]; history: Settlement[];
     actions: ReturnType<typeof useSettlementActions>; toast: any;
   };
   const [adjust, setAdjust] = useState(String(existing?.adjustment_amount || 0));
   const [notes, setNotes] = useState(existing?.notes || "");
-  const [dlg, setDlg] = useState<null | "return" | "pay" | "dispute">(null);
+  const [dlg, setDlg] = useState<null | "return" | "dispute">(null);
   const [note, setNote] = useState("");
-  const [payAmount, setPayAmount] = useState("");
-  const [payDate, setPayDate] = useState(new Date().toISOString().slice(0, 10));
-  const [payRef, setPayRef] = useState("");
-  const [payFile, setPayFile] = useState<File | null>(null);
-
   const isCont = mode === "contabilidad" && !readOnly;
   const locked = existing?.status === "saldado";
-  const showSaved = !!existing && (locked || existing.status === "pago_registrado" || mode === "asesor");
+  const showSaved = !!existing && (locked || existing.status === "pago_registrado" || allocations.some((a:any) => a.settlement_id === existing.id || savedItems.some((i:any) => i.id === a.settlement_item_id && i.settlement_id === existing.id)) || mode === "asesor");
   const myPayouts = payouts.filter((p) => existing && p.settlement_id === existing.id);
-  const paid = myPayouts.reduce((s, p) => s + Number(p.amount), 0);
+  const paid = existing ? appliedToSettlement(existing.id,payouts,allocations,savedItems) : 0;
   const total = existing ? Number(existing.total_amount) : draft.total;
   const myLogs = logs.filter((l) => existing && l.settlement_id === existing.id);
 
@@ -254,10 +250,10 @@ function AdvisorSettlement(props: any) {
               <div><Label className="text-xs">Ajuste (+/-)</Label><Input type="number" value={adjust} onChange={(e) => setAdjust(e.target.value)} /></div>
               <div><Label className="text-xs">Nota de la liquidación</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ej: saldo de septiembre pagado por fuera" /></div>
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" disabled={actions.approve.isPending || (existing?.status === "pago_registrado")}
+                <Button size="sm" disabled={actions.approve.isPending || paid > 0 || (existing?.status === "pago_registrado")}
                   onClick={() => run(() => actions.approve.mutateAsync({ advisorId, advisorName, draft, adjustment: Number(adjust) || 0, notes, existingId: existing?.id }), "Liquidación aprobada")}>Aprobar liquidación</Button>
                 {existing && <Button size="sm" variant="outline" onClick={() => setDlg("return")}>Devolver a revisión</Button>}
-                {existing && <Button size="sm" variant="secondary" onClick={() => { setPayAmount(String(Math.max(total - paid, 0))); setDlg("pay"); }}>Registrar pago</Button>}
+
               </div>
             </div>
           )}
@@ -296,13 +292,6 @@ function AdvisorSettlement(props: any) {
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm">Pagos e historial</CardTitle></CardHeader>
         <CardContent className="space-y-3 text-sm">
-          {payouts.length === 0 && <p className="text-muted-foreground text-xs">Sin pagos registrados.</p>}
-          {payouts.map((p) => (
-            <div key={p.id} className="flex flex-wrap justify-between gap-2 border-b pb-1">
-              <span>{fmtD(p.paid_at)} · pago de {periodLabel(p.pay_period)}{p.reference ? ` · ${p.reference}` : ""}{p.notes ? ` · ${p.notes}` : ""}</span>
-              <b>{money(Number(p.amount))}</b>
-            </div>
-          ))}
           {history.length > 0 && (
             <div className="space-y-1">
               <p className="font-semibold text-xs">Liquidaciones</p>
@@ -327,29 +316,15 @@ function AdvisorSettlement(props: any) {
 
       <Dialog open={!!dlg} onOpenChange={(o) => !o && setDlg(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle>{dlg === "pay" ? "Registrar pago de comisión" : dlg === "return" ? "Devolver liquidación a revisión" : "Reportar diferencia"}</DialogTitle></DialogHeader>
-          {dlg === "pay" ? (
-            <div className="space-y-2">
-              <div><Label>Valor pagado</Label><Input type="number" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} /></div>
-              <div><Label>Fecha del pago</Label><Input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} /></div>
-              <div><Label>Referencia</Label><Input value={payRef} onChange={(e) => setPayRef(e.target.value)} placeholder="Transferencia, número…" /></div>
-              <div><Label>Comprobante (opcional)</Label><Input type="file" onChange={(e) => setPayFile(e.target.files?.[0] || null)} /></div>
-            </div>
-          ) : (
-            <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Explica la diferencia" />
-          )}
+          <DialogHeader><DialogTitle>{dlg === "return" ? "Devolver liquidación a revisión" : "Reportar diferencia"}</DialogTitle></DialogHeader>
+          <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Explica la diferencia" />
           <DialogFooter>
             <Button variant="outline" onClick={() => setDlg(null)}>Cancelar</Button>
             <Button onClick={() => {
-              if (dlg === "pay") {
-                const amt = Number(payAmount);
-                if (!(amt > 0)) return toast({ title: "Ingresa un valor mayor a cero", variant: "destructive" });
-                run(() => actions.registerPayout.mutateAsync({ settlement: existing!, amount: amt, paidAt: payDate, reference: payRef, file: payFile }), "Pago registrado");
-              } else {
-                if (!note.trim()) return toast({ title: "Escribe el motivo", variant: "destructive" });
-                if (dlg === "return") run(() => actions.returnForReview.mutateAsync({ id: existing!.id, note }), "Liquidación devuelta");
-                else run(() => actions.respond.mutateAsync({ id: existing!.id, confirm: false, note }), "Diferencia reportada");
-              }
+              if (!existing) return;
+              if (!note.trim()) return toast({ title: "Escribe el motivo", variant: "destructive" });
+              if (dlg === "return") run(() => actions.returnForReview.mutateAsync({ id: existing.id, note }), "Liquidación devuelta");
+              else run(() => actions.respond.mutateAsync({ id: existing.id, confirm: false, note }), "Diferencia reportada");
             }}>Guardar</Button>
           </DialogFooter>
         </DialogContent>

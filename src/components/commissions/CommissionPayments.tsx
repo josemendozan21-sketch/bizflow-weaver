@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useSettlementActions, useSettlementData, type Payout } from "@/hooks/useCommissionSettlements";
 import { appliedToTarget, ledgerSummary, SYSTEM_WEB_ADVISOR_IDS, validateCommissionAllocation } from "@/lib/commissionSettlement";
-import { parseMoneyInput } from "@/lib/money";
+import { parseCOP } from "@/lib/money";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Download, FileText, Plus, RotateCcw } from "lucide-react";
@@ -68,20 +68,20 @@ export function CommissionPayments({advisors,advisorId,period,editable}:Props) {
   }
   async function save() {
     try {
-      const total=selected?Number(selected.amount):parseMoneyInput(amount);
+      const total=selected?Number(selected.amount):parseCOP(amount);
       if(!aid||!Number.isFinite(total)||total<=0) throw new Error("Selecciona el asesor e ingresa un importe válido");
       if(!selected?.proof_url&&!file) throw new Error("Adjunta el comprobante para confirmar");
       let remaining=total-(selected?ledgerSummary([selected],allocations).applied:0);
       const assigned=[];
       for(const c of candidates) {
         if(!values[c.id]?.trim()) continue;
-        const value=parseMoneyInput(values[c.id]);
+        const value=parseCOP(values[c.id]);
         validateCommissionAllocation(remaining,c.remaining,value);remaining-=value;
         assigned.push({kind:c.kind,id:c.id,amount:value});
       }
       const payload:Record<string,unknown> = {operation:selected?"reconcile":"register",payout_id:selected?.id,advisor_id:aid,payment_kind:kind,amount:total,paid_at:paidAt,pay_period:payPeriod,reference,note,request_key:requestKey,allocations:assigned};
       if(opening) {
-        const target=parseMoneyInput(openingAmount),value=parseMoneyInput(openingApply);
+        const target=parseCOP(openingAmount),value=parseCOP(openingApply);
         validateCommissionAllocation(remaining,target,value);
         if(!openingNote.trim()) throw new Error("Documenta el origen del saldo inicial");
         payload.opening_balance={amount:target,apply_amount:value,pay_period:payPeriod,note:openingNote};
