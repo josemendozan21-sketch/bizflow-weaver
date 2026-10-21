@@ -1,47 +1,53 @@
-# Conciliación de caja del Punto de la 92 (corte al 21 de octubre)
+# Comisiones claras: una sola cifra por asesor, igual para Contabilidad y para el asesor
 
-Este documento es solo diagnóstico. No se ha cambiado ningún dato, saldo ni cálculo.
+## Problema actual
+- Hay **dos pantallas por lado** con cálculos distintos. En Ventas están "Mis liquidaciones" y, debajo, el cuadro anterior de comisiones. En Contabilidad están el panel anterior de comisiones y "Contabilidad y Asesores". Por eso las cifras no siempre coinciden.
+- Las tablas muestran todo a la vez: base sin IVA, porcentaje, mes de comisión, fecha de pago completo, pendientes anteriores, etc. Eso hace difícil ver lo esencial: **cuánto vendió y cuánto se le paga**.
 
-## 1. Cifras verificadas
-- Arqueo físico: **$747.350**. Es la apertura del 21 de octubre, igual al cierre del 20.
-- Saldo en la plataforma: **$585.049,39**.
-- Diferencia exacta: **$162.300,61**.
-- La plataforma **nunca ha registrado un arqueo**. Su saldo se reconstruye desde la base de $215.400 de junio, sumando y restando cada movimiento. Cualquier error desde junio sigue arrastrándose.
+## Qué cambia
 
-## 2. Hallazgos confirmados con los registros
+### 1. Una sola fuente de verdad
+Se quitan las pantallas anteriores (el cuadro viejo en Ventas y el panel viejo en Contabilidad). Las dos vistas usan el mismo cálculo, con las reglas de hoy: solo pedidos al 100%, causación en el mes del pago completo, pago al mes siguiente y bonos de Magical y Sweat Spot. Lo que ve Contabilidad para Ángela es exactamente lo que ve Ángela.
 
-| Tema | Lo que hay en la plataforma | Efecto en el saldo |
-|---|---|---|
-| $24.100 "PICKUP TOBERIN" | Retiro de Eliana del 26 sep (aprobado), más gasto de Contabilidad del 25 sep "pickup-toberin" y gasto del 2 oct "Envío a cliente desde Chicó" (los dos pendientes) | Se restan las tres. Si es una sola salida física, se descuentan **$48.200 de más**. Es un error del cálculo: los gastos de Contabilidad se suman a los retiros del punto. |
-| Viáticos del 1 oct, $100.000 | Retiro pendiente | Se resta una vez. Es correcto, según lo confirmado por Eliana. |
-| Base de $215.400 | Se suma una sola vez, como punto de partida | Es correcta. No se suma dos veces. |
-| Centavos | Dos ventas en efectivo con decimales: $200.799,54 (18 jul) y $44.999,85 (17 sep), por descuento porcentual | Explican los **$0,61** (,54 + ,85 = 1,39). Es una diferencia real de $0,39 en el saldo, no solo de presentación. |
-| Ventas en efectivo de octubre | 2 oct $67.600 · 5 oct $78.000 (parte en efectivo de una venta mixta de $228.000) · 11 oct $149.900 · 16 oct $60.000 · 17 oct $394.800 | Coinciden con el resumen diario de la plataforma. |
-| Pagos del 21 oct en el Excel | Luis Contreras $280.000, Jailene Herrera $278.950, Juan Muñoz $10.000 (total $568.950) | **No están en la plataforma.** Son posteriores al arqueo, así que no explican la diferencia, pero faltan por registrar. Cierre del Excel: $178.400. |
+### 2. Contabilidad: un resumen de una línea por asesor
+Se elige el mes de pago, por ejemplo "Pago de noviembre (ventas completadas en octubre)".
 
-## 3. Explicación numérica hasta donde alcanzan los datos
 ```text
-Diferencia reportada                       162.300,61
-- Gasto $24.100 contado de más (x2)        -48.200,00
-- Centavos de ventas                            -0,61
-= Diferencia sin explicar                  114.100,00
+Asesor          Ventas al 100%   Pedidos   Comisión     Bono       A pagar      Estado
+Ángela María    $25.300.000      39        $1.521.228   $250.000   $1.771.228   Por pagar
+Pilar           ...
+                                                         TOTAL A PAGAR $X
 ```
-Los **$114.100** restantes no se pueden ubicar con la información actual. La captura solo muestra el día 21. Como la plataforma acumula desde junio, hay que comparar día por día los cierres del Excel con el saldo diario de la plataforma. El primer día en que no coincidan señala el movimiento que falta, que sobra o que tiene otro valor.
+- Botón "Marcar pagado" por asesor y un Excel del mes con la misma tabla.
+- Al tocar un asesor se abre su detalle (punto 4).
 
-## 4. Lo que necesito para terminar
-- **El Excel original de Eliana**, con los cierres diarios o los movimientos desde junio, o al menos desde la última vez que cuadró.
-- La confirmación de que los tres registros de $24.100 son una sola salida física.
+### 3. Asesor: una tarjeta grande
+```text
+Tu pago de noviembre
+$1.771.228
+Comisión $1.521.228 + Bono $250.000
+39 pedidos completados en octubre · Ventas $25.300.000
+Estado: Por pagar
+```
+Debajo hay dos bloques cortos:
+- **"Te faltan para cobrar"**: pedidos aún no al 100%, con una sola razón cada uno ("Falta saldo $300.000" o "Falta comprobante"), y lo que sumarían si se completan este mes.
+- **"Cómo vas para el bono"**: una barra de avance hacia la meta del mes.
 
-Con eso entrego la tabla completa, clasificando cada movimiento como coincidente, valor distinto, duplicado, solo en Excel, solo en la plataforma o pendiente.
+### 4. Detalle (igual para los dos), plegado por defecto
+Hay una tabla simple por marca (Magical / Sweat Spot) con: Pedido · Cliente · Valor · Comisión. El porcentaje, la base sin IVA y las fechas solo aparecen al abrir "Ver cálculo" de cada pedido.
 
-## 5. Correcciones propuestas (solo después de aprobar el diagnóstico)
-1. **Cálculo:** los gastos de Contabilidad que ya tienen su retiro en el punto dejan de restarse otra vez. Los gastos sin retiro equivalente siguen restando y se muestran como "sin pareja en el punto".
-2. **Duplicados confirmados:** se marcan como "anulado por duplicado", con referencia, motivo, quién y cuándo. No se borran.
-3. **Centavos:** el saldo se redondea al peso y las ventas nuevas se guardan en pesos enteros.
-4. **Registrar el arqueo del 21 de octubre en la plataforma**, para que los cálculos partan de ese conteo y no desde junio. Se registran también los tres pagos del 21.
-5. Se mantienen la base de $215.400, la alerta de mínimo de $200.000 y la de máximo de $400.000.
+### 5. Lenguaje y forma
+- Montos redondeados al peso, sin decimales.
+- Sin columnas de porcentaje en la vista principal.
+- Etiquetas en palabras simples: "Ventas al 100%", "A pagar", "Te falta".
+- Las reglas, en un "¿Cómo se calcula?" de 4 líneas, en lugar de la leyenda actual.
+- Funciona en celular, con el desplazamiento solo dentro de las tablas.
+
+## Lo que no cambia
+Las reglas de porcentajes, los bonos, el 100% (pago total + comprobante) y los pagos históricos ya registrados de Ángela y Pilar.
 
 ## Detalles técnicos
-- `computePosCash` (`src/lib/pettyCash.ts`) suma `petty_cash_expenses` de la sede Chicó además de `pos_cash_withdrawals`; ese es el origen del doble descuento.
-- La tabla `petty_cash_counts` está vacía; el saldo arranca en `cash_base`.
-- La conciliación de cada movimiento se hará cruzando fecha (±3 días), concepto y valor; nunca solo por valor.
+- Toda la lógica sigue en `src/lib/commissionSettlement.ts`. Se agrega una función pura `summarizeSettlement(draft)` que devuelve `{ ventas, pedidos, comision, bono, aPagar, porMarca, faltantes }`, con pruebas que comparan contra los valores actuales (por ejemplo, Ángela: comisión 1.521.228 + bono 250.000 = 1.771.228).
+- `SettlementsView.tsx` se reorganiza en `SettlementSummaryTable` (contabilidad), `AdvisorPayCard` (asesor) y `SettlementDetail` (compartido).
+- Se retiran `MisComisiones` de `Ventas.tsx` y `CommissionsPanel` de `Contabilidad.tsx`. Los archivos se conservan sin usar hasta confirmar.
+- Se actualiza el Excel de comisiones (`commissionExports.ts`) con las mismas columnas del resumen.
