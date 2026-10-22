@@ -14,13 +14,21 @@ Hay 58 ventas con alguna nota de descuento; 23 tienen descuentos de $1.000 o má
 
 Si el cliente pagó el valor completo en efectivo, la caja recibió más plata de la que registró la plataforma. Esto explicaría parte del sobrante del arqueo del 21 de octubre.
 
+## Primera lectura del arqueo de Eliana (1 ago – 21 oct, 82 días)
+- Abre el 1 de agosto con **$489.650**, no con la base de $215.400 que usa la plataforma.
+- Los $747.350 son el cierre del 19 y 20 de octubre. El 21 se pagan $568.950 y el cierre real queda en **$178.400**. O sea, los $747.350 eran **antes** de esos pagos, no después.
+- Con eso, la diferencia del 21 vuelve a ser la de antes de los pagos (cerca de $162.300), no $731.250.
+- Hay una celda rota (#REF!) en el cuadro de balance de las hojas.
+
+
 ## Qué haré (sin cambiar nada hasta que lo apruebes)
 1. **Revisar venta por venta:** listar las 58 ventas con productos, % escrito, descuento correcto, descuento guardado, total guardado y diferencia. Marcar las de efectivo, porque son las que afectan la caja.
 2. **Encontrar el error:** revisar cómo calcula el descuento la venta del Punto 92 (por ejemplo, si aplica el % sobre otro valor o si aplica el descuento dos veces). Corregirlo para que las ventas nuevas guarden el valor que de verdad se cobró y que la remisión muestre bien el descuento.
 3. **Excel para confirmar:** entregar un Excel con columnas para que Eliana o Contabilidad escriban cuánto se cobró de verdad en cada venta.
 4. **Corregir lo histórico solo con tu visto bueno:** con lo confirmado, ajustar el total de cada venta, dejando un historial con el valor anterior, el motivo y quién aprobó. No se borra nada.
-5. **Recalcular la caja:** sumar al saldo de caja la diferencia de las ventas en efectivo ya corregidas, y actualizar la conciliación del 21 de octubre para ver cuánto del sobrante queda explicado.
-6. **Quitar los centavos:** guardar los totales al peso para que dejen de salir diferencias como $0,61.
+5. **Cruce día a día con el arqueo de Eliana:** comparar, para cada día de agosto a octubre, apertura, ventas en efectivo, gastos y cierre del Excel contra la plataforma, y marcar el primer día en que no cuadran y por qué (descuento mal guardado, gasto repetido, pago no registrado, etc.).
+6. **Recalcular la caja:** proponer como punto de partida el cierre contado de Eliana (por ejemplo $178.400 del 21 de octubre) en lugar de la base de junio, sumando las correcciones aprobadas. Entrego un Excel con el cruce y la propuesta antes de tocar saldos.
+7. **Quitar los centavos:** guardar los totales al peso para que dejen de salir diferencias como $0,61.
 
 ## Lo que necesito confirmar
 - En 78D7159C y 8F0CF841: ¿se cobró el valor completo, sin descuento, o se aplicó un descuento menor?
