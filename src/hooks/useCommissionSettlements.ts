@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { requireCommissionProof, type LedgerAllocation, type SettlementDraft } from "@/lib/commissionSettlement";
+import { isSettlementSnapshotLocked, requireCommissionProof, type LedgerAllocation, type SettlementDraft } from "@/lib/commissionSettlement";
 
 export interface Settlement {
   id: string;
@@ -80,37 +80,28 @@ export function useSettlementActions() {
 
   const approve = useMutation({
     mutationFn: async (p: { advisorId: string; advisorName: string; draft: SettlementDraft; adjustment: number; notes: string; existingId?: string }) => {
-      const { data: u } = await supabase.auth.getUser();
       const row = {
-        advisor_id: p.advisorId, advisor_name: p.advisorName, pay_period: p.draft.payPeriod, status: "pendiente_pago",
+        advisor_id: p.advisorId, advisor_name: p.advisorName, pay_period: p.draft.payPeriod,
         current_amount: Math.round(p.draft.currentAmount), carryover_amount: Math.round(p.draft.carryoverAmount),
         bonus_amount: p.draft.bonus, adjustment_amount: Math.round(p.adjustment),
         total_amount: Math.round(p.draft.total + p.adjustment), notes: p.notes || null,
-        approved_by: u.user?.id, approved_at: new Date().toISOString(), returned_note: null,
       };
-      let id = p.existingId;
-      if (id) {
-        const { error } = await db.from("commission_settlements").update(row).eq("id", id);
+      if (p.existingId) {
+        const { data: existing, error } = await db.from("commission_settlements").select("approved_at,status").eq("id", p.existingId).single();
         if (error) throw error;
-        await db.from("commission_settlement_items").delete().eq("settlement_id", id);
-      } else {
-        const { data, error } = await db.from("commission_settlements").insert(row).select("id").single();
-        if (error) throw error;
-        id = data.id;
+        if (isSettlementSnapshotLocked(existing)) throw new Error("La liquidación ya fue aprobada y no se puede recalcular");
       }
       const items = [...p.draft.current, ...p.draft.carryover].map((l) => ({
-        settlement_id: id, order_id: l.order.id, order_code: l.order.order_code || null, client_name: l.order.client_name,
+        order_id: l.order.id, order_code: l.order.order_code || null, client_name: l.order.client_name,
         sale_date: l.saleDate.toISOString().slice(0, 10), completed_date: l.completedDate.toISOString().slice(0, 10),
         paid_date: l.paidDate ? l.paidDate.toISOString().slice(0, 10) : null,
         causation_period: l.causationPeriod, base_amount: Math.round(l.base), rate: l.rate, amount: Math.round(l.amount),
         is_carryover: l.isCarryover,
       }));
-      if (items.length) {
-        const { error } = await db.from("commission_settlement_items").insert(items);
-        if (error) throw error;
-      }
-      if (!id) throw new Error("Liquidación no encontrada");
-      await log(id, "aprobada", p.notes, row.total_amount);
+      const { error } = await supabase.rpc("approve_commission_settlement", {
+        _payload: { existing_id: p.existingId || null, settlement: row, items },
+      });
+      if (error) throw error;
     },
     onSuccess: done,
   });
