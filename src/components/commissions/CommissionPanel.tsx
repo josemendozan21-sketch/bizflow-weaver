@@ -1,3 +1,4 @@
+import { CommissionPayments } from "./CommissionPayments";
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -63,7 +64,7 @@ export function CommissionPanel({ orders, advisorId: fixed, mode }: Props) {
 
   const ov = useMemo(() => advisorId ? buildCommissionOverview({
     orders, payments, charges, advisorId, period,
-    settlements: data?.settlements || [], items: data?.items || [], payouts: data?.payouts || [],
+    settlements: data?.settlements || [], items: data?.items || [], payouts: data?.payouts || [], allocations: data?.allocations || [],
   }) : null, [orders, payments, charges, advisorId, period, data]);
 
   const rows = useMemo(() => {
@@ -105,7 +106,7 @@ export function CommissionPanel({ orders, advisorId: fixed, mode }: Props) {
     { label: "Pendientes de requisitos", value: c.pendientesRequisitos, help: "Causadas, pero al pedido le falta algo" },
     { label: "Disponibles para liquidar", value: c.disponibles, help: "Cumplen todo; entran en la próxima liquidación", strong: true },
     { label: "Aprobadas", value: c.aprobadas, help: `Aprobadas por Contabilidad, por transferir` },
-    { label: "Pagadas", value: c.pagadas, help: "Ya transferidas (total histórico)" },
+    { label: "Pagadas", value: c.pagadas, help: "Confirmadas y aplicadas al período seleccionado" },
   ] : [];
 
   return (
@@ -204,6 +205,8 @@ export function CommissionPanel({ orders, advisorId: fixed, mode }: Props) {
         </>
       )}
 
+      <CommissionPayments advisors={advisors} advisorId={advisorId || undefined} period={period} editable={mode === "contabilidad"} />
+
       <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Pedido {detail?.order.order_code || ""}</DialogTitle></DialogHeader>
@@ -215,6 +218,8 @@ export function CommissionPanel({ orders, advisorId: fixed, mode }: Props) {
               <Row k="Base sin IVA" v={money(detail.base)} />
               <Row k="Porcentaje aplicado" v={`${(detail.rate * 100).toFixed(1)}%`} />
               <Row k="Comisión calculada" v={money(detail.estimated)} />
+              <Row k="Comisión ya pagada" v={money(detail.commissionPaid)} />
+              <Row k="Comisión pendiente" v={money(detail.commissionRemaining)} />
               <Row k="Pagos recibidos" v={money(detail.collected)} />
               <Row k="Saldo pendiente" v={money(detail.balance)} />
               <Row k="Comprobante" v={detail.order.payment_proof_url ? "Sí" : (payments[detail.order.id] || []).some((p) => p.proof_url) ? "Sí" : "No"} />

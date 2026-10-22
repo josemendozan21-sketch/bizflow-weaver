@@ -2,7 +2,9 @@
 
 ## 10. Registro y conciliación de pagos históricos de comisiones
 - [x] Auditar estructuras y pantallas existentes; plan preparado para aprobación.
-- En espera de aprobación: implementación y cualquier cambio de saldos históricos; no aplicar migraciones antes.
+- [x] Registro y conciliación implementados con comprobante obligatorio, asignaciones parciales, topes, prevención de duplicados y anulaciones auditables.
+- [x] Verificado en Contabilidad y con Ángela: $100 de prueba, $40 aplicados / $60 pendientes, aplicación completa y reverso; asesor sin permisos de escritura. Datos temporales eliminados; 24 pruebas pasan.
+- Pendiente de Contabilidad: revisar soportes y asignaciones de los dos pagos históricos reales; permanecen intactos y sin descuento automático.
 
 8. **Conexión Bionovations para Sweat Spot** — COMPLETADO: entradas desplegadas, print_type por línea o pedido, catálogo y siliconas, líneas agrupadas sin escribir order_code. Prueba real de dos líneas, reserva, solicitud Sweatspot y reenvío sin duplicados; los seis avisos de termos entregados a la tienda. La sesión disponible es de asesora y no permite revisar solicitudes del asesor web en Diseño.
 

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { SettlementDraft } from "@/lib/commissionSettlement";
+import { requireCommissionProof, type LedgerAllocation, type SettlementDraft } from "@/lib/commissionSettlement";
 
 export interface Settlement {
   id: string;
@@ -27,6 +27,7 @@ export interface SettlementItem {
 }
 export interface Payout {
   id: string; settlement_id: string | null; advisor_id: string; pay_period: string; amount: number;
+  reconciliation_status: string; payment_kind: string; proof_hash: string | null;
   paid_at: string; reference: string | null; proof_url: string | null; notes: string | null; created_at: string;
 }
 export interface SettlementLog {
@@ -35,24 +36,30 @@ export interface SettlementLog {
 }
 
 const db = supabase as any;
-const KEY = ["commission_settlements"];
+export const KEY = ["commission_settlements"];
 
 export function useSettlementData() {
   return useQuery({
     queryKey: KEY,
     queryFn: async () => {
-      const [s, i, p, l] = await Promise.all([
+      const [s, i, p, l, a, b, h] = await Promise.all([
         db.from("commission_settlements").select("*").order("pay_period", { ascending: false }),
         db.from("commission_settlement_items").select("*").range(0, 19999),
         db.from("commission_payouts").select("*").order("paid_at", { ascending: false }),
         db.from("commission_settlement_log").select("*").order("created_at", { ascending: false }),
+        db.from("commission_payment_allocations").select("*").range(0,19999),
+        db.from("commission_opening_balances").select("*"),
+        db.from("commission_payment_audit").select("*").order("created_at", {ascending:false}),
       ]);
-      for (const r of [s, i, p, l]) if (r.error) throw r.error;
+      for (const r of [s, i, p, l, a, b, h]) if (r.error) throw r.error;
       return {
         settlements: (s.data || []) as Settlement[],
         items: (i.data || []) as SettlementItem[],
         payouts: (p.data || []) as Payout[],
         logs: (l.data || []) as SettlementLog[],
+        allocations: (a.data || []) as LedgerAllocation[],
+        openings: (b.data || []) as {id:string; advisor_id:string; pay_period:string; amount:number; note:string}[],
+        paymentAudit: (h.data || []) as {id:string;payout_id:string;action:string;note:string|null;actor_name:string|null;created_at:string}[],
       };
     },
   });
@@ -63,7 +70,8 @@ async function actorName() {
   return data.user?.email || null;
 }
 async function log(settlement_id: string, action: string, note?: string | null, amount?: number | null) {
-  await db.from("commission_settlement_log").insert({ settlement_id, action, note: note || null, amount: amount ?? null, actor_name: await actorName() });
+  const {error} = await db.from("commission_settlement_log").insert({ settlement_id, action, note: note || null, amount: amount ?? null, actor_name: await actorName() });
+  if(error) throw error;
 }
 
 export function useSettlementActions() {
@@ -101,7 +109,8 @@ export function useSettlementActions() {
         const { error } = await db.from("commission_settlement_items").insert(items);
         if (error) throw error;
       }
-      await log(id!, "aprobada", p.notes, row.total_amount);
+      if (!id) throw new Error("Liquidación no encontrada");
+      await log(id, "aprobada", p.notes, row.total_amount);
     },
     onSuccess: done,
   });
@@ -115,25 +124,23 @@ export function useSettlementActions() {
     onSuccess: done,
   });
 
-  const registerPayout = useMutation({
-    mutationFn: async (p: { settlement: Settlement; amount: number; paidAt: string; reference: string; file?: File | null }) => {
-      let proof_url: string | null = null;
+  const managePayment = useMutation({
+    mutationFn: async (p: { payload: Record<string, unknown>; file?: File | null }) => {
+      const payload = { ...p.payload };
       if (p.file) {
-        const path = `commissions/${p.settlement.id}/${Date.now()}-${p.file.name}`;
-        const { error } = await supabase.storage.from("payment-proofs").upload(path, p.file);
-        if (error) throw error;
-        proof_url = path;
+        const bytes = await p.file.arrayBuffer();
+        const hash = await crypto.subtle.digest("SHA-256",bytes);
+        payload.proof_hash = Array.from(new Uint8Array(hash), b => b.toString(16).padStart(2,"0")).join("");
+        const path = `commissions/${crypto.randomUUID()}/${p.file.name.replace(/[^a-zA-Z0-9._-]/g,"_")}`;
+        const {error} = await supabase.storage.from("payment-proofs").upload(path,p.file);
+        if(error) throw error;
+        payload.proof_url = path;
       }
-      const { data: u } = await supabase.auth.getUser();
-      const { error } = await db.from("commission_payouts").insert({
-        settlement_id: p.settlement.id, advisor_id: p.settlement.advisor_id, pay_period: p.settlement.pay_period,
-        amount: p.amount, paid_at: p.paidAt, reference: p.reference || null, proof_url, registered_by: u.user?.id,
-      });
-      if (error) throw error;
-      await db.from("commission_settlements").update({ status: "pago_registrado", confirmed_at: null, confirmed_by: null }).eq("id", p.settlement.id);
-      await log(p.settlement.id, "pago_registrado", p.reference, p.amount);
-    },
-    onSuccess: done,
+      if(payload.operation === "register") requireCommissionProof(payload.proof_url);
+      const {data,error} = await db.rpc("manage_commission_payment",{_payload:payload});
+      if(error) throw error;
+      return data as string;
+    }, onSuccess:done,
   });
 
   const respond = useMutation({
@@ -144,5 +151,5 @@ export function useSettlementActions() {
     onSuccess: done,
   });
 
-  return { approve, returnForReview, registerPayout, respond };
+  return { approve, returnForReview, managePayment, respond };
 }
