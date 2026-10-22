@@ -1,5 +1,9 @@
 # Tareas en curso
 
+## 12. Restaurar inventario afectado por pruebas Bionovations
+- [ ] Verificar reservas y devoluciones de pruebas eliminadas.
+- [ ] Devolver solo las unidades pendientes mediante movimiento trazable y verificar el saldo final.
+
 ## 11. Corrección de umbrales de comisiones por volumen
 - [x] Diagnosticar impacto y verificar ID de Valentina: faltan umbrales, coincidencia por nombre actual, redondeo incorrecto del 7,5% en exportación y protección incompleta de liquidaciones aprobadas sin pagar.
 - [x] Implementar umbrales autorizados y conservar liquidaciones históricas aprobadas o pagadas; 46 pruebas pasan.
