@@ -2,8 +2,9 @@
 
 ## 11. Corrección de umbrales de comisiones por volumen
 - [x] Diagnosticar impacto y verificar ID de Valentina: faltan umbrales, coincidencia por nombre actual, redondeo incorrecto del 7,5% en exportación y protección incompleta de liquidaciones aprobadas sin pagar.
-- [ ] Implementar y verificar tras autorización; conservar liquidaciones históricas aprobadas o pagadas.
-- Bloqueado: autorización del diagnóstico y plan solicitada por el documento del 22-oct-2026.
+- [x] Implementar umbrales autorizados y conservar liquidaciones históricas aprobadas o pagadas; 46 pruebas pasan.
+- [x] Verificar en Contabilidad el pedido real SW-VM-01405: Valentina Sweatspot, 1.000 unidades, 10%, base $15.808.000 y comisión estimada $1.580.800; pago parcial sigue sin causar comisión.
+- Verificación con otra cuenta de asesor no realizada en este turno; la sesión activa es de administrador.
 
 ## 10. Registro y conciliación de pagos históricos de comisiones
 - [x] Auditar estructuras y pantallas existentes; plan preparado para aprobación.

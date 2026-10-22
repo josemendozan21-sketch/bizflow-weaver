@@ -8,10 +8,9 @@ import {
   BONUS_TIER_1_AMOUNT,
   BONUS_TIER_2_THRESHOLD,
   BONUS_TIER_2_AMOUNT,
-  getCommissionRate,
+  getOrderCommissionRate,
   getCommissionableTotal,
   getDefaultPaymentMode,
-  getFlatRateFor,
   getSaleDate,
   isGiftOrder,
   periodKey,
@@ -161,8 +160,7 @@ export interface SettlementDraft {
 function rateFor(o: Order, weekendUnlocked: boolean): number {
   const day = getDay(getSaleDate(o));
   return (
-    getFlatRateFor(o.advisor_name) ??
-    getCommissionRate({
+    getOrderCommissionRate(o, {
       saleType: (o.sale_type as "menor" | "mayor") || "mayor",
       weekend: day === 0 || day === 6,
       paymentMode: getDefaultPaymentMode(o),
@@ -265,6 +263,10 @@ export const SETTLEMENT_STATUS_LABEL: Record<string, string> = {
   saldado: "Saldado",
 };
 
+export function isSettlementSnapshotLocked(settlement?: { approved_at?: string | null; status: string } | null): boolean {
+  return Boolean(settlement && (settlement.approved_at || ["pendiente_pago", "pago_registrado", "saldado"].includes(settlement.status)));
+}
+
 export const BONUS_GOALS = [
   { threshold: BONUS_TIER_1_THRESHOLD, amount: BONUS_TIER_1_AMOUNT },
   { threshold: BONUS_TIER_2_THRESHOLD, amount: BONUS_TIER_2_AMOUNT },
@@ -363,31 +365,31 @@ export interface CommissionOverview {
 export function buildCommissionOverview(params: {
   orders: Order[]; payments: PaymentsByOrder; charges?: ChargesMap; advisorId: string; period: string;
   settlements: { id: string; status: string; advisor_id: string }[];
-  items: { id?: string; settlement_id: string; order_id: string; amount: number | string }[];
+  items: { id?: string; settlement_id: string; order_id: string; amount: number | string; rate?: number | string; base_amount?: number | string }[];
   payouts: LedgerPayment[];
   allocations?: LedgerAllocation[];
 }): CommissionOverview {
   const { orders, payments, charges, advisorId, period } = params;
   const stById = new Map(params.settlements.filter((s) => s.advisor_id === advisorId).map((s) => [s.id, s.status]));
-  const itemByOrder = new Map<string, { status: string; amount: number }>();
+  const itemByOrder = new Map<string, { status: string; amount: number; rate?: number; base?: number }>();
   for (const i of params.items) {
     const st = stById.get(i.settlement_id);
-    if (st) itemByOrder.set(i.order_id, { status: st, amount: Number(i.amount || 0) });
+    if (st) itemByOrder.set(i.order_id, { status: st, amount: Number(i.amount || 0), rate: i.rate == null ? undefined : Number(i.rate), base: i.base_amount == null ? undefined : Number(i.base_amount) });
   }
   const rows: OrderCommissionRow[] = [];
   let ventasMes = 0, recaudadoMes = 0;
   for (const o of orders) {
     if (o.advisor_id !== advisorId || isExcludedOrder(o)) continue;
     const total = Number(o.total_amount || 0);
-    const base = getCommissionableTotal(o, charges) / IVA_DIVISOR;
-    const rate = rateFor(o, false);
+    const settled = itemByOrder.get(o.id);
+    const base = settled?.base ?? getCommissionableTotal(o, charges) / IVA_DIVISOR;
+    const rate = settled?.rate ?? rateFor(o, false);
     const rowsP = (payments[o.id] || []).filter((r) => Number(r.amount || 0) > 0);
     const collected = Math.min(Math.max(Number(o.abono || 0), rowsP.reduce((s, r) => s + Number(r.amount || 0), 0)), total);
     for (const r of rowsP) if (r.payment_date && r.payment_date.slice(0, 7) === period) recaudadoMes += Number(r.amount || 0);
     const saleDate = getSaleDate(o);
     if (periodKey(saleDate) === period) ventasMes += base;
     const completedDate = getCompletionDate(o, payments);
-    const settled = itemByOrder.get(o.id);
     const estimated = settled ? settled.amount : base * rate;
     const commissionPaid = appliedToTarget(params.payouts, params.allocations || [], "item", o.id, params.items);
     const commissionRemaining = Math.max(Math.round(estimated) - commissionPaid, 0);

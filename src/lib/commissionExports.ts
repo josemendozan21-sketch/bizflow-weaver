@@ -36,7 +36,7 @@ export function buildCommissionRows(lines: CommissionLine[]) {
       Motivo: l.reason,
       "Base usada (con IVA)": r(l.commissionableWithVat),
       "Base sin IVA": r(l.baseSinIva),
-      "% comisión": `${(l.ratePct * 100).toFixed(0)}%`,
+      "% comisión": `${(l.ratePct * 100).toLocaleString("es-CO", { maximumFractionDigits: 1 })}%`,
       Penalización: r(l.penalty),
       Comisión: r(l.netCommission),
     };

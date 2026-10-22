@@ -10,10 +10,9 @@ import {
   IVA_DIVISOR,
   UNLOCK_THRESHOLD,
   bonusFor,
-  getCommissionRate,
+  getOrderCommissionRate,
   getCommissionableTotal,
   getDefaultPaymentMode,
-  getFlatRateFor,
   getSaleDate,
   isGiftOrder,
   periodKey,
@@ -116,8 +115,7 @@ function rateFor(o: Order, weekendUnlocked: boolean): number {
   const day = getDay(sale);
   const clientKind: ClientKind = o.is_recompra ? "recompra" : "nuevo";
   return (
-    getFlatRateFor(o.advisor_name) ??
-    getCommissionRate({
+    getOrderCommissionRate(o, {
       saleType: (o.sale_type as "menor" | "mayor") || "mayor",
       weekend: day === 0 || day === 6,
       paymentMode: getDefaultPaymentMode(o),
