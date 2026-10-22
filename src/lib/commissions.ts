@@ -180,22 +180,6 @@ export const STATUS_LABEL: Record<CommissionStatus, string> = {
   excluido: "Excluido",
 };
 
-/**
- * Asesores con tarifa plana: Valentina Mendoza percibe 10% sobre cualquier
- * venta (base sin IVA), sin importar canal, día o forma de pago.
- */
-export const FLAT_RATE_ADVISORS: { match: string; rate: number }[] = [
-  { match: "valentina mendoza", rate: 0.10 },
-  { match: "valemendoza", rate: 0.10 },
-];
-
-export function getFlatRateFor(advisorName?: string | null): number | null {
-  const n = (advisorName || "").toLowerCase().trim();
-  if (!n) return null;
-  const hit = FLAT_RATE_ADVISORS.find((f) => n.includes(f.match));
-  return hit ? hit.rate : null;
-}
-
 export type PaymentMode = "contado" | "contraentrega";
 export type ClientKind = "nuevo" | "recompra";
 
@@ -753,11 +737,8 @@ export function computeRetroAdjustment(
       const net = getCommissionableTotal(o, charges);
       const d = getPeriodDate(o, basis);
       const weekend = getDay(d) === 0 || getDay(d) === 6;
-      const flat = getFlatRateFor(o.advisor_name);
       const rateFor = (unlocked: boolean) =>
-        flat != null
-          ? flat
-          : getCommissionRate({
+          getOrderCommissionRate(o, {
               saleType: o.sale_type === "menor" ? "menor" : "mayor",
               weekend,
               paymentMode: getDefaultPaymentMode(o),
