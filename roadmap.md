@@ -1,7 +1,7 @@
 # Tareas en curso
 
 ## 11. Corrección de umbrales de comisiones por volumen
-- [ ] Diagnosticar impacto: general desde 1.000 unidades al 5%; Valentina Sweatspot hasta 1.000 al 10% y desde 1.001 al 7,5%, identificada por ID.
+- [x] Diagnosticar impacto y verificar ID de Valentina: faltan umbrales, coincidencia por nombre actual, redondeo incorrecto del 7,5% en exportación y protección incompleta de liquidaciones aprobadas sin pagar.
 - [ ] Implementar y verificar tras autorización; conservar liquidaciones históricas aprobadas o pagadas.
 - Bloqueado: autorización del diagnóstico y plan solicitada por el documento del 22-oct-2026.
 
