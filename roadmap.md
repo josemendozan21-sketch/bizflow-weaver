@@ -29,10 +29,14 @@
 
 
 
-## En espera: conciliación caja Punto 92 (21 oct)
-- Diagnóstico guardado en .lovable/plan.md (no se modificó nada).
-- Bloqueado: Excel original de Eliana con cierres diarios + confirmar si los tres $24.100 son una sola salida.
-- Sin explicar: $114.100. Faltan registrar pagos del 21 oct ($568.950).
+## 13. Conciliación caja Punto 92 — investigación sin modificar datos
+- [x] Incorporar nuevos hallazgos: Eliana reconoce una salida de $24.100 y Santiago confirma arqueo después de pagos del 21.
+- [x] Verificar 48 ventas del 1–13 octubre y correcciones de descuentos con tarjeta; tres pagos del 21 ya registrados por $568.950.
+- [x] Preparar Excel con 763 movimientos y diario completo desde junio hasta 21-oct; saldo final verificado $16.099,39, sin cambios de datos.
+- [x] Revisar fuente de la vista: historial Caja Menor solo incluye fondos/gastos, cifra Chicó además ventas/retiros; diario del punto solo días con movimientos de efectivo. No demuestra faltantes físicos.
+- Verificación visual bloqueada: sesión inyectada no cargó Caja Menor y no se pudo renovar para el solicitante; requiere sesión activa con acceso a caja. No se cambió ningún permiso.
+- Bloqueado: cierres físicos/Excel de Eliana para localizar primer descuadre; Contabilidad debe validar soportes de dos gastos y origen físico/bancario de los tres pagos.
+- Diferencia comparable al cierre: $747.350 físicos − $16.099,39 registrados = $731.250,61; $48.200 de gastos adicionales por validar, resto $683.050,61 sin explicar. No corregir sin evidencia y aprobación específica.
 
 ## 9. Comisiones claras + confirmación contraentrega (en curso)
 - Resumen de una línea por asesor (Contabilidad) y tarjeta grande (asesor); quitar pantallas antiguas.
