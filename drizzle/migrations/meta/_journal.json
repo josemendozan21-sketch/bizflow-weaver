@@ -141,6 +141,13 @@
       "when": 1792627164578,
       "tag": "0019_commission_proof_access_scope",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792681575071,
+      "tag": "0020_immutable_approved_commission_snapshots",
+      "breakpoints": true
     }
   ]
 }

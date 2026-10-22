@@ -5166,6 +5166,10 @@ export type Database = {
         Args: { _by_name: string; _id: string }
         Returns: undefined
       }
+      approve_commission_settlement: {
+        Args: { _payload: Json }
+        Returns: string
+      }
       build_ref_key: {
         Args: {
           _brand: string
