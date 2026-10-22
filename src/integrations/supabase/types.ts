@@ -5158,6 +5158,15 @@ export type Database = {
       }
     }
     Functions: {
+      adjust_commission_settlement: {
+        Args: {
+          _adjustment: number
+          _notes: string
+          _reason: string
+          _settlement_id: string
+        }
+        Returns: undefined
+      }
       advisor_respond_settlement: {
         Args: { _confirm: boolean; _note: string; _settlement_id: string }
         Returns: Json

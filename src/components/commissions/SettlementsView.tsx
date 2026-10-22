@@ -248,11 +248,17 @@ function AdvisorSettlement(props: any) {
 
           {isCont && !locked && (
             <div className="grid gap-2 md:grid-cols-[180px_1fr_auto] items-end border-t pt-3">
-              <div><Label className="text-xs">Ajuste (+/-)</Label><Input disabled={snapshotLocked} type="number" value={adjust} onChange={(e) => setAdjust(e.target.value)} /></div>
-              <div><Label className="text-xs">Nota de la liquidación</Label><Input disabled={snapshotLocked} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ej: saldo de septiembre pagado por fuera" /></div>
+              <div><Label className="text-xs">Ajuste (+/-)</Label><Input disabled={snapshotLocked && paid > 0} type="number" value={adjust} onChange={(e) => setAdjust(e.target.value)} /></div>
+              <div><Label className="text-xs">Nota de la liquidación</Label><Input disabled={snapshotLocked && paid > 0} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ej: saldo de septiembre pagado por fuera" /></div>
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" disabled={actions.approve.isPending || paid > 0 || snapshotLocked}
+                {snapshotLocked && existing ? (
+                  <Button size="sm" disabled={actions.adjust.isPending || paid > 0}
+                    onClick={() => { const reason = window.prompt("Motivo de la corrección del ajuste"); if (!reason?.trim()) return;
+                      run(() => actions.adjust.mutateAsync({ id: existing.id, adjustment: Number(adjust) || 0, notes, reason }), "Ajuste corregido"); }}>Guardar ajuste</Button>
+                ) : (
+                <Button size="sm" disabled={actions.approve.isPending || paid > 0}
                   onClick={() => run(() => actions.approve.mutateAsync({ advisorId, advisorName, draft, adjustment: Number(adjust) || 0, notes, existingId: existing?.id }), "Liquidación aprobada")}>Aprobar liquidación</Button>
+                )}
                 {existing && <Button size="sm" variant="outline" onClick={() => setDlg("return")}>Devolver a revisión</Button>}
 
               </div>

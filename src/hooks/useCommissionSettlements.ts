@@ -142,5 +142,13 @@ export function useSettlementActions() {
     onSuccess: done,
   });
 
-  return { approve, returnForReview, managePayment, respond };
+  const adjust = useMutation({
+    mutationFn: async (p: { id: string; adjustment: number; notes: string; reason: string }) => {
+      const { error } = await db.rpc("adjust_commission_settlement", { _settlement_id: p.id, _adjustment: p.adjustment, _notes: p.notes, _reason: p.reason });
+      if (error) throw error;
+    },
+    onSuccess: done,
+  });
+
+  return { approve, returnForReview, managePayment, respond, adjust };
 }
