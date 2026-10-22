@@ -148,6 +148,13 @@
       "when": 1792681575071,
       "tag": "0020_immutable_approved_commission_snapshots",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792681650296,
+      "tag": "0021_preserve_commission_response_updates",
+      "breakpoints": true
     }
   ]
 }
