@@ -1,5 +1,10 @@
 # Tareas en curso
 
+## 11. Corrección de umbrales de comisiones por volumen
+- [ ] Diagnosticar impacto: general desde 1.000 unidades al 5%; Valentina Sweatspot hasta 1.000 al 10% y desde 1.001 al 7,5%, identificada por ID.
+- [ ] Implementar y verificar tras autorización; conservar liquidaciones históricas aprobadas o pagadas.
+- Bloqueado: autorización del diagnóstico y plan solicitada por el documento del 22-oct-2026.
+
 ## 10. Registro y conciliación de pagos históricos de comisiones
 - [x] Auditar estructuras y pantallas existentes; plan preparado para aprobación.
 - [x] Registro y conciliación implementados con comprobante obligatorio, asignaciones parciales, topes, prevención de duplicados y anulaciones auditables.
