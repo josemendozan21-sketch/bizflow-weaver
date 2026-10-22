@@ -592,7 +592,7 @@ export function useRegisterPosSale(locationId: string) {
       // Si hay precios rebajados por producto, el descuento ya está en las líneas:
       // no restarlo otra vez (evita doble descuento).
       const hasOverrides = !!input.override_unit_prices && Object.keys(input.override_unit_prices).length > 0;
-      const total_amount = Math.max(0, hasOverrides ? subtotal : subtotal - discount);
+      const total_amount = Math.max(0, Math.round(hasOverrides ? subtotal : subtotal - discount));
       const total_cost = input.items.reduce(
         (a, b) => a + Number(b.product.avg_cost) * b.quantity,
         0

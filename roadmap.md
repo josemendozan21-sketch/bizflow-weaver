@@ -43,3 +43,9 @@
 - Contraentrega: asesor confirma cobrado/no cobrado tras despacho; solo suma si cobrado.
 - [x] Panel de comisiones con 8 cifras, tabla de pendientes, filtros y fecha de pago día 20 (mié/vie) — documento de Jose Mario
 - [x] Contraentregas anteriores (129, sin estado): se dejan como están, siguen sumando; el ajuste lo hacen los asesores manualmente (decisión Santiago, 21-oct).
+
+## Punto 92 — descuentos y arqueo (22-oct)
+- [x] Cálculo de descuento por producto verificado con prueba (una sola vez, al peso)
+- [x] Excel de descuentos + cruce diario con arqueo de Eliana
+- [ ] Corregir totales de ventas con doble descuento y anular gasto duplicado del 25-sep — espera aprobación
+- [ ] Explicar $20.198 previos a agosto — espera cierres de junio–julio
