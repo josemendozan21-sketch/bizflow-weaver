@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { computePosCash, saleAmountFor } from "@/lib/pettyCash";
 import { parseCOP, formatCOPInput } from "@/lib/money";
 import { CashAlertPanel, CorrectAmountButton } from "./CashAlertPanel";
+import { CierresDiarios } from "./CierresDiarios";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useSedePettyExpenses,
@@ -145,13 +146,15 @@ export function PuntoRetiros({ locationId, cashBase = 0, cashMin = 200000, cashM
   const submitCount = async () => {
     const counted = parseCOP(countedAmount);
     if (isNaN(counted) || counted < 0) { toast.error("Monto contado inválido"); return; }
+    const diff = counted - cashOnHand;
+    if (Math.abs(diff) >= 1 && !countNotes.trim()) { toast.error("Hay diferencia: escribe en observaciones qué pasó"); return; }
     try {
       await createCount.mutateAsync({
         expected_amount: cashOnHand,
         counted_amount: counted,
         notes: countNotes || null,
       });
-      toast.success("Arqueo registrado. El saldo queda cuadrado desde este momento.");
+      toast.success(Math.abs(diff) < 1 ? "Cierre registrado: la caja cuadra." : "Cierre registrado. La diferencia queda pendiente para Contabilidad.");
       setShowCount(false); setCountedAmount(""); setCountNotes("");
     } catch (e: any) {
       toast.error(e.message ?? "Error al registrar arqueo");
@@ -168,7 +171,7 @@ export function PuntoRetiros({ locationId, cashBase = 0, cashMin = 200000, cashM
           <div className="flex gap-2">
             {!showCount && (
               <Button size="sm" variant="outline" onClick={() => setShowCount(true)}>
-                Arqueo de caja
+                Cierre del día
               </Button>
             )}
             {!showForm && (
@@ -229,29 +232,43 @@ export function PuntoRetiros({ locationId, cashBase = 0, cashMin = 200000, cashM
           </div>
         </div>
 
-        {showCount && (
-          <div className="rounded-lg border bg-muted/40 p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+        {showCount && (() => {
+          const counted = countedAmount ? parseCOP(countedAmount) : NaN;
+          const diff = isNaN(counted) ? null : Math.round((counted - cashOnHand) * 100) / 100;
+          return (
+          <div className="rounded-lg border bg-muted/40 p-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="md:col-span-3 text-sm font-semibold">Cierre del día · {today}</div>
             <div>
-              <Label>Efectivo esperado</Label>
+              <Label>Saldo según la plataforma</Label>
               <Input value={`$${cashOnHand.toLocaleString()}`} readOnly />
+              <p className="text-[10px] text-muted-foreground mt-1">Incluye ventas en efectivo y salidas registradas hasta ahora. Registra todo antes de cerrar.</p>
             </div>
             <div>
               <Label>Efectivo contado</Label>
               <Input inputMode="numeric" value={countedAmount} onChange={(e) => setCountedAmount(e.target.value)} placeholder="Ej: 215.400" />
               {countedAmount && <p className="text-xs text-muted-foreground mt-1">Se guardará como <b>{formatCOPInput(parseCOP(countedAmount))}</b></p>}
             </div>
-            <div className="md:col-span-2">
-              <Label>Observaciones (opcional)</Label>
+            <div>
+              <Label>Diferencia</Label>
+              <div className={`h-10 flex items-center rounded-md border px-3 text-sm font-bold bg-background ${diff === null ? "" : Math.abs(diff) < 1 ? "" : diff < 0 ? "text-destructive" : "text-primary"}`}>
+                {diff === null ? "—" : Math.abs(diff) < 1 ? "Cuadra ✓" : `${diff > 0 ? "Sobran" : "Faltan"} $${Math.abs(diff).toLocaleString()}`}
+              </div>
+            </div>
+            <div className="md:col-span-3">
+              <Label>Observaciones {diff !== null && Math.abs(diff) >= 1 ? "(obligatorio: explica la diferencia)" : "(opcional)"}</Label>
               <Textarea value={countNotes} onChange={(e) => setCountNotes(e.target.value)} rows={2} />
             </div>
-            <div className="md:col-span-2 flex justify-end gap-2">
+            <div className="md:col-span-3 flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowCount(false)}>Cancelar</Button>
               <Button onClick={submitCount} disabled={createCount.isPending}>
-                {createCount.isPending ? "Guardando…" : "Registrar arqueo"}
+                {createCount.isPending ? "Guardando…" : "Registrar cierre"}
               </Button>
             </div>
           </div>
-        )}
+          );
+        })()}
+
+        <CierresDiarios counts={counts} canResolve={isAdmin} />
 
         {showForm && (
           <div className="rounded-lg border bg-muted/40 p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
