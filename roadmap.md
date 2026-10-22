@@ -1,8 +1,8 @@
 # Tareas en curso
 
 ## 12. Restaurar inventario afectado por pruebas Bionovations
-- [ ] Verificar reservas y devoluciones de pruebas eliminadas.
-- [ ] Devolver solo las unidades pendientes mediante movimiento trazable y verificar el saldo final.
+- [x] Verificar reservas y devoluciones: 28 Lumbar fríos pendientes en MW-XX-01508; el termo de SW-XX-01509 ya devuelto.
+- [x] Devolver 28 unidades mediante movimiento trazable e idempotente e47a0b06-51d4-4797-8781-2898348d636c, sin tocar la reserva real de 10 unidades ni otros productos.
 
 ## 11. Corrección de umbrales de comisiones por volumen
 - [x] Diagnosticar impacto y verificar ID de Valentina: faltan umbrales, coincidencia por nombre actual, redondeo incorrecto del 7,5% en exportación y protección incompleta de liquidaciones aprobadas sin pagar.
