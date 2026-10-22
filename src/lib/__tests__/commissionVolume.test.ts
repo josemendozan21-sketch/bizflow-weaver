@@ -43,7 +43,7 @@ describe("umbrales de volumen", () => {
   });
   it("tarifa y base coinciden en ventas, recaudo, liquidación y panel", () => {
     const o = order({ advisor_id: VALENTINA_ADVISOR_ID, brand: "sweatspot", quantity: 1001 });
-    const sales = summarizeAdvisorMonth([o], 2026, 9, o.advisor_id);
+    const sales = summarizeAdvisorMonth([o], {}, 2026, 9)[0];
     const accrual = summarizeMonthAccrual([o], {}, 2026, 9, o.advisor_id);
     const draft = buildSettlement({ orders: [o], payments: {}, advisorId: o.advisor_id, payPeriod: "2026-11" });
     const overview = buildCommissionOverview({ orders: [o], payments: {}, advisorId: o.advisor_id, period: "2026-10", settlements: [], items: [], payouts: [] });
