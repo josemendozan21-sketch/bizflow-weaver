@@ -30,7 +30,7 @@ export function CommissionRulesLegend() {
       label: "Base comisionable",
       text: (
         <>
-          <b>Excluye flete y cargos adicionales</b> y se calcula sin IVA.
+          <b>Excluye flete y cargos adicionales</b>, después de descuentos y sin IVA. Desde 1.000 unidades: 5%. Valentina en Sweatspot: 10% hasta 1.000; 7,5% desde 1.001.
         </>
       ),
     },

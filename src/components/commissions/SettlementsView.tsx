@@ -13,7 +13,7 @@ import { type Order } from "@/hooks/useOrders";
 import { useAllOrderPayments } from "@/hooks/useOrderPayments";
 import { useAllOrderCharges } from "@/hooks/useOrderCharges";
 import { useSettlementActions, useSettlementData, type Settlement } from "@/hooks/useCommissionSettlements";
-import { appliedToSettlement, buildSettlement, shiftPeriod, SETTLEMENT_STATUS_LABEL, HISTORY_START_PERIOD, type SettlementLine } from "@/lib/commissionSettlement";
+import { appliedToSettlement, buildSettlement, isSettlementSnapshotLocked, shiftPeriod, SETTLEMENT_STATUS_LABEL, HISTORY_START_PERIOD, type SettlementLine } from "@/lib/commissionSettlement";
 import { periodKey, periodLabel } from "@/lib/commissions";
 import { format } from "date-fns";
 
@@ -207,7 +207,8 @@ function AdvisorSettlement(props: any) {
   const [note, setNote] = useState("");
   const isCont = mode === "contabilidad" && !readOnly;
   const locked = existing?.status === "saldado";
-  const showSaved = !!existing && (locked || existing.status === "pago_registrado" || allocations.some((a:any) => a.settlement_id === existing.id || savedItems.some((i:any) => i.id === a.settlement_item_id && i.settlement_id === existing.id)) || mode === "asesor");
+  const snapshotLocked = isSettlementSnapshotLocked(existing);
+  const showSaved = !!existing && (snapshotLocked || allocations.some((a:any) => a.settlement_id === existing.id || savedItems.some((i:any) => i.id === a.settlement_item_id && i.settlement_id === existing.id)) || mode === "asesor");
   const myPayouts = payouts.filter((p) => existing && p.settlement_id === existing.id);
   const paid = existing ? appliedToSettlement(existing.id,payouts,allocations,savedItems) : 0;
   const total = existing ? Number(existing.total_amount) : draft.total;
@@ -243,14 +244,14 @@ function AdvisorSettlement(props: any) {
           </div>
           {existing?.returned_note && <p className="text-xs text-destructive">Devuelta a revisión: {existing.returned_note}</p>}
           {existing?.dispute_note && <p className="text-xs text-destructive">Diferencia reportada por el asesor: {existing.dispute_note}</p>}
-          {existing && !showSaved && mode === "contabilidad" && <p className="text-xs text-muted-foreground">La liquidación aprobada se recalculará con los datos actuales si la vuelves a aprobar.</p>}
+          {snapshotLocked && <p className="text-xs text-muted-foreground">Esta liquidación conserva los importes y las tarifas de su aprobación.</p>}
 
           {isCont && !locked && (
             <div className="grid gap-2 md:grid-cols-[180px_1fr_auto] items-end border-t pt-3">
-              <div><Label className="text-xs">Ajuste (+/-)</Label><Input type="number" value={adjust} onChange={(e) => setAdjust(e.target.value)} /></div>
-              <div><Label className="text-xs">Nota de la liquidación</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ej: saldo de septiembre pagado por fuera" /></div>
+              <div><Label className="text-xs">Ajuste (+/-)</Label><Input disabled={snapshotLocked} type="number" value={adjust} onChange={(e) => setAdjust(e.target.value)} /></div>
+              <div><Label className="text-xs">Nota de la liquidación</Label><Input disabled={snapshotLocked} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ej: saldo de septiembre pagado por fuera" /></div>
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" disabled={actions.approve.isPending || paid > 0 || (existing?.status === "pago_registrado")}
+                <Button size="sm" disabled={actions.approve.isPending || paid > 0 || snapshotLocked}
                   onClick={() => run(() => actions.approve.mutateAsync({ advisorId, advisorName, draft, adjustment: Number(adjust) || 0, notes, existingId: existing?.id }), "Liquidación aprobada")}>Aprobar liquidación</Button>
                 {existing && <Button size="sm" variant="outline" onClick={() => setDlg("return")}>Devolver a revisión</Button>}
 
