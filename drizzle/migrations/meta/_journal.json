@@ -162,6 +162,13 @@
       "when": 1792683980356,
       "tag": "0022_allow_unpaid_settlement_adjustment",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1792706454799,
+      "tag": "0023_round_pos_product_price",
+      "breakpoints": true
     }
   ]
 }
