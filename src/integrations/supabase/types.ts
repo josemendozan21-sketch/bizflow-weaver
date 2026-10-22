@@ -3118,6 +3118,9 @@ export type Database = {
           expected_amount: number
           id: string
           notes: string | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by_name: string | null
           sede: string
           updated_at: string
         }
@@ -3131,6 +3134,9 @@ export type Database = {
           expected_amount?: number
           id?: string
           notes?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by_name?: string | null
           sede?: string
           updated_at?: string
         }
@@ -3144,6 +3150,9 @@ export type Database = {
           expected_amount?: number
           id?: string
           notes?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by_name?: string | null
           sede?: string
           updated_at?: string
         }

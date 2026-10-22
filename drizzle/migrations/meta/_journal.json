@@ -169,6 +169,13 @@
       "when": 1792706454799,
       "tag": "0023_round_pos_product_price",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792706612600,
+      "tag": "0024_cash_count_resolution",
+      "breakpoints": true
     }
   ]
 }
