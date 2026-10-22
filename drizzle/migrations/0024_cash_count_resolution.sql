@@ -1,0 +1,1 @@
+ALTER TABLE public.petty_cash_counts ADD COLUMN IF NOT EXISTS resolved_at timestamptz, ADD COLUMN IF NOT EXISTS resolved_by_name text, ADD COLUMN IF NOT EXISTS resolution_note text;

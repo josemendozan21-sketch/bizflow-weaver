@@ -14,6 +14,9 @@ export interface PettyCashCount {
   created_by: string | null;
   created_by_name: string | null;
   created_at: string;
+  resolved_at?: string | null;
+  resolved_by_name?: string | null;
+  resolution_note?: string | null;
 }
 
 /** Gastos en efectivo registrados para una sede (por defecto, el punto de Chicó). */
@@ -87,11 +90,14 @@ export function useCreateSedeCashCount(sede: Sede = "chico") {
       counted_amount: number;
       notes?: string | null;
     }) => {
+      const diff = Math.round((input.counted_amount - input.expected_amount) * 100) / 100;
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
       const { error } = await supabase.from("petty_cash_counts" as any).insert({
         sede,
+        count_date: today,
         expected_amount: input.expected_amount,
         counted_amount: input.counted_amount,
-        difference: input.counted_amount - input.expected_amount,
+        difference: diff,
         notes: input.notes ?? null,
         created_by: user!.id,
         created_by_name: user!.email,
@@ -102,5 +108,21 @@ export function useCreateSedeCashCount(sede: Sede = "chico") {
       qc.invalidateQueries({ queryKey: ["petty_cash_counts_sede", sede] });
       qc.invalidateQueries({ queryKey: ["petty_cash_counts"] });
     },
+  });
+}
+
+/** Contabilidad marca como resuelta la diferencia de un cierre, con explicación. */
+export function useResolveCashCount(sede: Sede = "chico") {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async (input: { id: string; note: string }) => {
+      const { error } = await supabase
+        .from("petty_cash_counts" as any)
+        .update({ resolved_at: new Date().toISOString(), resolved_by_name: user!.email, resolution_note: input.note } as any)
+        .eq("id", input.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["petty_cash_counts_sede", sede] }),
   });
 }
