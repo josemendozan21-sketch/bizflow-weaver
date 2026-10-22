@@ -30,9 +30,20 @@ Si el cliente pagó el valor completo en efectivo, la caja recibió más plata d
 6. **Recalcular la caja:** proponer como punto de partida el cierre contado de Eliana (por ejemplo $178.400 del 21 de octubre) en lugar de la base de junio, sumando las correcciones aprobadas. Entrego un Excel con el cruce y la propuesta antes de tocar saldos.
 7. **Quitar los centavos:** guardar los totales al peso para que dejen de salir diferencias como $0,61.
 
-## Lo que necesito confirmar
-- En 78D7159C y 8F0CF841: ¿se cobró el valor completo, sin descuento, o se aplicó un descuento menor?
-- ¿Las ventas que quedaron en $0 con "50%" se cobraron a la mitad?
+## Causa confirmada con tus dos ejemplos
+El descuento a un solo producto ya existe en la venta, pero hasta el 17 de octubre se restaba dos veces:
+- **78D7159C:** Termo a $40.000 (ya con el 20%) + Juguetón $40.000 = **$80.000 cobrados**. El sistema volvió a restar $10.000 y guardó $70.000.
+- **8F0CF841:** Termo a $25.000 (ya con el 50%) + Media $57.000 + Free belt $70.000 = **$152.000 cobrados**. Volvió a restar $25.000 y guardó $127.000.
+
+Las ventas nuevas desde la corrección del 17 de octubre restan una sola vez. Como confirmaste que el descuento es por producto, las ventas viejas con el mismo patrón se corrigen al valor de sus productos.
+
+## Descuento por producto en la venta
+- Verificar en pantalla que se puede poner el descuento solo al producto que se elija (por % o por valor), que los demás queden a precio normal y que el total, la remisión y la caja muestren lo mismo.
+- Mostrar en cada línea el precio normal, el descuento y el precio final, para que se vea a qué producto se aplicó.
+- Prueba: Termo $50.000 al 20% + Juguetón $40.000 = $80.000; Termo $50.000 al 50% + $57.000 + $70.000 = $152.000.
+
+## Lo que falta confirmar
+- ¿Las ventas que quedaron en $0 con "50%" se cobraron a la mitad? Con la causa confirmada asumiré que sí, salvo que me digas lo contrario.
 
 ## Detalles técnicos
 - Datos: `pos_sales.discount`, `total_amount`, `notes` ("Descuentos por producto"), y `pos_sale_items.line_total`.
