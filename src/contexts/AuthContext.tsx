@@ -29,13 +29,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Reintenta: fallos transitorios de red o token vencido (p. ej. tras suspender la pestaña)
+  // no deben mostrar "Usuario sin permisos" a cuentas que sí tienen rol.
   const fetchRole = async (userId: string) => {
-    const { data, error } = await supabase.rpc("get_user_role", { _user_id: userId });
-    if (error) {
-      console.error("[AuthContext] Error loading user role:", error);
-      return null;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      if (attempt > 0) {
+        await new Promise((r) => setTimeout(r, 700 * attempt));
+        if (attempt === 2) await supabase.auth.refreshSession().catch(() => {});
+      }
+      const { data, error } = await supabase.rpc("get_user_role", { _user_id: userId });
+      if (!error && data) return data as AppRole;
+      if (error) console.error("[AuthContext] Error loading user role:", error);
     }
-    return data as AppRole | null;
+    return null;
   };
 
   useEffect(() => {
