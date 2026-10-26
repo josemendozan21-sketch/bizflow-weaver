@@ -366,7 +366,35 @@ export function PuntoRetiros({ locationId, cashBase = 0, cashMin = 200000, cashM
             </div>
           )}
           <div className="space-y-2">
-            {withdrawals.map((w) => (
+            {[
+              ...posExpenses.map((e: any) => ({ kind: "gasto" as const, at: String(e.created_at), e })),
+              ...withdrawals.map((w: any) => ({ kind: "w" as const, at: String(w.created_at), w })),
+            ]
+              .sort((a, b) => (a.at < b.at ? 1 : -1))
+              .map((item) => item.kind === "gasto" ? (
+              <div key={`g-${item.e.id}`} className="border rounded-md p-3 flex flex-col md:flex-row md:items-center gap-2">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline"><Wallet className="h-3 w-3 mr-1" /> Gasto</Badge>
+                    <span className="font-bold">${Number(item.e.amount).toLocaleString()}</span>
+                    <Badge variant={
+                      item.e.status === "aprobado" ? "default" :
+                      item.e.status === "rechazado" || item.e.status === "anulado" ? "destructive" : "secondary"
+                    }>{item.e.status ?? "aprobado"}</Badge>
+                  </div>
+                  <div className="text-sm">{item.e.description}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {new Date(item.e.created_at).toLocaleString()} · {item.e.requested_by ?? item.e.recorded_by_name ?? "—"}
+                  </div>
+                </div>
+                {item.e.proof_url && (
+                  <button type="button" onClick={() => openSignedUrl(item.e.proof_url!)}
+                    className="text-xs inline-flex items-center gap-1 text-primary hover:underline">
+                    <Paperclip className="h-3 w-3" /> Soporte
+                  </button>
+                )}
+              </div>
+            ) : (() => { const w = item.w; return (
               <div key={w.id} className="border rounded-md p-3 flex flex-col md:flex-row md:items-center gap-2">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
@@ -418,7 +446,7 @@ export function PuntoRetiros({ locationId, cashBase = 0, cashMin = 200000, cashM
                   </div>
                 )}
               </div>
-            ))}
+            ); })())}
           </div>
           </>
         )}
