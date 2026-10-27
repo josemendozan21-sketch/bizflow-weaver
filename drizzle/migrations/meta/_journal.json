@@ -176,6 +176,13 @@
       "when": 1792706612600,
       "tag": "0024_cash_count_resolution",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793134397142,
+      "tag": "0025_wo_export",
+      "breakpoints": true
     }
   ]
 }
