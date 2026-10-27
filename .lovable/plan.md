@@ -54,10 +54,7 @@ Nueva pestaña **Exportar a WO** en Contabilidad:
 - Saldo: forma de pago **Crédito**. Debe existir en WO con ese nombre exacto (hoy no aparece en el listado); si WO lo rechaza en el piloto, se crea allá.
 - Prefijo: **FEVC**.
 - Bodega: siempre **Principal**.
-- Pagos: transferencias a **Bancolombia**; efectivo a **Caja General** en los casos que apliquen. Nequi u otros medios quedan marcados para revisión.
-
-## Pendiente menor
-- WO tiene dos cuentas Bancolombia (36 y 68): confirmar cuál usar, o si depende de la marca.
+- Pagos: transferencias a **Bancolombia 68** para todas las marcas, productos y referencias; efectivo a **Caja General** en los casos que apliquen. Nequi u otros medios quedan marcados para revisión.
 
 ## Detalles técnicos
 - Tablas nuevas: ajustes WO, equivalencias de productos/asesores/formas de pago, `wo_exports` y `wo_export_items` (estado exportado/confirmado/devuelto, único por pedido activo). RLS para admin/contabilidad.
