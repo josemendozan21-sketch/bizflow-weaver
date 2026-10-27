@@ -16,6 +16,7 @@ import { Upload, Download, Clock, FileText, ExternalLink, BarChart3, Wallet, Tra
 import AccountingDashboard from "@/components/contabilidad/AccountingDashboard";
 import MonthlyAnalysis from "@/components/contabilidad/MonthlyAnalysis";
 import CajaMenor from "@/components/contabilidad/CajaMenor";
+import WorldOfficeExport from "@/components/contabilidad/WorldOfficeExport";
 import { CommissionPanel } from "@/components/commissions/CommissionPanel";
 import AdvisorSalesPanel from "@/components/contabilidad/AdvisorSalesPanel";
 import AreaCompliancePanel from "@/components/contabilidad/AreaCompliancePanel";
@@ -553,6 +554,7 @@ const Contabilidad = () => {
           <TabsTrigger value="facturados">Facturados ({invoiced.length})</TabsTrigger>
           <TabsTrigger value="conciliacion"><AlertTriangle className="h-4 w-4 mr-1" />Conciliación</TabsTrigger>
           {!isReadOnly && <TabsTrigger value="caja_menor"><Wallet className="h-4 w-4 mr-1" />Caja menor</TabsTrigger>}
+          {!isReadOnly && <TabsTrigger value="world_office"><FileText className="h-4 w-4 mr-1" />Exportar a WO</TabsTrigger>}
         </TabsList>
 
         {!isReadOnly && (
@@ -834,6 +836,11 @@ const Contabilidad = () => {
         {!isReadOnly && (
           <TabsContent value="caja_menor">
             <CajaMenor />
+          </TabsContent>
+        )}
+        {!isReadOnly && (
+          <TabsContent value="world_office">
+            <WorldOfficeExport />
           </TabsContent>
         )}
       </Tabs>
