@@ -5121,6 +5121,155 @@ export type Database = {
           },
         ]
       }
+      wo_advisor_ids: {
+        Row: {
+          advisor_id: string
+          label: string | null
+          updated_at: string
+          wo_vendor_id: string
+        }
+        Insert: {
+          advisor_id: string
+          label?: string | null
+          updated_at?: string
+          wo_vendor_id: string
+        }
+        Update: {
+          advisor_id?: string
+          label?: string | null
+          updated_at?: string
+          wo_vendor_id?: string
+        }
+        Relationships: []
+      }
+      wo_export_items: {
+        Row: {
+          created_at: string
+          export_id: string
+          id: string
+          link_number: number
+          order_id: string
+          return_reason: string | null
+          status: string
+          updated_at: string
+          updated_by_name: string | null
+          wo_invoice_number: string | null
+        }
+        Insert: {
+          created_at?: string
+          export_id: string
+          id?: string
+          link_number: number
+          order_id: string
+          return_reason?: string | null
+          status?: string
+          updated_at?: string
+          updated_by_name?: string | null
+          wo_invoice_number?: string | null
+        }
+        Update: {
+          created_at?: string
+          export_id?: string
+          id?: string
+          link_number?: number
+          order_id?: string
+          return_reason?: string | null
+          status?: string
+          updated_at?: string
+          updated_by_name?: string | null
+          wo_invoice_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wo_export_items_export_id_fkey"
+            columns: ["export_id"]
+            isOneToOne: false
+            referencedRelation: "wo_exports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wo_exports: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          id: string
+          order_count: number
+          sale_date: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          id?: string
+          order_count?: number
+          sale_date?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          id?: string
+          order_count?: number
+          sale_date?: string | null
+        }
+        Relationships: []
+      }
+      wo_product_codes: {
+        Row: {
+          app_product: string
+          updated_at: string
+          wo_code: string
+        }
+        Insert: {
+          app_product: string
+          updated_at?: string
+          wo_code: string
+        }
+        Update: {
+          app_product?: string
+          updated_at?: string
+          wo_code?: string
+        }
+        Relationships: []
+      }
+      wo_settings: {
+        Row: {
+          bodega: string
+          cash_payment_name: string
+          contado_name: string
+          credito_name: string
+          empresa: string
+          id: number
+          prefijo: string
+          transfer_payment_name: string
+          updated_at: string
+        }
+        Insert: {
+          bodega?: string
+          cash_payment_name?: string
+          contado_name?: string
+          credito_name?: string
+          empresa?: string
+          id?: number
+          prefijo?: string
+          transfer_payment_name?: string
+          updated_at?: string
+        }
+        Update: {
+          bodega?: string
+          cash_payment_name?: string
+          contado_name?: string
+          credito_name?: string
+          empresa?: string
+          id?: number
+          prefijo?: string
+          transfer_payment_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       inventory_control_view: {
