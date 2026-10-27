@@ -50,11 +50,14 @@ Nueva pestaña **Exportar a WO** en Contabilidad:
 - Contabilidad lo carga en WO y reporta errores; se ajusta y se repite. No se declara listo hasta que WO lo acepte.
 - Al final, instrucciones breves del proceso diario.
 
-## Pendiente de Contabilidad
-1. Crear en WO la forma de pago "Crédito" (o decir cuál usar para el saldo).
-2. Prefijo de factura de venta a usar (¿FEOC, FEVC, FVSP?).
-3. Bodega por venta: ¿siempre Principal, o según marca/punto?
-4. A qué forma de pago WO corresponde cada cuenta de la app (Nequi, Bancolombia, efectivo...).
+## Respuestas de Contabilidad (confirmadas)
+- Saldo: forma de pago **Crédito**. Debe existir en WO con ese nombre exacto (hoy no aparece en el listado); si WO lo rechaza en el piloto, se crea allá.
+- Prefijo: **FEVC**.
+- Bodega: siempre **Principal**.
+- Pagos: transferencias a **Bancolombia**; efectivo a **Caja General** en los casos que apliquen. Nequi u otros medios quedan marcados para revisión.
+
+## Pendiente menor
+- WO tiene dos cuentas Bancolombia (36 y 68): confirmar cuál usar, o si depende de la marca.
 
 ## Detalles técnicos
 - Tablas nuevas: ajustes WO, equivalencias de productos/asesores/formas de pago, `wo_exports` y `wo_export_items` (estado exportado/confirmado/devuelto, único por pedido activo). RLS para admin/contabilidad.
