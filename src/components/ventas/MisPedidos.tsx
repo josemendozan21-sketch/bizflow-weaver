@@ -1118,6 +1118,7 @@ function EditOrderDialog({ order, label }: { order: Order; label?: string }) {
             observations: finalObs || null,
             ...(order.brand === "magical" ? { gel_color: gelColor || null } : {}),
             ...(order.brand === "sweatspot" ? { silicone_color: siliconeColor || null } : {}),
+            ...((order as any).glitter_color ? { glitter_color: (order as any).glitter_color } : {}),
           })
           .eq("order_id", order.id);
         if (prodErr) console.warn("No se pudo sincronizar con producción:", prodErr.message);
