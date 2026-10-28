@@ -144,6 +144,17 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
         const map = new Map((profs ?? []).map((p: any) => [p.user_id, p.display_name || p.email]));
         rows.forEach((r) => { r.advisor_name = r.advisor_id ? (map.get(r.advisor_id) ?? null) : null; });
       }
+      // Respaldo: si la orden de producción no tiene escarcha, usar la de la venta
+      const missingGlitter = Array.from(new Set(rows.filter((r) => !r.glitter_color && r.order_id).map((r) => r.order_id as string)));
+      for (let i = 0; i < missingGlitter.length; i += 200) {
+        const { data: parents } = await supabase
+          .from("orders")
+          .select("id, glitter_color")
+          .in("id", missingGlitter.slice(i, i + 200))
+          .not("glitter_color", "is", null);
+        const gmap = new Map((parents ?? []).map((p: any) => [p.id, p.glitter_color]));
+        rows.forEach((r) => { if (!r.glitter_color && r.order_id && gmap.has(r.order_id)) r.glitter_color = gmap.get(r.order_id); });
+      }
       return rows;
     },
   });
