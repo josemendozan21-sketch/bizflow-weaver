@@ -78,24 +78,39 @@ export function buildSalePdf(opts: {
   const disc = Math.round(Number(sale.discount) || 0);
   const subtotal = disc >= 1 ? total + disc : items.reduce((a, b) => a + Number(b.line_total), 0);
   const right = 612 - margin;
+  if (endY + 80 > doc.internal.pageSize.getHeight() - margin) {
+    doc.addPage();
+    endY = margin;
+  }
   doc.setFontSize(10);
   doc.text(`Subtotal: $${Math.round(subtotal).toLocaleString()}`, right, endY, { align: "right" }); endY += 14;
   if (disc >= 1) {
-    doc.text(`Descuento: − $${disc.toLocaleString()}`, right, endY, { align: "right" }); endY += 14;
+    doc.text(`Descuento: - $${disc.toLocaleString("es-CO")}`, right, endY, { align: "right" }); endY += 14;
   }
   doc.setFont("helvetica", "bold").setFontSize(12);
   doc.text(`Total: $${Number(sale.total_amount).toLocaleString()}`, right, endY, { align: "right" });
   endY += 22;
 
   doc.setFont("helvetica", "normal").setFontSize(10);
-  doc.text(`Método de pago: ${formatSalePayment(sale)}`, margin, endY); endY += 14;
-  doc.text(`Atendido por: ${sale.recorded_by_name ?? "—"}`, margin, endY); endY += 14;
-  if (sale.notes) { doc.text(`Notas: ${sale.notes}`, margin, endY); endY += 14; }
+  const writeWrapped = (text: string) => {
+    const lines: string[] = doc.splitTextToSize(text, doc.internal.pageSize.getWidth() - margin * 2);
+    for (const line of lines) {
+      if (endY > doc.internal.pageSize.getHeight() - margin) {
+        doc.addPage();
+        endY = margin;
+      }
+      doc.text(line, margin, endY);
+      endY += 14;
+    }
+  };
+  writeWrapped(`Método de pago: ${formatSalePayment(sale)}`);
+  writeWrapped(`Atendido por: ${sale.recorded_by_name ?? "—"}`);
+  if (sale.notes) writeWrapped(`Notas: ${sale.notes}`);
 
   if (docType === "remision") {
     endY += 10;
     doc.setFont("helvetica", "italic").setFontSize(9);
-    doc.text("Documento de remisión interno - No válido como factura electrónica DIAN.", margin, endY);
+    writeWrapped("Documento de remisión interno - No válido como factura electrónica DIAN.");
   }
 
   return doc;
