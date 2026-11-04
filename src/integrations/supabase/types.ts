@@ -5439,6 +5439,7 @@ export type Database = {
         Args: { _balance: number; _location_id: string; _type: string }
         Returns: string
       }
+      order_logo_pending: { Args: { _order_id: string }; Returns: string }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
