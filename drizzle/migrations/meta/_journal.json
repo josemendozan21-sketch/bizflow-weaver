@@ -183,6 +183,13 @@
       "when": 1793134397142,
       "tag": "0025_wo_export",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793829123555,
+      "tag": "0026_block_production_until_logo_approved",
+      "breakpoints": true
     }
   ]
 }

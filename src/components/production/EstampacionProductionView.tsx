@@ -249,6 +249,12 @@ export const EstampacionProductionView = () => {
       .filter((lr) => APPROVED_LOGO_STATUSES.includes(lr.status) && !lr.order_id)
       .map((lr) => lr.client_name.trim().toLowerCase())
   );
+  // Pedidos con solicitud de Diseño abierta (ajuste/logo sin aprobar): no entran.
+  const openLogoOrderIds = new Set(
+    logoRequests
+      .filter((lr) => lr.order_id && !APPROVED_LOGO_STATUSES.includes(lr.status))
+      .map((lr) => lr.order_id as string)
+  );
   const orderIdsWithProductionOrder = new Set(
     allOrders.map((o) => o.order_id).filter((id): id is string => Boolean(id))
   );
@@ -259,6 +265,7 @@ export const EstampacionProductionView = () => {
       (approvedLogoOrderIds.has(o.id) ||
         approvedLogoClients.has(o.client_name.trim().toLowerCase()) ||
         (Boolean(o.is_recompra) && Boolean(o.logo_url))) &&
+      !openLogoOrderIds.has(o.id) &&
       !orderIdsWithProductionOrder.has(o.id)
   );
 
@@ -652,9 +659,15 @@ function EstampacionOrderCard({
 
   const bodiesPending = order.current_stage === "produccion_cuerpos";
 
-  const matchingLogo = logoRequests.find(
-    (lr) => lr.client_name.toLowerCase() === order.client_name.toLowerCase()
-  );
+  // Primero la solicitud enlazada a este pedido; el nombre del cliente solo
+  // como respaldo para solicitudes antiguas sin enlace.
+  const matchingLogo =
+    (order.order_id ? logoRequests.find((lr) => lr.order_id === order.order_id) : undefined) ??
+    logoRequests.find(
+      (lr) => !lr.order_id && lr.client_name.toLowerCase() === order.client_name.toLowerCase()
+    );
+  const logoPendingInDesign =
+    !!matchingLogo && !["aprobado", "finalizado"].includes(matchingLogo.status);
 
   const hasLogo = !!order.logo_file;
   // If there's no matching logo_request, it's a recompra without logo adjustment → treat as approved.
@@ -676,12 +689,12 @@ function EstampacionOrderCard({
   const inkgelStatus = order.stamp_inkgel_status || "pendiente";
 
   // Determine the current stamping step
-  const canStartProcess = logoApproved || !hasLogo;
+  const canStartProcess = !logoPendingInDesign && (logoApproved || !hasLogo);
   const isInProcess = !readOnly && order.stage_status === "en_proceso";
 
   // Pedido sin logo: solo muestra de color de gel / escarcha (tamaño no aplica).
   const colorOnly = !readOnly && !order.logo_file;
-  const canUpload = isInProcess || colorOnly;
+  const canUpload = !logoPendingInDesign && (isInProcess || colorOnly);
 
   // Step 1: Size approval needed
   const needsSizeUpload = isInProcess && sizeStatus === "pendiente" && !order.stamp_size_photo_url;
@@ -729,6 +742,11 @@ function EstampacionOrderCard({
             {order.stamp_size_status === "finalizado" && order.stamp_inkgel_status === "finalizado" && (
               <Badge variant="outline" className="border-emerald-500 text-emerald-600">
                 Estampación finalizada
+              </Badge>
+            )}
+            {logoPendingInDesign && (
+              <Badge variant="destructive" className="whitespace-nowrap">
+                Ajuste de logo en Diseño — no revelar
               </Badge>
             )}
             <Badge variant={badge.variant}>{badge.label}</Badge>
@@ -853,7 +871,8 @@ function EstampacionOrderCard({
               size="sm"
               variant="outline"
               onClick={onStart}
-              disabled={hasLogo && !logoApproved}
+              disabled={!canStartProcess}
+              title={logoPendingInDesign ? "Logo pendiente en Diseño: no revelar hasta su aprobación" : undefined}
             >
               <Play className="h-3 w-3 mr-1" /> Iniciar proceso
             </Button>
