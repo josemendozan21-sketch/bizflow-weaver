@@ -1,11 +1,16 @@
 # Recompras con ajuste de logo: que Producción no pueda revelar hasta que Diseño apruebe
 
-## Qué pasa hoy
-- Cuando una recompra reutiliza el logo anterior, Estampación la recibe de inmediato, aunque la asesora haya pedido un ajuste y Diseño lo tenga abierto.
-- Estampación busca la solicitud de diseño por **nombre del cliente**. Si el cliente tiene una solicitud vieja ya terminada, la toma como aprobada y deja revelar.
-- En la tarjeta de Producción solo aparece "Recompra"; no hay ningún aviso de "Ajuste de logo".
+## Qué encontré en MW-PB-01577 (Lina Sora / Ana Milena Espitia)
+- El pedido **no quedó marcado como recompra** en el sistema: está como pedido con logo nuevo.
+- La solicitud a Diseño ("modificar el número de teléfono 3103192663") existe y sigue **en revisión**, sin aprobar.
+- Aun así, la orden de Producción se creó **56 minutos después** de la venta y Estampación pudo avanzar. O sea: el sistema dejó pasar a Producción un pedido con el logo todavía en Diseño.
 
-No logré ubicar el pedido exacto de Pilar en los datos; el primer paso es encontrarlo (pedirle el código o el cliente) para confirmar que fue este caso.
+Riesgos generales que también vi:
+- Las recompras que reutilizan logo entran a Estampación directo, aunque tengan un ajuste abierto.
+- Estampación busca la solicitud de diseño por **nombre del cliente**, así que una solicitud vieja ya terminada puede contar como "aprobada".
+- En la tarjeta de Producción no aparece ningún aviso de "Ajuste de logo".
+
+Primer paso: confirmar por dónde se habilitó exactamente este pedido (si Producción no vio el logo como pendiente o si la orden se creó sin revisar Diseño).
 
 ## Qué cambia
 1. **Bloqueo:** si un pedido (recompra o no) tiene una solicitud de diseño **abierta**, no entra a Estampación ni se puede iniciar el revelado ni la muestra de gel hasta que Diseño la apruebe.
