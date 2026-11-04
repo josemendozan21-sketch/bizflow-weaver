@@ -694,7 +694,7 @@ function EstampacionOrderCard({
 
   // Pedido sin logo: solo muestra de color de gel / escarcha (tamaño no aplica).
   const colorOnly = !readOnly && !order.logo_file;
-  const canUpload = isInProcess || colorOnly;
+  const canUpload = !logoPendingInDesign && (isInProcess || colorOnly);
 
   // Step 1: Size approval needed
   const needsSizeUpload = isInProcess && sizeStatus === "pendiente" && !order.stamp_size_photo_url;
@@ -871,7 +871,8 @@ function EstampacionOrderCard({
               size="sm"
               variant="outline"
               onClick={onStart}
-              disabled={hasLogo && !logoApproved}
+              disabled={!canStartProcess}
+              title={logoPendingInDesign ? "Logo pendiente en Diseño: no revelar hasta su aprobación" : undefined}
             >
               <Play className="h-3 w-3 mr-1" /> Iniciar proceso
             </Button>
