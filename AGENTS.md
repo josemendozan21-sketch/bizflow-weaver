@@ -5,3 +5,4 @@
 - The Bionovations read-only catalog reads stock_items exclusively; its isolated catalog mapper mirrors Ventas prefix/type normalization and is covered by webCatalog tests to prevent unintended writes or exposure of other inventory fields.
 - Bionovations wholesale order identities are mapped by a pure edge-function helper; line groups share submission_id and never assign generated order_code, so both brands use the normal database coding and inventory triggers.
 - World Office export logic lives only in src/lib/wo/woExport.ts and fills the untouched official template in public/templates; export state lives in wo_export_items (one active row per order) so a sale is never exported twice.
+- Production orders cannot be created while the order (or its submission group) has an unapproved logo_request; enforced by a production_orders insert trigger so no UI path bypasses Diseño approval.
