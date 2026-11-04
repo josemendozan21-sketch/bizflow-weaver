@@ -689,7 +689,7 @@ function EstampacionOrderCard({
   const inkgelStatus = order.stamp_inkgel_status || "pendiente";
 
   // Determine the current stamping step
-  const canStartProcess = logoApproved || !hasLogo;
+  const canStartProcess = !logoPendingInDesign && (logoApproved || !hasLogo);
   const isInProcess = !readOnly && order.stage_status === "en_proceso";
 
   // Pedido sin logo: solo muestra de color de gel / escarcha (tamaño no aplica).
