@@ -249,6 +249,12 @@ export const EstampacionProductionView = () => {
       .filter((lr) => APPROVED_LOGO_STATUSES.includes(lr.status) && !lr.order_id)
       .map((lr) => lr.client_name.trim().toLowerCase())
   );
+  // Pedidos con solicitud de Diseño abierta (ajuste/logo sin aprobar): no entran.
+  const openLogoOrderIds = new Set(
+    logoRequests
+      .filter((lr) => lr.order_id && !APPROVED_LOGO_STATUSES.includes(lr.status))
+      .map((lr) => lr.order_id as string)
+  );
   const orderIdsWithProductionOrder = new Set(
     allOrders.map((o) => o.order_id).filter((id): id is string => Boolean(id))
   );
@@ -259,6 +265,7 @@ export const EstampacionProductionView = () => {
       (approvedLogoOrderIds.has(o.id) ||
         approvedLogoClients.has(o.client_name.trim().toLowerCase()) ||
         (Boolean(o.is_recompra) && Boolean(o.logo_url))) &&
+      !openLogoOrderIds.has(o.id) &&
       !orderIdsWithProductionOrder.has(o.id)
   );
 
@@ -652,9 +659,15 @@ function EstampacionOrderCard({
 
   const bodiesPending = order.current_stage === "produccion_cuerpos";
 
-  const matchingLogo = logoRequests.find(
-    (lr) => lr.client_name.toLowerCase() === order.client_name.toLowerCase()
-  );
+  // Primero la solicitud enlazada a este pedido; el nombre del cliente solo
+  // como respaldo para solicitudes antiguas sin enlace.
+  const matchingLogo =
+    (order.order_id ? logoRequests.find((lr) => lr.order_id === order.order_id) : undefined) ??
+    logoRequests.find(
+      (lr) => !lr.order_id && lr.client_name.toLowerCase() === order.client_name.toLowerCase()
+    );
+  const logoPendingInDesign =
+    !!matchingLogo && !["aprobado", "finalizado"].includes(matchingLogo.status);
 
   const hasLogo = !!order.logo_file;
   // If there's no matching logo_request, it's a recompra without logo adjustment → treat as approved.
