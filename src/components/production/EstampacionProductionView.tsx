@@ -744,6 +744,11 @@ function EstampacionOrderCard({
                 Estampación finalizada
               </Badge>
             )}
+            {logoPendingInDesign && (
+              <Badge variant="destructive" className="whitespace-nowrap">
+                Ajuste de logo en Diseño — no revelar
+              </Badge>
+            )}
             <Badge variant={badge.variant}>{badge.label}</Badge>
           </div>
         </div>
