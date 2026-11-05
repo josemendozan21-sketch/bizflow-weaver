@@ -5457,6 +5457,16 @@ export type Database = {
         Args: { _batch_id: string; _received: number }
         Returns: Json
       }
+      register_cod_collection: {
+        Args: {
+          _order_ids: string[]
+          _payment_date: string
+          _proof_url: string
+          _reason: string
+          _received: boolean
+        }
+        Returns: Json
+      }
       release_order_reservation: {
         Args: { _reason: string; _reservation_id: string }
         Returns: Json
