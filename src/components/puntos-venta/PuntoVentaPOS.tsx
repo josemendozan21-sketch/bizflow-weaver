@@ -69,6 +69,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [notes, setNotes] = useState("");
   const [itemDiscounts, setItemDiscounts] = useState<Record<string, number>>({});
+  const [customPrices, setCustomPrices] = useState<Record<string, number>>({});
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [uploadingProof, setUploadingProof] = useState(false);
   const [merchFile, setMerchFile] = useState<File | null>(null);
@@ -216,6 +217,10 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
   }, [products]);
 
   const clampPct = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
+  const isGel = (p: { name?: string | null; category?: string | null }) =>
+    /\bgel/i.test(`${p.name ?? ""} ${p.category ?? ""}`);
+  const basePrice = (p: { id: string; sale_price: any }) =>
+    customPrices[p.id] != null && customPrices[p.id] > 0 ? customPrices[p.id] : Number(p.sale_price);
   const discountedUnitPrice = (productId: string, salePrice: number) => {
     const pct = clampPct(itemDiscounts[productId] ?? 0);
     if (pct <= 0) return Number(salePrice);
@@ -225,14 +230,15 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
     const out: Record<string, number> = {};
     for (const c of cart) {
       const pct = clampPct(itemDiscounts[c.product.id] ?? 0);
-      if (pct > 0) out[c.product.id] = discountedUnitPrice(c.product.id, Number(c.product.sale_price));
+      const custom = basePrice(c.product) !== Number(c.product.sale_price);
+      if (pct > 0 || custom) out[c.product.id] = discountedUnitPrice(c.product.id, basePrice(c.product));
     }
     return out;
-  }, [cart, itemDiscounts]);
-  const total = cart.reduce((a, b) => a + Number(b.product.sale_price) * b.quantity, 0);
+  }, [cart, itemDiscounts, customPrices]);
+  const total = cart.reduce((a, b) => a + basePrice(b.product) * b.quantity, 0);
   const totalUnits = cart.reduce((a, b) => a + b.quantity, 0);
   const totalAfter = cart.reduce(
-    (a, b) => a + discountedUnitPrice(b.product.id, Number(b.product.sale_price)) * b.quantity,
+    (a, b) => a + discountedUnitPrice(b.product.id, basePrice(b.product)) * b.quantity,
     0
   );
   const discountAmount = Math.max(0, total - totalAfter);
@@ -362,6 +368,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
         setClientPhone(""); setClientAddress(""); setClientCity("");
         setNotes("");
         setItemDiscounts({});
+      setCustomPrices({});
         setProofFile(null);
         setMerchFile(null);
       } catch (e: any) {
@@ -407,12 +414,17 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
         client_address: clientAddress || undefined,
         client_city: clientCity || undefined,
         customer_id: customer?.id ?? null,
-        notes: hasAnyDiscount
+        notes: [
+          cart.filter((c) => customPrices[c.product.id] != null).length
+            ? `[Precio editado: ${cart.filter((c) => customPrices[c.product.id] != null).map((c) => `${c.product.name} ${fmt(customPrices[c.product.id])} (local ${fmt(Number(c.product.sale_price))})`).join(", ")}]`
+            : "",
+          hasAnyDiscount
           ? `[Descuentos por producto: ${cart
               .filter((c) => (itemDiscounts[c.product.id] ?? 0) > 0)
               .map((c) => `${c.product.name} ${itemDiscounts[c.product.id]}%`)
               .join(", ")}] ${notes}`.trim()
-          : (notes || undefined),
+          : (notes || ""),
+        ].filter(Boolean).join(" ") || undefined,
         discount: discountAmount,
         override_unit_prices: overrideUnitPrices,
         payment_proof_url,
@@ -437,6 +449,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
       setClientCity("");
       setNotes("");
       setItemDiscounts({});
+      setCustomPrices({});
       setProofFile(null);
       setMerchFile(null);
     } catch (e: any) {
@@ -705,7 +718,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
             <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
               {cart.map((c) => {
                 const pct = clampPct(itemDiscounts[c.product.id] ?? 0);
-                const unit = Number(c.product.sale_price);
+                const unit = basePrice(c.product);
                 const discUnit = discountedUnitPrice(c.product.id, unit);
                 const lineTotal = unit * c.quantity;
                 const lineAfter = discUnit * c.quantity;
@@ -740,6 +753,30 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
                         </Button>
                       </div>
                     </div>
+                    {!isCourtesy && isGel(c.product) && (
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className="text-[10px] text-muted-foreground mr-1">Precio c/u (ej. Rappi):</span>
+                        <Input
+                          type="number"
+                          min={0}
+                          className="h-6 w-24 text-[11px] px-1.5"
+                          placeholder={String(Number(c.product.sale_price))}
+                          value={customPrices[c.product.id] ?? ""}
+                          onChange={(e) => {
+                            const v = Math.round(Number(e.target.value));
+                            setCustomPrices((prev) => {
+                              const next = { ...prev };
+                              if (!e.target.value || !(v > 0)) delete next[c.product.id];
+                              else next[c.product.id] = v;
+                              return next;
+                            });
+                          }}
+                        />
+                        {customPrices[c.product.id] != null && (
+                          <span className="text-[10px] text-muted-foreground">Local: {fmt(Number(c.product.sale_price))}</span>
+                        )}
+                      </div>
+                    )}
                     {!isCourtesy && (
                       <div className="flex items-center gap-1 flex-wrap">
                         <span className="text-[10px] text-muted-foreground mr-1">Desc:</span>
