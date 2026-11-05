@@ -7,8 +7,10 @@
 - Causa 2: el cobro de la transportadora **nunca se confirma en la app**. Existe la confirmación "Recibido y pagado" del contraentrega, pero solo aparece en Comisiones; Logística cruza los cobros por fuera y el pedido sigue con saldo. Solo 3 pedidos tienen la confirmación solicitada y ninguno confirmado.
 
 ## Solución propuesta
-1. **Facturar contraentrega sin esperar el pago**: en Contabilidad, los pedidos contraentrega despachados se pueden marcar como facturados (con N° de factura, adjunto opcional). Los demás pedidos al detal siguen exigiendo pago completo.
-2. **Registrar el número de factura**: al facturar se pide el N° de factura y la fecha, para que salga en la exportación.
+1. **Facturar en bloque, no uno a uno**: 
+   - Automático: cuando Contabilidad genera el archivo plano para World Office desde la app ("Exportar a WO"), los pedidos incluidos quedan marcados como facturados (con la fecha), sin otro paso.
+   - Importar: botón "Cargar facturas" en Contabilidad donde se sube el Excel de facturas del programa contable (o el mismo archivo de la app con la columna N° Factura llena). La app cruza cada fila con el pedido (código de pedido, o cliente + cédula + valor), muestra una vista previa con "encontrados / dudosos / no encontrados", y al confirmar marca todos como facturados con su número.
+2. **Contraentrega no espera el pago para facturar**: los contraentrega despachados pueden quedar facturados aunque el saldo siga pendiente; el pago se cierra aparte (punto 3). Los demás pedidos al detal siguen exigiendo pago completo.
 3. **Usar la confirmación que ya existe**: sí existe — al despachar un contraentrega se le pide al asesor confirmar en Comisiones "Recibido y pagado" o "No cobrado", con recordatorio a los 7 días. Pero solo se activa para pedidos despachados después de que se creó, por eso 124 de los 127 nunca la pidieron, y ninguno ha sido confirmado. Propuesta: activar la confirmación pendiente en esos pedidos antiguos (le llegan al asesor) y además dejar que Contabilidad/Logística la marquen en grupo desde Contabilidad, porque son quienes cruzan el cobro con la transportadora.
 4. **Poner al día lo existente**: con la lista de facturas y cobros que nos pase Contabilidad/Logística (N° factura y guía o cliente), actualizo los 127 pedidos de una vez. No marco nada como pagado ni facturado sin ese soporte.
 
