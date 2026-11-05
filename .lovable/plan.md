@@ -12,7 +12,12 @@
 2. **Contraentrega no espera el pago para facturar**: los contraentrega despachados pueden quedar facturados aunque el saldo siga pendiente; el pago se cierra aparte (punto 3). Los demás pedidos al detal siguen exigiendo pago completo.
 3. **PRIORIDAD — Logística registra los pagos de contraentrega en bloque** (porque es quien hace el seguimiento de entregas y devoluciones): nueva pestaña "Cobros contraentrega" en Logística con los pedidos despachados y saldo pendiente, filtrable por transportadora (Envía, Bogoexpress, Coordinadora) y fechas. Se seleccionan los pedidos que vienen en la liquidación de la transportadora, se pone la fecha del pago, se sube una vez el soporte (liquidación o extracto) y "Registrar cobro": cada pedido queda pagado al 100%, sale de pendientes y suma a la comisión del asesor. Los que no se cobraron se marcan "No cobrado / devuelto" con motivo. Opción de subir el Excel de la liquidación para seleccionar automáticamente por N° de guía. Contabilidad ve los mismos cobros (solo consulta, con su soporte) y los pedidos dejan de salir como pendientes de pago.
    **Relación con la confirmación de los asesores**: sí existe — al despachar un contraentrega se le pide al asesor confirmar en Comisiones "Recibido y pagado" o "No cobrado", con recordatorio a los 7 días. Pero solo se activa para pedidos despachados después de que se creó, por eso 124 de los 127 nunca la pidieron, y ninguno ha sido confirmado. Propuesta: activar la confirmación pendiente en esos pedidos antiguos (le llegan al asesor) y además dejar que Contabilidad/Logística la marquen en grupo desde Contabilidad, porque son quienes cruzan el cobro con la transportadora.
-4. **Poner al día lo existente**: con la lista de facturas y cobros que nos pase Contabilidad/Logística (N° factura y guía o cliente), actualizo los 127 pedidos de una vez. No marco nada como pagado ni facturado sin ese soporte.
+4. **Poner al día lo pendiente desde abril (127 pedidos, $10.234.000)**:
+   - Le entrego a Logística un Excel con esos 127 pedidos agrupados por transportadora y mes (cliente, guía, valor a cobrar, fecha de despacho).
+   - Logística lo cruza con las liquidaciones de Envía, Bogoexpress y Coordinadora y marca cada uno: cobrado (con fecha) o devuelto/no cobrado.
+   - Ese Excel se sube en la nueva pestaña (o me lo pasan y lo cargo yo) y todos quedan pagados o cerrados de una vez, con la liquidación como soporte.
+   - Para facturas: Sandra asigna su factura consolidada a esos pedidos con la selección masiva del punto 1.
+   - No marco nada como pagado ni facturado sin ese soporte.
 
 ## Detalles técnicos
 - `getBlockReason` en Contabilidad.tsx: excepción para `payment_method='contra_entrega'` con `production_status` despachado.
