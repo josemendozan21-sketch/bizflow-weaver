@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Package, PackageCheck, Truck, CheckCircle2, Clock, AlertTriangle, CalendarDays, FileCheck, Download, FileImage, MapPin, PackageX, Undo2, Tent, Pencil, UserRound } from "lucide-react";
 import { FeriaDispatchTab } from "@/components/logistics/FeriaDispatchTab";
+import CodCollectionsPanel from "@/components/logistics/CodCollectionsPanel";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { differenceInDays, format } from "date-fns";
@@ -430,6 +431,9 @@ const Logistica = () => {
           <TabsTrigger value="ferias" className="gap-1.5">
             <Tent className="h-4 w-4" /> Ferias
           </TabsTrigger>
+          <TabsTrigger value="cod" className="gap-1.5">
+            <FileCheck className="h-4 w-4" /> Cobros contraentrega
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="ready">
@@ -556,6 +560,10 @@ const Logistica = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="cod">
+          <CodCollectionsPanel orders={allOrders} canEdit={role === "admin" || role === "logistica"} />
         </TabsContent>
 
         <TabsContent value="ferias">
