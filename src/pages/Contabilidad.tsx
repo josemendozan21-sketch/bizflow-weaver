@@ -552,6 +552,7 @@ const Contabilidad = () => {
           <TabsTrigger value="pendientes">Pendientes ({pending.length})</TabsTrigger>
           <TabsTrigger value="facturar">Facturar ({toInvoice.length})</TabsTrigger>
           <TabsTrigger value="facturados">Facturados ({invoiced.length})</TabsTrigger>
+          <TabsTrigger value="cod">Cobros contraentrega</TabsTrigger>
           <TabsTrigger value="conciliacion"><AlertTriangle className="h-4 w-4 mr-1" />Conciliación</TabsTrigger>
           {!isReadOnly && <TabsTrigger value="caja_menor"><Wallet className="h-4 w-4 mr-1" />Caja menor</TabsTrigger>}
           {!isReadOnly && <TabsTrigger value="world_office"><FileText className="h-4 w-4 mr-1" />Exportar a WO</TabsTrigger>}
@@ -826,6 +827,10 @@ const Contabilidad = () => {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="cod">
+          <CodCollectionsPanel orders={allOrders} canEdit={false} />
         </TabsContent>
 
         <TabsContent value="conciliacion">
