@@ -9,7 +9,7 @@
 ## Solución propuesta
 1. **Facturar contraentrega sin esperar el pago**: en Contabilidad, los pedidos contraentrega despachados se pueden marcar como facturados (con N° de factura, adjunto opcional). Los demás pedidos al detal siguen exigiendo pago completo.
 2. **Registrar el número de factura**: al facturar se pide el N° de factura y la fecha, para que salga en la exportación.
-3. **Confirmar cobros de la transportadora** (Logística y Contabilidad): nueva vista "Contraentrega por confirmar", filtrable por transportadora y fecha, con selección múltiple para marcar "Cobrado" (guarda el pago, deja el pedido pagado y la comisión se calcula normal) o "No cobrado / devuelto" con motivo.
+3. **Usar la confirmación que ya existe**: sí existe — al despachar un contraentrega se le pide al asesor confirmar en Comisiones "Recibido y pagado" o "No cobrado", con recordatorio a los 7 días. Pero solo se activa para pedidos despachados después de que se creó, por eso 124 de los 127 nunca la pidieron, y ninguno ha sido confirmado. Propuesta: activar la confirmación pendiente en esos pedidos antiguos (le llegan al asesor) y además dejar que Contabilidad/Logística la marquen en grupo desde Contabilidad, porque son quienes cruzan el cobro con la transportadora.
 4. **Poner al día lo existente**: con la lista de facturas y cobros que nos pase Contabilidad/Logística (N° factura y guía o cliente), actualizo los 127 pedidos de una vez. No marco nada como pagado ni facturado sin ese soporte.
 
 ## Detalles técnicos
