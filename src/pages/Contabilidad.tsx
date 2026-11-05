@@ -28,6 +28,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAccountingAlerts } from "@/hooks/useAccountingAlerts";
 import type { AccountingOrder } from "@/stores/accountingStore";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
+import CodCollectionsPanel from "@/components/logistics/CodCollectionsPanel";
+import BulkInvoiceDialog from "@/components/contabilidad/BulkInvoiceDialog";
+import { canInvoiceOrder } from "@/lib/invoiceRules";
 import OrderDisputeDialog from "@/components/ventas/OrderDisputeDialog";
 import DisputesPanel from "@/components/contabilidad/DisputesPanel";
 
@@ -152,12 +155,11 @@ function DownloadInvoicesExport({ allOrders }: { allOrders: Order[] }) {
 }
 
 function canInvoice(o: Order): boolean {
-  if (o.sale_type === "menor") return isOrderFullyPaid(o);
-  if (o.sale_type === "mayor") return !!o.client_nit;
-  return false;
+  return canInvoiceOrder(o, isOrderFullyPaid(o));
 }
 
 function getBlockReason(o: Order): string | null {
+  if (canInvoice(o)) return null;
   if (o.sale_type === "menor" && !isOrderFullyPaid(o)) return "Pendiente de pago completo";
   if (o.sale_type === "mayor" && !o.client_nit) return "Falta adjuntar RUT del cliente";
   return null;
@@ -676,6 +678,13 @@ const Contabilidad = () => {
                   <Button size="sm" variant="outline" onClick={() => handleExportSelected(selectedToInvoice, "facturar")}>
                     <Download className="h-4 w-4 mr-1" />Exportar selección ({selectedToInvoice.size})
                   </Button>
+                )}
+                {selectedToInvoice.size > 0 && !isReadOnly && (
+                  <BulkInvoiceDialog
+                    orders={toInvoice.filter((o) => selectedToInvoice.has(o.id))}
+                    canInvoice={canInvoice}
+                    onDone={() => { setSelectedToInvoice(new Set()); refreshOrders(); }}
+                  />
                 )}
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
