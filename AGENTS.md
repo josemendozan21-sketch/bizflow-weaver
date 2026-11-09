@@ -7,3 +7,4 @@
 - World Office export logic lives only in src/lib/wo/woExport.ts and fills the untouched official template in public/templates; export state lives in wo_export_items (one active row per order) so a sale is never exported twice.
 - Production orders cannot be created while the order (or its submission group) has an unapproved logo_request; enforced by a production_orders insert trigger so no UI path bypasses Diseño approval.
 - Contraentrega collections are registered in bulk by Logística through register_cod_collection (inserts order_payments for the balance), so payment and commission paths stay consistent.
+- POS garment exchanges go only through register_pos_exchange (one atomic call creates the exchange sale with negative returned lines, stock movements and the pos_sale_exchanges link) so cash and reports only count the real difference and the original sale is never deleted.
