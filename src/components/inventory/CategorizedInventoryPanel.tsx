@@ -333,6 +333,12 @@ const CategorizedInventoryPanel = ({
             <span>
               <span className="font-semibold">{item.available.toLocaleString("es-CO")}</span>
               <span className="text-muted-foreground ml-1 text-xs">{item.unit}</span>
+              {reservedByItem[item.id] && (
+                <span className="block text-[11px] text-muted-foreground"
+                  title={reservedByItem[item.id].orders.join("\n")}>
+                  Reservado: {reservedByItem[item.id].qty.toLocaleString("es-CO")} ({reservedByItem[item.id].orders.length} pedido{reservedByItem[item.id].orders.length > 1 ? "s" : ""})
+                </span>
+              )}
             </span>
           )}
         </TableCell>
