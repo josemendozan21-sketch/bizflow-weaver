@@ -22,7 +22,8 @@ export function buildSalePdf(opts: {
 }): jsPDF {
   const { sale, items, location } = opts;
   const docType = saleDocType(sale.payment_method);
-  const title = docType === "factura" ? "FACTURA DE VENTA" : "REMISIÓN";
+  const isExchange = (sale.notes ?? "").startsWith("CAMBIO");
+  const title = isExchange ? (docType === "factura" ? "FACTURA DE CAMBIO" : "REMISIÓN DE CAMBIO") : docType === "factura" ? "FACTURA DE VENTA" : "REMISIÓN";
 
   const doc = new jsPDF({ unit: "pt", format: "letter" });
   const margin = 40;

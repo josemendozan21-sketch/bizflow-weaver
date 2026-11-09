@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Download, FileDown, Package2, Receipt, Camera, ImageIcon, Loader2, Box, Pencil, Trash2 } from "lucide-react";
+import { Download, FileDown, Package2, Receipt, Camera, ImageIcon, Loader2, Box, Pencil, Trash2, Repeat } from "lucide-react";
 import { PosSale, usePosSaleItems, uploadPosSaleProof, useAttachPosSaleProof, useAttachPosSaleMerchandise, useDeletePosSale, useUpdatePosSale } from "@/hooks/usePuntosVenta";
 import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -14,12 +14,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { downloadSalePdf, saleDocType, type InvoiceLocation } from "@/lib/posInvoicePdf";
 import { downloadCsvDay, downloadInvoicesZip } from "@/lib/posExports";
 import { toast } from "sonner";
+import { PuntoCambioDialog } from "./PuntoCambioDialog";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 type Props = { sales: PosSale[]; location: InvoiceLocation; locationId: string };
 
 export function PuntoVentasDelDia({ sales, location, locationId }: Props) {
   const { role } = useAuth();
   const isAdmin = role === "admin";
+  const canExchange = isAdmin || role === "pos_punto";
+  const [exchanging, setExchanging] = useState<PosSale | null>(null);
+  const { data: exchanges = [] } = useQuery({
+    queryKey: ["pos_sale_exchanges", locationId],
+    queryFn: async () => {
+      const { data } = await supabase.from("pos_sale_exchanges").select("original_sale_id, exchange_sale_id").eq("location_id", locationId);
+      return data ?? [];
+    },
+  });
+  const exchangedIds = useMemo(() => new Set(exchanges.map((e) => e.original_sale_id)), [exchanges]);
+  const exchangeSaleIds = useMemo(() => new Set(exchanges.map((e) => e.exchange_sale_id)), [exchanges]);
   const today = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(today);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
@@ -201,6 +215,8 @@ export function PuntoVentasDelDia({ sales, location, locationId }: Props) {
                           <Badge variant={tipo === "factura" ? "default" : "secondary"}>
                             {tipo === "factura" ? "Factura DIAN" : "Remisión"}
                           </Badge>
+                          {exchangedIds.has(s.id) && <Badge variant="outline" className="ml-1">Con cambio</Badge>}
+                          {exchangeSaleIds.has(s.id) && <Badge variant="outline" className="ml-1">Cambio</Badge>}
                           {hasDiscount && (
                             <Badge variant="destructive" className="ml-1">
                               Desc. ${Number(s.discount).toLocaleString()}
@@ -297,6 +313,11 @@ export function PuntoVentasDelDia({ sales, location, locationId }: Props) {
                               onClick={() => downloadSalePdf({ sale: s, items: its, location })}>
                               <Download className="h-4 w-4" />
                             </Button>
+                            {canExchange && !exchangeSaleIds.has(s.id) && (
+                              <Button size="sm" variant="ghost" title="Cambio de prendas" onClick={() => setExchanging(s)}>
+                                <Repeat className="h-4 w-4" />
+                              </Button>
+                            )}
                             {isAdmin && (
                               <>
                                 <Button size="sm" variant="ghost" title="Editar venta" onClick={() => openEdit(s)}>
@@ -364,7 +385,7 @@ export function PuntoVentasDelDia({ sales, location, locationId }: Props) {
               <Input value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} />
             </div>
             <p className="text-xs text-muted-foreground">
-              Para corregir productos o cantidades, elimina la venta y vuélvela a registrar. Eliminar restituye el stock automáticamente.
+              Para un cambio de prendas usa el botón de cambio (flechas). Para corregir un error de registro, elimina la venta y vuélvela a registrar. Eliminar restituye el stock automáticamente.
             </p>
           </div>
           <DialogFooter>
@@ -375,6 +396,10 @@ export function PuntoVentasDelDia({ sales, location, locationId }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <PuntoCambioDialog sale={exchanging} locationId={locationId}
+        items={exchanging ? (itemsBySale[exchanging.id] ?? []) as any : []}
+        onClose={() => setExchanging(null)} />
 
       <AlertDialog open={!!deletingId} onOpenChange={(o) => !o && setDeletingId(null)}>
         <AlertDialogContent>
