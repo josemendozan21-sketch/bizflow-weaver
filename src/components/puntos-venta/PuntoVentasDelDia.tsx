@@ -310,18 +310,18 @@ export function PuntoVentasDelDia({ sales, location, locationId }: Props) {
                         <td className="text-xs">{s.recorded_by_name ?? "—"}</td>
                         <td className="text-right">
                           <div className="flex items-center justify-end gap-1">
+                            {canExchange && !exchangeSaleIds.has(s.id) && (
+                              <Button size="sm" variant="outline" className="h-7 px-2 text-xs"
+                                disabled={!isWithinExchangeWindow(s.sale_date)}
+                                title={isWithinExchangeWindow(s.sale_date) ? "Cambio de prendas" : "Plazo vencido: los cambios se hacen antes de terminar el mes de la compra"}
+                                onClick={() => setExchanging(s)}>
+                                <Repeat className="h-3 w-3 mr-1" /> Cambio
+                              </Button>
+                            )}
                             <Button size="sm" variant="ghost" title="Descargar PDF"
                               onClick={() => downloadSalePdf({ sale: s, items: its, location })}>
                               <Download className="h-4 w-4" />
                             </Button>
-                            {canExchange && !exchangeSaleIds.has(s.id) && (
-                              <Button size="sm" variant="ghost"
-                                disabled={!isWithinExchangeWindow(s.sale_date)}
-                                title={isWithinExchangeWindow(s.sale_date) ? "Cambio de prendas" : "Plazo vencido: los cambios se hacen antes de terminar el mes de la compra"}
-                                onClick={() => setExchanging(s)}>
-                                <Repeat className="h-4 w-4" />
-                              </Button>
-                            )}
                             {isAdmin && (
                               <>
                                 <Button size="sm" variant="ghost" title="Editar venta" onClick={() => openEdit(s)}>
