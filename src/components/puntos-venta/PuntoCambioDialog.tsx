@@ -23,7 +23,6 @@ export function PuntoCambioDialog({ sale, locationId, items, onClose }: Props) {
   const [newItems, setNewItems] = useState<{ id: string; quantity: number; unit_price: number }[]>([]);
   const [search, setSearch] = useState("");
   const [method, setMethod] = useState("efectivo");
-  const [settlement, setSettlement] = useState<"saldo_favor" | "devolucion">("saldo_favor");
   const [notes, setNotes] = useState("");
 
   // Units already returned in earlier exchanges of this sale
@@ -60,7 +59,7 @@ export function PuntoCambioDialog({ sale, locationId, items, onClose }: Props) {
     .filter((p) => (p as any).active !== false && p.name.toLowerCase().includes(search.toLowerCase()))
     .slice(0, 8);
 
-  const reset = () => { setRet({}); setNewItems([]); setSearch(""); setNotes(""); setMethod("efectivo"); setSettlement("saldo_favor"); };
+  const reset = () => { setRet({}); setNewItems([]); setSearch(""); setNotes(""); setMethod("efectivo"); };
 
   const save = useMutation({
     mutationFn: async () => {
@@ -69,7 +68,6 @@ export function PuntoCambioDialog({ sale, locationId, items, onClose }: Props) {
         returned: Object.entries(ret).filter(([, q]) => q > 0).map(([pos_product_id, quantity]) => ({ pos_product_id, quantity })),
         new_items: newItems.map((n) => ({ pos_product_id: n.id, quantity: n.quantity, unit_price: n.unit_price })),
         payment_method: method,
-        settlement,
         notes,
       };
       const { data, error } = await (supabase.rpc as any)("register_pos_exchange", { _payload: payload });
@@ -88,7 +86,7 @@ export function PuntoCambioDialog({ sale, locationId, items, onClose }: Props) {
     onError: (e: any) => toast.error(e.message ?? "No se pudo registrar el cambio"),
   });
 
-  const canSave = Object.values(ret).some((q) => q > 0) && !save.isPending;
+  const canSave = Object.values(ret).some((q) => q > 0) && summary.kind !== "falta" && !save.isPending;
 
   return (
     <Dialog open={!!sale} onOpenChange={(o) => { if (!o) { reset(); onClose(); } }}>
@@ -156,26 +154,19 @@ export function PuntoCambioDialog({ sale, locationId, items, onClose }: Props) {
             <div className="flex justify-between"><span>Devuelve</span><span>{money(summary.returnedValue)}</span></div>
             <div className="flex justify-between"><span>Se lleva</span><span>{money(summary.newValue)}</span></div>
             <div className="flex justify-between font-semibold">
-              <span>{summary.kind === "cobro" ? "Cliente paga" : summary.kind === "a_favor" ? "A favor del cliente" : "Diferencia"}</span>
+              <span>{summary.kind === "cobro" ? "Cliente paga" : summary.kind === "falta" ? "Falta por elegir" : "Diferencia"}</span>
               <span>{money(Math.abs(summary.difference))}</span>
             </div>
           </div>
 
-          {summary.kind === "a_favor" && (
-            <div>
-              <Label>¿Qué se hace con el valor a favor?</Label>
-              <Select value={settlement} onValueChange={(v) => setSettlement(v as any)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="saldo_favor">Queda como saldo a favor del cliente</SelectItem>
-                  <SelectItem value="devolucion">Se le devuelve el dinero</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          {summary.kind === "falta" && Object.values(ret).some((q) => q > 0) && (
+            <p className="text-sm text-destructive">
+              No se devuelve dinero: el cliente debe llevar productos por el mismo valor o más. Agrega {money(-summary.difference)} más en productos.
+            </p>
           )}
-          {(summary.kind === "cobro" || (summary.kind === "a_favor" && settlement === "devolucion")) && (
+          {summary.kind === "cobro" && (
             <div>
-              <Label>{summary.kind === "cobro" ? "Medio de pago de la diferencia" : "Cómo se devuelve el dinero"}</Label>
+              <Label>Medio de pago de la diferencia</Label>
               <Select value={method} onValueChange={setMethod}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
