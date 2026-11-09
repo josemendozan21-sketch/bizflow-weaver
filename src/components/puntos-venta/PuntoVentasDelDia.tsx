@@ -15,6 +15,7 @@ import { downloadSalePdf, saleDocType, type InvoiceLocation } from "@/lib/posInv
 import { downloadCsvDay, downloadInvoicesZip } from "@/lib/posExports";
 import { toast } from "sonner";
 import { PuntoCambioDialog } from "./PuntoCambioDialog";
+import { isWithinExchangeWindow } from "@/lib/posExchange";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -314,7 +315,10 @@ export function PuntoVentasDelDia({ sales, location, locationId }: Props) {
                               <Download className="h-4 w-4" />
                             </Button>
                             {canExchange && !exchangeSaleIds.has(s.id) && (
-                              <Button size="sm" variant="ghost" title="Cambio de prendas" onClick={() => setExchanging(s)}>
+                              <Button size="sm" variant="ghost"
+                                disabled={!isWithinExchangeWindow(s.sale_date)}
+                                title={isWithinExchangeWindow(s.sale_date) ? "Cambio de prendas" : "Plazo vencido: los cambios se hacen antes de terminar el mes de la compra"}
+                                onClick={() => setExchanging(s)}>
                                 <Repeat className="h-4 w-4" />
                               </Button>
                             )}

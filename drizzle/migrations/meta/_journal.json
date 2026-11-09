@@ -218,6 +218,13 @@
       "when": 1794234516393,
       "tag": "0030_fix_release_reservation_area",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1794238734365,
+      "tag": "0031_pos_exchange_policy_rules",
+      "breakpoints": true
     }
   ]
 }
