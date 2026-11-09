@@ -197,6 +197,13 @@
       "when": 1793909978959,
       "tag": "0027_cod_collection_by_logistics",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1794233475302,
+      "tag": "0028_pos_sale_exchanges",
+      "breakpoints": true
     }
   ]
 }

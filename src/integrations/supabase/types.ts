@@ -3908,6 +3908,76 @@ export type Database = {
         }
         Relationships: []
       }
+      pos_sale_exchanges: {
+        Row: {
+          created_at: string
+          credit_amount: number
+          difference: number
+          exchange_sale_id: string
+          id: string
+          location_id: string
+          new_value: number
+          notes: string | null
+          original_sale_id: string
+          recorded_by: string | null
+          recorded_by_name: string | null
+          returned_value: number
+          settlement: string
+        }
+        Insert: {
+          created_at?: string
+          credit_amount?: number
+          difference?: number
+          exchange_sale_id: string
+          id?: string
+          location_id: string
+          new_value?: number
+          notes?: string | null
+          original_sale_id: string
+          recorded_by?: string | null
+          recorded_by_name?: string | null
+          returned_value?: number
+          settlement?: string
+        }
+        Update: {
+          created_at?: string
+          credit_amount?: number
+          difference?: number
+          exchange_sale_id?: string
+          id?: string
+          location_id?: string
+          new_value?: number
+          notes?: string | null
+          original_sale_id?: string
+          recorded_by?: string | null
+          recorded_by_name?: string | null
+          returned_value?: number
+          settlement?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_sale_exchanges_exchange_sale_id_fkey"
+            columns: ["exchange_sale_id"]
+            isOneToOne: false
+            referencedRelation: "pos_sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_sale_exchanges_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "pos_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_sale_exchanges_original_sale_id_fkey"
+            columns: ["original_sale_id"]
+            isOneToOne: false
+            referencedRelation: "pos_sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pos_sale_items: {
         Row: {
           brand: string | null
@@ -5467,6 +5537,7 @@ export type Database = {
         }
         Returns: Json
       }
+      register_pos_exchange: { Args: { _payload: Json }; Returns: Json }
       release_order_reservation: {
         Args: { _reason: string; _reservation_id: string }
         Returns: Json
