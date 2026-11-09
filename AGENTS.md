@@ -8,3 +8,4 @@
 - Production orders cannot be created while the order (or its submission group) has an unapproved logo_request; enforced by a production_orders insert trigger so no UI path bypasses Diseño approval.
 - Contraentrega collections are registered in bulk by Logística through register_cod_collection (inserts order_payments for the balance), so payment and commission paths stay consistent.
 - POS garment exchanges go only through register_pos_exchange (one atomic call creates the exchange sale with negative returned lines, stock movements and the pos_sale_exchanges link) so cash and reports only count the real difference and the original sale is never deleted.
+- Wholesale (mayor) orders never reserve producto_terminado: create_order_requirement points them to cuerpos_referencias, because wholesale is always produced from bodies; reservations are consumed on dispatch by trg_consume_reservations_on_dispatch.
