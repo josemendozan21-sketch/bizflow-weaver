@@ -57,7 +57,7 @@ export function PuntoCambioDialog({ sale, locationId, items, onClose }: Props) {
   );
 
   const matches = search.trim().length < 2 ? [] : products
-    .filter((p) => p.active !== false && p.name.toLowerCase().includes(search.toLowerCase()))
+    .filter((p) => (p as any).active !== false && p.name.toLowerCase().includes(search.toLowerCase()))
     .slice(0, 8);
 
   const reset = () => { setRet({}); setNewItems([]); setSearch(""); setNotes(""); setMethod("efectivo"); setSettlement("saldo_favor"); };
