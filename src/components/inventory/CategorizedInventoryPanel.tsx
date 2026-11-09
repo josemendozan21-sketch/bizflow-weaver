@@ -74,6 +74,21 @@ const CategorizedInventoryPanel = ({
 }: CategorizedInventoryPanelProps) => {
   const { stockItems, addStockItem, updateStockItem, deleteStockItem, isLoading } = useInventory();
   const { role } = useAuth();
+  // Unidades apartadas por pedidos (reservas activas), para explicar por qué no hay disponible
+  const [reservedByItem, setReservedByItem] = useState<Record<string, { qty: number; orders: string[] }>>({});
+  useEffect(() => {
+    supabase.from("order_reservations").select("stock_item_id, order_code, quantity").eq("status", "activa")
+      .then(({ data }) => {
+        const m: Record<string, { qty: number; orders: string[] }> = {};
+        for (const r of data ?? []) {
+          if (!r.stock_item_id) continue;
+          const e = (m[r.stock_item_id] ??= { qty: 0, orders: [] });
+          e.qty += Number(r.quantity);
+          e.orders.push(`${r.order_code ?? "Pedido"}: ${Number(r.quantity)}`);
+        }
+        setReservedByItem(m);
+      });
+  }, []);
   // Solo Admin e Inventarios pueden crear/editar/eliminar referencias.
   const isReadOnly = role !== "admin" && role !== "inventarios";
   const baseCategories = role === "asesor_comercial" ? ASESOR_CATEGORIES : ALL_CATEGORIES;
@@ -333,6 +348,12 @@ const CategorizedInventoryPanel = ({
             <span>
               <span className="font-semibold">{item.available.toLocaleString("es-CO")}</span>
               <span className="text-muted-foreground ml-1 text-xs">{item.unit}</span>
+              {reservedByItem[item.id] && (
+                <span className="block text-[11px] text-muted-foreground"
+                  title={reservedByItem[item.id].orders.join("\n")}>
+                  Reservado: {reservedByItem[item.id].qty.toLocaleString("es-CO")} ({reservedByItem[item.id].orders.length} pedido{reservedByItem[item.id].orders.length > 1 ? "s" : ""})
+                </span>
+              )}
             </span>
           )}
         </TableCell>
