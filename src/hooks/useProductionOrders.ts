@@ -311,6 +311,20 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
 
       const po = order as ProductionOrder;
 
+      // Protección contra pantallas desactualizadas o doble clic: si se pide finalizar
+      // una etapa que en realidad no está en proceso, la orden ya avanzó en otra acción.
+      if (operatorName && po.stage_status !== "en_proceso") {
+        throw new Error("Esta orden ya cambió de etapa. Recarga la pantalla y vuelve a intentarlo.");
+      }
+      {
+        const st = (po.stages ?? []).includes(po.current_stage) ? (po.stages ?? []) : normalizeStages(po as any);
+        const isLast = st.indexOf(po.current_stage) >= st.length - 2;
+        // Cerrar la orden (pasar a Listo) exige la foto, el empacador y el conteo final.
+        if (isLast && po.current_stage !== "produccion_cuerpos" && !completionData) {
+          throw new Error("Para finalizar el pedido hay que subir la foto y el conteo final. Recarga la pantalla.");
+        }
+      }
+
       // Close the currently-open log for this stage (mark ended_at)
       // If operatorName provided and there is no open log yet, create a closed one.
       const stageBeingFinished = po.current_stage;
