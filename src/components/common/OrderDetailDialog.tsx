@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import { PaymentsList } from "@/components/ventas/PaymentsList";
+import { AddPaymentDialog } from "@/components/ventas/AddPaymentDialog";
 import BalancePaymentsReview from "@/components/ventas/BalancePaymentsReview";
 import { OrderChangeLogPanel } from "@/components/ventas/OrderChangeLogPanel";
 import ReferenceFilesPanel from "@/components/diseno/ReferenceFilesPanel";
@@ -62,7 +63,7 @@ function SectionTitle({ icon: Icon, children }: { icon: any; children: React.Rea
 
 /** Ficha de solo lectura con TODOS los detalles de un pedido. */
 export default function OrderDetailDialog({ orderId, orderCode, open, onOpenChange }: Props) {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const scope = getOrderViewScope(role);
   const designOnly = scope === "design";
   const operationsOnly = scope === "operations";
@@ -291,6 +292,12 @@ export default function OrderDetailDialog({ orderId, orderCode, open, onOpenChan
                   ))}
                 </div>
               )}
+              {balance > 0 &&
+                (role === "admin" || role === "contabilidad" || order.advisor_id === user?.id) && (
+                  <div className="flex justify-end">
+                    <AddPaymentDialog orderId={order.id} pendingBalance={balance} />
+                  </div>
+                )}
               <PaymentsList orderId={order.id} total={total} />
             </section>
 

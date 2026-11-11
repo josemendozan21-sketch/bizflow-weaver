@@ -65,6 +65,7 @@ export function useCreateOrderPayment() {
       qc.invalidateQueries({ queryKey: ["order_payments", vars.order_id] });
       qc.invalidateQueries({ queryKey: ["order_payments_bulk"] });
       qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["order-detail"] });
       toast({ title: "Abono registrado" });
     },
     onError: (err: any) => {
@@ -85,6 +86,7 @@ export function useDeleteOrderPayment() {
       qc.invalidateQueries({ queryKey: ["order_payments", vars.order_id] });
       qc.invalidateQueries({ queryKey: ["order_payments_bulk"] });
       qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["order-detail"] });
       toast({ title: "Abono eliminado" });
     },
     onError: (err: any) => {
