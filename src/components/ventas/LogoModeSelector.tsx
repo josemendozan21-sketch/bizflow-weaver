@@ -28,7 +28,7 @@ export function LogoModeSelector({
         <p className="text-xs text-destructive">Elija una opción para poder registrar el pedido.</p>
       )}
       {previousBuyer && value === "nuevo" && (
-        <p className="text-xs font-medium text-warning-foreground rounded bg-warning/20 px-2 py-1">
+        <p className="text-xs font-medium text-foreground rounded bg-accent px-2 py-1">
           Este cliente ya compró antes. ¿Es recompra? Si el logo es el mismo, elija "Recompra — logo tal cual".
         </p>
       )}
