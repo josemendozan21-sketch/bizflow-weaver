@@ -709,7 +709,8 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [mwRefFiles, setMwRefFiles] = useState<File[]>([]);
   const [clientName, setClientName] = usePersistedState<string>("ventas:mw:clientName", "");
   const [recompraLogoUrl, setRecompraLogoUrl] = usePersistedState<string>("ventas:mw:recompraLogoUrl", "");
-  const [recompraMismoLogo, setRecompraMismoLogo] = usePersistedState<"si" | "no">("ventas:mw:recompraMismoLogo","ventas:mw:logoMode", "si");
+  const [recompraMismoLogo, setRecompraMismoLogo] = usePersistedState<"si" | "no">("ventas:mw:recompraMismoLogo", "si");
+  const mwPrevBuyer = usePreviousBuyer(clientName, "magical");
   const [logoMode, setLogoModeRaw] = usePersistedState<LogoMode | "">("ventas:mw:logoMode", "");
   const setLogoMode = (m: LogoMode) => {
     const f = logoModeFlags(m);
@@ -1179,7 +1180,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           toast.success("Compra de molde registrada", { description: `${clientNameValue} — Molde "${moldeNombre}"` });
           [
             "ventas:mw:lines","ventas:mw:abono","ventas:mw:estadoPago",
-            "ventas:mw:dobleTinta","ventas:mw:escarcha","ventas:mw:isRecompra",
+            "ventas:mw:dobleTinta","ventas:mw:escarcha","ventas:mw:isRecompra","ventas:mw:logoMode",
             "ventas:mw:noLogo","ventas:mw:needsLogoAdjustment","ventas:mw:costoAdicional",
             "ventas:mw:cobroLogo","ventas:mw:costoLogo",
             "ventas:mw:moldeNuevo","ventas:mw:moldeNombre","ventas:mw:moldeCosto","ventas:mw:moldeModo",
@@ -1467,7 +1468,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
     [
       "ventas:mw:lines","ventas:mw:abono","ventas:mw:estadoPago",
-      "ventas:mw:dobleTinta","ventas:mw:escarcha","ventas:mw:isRecompra",
+      "ventas:mw:dobleTinta","ventas:mw:escarcha","ventas:mw:isRecompra","ventas:mw:logoMode",
       "ventas:mw:noLogo","ventas:mw:needsLogoAdjustment","ventas:mw:costoAdicional",
       "ventas:mw:cobroLogo","ventas:mw:costoLogo",
       "ventas:mw:moldeNuevo","ventas:mw:moldeNombre","ventas:mw:moldeCosto","ventas:mw:moldeModo",
@@ -2141,11 +2142,12 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const [ssPaymentDate, setSsPaymentDate] = usePersistedState<string>("ventas:ss:paymentDate", new Date().toISOString().slice(0, 10));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ssIsRecompra, setSsIsRecompra] = usePersistedState("ventas:ss:isRecompra", false);
-  const [ssRecompraMismoLogo, setSsRecompraMismoLogo] = usePersistedState<"si" | "no">("ventas:ss:recompraMismoLogo","ventas:ss:logoMode", "si");
+  const [ssRecompraMismoLogo, setSsRecompraMismoLogo] = usePersistedState<"si" | "no">("ventas:ss:recompraMismoLogo", "si");
   const [ssRecompraLogoUrl, setSsRecompraLogoUrl] = usePersistedState<string>("ventas:ss:recompraLogoUrl", "");
   const [ssClientName, setSsClientName] = usePersistedState<string>("ventas:ss:clientName", "");
   const [ssNoLogo, setSsNoLogo] = usePersistedState("ventas:ss:noLogo", false);
   const [ssNeedsLogoAdjustment, setSsNeedsLogoAdjustment] = usePersistedState("ventas:ss:needsLogoAdjustment", false);
+  const ssPrevBuyer = usePreviousBuyer(ssClientName, "sweatspot");
   const [ssLogoMode, setSsLogoModeRaw] = usePersistedState<LogoMode | "">("ventas:ss:logoMode", "");
   const setSsLogoMode = (m: LogoMode) => {
     const f = logoModeFlags(m);
