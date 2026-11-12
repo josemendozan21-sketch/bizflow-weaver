@@ -215,6 +215,22 @@ export const EstampacionProductionView = () => {
     },
   });
 
+  const orderIdsForLogo = allOrders.map((o) => o.order_id).filter(Boolean) as string[];
+  const logoSourceQuery = useQuery({
+    queryKey: ["estampacion_logo_source", orderIdsForLogo.join(",")],
+    enabled: orderIdsForLogo.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("id, is_recompra, logo_source")
+        .in("id", orderIdsForLogo);
+      if (error) throw error;
+      const map: Record<string, { is_recompra: boolean; logo_source: string | null }> = {};
+      (data ?? []).forEach((r: any) => { map[r.id] = { is_recompra: r.is_recompra, logo_source: r.logo_source }; });
+      return map;
+    },
+  });
+  const logoSourceMap = logoSourceQuery.data ?? {};
   const bodyStock = bodyStockQuery.data ?? [];
   const logoRequests = logoRequestsQuery.data ?? [];
 
@@ -352,6 +368,7 @@ export const EstampacionProductionView = () => {
                         lineCtx={order.order_id ? lineContext[order.order_id] : undefined}
                         stageLogs={stageLogs.filter((l) => l.production_order_id === order.id)}
                         logoRequests={logoRequests}
+                logoSourceMap={logoSourceMap}
                         onStart={() => setOperatorPrompt({ mode: "start", orderId: order.id, clientName: order.client_name })}
                         onFinish={() => setOperatorPrompt({ mode: "finish", orderId: order.id, clientName: order.client_name })}
                         finishing={completeStamping.isPending && completeStamping.variables?.orderId === order.id}
@@ -387,6 +404,7 @@ export const EstampacionProductionView = () => {
                 lineCtx={order.order_id ? lineContext[order.order_id] : undefined}
                 stageLogs={stageLogs.filter((l) => l.production_order_id === order.id)}
                 logoRequests={logoRequests}
+                logoSourceMap={logoSourceMap}
                 onStart={() => setOperatorPrompt({ mode: "start", orderId: order.id, clientName: order.client_name })}
                 onFinish={() => setOperatorPrompt({ mode: "finish", orderId: order.id, clientName: order.client_name })}
                 finishing={completeStamping.isPending && completeStamping.variables?.orderId === order.id}
@@ -420,6 +438,7 @@ export const EstampacionProductionView = () => {
                 lineCtx={order.order_id ? lineContext[order.order_id] : undefined}
                 stageLogs={stageLogs.filter((l) => l.production_order_id === order.id)}
                 logoRequests={logoRequests}
+                logoSourceMap={logoSourceMap}
                 onStart={() => {}}
                 onFinish={() => {}}
                 finishing={false}
@@ -666,6 +685,7 @@ function EstampacionOrderCard({
     logoRequests.find(
       (lr) => !lr.order_id && lr.client_name.toLowerCase() === order.client_name.toLowerCase()
     );
+  const orderLogoInfo = order.order_id ? logoSourceMap?.[order.order_id] : undefined;
   const logoPendingInDesign =
     !!matchingLogo && !["aprobado", "finalizado"].includes(matchingLogo.status);
 
@@ -746,8 +766,16 @@ function EstampacionOrderCard({
             )}
             {logoPendingInDesign && (
               <Badge variant="destructive" className="whitespace-nowrap">
-                Ajuste de logo en Diseño — no revelar
+                {orderLogoInfo?.is_recompra ? "Ajuste de logo en Diseño — no revelar" : "Logo nuevo en Diseño — no revelar"}
               </Badge>
+            )}
+            {!logoPendingInDesign && orderLogoInfo?.is_recompra && orderLogoInfo.logo_source === "reutilizado" && (
+              <Badge className="whitespace-nowrap bg-primary/15 text-primary hover:bg-primary/15">
+                Recompra — mismo logo
+              </Badge>
+            )}
+            {!logoPendingInDesign && orderLogoInfo?.logo_source === "nuevo" && hasLogo && (
+              <Badge variant="outline" className="whitespace-nowrap">Logo nuevo</Badge>
             )}
             <Badge variant={badge.variant}>{badge.label}</Badge>
           </div>
