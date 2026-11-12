@@ -659,6 +659,7 @@ function EstampacionOrderCard({
   lineCtx,
   stageLogs,
   logoRequests,
+  logoSourceMap,
   onStart,
   onFinish,
   finishing,
@@ -671,6 +672,7 @@ function EstampacionOrderCard({
   onStart: () => void;
   onFinish: () => void;
   finishing: boolean;
+  logoSourceMap?: Record<string, { is_recompra: boolean; logo_source: string | null }>;
   readOnly?: boolean;
 }) {
   const queryClient = useQueryClient();
