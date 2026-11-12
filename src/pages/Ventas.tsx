@@ -25,6 +25,9 @@ import MisLiquidaciones from "@/components/ventas/MisLiquidaciones";
 import { SalesCalendar } from "@/components/ventas/SalesCalendar";
 import { createLogoRequestFromOrder } from "@/lib/createLogoRequestFromOrder";
 import { useAuth } from "@/contexts/AuthContext";
+import { LogoModeSelector } from "@/components/ventas/LogoModeSelector";
+import { usePreviousBuyer } from "@/hooks/usePreviousBuyer";
+import { logoModeFlags, type LogoMode } from "@/lib/logoMode";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createOrderNotifications } from "@/hooks/useNotifications";
@@ -707,6 +710,13 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
   const [clientName, setClientName] = usePersistedState<string>("ventas:mw:clientName", "");
   const [recompraLogoUrl, setRecompraLogoUrl] = usePersistedState<string>("ventas:mw:recompraLogoUrl", "");
   const [recompraMismoLogo, setRecompraMismoLogo] = usePersistedState<"si" | "no">("ventas:mw:recompraMismoLogo", "si");
+  const mwPrevBuyer = usePreviousBuyer(clientName, "magical");
+  const [logoMode, setLogoModeRaw] = usePersistedState<LogoMode | "">("ventas:mw:logoMode", "");
+  const setLogoMode = (m: LogoMode) => {
+    const f = logoModeFlags(m);
+    setLogoModeRaw(m); setIsRecompra(f.isRecompra); setNoLogo(f.noLogo);
+    setRecompraMismoLogo(f.recompraMismoLogo); setNeedsLogoAdjustment(f.needsLogoAdjustment);
+  };
   const [rutFileState, setRutFileState] = useState<File | null>(null);
   // Molde nuevo (sólo Magical)
   const [moldeNuevo, setMoldeNuevo] = usePersistedState("ventas:mw:moldeNuevo", false);
@@ -936,6 +946,16 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
       setIsSubmitting(false);
       return;
     }
+    if (!logoMode) {
+      toast.error("Indique cómo va el logo", { description: "Elija Logo nuevo, Recompra tal cual, Recompra con ajuste o Sin logo." });
+      setIsSubmitting(false);
+      return;
+    }
+    if (logoMode === "recompra_ajuste" && !String(fd.get("mw_observaciones") || "").trim()) {
+      toast.error("Describa el ajuste del logo", { description: "Escriba en Observaciones qué se debe ajustar para que Diseño lo reciba." });
+      setIsSubmitting(false);
+      return;
+    }
     if (isRecompra && !noLogo && recompraMismoLogo === "no" && !(logoFile && logoFile.size > 0)) {
       toast.error("Adjunte el logo actualizado", {
         description: "El cliente cambió el logo: adjunte el archivo nuevo para que Diseño y Estampación lo reciban.",
@@ -1160,7 +1180,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
           toast.success("Compra de molde registrada", { description: `${clientNameValue} — Molde "${moldeNombre}"` });
           [
             "ventas:mw:lines","ventas:mw:abono","ventas:mw:estadoPago",
-            "ventas:mw:dobleTinta","ventas:mw:escarcha","ventas:mw:isRecompra",
+            "ventas:mw:dobleTinta","ventas:mw:escarcha","ventas:mw:isRecompra","ventas:mw:logoMode",
             "ventas:mw:noLogo","ventas:mw:needsLogoAdjustment","ventas:mw:costoAdicional",
             "ventas:mw:cobroLogo","ventas:mw:costoLogo",
             "ventas:mw:moldeNuevo","ventas:mw:moldeNombre","ventas:mw:moldeCosto","ventas:mw:moldeModo",
@@ -1448,11 +1468,11 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
 
     [
       "ventas:mw:lines","ventas:mw:abono","ventas:mw:estadoPago",
-      "ventas:mw:dobleTinta","ventas:mw:escarcha","ventas:mw:isRecompra",
+      "ventas:mw:dobleTinta","ventas:mw:escarcha","ventas:mw:isRecompra","ventas:mw:logoMode",
       "ventas:mw:noLogo","ventas:mw:needsLogoAdjustment","ventas:mw:costoAdicional",
       "ventas:mw:cobroLogo","ventas:mw:costoLogo",
       "ventas:mw:moldeNuevo","ventas:mw:moldeNombre","ventas:mw:moldeCosto","ventas:mw:moldeModo",
-      "ventas:mw:fields","ventas:mw:clientName","ventas:mw:recompraLogoUrl","ventas:mw:recompraMismoLogo",
+      "ventas:mw:fields","ventas:mw:clientName","ventas:mw:recompraLogoUrl","ventas:mw:recompraMismoLogo","ventas:mw:logoMode",
     ].forEach(clearFormDraft);
     setMwLogos([makeLogoEntry()]);
     setClientName("");
@@ -1512,7 +1532,7 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
               }
 
               if (data.abono) setAbono(String(data.abono));
-              if (data.es_recompra) setIsRecompra(true);
+              if (data.es_recompra) setLogoMode("recompra_igual");
               if (data.observaciones) {
                 const obs = form.querySelector('[name="mw_observaciones"]') as HTMLTextAreaElement;
                 if (obs) obs.value = data.observaciones;
@@ -1791,10 +1811,6 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
             <legend className="text-sm font-semibold text-foreground mb-2">Opciones adicionales</legend>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               <div className="flex items-center justify-between rounded-md border border-input p-3">
-                <Label htmlFor="mw_recompra" className="cursor-pointer">Recompra</Label>
-                <Switch id="mw_recompra" checked={isRecompra} onCheckedChange={setIsRecompra} />
-              </div>
-              <div className="flex items-center justify-between rounded-md border border-input p-3">
                 <Label htmlFor="mw_dobleTinta" className="cursor-pointer">Doble tinta</Label>
                 <Switch id="mw_dobleTinta" checked={dobleTinta} onCheckedChange={setDobleTinta} />
               </div>
@@ -1803,15 +1819,12 @@ function MagicalMayorForm({ onReset }: { onReset: () => void }) {
                 <Switch id="mw_escarcha" checked={escarcha} onCheckedChange={setEscarcha} />
               </div>
               <div className="flex items-center justify-between rounded-md border border-input p-3">
-                <Label htmlFor="mw_noLogo" className="cursor-pointer">No requiere logo</Label>
-                <Switch id="mw_noLogo" checked={noLogo} onCheckedChange={setNoLogo} />
-              </div>
-              <div className="flex items-center justify-between rounded-md border border-input p-3">
                 <Label htmlFor="mw_cobroLogo" className="cursor-pointer">Cobrar logo</Label>
                 <Switch id="mw_cobroLogo" checked={cobroLogo} onCheckedChange={setCobroLogo} />
               </div>
             </div>
-            {isRecompra && !noLogo && (
+            <LogoModeSelector value={logoMode} onChange={setLogoMode} previousBuyer={mwPrevBuyer} />
+            {false && (
               <div className="space-y-2 rounded-md border border-primary/40 bg-primary/5 p-3">
                 <Label className="text-sm font-semibold">¿El cliente utilizará el mismo logo?</Label>
                 <div className="flex gap-2">
@@ -2134,6 +2147,13 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
   const [ssClientName, setSsClientName] = usePersistedState<string>("ventas:ss:clientName", "");
   const [ssNoLogo, setSsNoLogo] = usePersistedState("ventas:ss:noLogo", false);
   const [ssNeedsLogoAdjustment, setSsNeedsLogoAdjustment] = usePersistedState("ventas:ss:needsLogoAdjustment", false);
+  const ssPrevBuyer = usePreviousBuyer(ssClientName, "sweatspot");
+  const [ssLogoMode, setSsLogoModeRaw] = usePersistedState<LogoMode | "">("ventas:ss:logoMode", "");
+  const setSsLogoMode = (m: LogoMode) => {
+    const f = logoModeFlags(m);
+    setSsLogoModeRaw(m); setSsIsRecompra(f.isRecompra); setSsNoLogo(f.noLogo);
+    setSsRecompraMismoLogo(f.recompraMismoLogo); setSsNeedsLogoAdjustment(f.needsLogoAdjustment);
+  };
   const [ssCobroLogo, setSsCobroLogo] = usePersistedState("ventas:ss:cobroLogo", false);
   const [ssCostoLogo, setSsCostoLogo] = usePersistedState("ventas:ss:costoLogo", "");
   const [ssPaymentProofFile, setSsPaymentProofFile] = useState<File | null>(null);
@@ -2232,6 +2252,16 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
       toast.error("Seleccione el logo anterior", {
         description: "Use el buscador para elegir el logo ya trabajado con este cliente.",
       });
+      setIsSubmitting(false);
+      return;
+    }
+    if (!ssLogoMode) {
+      toast.error("Indique cómo va el logo", { description: "Elija Logo nuevo, Recompra tal cual, Recompra con ajuste o Sin logo." });
+      setIsSubmitting(false);
+      return;
+    }
+    if (ssLogoMode === "recompra_ajuste" && !String(fd.get("ss_observaciones") || "").trim()) {
+      toast.error("Describa el ajuste del logo", { description: "Escriba en Observaciones qué se debe ajustar para que Diseño lo reciba." });
       setIsSubmitting(false);
       return;
     }
@@ -2588,7 +2618,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
 
     [
       "ventas:ss:lines","ventas:ss:abono","ventas:ss:estadoPago",
-      "ventas:ss:isRecompra","ventas:ss:recompraMismoLogo","ventas:ss:recompraLogoUrl","ventas:ss:clientName","ventas:ss:noLogo","ventas:ss:needsLogoAdjustment",
+      "ventas:ss:isRecompra","ventas:ss:recompraMismoLogo","ventas:ss:logoMode","ventas:ss:recompraLogoUrl","ventas:ss:clientName","ventas:ss:noLogo","ventas:ss:needsLogoAdjustment",
       "ventas:ss:cobroLogo","ventas:ss:costoLogo",
       "ventas:ss:fields",
     ].forEach(clearFormDraft);
@@ -2659,7 +2689,7 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
               }
 
               if (data.abono) setSsAbono(String(data.abono));
-              if (data.es_recompra) setSsIsRecompra(true);
+              if (data.es_recompra) setSsLogoMode("recompra_igual");
               if (data.observaciones) {
                 const obs = form.querySelector('[name="ss_observaciones"]') as HTMLTextAreaElement;
                 if (obs) obs.value = data.observaciones;
@@ -2863,19 +2893,12 @@ function SweatspotMayorForm({ onReset }: { onReset: () => void }) {
             <legend className="text-sm font-semibold text-foreground mb-2">Opciones adicionales</legend>
             <div className="grid gap-6 sm:grid-cols-2 max-w-xl">
               <div className="flex items-center justify-between rounded-md border border-input p-3">
-                <Label htmlFor="ss_recompra" className="cursor-pointer">Recompra</Label>
-                <Switch id="ss_recompra" checked={ssIsRecompra} onCheckedChange={setSsIsRecompra} />
-              </div>
-              <div className="flex items-center justify-between rounded-md border border-input p-3">
-                <Label htmlFor="ss_noLogo" className="cursor-pointer">No requiere logo</Label>
-                <Switch id="ss_noLogo" checked={ssNoLogo} onCheckedChange={setSsNoLogo} />
-              </div>
-              <div className="flex items-center justify-between rounded-md border border-input p-3">
                 <Label htmlFor="ss_cobroLogo" className="cursor-pointer">Cobrar logo</Label>
                 <Switch id="ss_cobroLogo" checked={ssCobroLogo} onCheckedChange={setSsCobroLogo} />
               </div>
             </div>
-            {ssIsRecompra && !ssNoLogo && (
+            <LogoModeSelector value={ssLogoMode} onChange={setSsLogoMode} previousBuyer={ssPrevBuyer} />
+            {false && (
               <div className="space-y-2 rounded-md border border-primary/40 bg-primary/5 p-3 max-w-md">
                 <Label className="text-sm font-semibold">¿El cliente utilizará el mismo logo?</Label>
                 <div className="flex gap-2">
