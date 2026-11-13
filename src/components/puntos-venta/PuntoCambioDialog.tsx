@@ -173,6 +173,7 @@ export function PuntoCambioDialog({ sale, locationId, items, onClose }: Props) {
                   <SelectItem value="efectivo">Efectivo</SelectItem>
                   <SelectItem value="tarjeta">Tarjeta / Datáfono</SelectItem>
                   <SelectItem value="nequi">Nequi</SelectItem>
+                  <SelectItem value="rappi">Rappi</SelectItem>
                   <SelectItem value="transferencia">Transferencia</SelectItem>
                 </SelectContent>
               </Select>

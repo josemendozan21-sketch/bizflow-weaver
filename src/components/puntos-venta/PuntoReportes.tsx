@@ -68,6 +68,7 @@ export function PuntoReportes({ sales, movements, products, locationId, location
       efectivo,
       tarjeta: byMethod("tarjeta"),
       nequi: byMethod("nequi"),
+      rappi: byMethod("rappi"),
       otros: byMethod("transferencia") + byMethod("otro"),
       countToday: todaySales.length,
       cash,
@@ -117,6 +118,7 @@ export function PuntoReportes({ sales, movements, products, locationId, location
             <div><span className="text-muted-foreground">Efectivo:</span> <span className="font-bold">${totals.efectivo.toLocaleString()}</span></div>
             <div><span className="text-muted-foreground">Tarjeta:</span> <span className="font-bold">${totals.tarjeta.toLocaleString()}</span></div>
             <div><span className="text-muted-foreground">Nequi:</span> <span className="font-bold">${totals.nequi.toLocaleString()}</span></div>
+            <div><span className="text-muted-foreground">Rappi:</span> <span className="font-bold">${totals.rappi.toLocaleString()}</span></div>
             <div><span className="text-muted-foreground">Transf./Otro:</span> <span className="font-bold">${totals.otros.toLocaleString()}</span></div>
           </div>
         </CardContent>

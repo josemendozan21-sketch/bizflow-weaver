@@ -34,6 +34,7 @@ const PAYMENT_LABEL: Record<string, string> = {
   bancolombia: "Bancolombia",
   davivienda: "Davivienda",
   link_pago: "Link de pago",
+  rappi: "Rappi",
   transferencia: "Transferencia",
   otro: "Otro",
 };
@@ -910,6 +911,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
                 <SelectItem value="bancolombia">Bancolombia</SelectItem>
                 <SelectItem value="davivienda">Davivienda</SelectItem>
                 <SelectItem value="link_pago">Link de pago</SelectItem>
+                <SelectItem value="rappi">Rappi</SelectItem>
                 <SelectItem value="transferencia">Transferencia</SelectItem>
                 <SelectItem value="otro">Otro</SelectItem>
               </SelectContent>
@@ -930,6 +932,7 @@ export function PuntoVentaPOS({ locationId, products }: Props) {
                 <SelectItem value="bancolombia">Bancolombia</SelectItem>
                 <SelectItem value="davivienda">Davivienda</SelectItem>
                 <SelectItem value="link_pago">Link de pago</SelectItem>
+                <SelectItem value="rappi">Rappi</SelectItem>
                 <SelectItem value="transferencia">Transferencia</SelectItem>
                 <SelectItem value="otro">Otro</SelectItem>
                       </SelectContent>

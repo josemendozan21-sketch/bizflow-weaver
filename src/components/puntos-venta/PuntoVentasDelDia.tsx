@@ -378,6 +378,7 @@ export function PuntoVentasDelDia({ sales, location, locationId }: Props) {
                   <SelectItem value="efectivo">Efectivo</SelectItem>
                   <SelectItem value="tarjeta">Tarjeta / Datáfono</SelectItem>
                   <SelectItem value="nequi">Nequi</SelectItem>
+                  <SelectItem value="rappi">Rappi</SelectItem>
                   <SelectItem value="transferencia">Transferencia</SelectItem>
                   <SelectItem value="factura">Factura DIAN</SelectItem>
                   <SelectItem value="otro">Otro</SelectItem>

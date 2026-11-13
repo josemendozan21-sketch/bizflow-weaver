@@ -236,7 +236,7 @@ export const saleAmountFor = (s: SaleLike, method: string) =>
 
 const PAY_LABEL: Record<string, string> = {
   efectivo: "Efectivo", tarjeta: "Tarjeta", nequi: "Nequi", bancolombia: "Bancolombia",
-  davivienda: "Davivienda", link_pago: "Link de pago", transferencia: "Transferencia", otro: "Otro",
+  davivienda: "Davivienda", link_pago: "Link de pago", rappi: "Rappi", transferencia: "Transferencia", otro: "Otro",
 };
 /** Texto legible: "Nequi $80.000 + Efectivo $61.000" o "Tarjeta". */
 export function formatSalePayment(s: SaleLike): string {
