@@ -10,3 +10,4 @@
 - POS garment exchanges go only through register_pos_exchange (one atomic call creates the exchange sale with negative returned lines, stock movements and the pos_sale_exchanges link) so cash and reports only count the real difference and the original sale is never deleted.
 - Wholesale (mayor) orders never reserve producto_terminado: create_order_requirement points them to cuerpos_referencias, because wholesale is always produced from bodies; reservations are consumed on dispatch by trg_consume_reservations_on_dispatch.
 - Wholesale order forms require an explicit logo mode (src/lib/logoMode.ts: nuevo / recompra tal cual / recompra con ajuste / sin logo); only nuevo and con ajuste create a Diseño request, so repeat orders aren't blocked by mistake.
+- Internal tables and shared work-file buckets gate access with public.is_staff(auth.uid()) (user has any row in user_roles) instead of USING (true), so self-registered accounts without an assigned role see nothing.
