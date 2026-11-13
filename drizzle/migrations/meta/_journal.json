@@ -225,6 +225,13 @@
       "when": 1794238734365,
       "tag": "0031_pos_exchange_policy_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794599755696,
+      "tag": "0032_restrict_rls_to_staff",
+      "breakpoints": true
     }
   ]
 }
