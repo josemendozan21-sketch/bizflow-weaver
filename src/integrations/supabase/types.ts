@@ -5495,6 +5495,7 @@ export type Database = {
       }
       is_pos_for_feria: { Args: { _feria_id: string }; Returns: boolean }
       is_pos_for_location: { Args: { _location_id: string }; Returns: boolean }
+      is_staff: { Args: { _user_id: string }; Returns: boolean }
       manage_commission_payment: { Args: { _payload: Json }; Returns: string }
       move_to_dlq: {
         Args: {
