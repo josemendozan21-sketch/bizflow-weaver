@@ -18,6 +18,7 @@ const PAYMENT_LABEL: Record<string, string> = {
   bancolombia: "Bancolombia",
   davivienda: "Davivienda",
   link_pago: "Link de pago",
+  rappi: "Rappi",
   transferencia: "Transferencia",
   otro: "Otro",
 };

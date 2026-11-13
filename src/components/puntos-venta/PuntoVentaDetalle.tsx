@@ -177,6 +177,7 @@ export function PuntoVentaDetalle({ locationId, products }: Props) {
               <SelectItem value="bancolombia">Bancolombia</SelectItem>
               <SelectItem value="davivienda">Davivienda</SelectItem>
               <SelectItem value="link_pago">Link de pago</SelectItem>
+              <SelectItem value="rappi">Rappi</SelectItem>
               <SelectItem value="transferencia">Transferencia</SelectItem>
               <SelectItem value="otro">Otro</SelectItem>
             </SelectContent>
