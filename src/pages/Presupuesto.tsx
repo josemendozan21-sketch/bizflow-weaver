@@ -64,14 +64,18 @@ export default function Presupuesto() {
   }, [accounts]);
 
   const totals = useMemo(() => {
-    let projected = 0;
-    let real = 0;
+    const income = { projected: 0, real: 0 };
+    const expense = { projected: 0, real: 0 };
     accounts.forEach((a) => {
-      projected += get(a.id, month, "presupuesto");
-      real += get(a.id, month, "real");
+      const t = a.kind === "ingreso" ? income : expense;
+      t.projected += get(a.id, month, "presupuesto");
+      t.real += get(a.id, month, "real");
     });
-    return { projected, real };
+    return { income, expense };
   }, [accounts, amountMap, month]);
+
+  const incomeAccounts = useMemo(() => accounts.filter((a) => a.kind === "ingreso"), [accounts]);
+  const expenseAccounts = useMemo(() => accounts.filter((a) => a.kind !== "ingreso"), [accounts]);
 
   const navigate = (delta: number) => {
     let m = month + delta;
@@ -118,9 +122,14 @@ export default function Presupuesto() {
 
         <TabsContent value="mes" className="space-y-6 mt-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <KpiCard title="Presupuestado" value={totals.projected} />
-            <KpiCard title="Ejecutado (real)" value={totals.real} />
-            <KpiCard title="Diferencia" value={totals.projected - totals.real} />
+            <KpiCard title="Ingresos presupuestados" value={totals.income.projected} />
+            <KpiCard title="Ingresos reales" value={totals.income.real} />
+            <KpiCard title="Diferencia ingresos" value={totals.income.projected - totals.income.real} />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <KpiCard title="Costos y gastos presupuestados" value={totals.expense.projected} />
+            <KpiCard title="Costos y gastos reales" value={totals.expense.real} />
+            <KpiCard title="Diferencia costos y gastos" value={totals.expense.projected - totals.expense.real} />
           </div>
 
           {groups.map((g) => (
@@ -139,7 +148,10 @@ export default function Presupuesto() {
         </TabsContent>
 
         <TabsContent value="anual" className="mt-4">
-          <AnnualMatrix year={year} accounts={accounts} get={get} />
+          <div className="space-y-6">
+            <AnnualMatrix title={`Ingresos reales ${year}`} totalLabel="Total ingresos" accounts={incomeAccounts} get={get} />
+            <AnnualMatrix title={`Costos y gastos reales ${year}`} totalLabel="Total costos y gastos" accounts={expenseAccounts} get={get} />
+          </div>
         </TabsContent>
 
         <TabsContent value="cuentas" className="mt-4">
@@ -176,10 +188,12 @@ function KpiCard({ title, value }: { title: string; value: number }) {
 function AmountCell({
   value,
   editable,
+  allowNegative = false,
   onSave,
 }: {
   value: number;
   editable: boolean;
+  allowNegative?: boolean;
   onSave: (v: number) => void;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
@@ -193,7 +207,7 @@ function AmountCell({
         if (draft === null) return;
         const n = parseFloat(draft.replace(/[^0-9.-]/g, ""));
         setDraft(null);
-        const parsed = Number.isFinite(n) ? Math.abs(n) : 0;
+        const parsed = Number.isFinite(n) ? (allowNegative ? n : Math.abs(n)) : 0;
         if (parsed !== value) onSave(parsed);
       }}
       placeholder="0"
@@ -246,13 +260,13 @@ function GroupTable({
                 <TableRow key={a.id} className={!a.active ? "opacity-50" : undefined}>
                   <TableCell className="text-sm">{a.name}</TableCell>
                   <TableCell className="text-right">
-                    <AmountCell value={p} editable={canManage} onSave={(v) => onSave(a.id, "presupuesto", v)} />
+                    <AmountCell value={p} editable={canManage} allowNegative={a.kind === "ingreso"} onSave={(v) => onSave(a.id, "presupuesto", v)} />
                   </TableCell>
                   <TableCell className="text-right">
-                    <AmountCell value={r} editable={canManage} onSave={(v) => onSave(a.id, "real", v)} />
+                    <AmountCell value={r} editable={canManage} allowNegative={a.kind === "ingreso"} onSave={(v) => onSave(a.id, "real", v)} />
                   </TableCell>
                   <TableCell className="text-right text-sm">{formatCOP(p - r)}</TableCell>
-                  <TableCell className="text-right text-sm">{p > 0 ? `${Math.round((r / p) * 100)}%` : "—"}</TableCell>
+                  <TableCell className="text-right text-sm">{p !== 0 ? `${Math.round((r / p) * 100)}%` : "—"}</TableCell>
                 </TableRow>
               );
             })}
@@ -271,11 +285,13 @@ function GroupTable({
 }
 
 function AnnualMatrix({
-  year,
+  title,
+  totalLabel,
   accounts,
   get,
 }: {
-  year: number;
+  title: string;
+  totalLabel: string;
   accounts: AccountingAccount[];
   get: (id: string, m: number, kind: "real" | "presupuesto") => number;
 }) {
@@ -285,7 +301,7 @@ function AnnualMatrix({
 
   return (
     <Card>
-      <CardHeader className="pb-2"><CardTitle className="text-base">Ejecución real {year}</CardTitle></CardHeader>
+      <CardHeader className="pb-2"><CardTitle className="text-base">{title}</CardTitle></CardHeader>
       <CardContent className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -312,7 +328,7 @@ function AnnualMatrix({
               );
             })}
             <TableRow className="font-semibold bg-muted/40">
-              <TableCell>Total general</TableCell>
+              <TableCell>{totalLabel}</TableCell>
               {monthTotals.map((v, i) => (
                 <TableCell key={i} className="text-right text-xs whitespace-nowrap">{formatCOP(v)}</TableCell>
               ))}

@@ -58,17 +58,25 @@ export function exportAccountingYearXlsx(
     .forEach((a) => byKey.set(`${a.account_id}|${a.month}`, Number(a.amount || 0)));
 
   const data: (string | number)[][] = [["Concepto", ...MONTHS, "Total"]];
-  const monthTotals = new Array(12).fill(0);
+  const sections: { label: string; accounts: AccountingAccount[] }[] = [
+    { label: "Total ingresos", accounts: accounts.filter((a) => a.kind === "ingreso") },
+    { label: "Total costos y gastos", accounts: accounts.filter((a) => a.kind !== "ingreso") },
+  ];
 
-  const groups = Array.from(new Set(accounts.map((a) => a.group_code))).sort();
-  for (const g of groups) {
-    for (const acc of accounts.filter((a) => a.group_code === g)) {
-      const vals = MONTHS.map((_, i) => byKey.get(`${acc.id}|${i + 1}`) ?? 0);
-      vals.forEach((v, i) => (monthTotals[i] += v));
-      data.push([`${acc.group_code}. ${acc.name}`, ...vals, vals.reduce((s, v) => s + v, 0)]);
+  for (const section of sections) {
+    if (section.accounts.length === 0) continue;
+    const monthTotals = new Array(12).fill(0);
+    const groups = Array.from(new Set(section.accounts.map((a) => a.group_code))).sort();
+    for (const g of groups) {
+      for (const acc of section.accounts.filter((a) => a.group_code === g)) {
+        const vals = MONTHS.map((_, i) => byKey.get(`${acc.id}|${i + 1}`) ?? 0);
+        vals.forEach((v, i) => (monthTotals[i] += v));
+        data.push([`${acc.group_code}. ${acc.name}`, ...vals, vals.reduce((s, v) => s + v, 0)]);
+      }
     }
+    data.push([section.label, ...monthTotals, monthTotals.reduce((s, v) => s + v, 0)]);
+    data.push([]);
   }
-  data.push(["Total general", ...monthTotals, monthTotals.reduce((s, v) => s + v, 0)]);
 
   const ws = XLSX.utils.aoa_to_sheet(data);
   ws["!cols"] = [{ wch: 42 }, ...MONTHS.map(() => ({ wch: 16 })), { wch: 18 }];

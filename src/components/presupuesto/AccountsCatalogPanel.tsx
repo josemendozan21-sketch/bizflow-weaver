@@ -86,7 +86,7 @@ export function AccountsCatalogPanel({ canManage }: { canManage: boolean }) {
                 <TableCell className="text-sm text-muted-foreground">{GROUP_LABELS[a.group_code] ?? a.group_code}</TableCell>
                 <TableCell className="text-sm font-medium">{a.name}</TableCell>
                 <TableCell>
-                  <Badge variant={a.kind === "costo" ? "secondary" : "outline"}>{a.kind}</Badge>
+                  <Badge variant={a.kind === "costo" ? "secondary" : a.kind === "ingreso" ? "default" : "outline"}>{a.kind}</Badge>
                 </TableCell>
                 <TableCell>
                   <Badge variant={a.active ? "default" : "destructive"}>{a.active ? "Activa" : "Inactiva"}</Badge>
@@ -113,7 +113,7 @@ export function AccountsCatalogPanel({ canManage }: { canManage: boolean }) {
             <DialogTitle>{editing ? "Editar cuenta" : "Nueva cuenta contable"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <Select value={form.group_code} onValueChange={(v) => setForm({ ...form, group_code: v, kind: ["61", "72", "73"].includes(v) ? "costo" : "gasto" })}>
+            <Select value={form.group_code} onValueChange={(v) => setForm({ ...form, group_code: v, kind: v.startsWith("4") ? "ingreso" : ["61", "72", "73"].includes(v) ? "costo" : "gasto" })}>
               <SelectTrigger><SelectValue placeholder="Grupo contable" /></SelectTrigger>
               <SelectContent>
                 {GROUPS.map((g) => (
@@ -131,6 +131,7 @@ export function AccountsCatalogPanel({ canManage }: { canManage: boolean }) {
               <SelectContent>
                 <SelectItem value="gasto">Gasto</SelectItem>
                 <SelectItem value="costo">Costo</SelectItem>
+                <SelectItem value="ingreso">Ingreso</SelectItem>
               </SelectContent>
             </Select>
             {editing && (

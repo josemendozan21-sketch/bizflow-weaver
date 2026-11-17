@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-export type AccountKind = "costo" | "gasto";
+export type AccountKind = "costo" | "gasto" | "ingreso";
 export type AmountKind = "real" | "presupuesto";
 
 export interface AccountingAccount {
@@ -24,6 +24,8 @@ export interface AccountingAmount {
 }
 
 export const GROUP_LABELS: Record<string, string> = {
+  "41": "41. Ingresos operacionales",
+  "42": "42. Ingresos no operacionales",
   "51": "51. Gastos de administración",
   "52": "52. Gastos de ventas",
   "53": "53. Gastos no operacionales",
@@ -36,6 +38,11 @@ export const MONTHS = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ];
+
+/** Income accounts (group 4x); devoluciones/descuentos are stored as negative amounts. */
+export function isIncomeAccount(a: Pick<AccountingAccount, "kind">) {
+  return a.kind === "ingreso";
+}
 
 export function canManageBudget(role?: string | null) {
   return role === "admin" || role === "contabilidad";
