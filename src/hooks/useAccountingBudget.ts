@@ -12,6 +12,7 @@ export interface AccountingAccount {
   kind: AccountKind;
   active: boolean;
   sort_order: number;
+  pos_location_id?: string | null;
 }
 
 export interface AccountingAmount {
@@ -48,12 +49,17 @@ export function canManageBudget(role?: string | null) {
   return role === "admin" || role === "contabilidad";
 }
 
-export function useAccountingAccounts(includeInactive = false) {
+/** Budget scope: null = company-wide accounts; otherwise a POS location id. */
+export type BudgetScope = string | null;
+export const POS92_LOCATION_ID = "73050f3b-1c8e-44f1-9d0d-94772216c100";
+
+export function useAccountingAccounts(includeInactive = false, scope: BudgetScope = null) {
   return useQuery({
-    queryKey: ["accounting_accounts", includeInactive],
+    queryKey: ["accounting_accounts", includeInactive, scope],
     queryFn: async () => {
       let q = supabase.from("accounting_accounts" as any).select("*");
       if (!includeInactive) q = q.eq("active", true);
+      q = scope ? q.eq("pos_location_id", scope) : q.is("pos_location_id", null);
       const { data, error } = await q
         .order("group_code", { ascending: true })
         .order("sort_order", { ascending: true });
@@ -138,6 +144,7 @@ export function useSaveAccount() {
       name: string;
       kind: AccountKind;
       active?: boolean;
+      pos_location_id?: string | null;
     }) => {
       if (vars.id) {
         const { error } = await supabase
@@ -155,6 +162,7 @@ export function useSaveAccount() {
           group_code: vars.group_code,
           name: vars.name,
           kind: vars.kind,
+          pos_location_id: vars.pos_location_id ?? null,
         });
         if (error) throw error;
       }
@@ -173,6 +181,34 @@ export function useDeleteAccount() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["accounting_accounts"] });
       qc.invalidateQueries({ queryKey: ["accounting_amounts"] });
+    },
+  });
+}
+
+/** Monthly sales registered in the POS cash register (reference only). */
+export function usePosMonthlySales(locationId: BudgetScope, year: number) {
+  return useQuery({
+    enabled: !!locationId,
+    queryKey: ["pos_monthly_sales", locationId, year],
+    queryFn: async () => {
+      const totals = new Array(12).fill(0);
+      const pageSize = 1000;
+      for (let from = 0; ; from += pageSize) {
+        const { data, error } = await supabase
+          .from("pos_sales")
+          .select("sale_date,total_amount")
+          .eq("location_id", locationId!)
+          .gte("sale_date", `${year}-01-01`)
+          .lte("sale_date", `${year}-12-31`)
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        (data ?? []).forEach((r: any) => {
+          const m = Number(String(r.sale_date).slice(5, 7));
+          if (m >= 1 && m <= 12) totals[m - 1] += Number(r.total_amount || 0);
+        });
+        if (!data || data.length < pageSize) break;
+      }
+      return totals as number[];
     },
   });
 }

@@ -22,6 +22,7 @@ export type Database = {
           id: string
           kind: string
           name: string
+          pos_location_id: string | null
           sort_order: number
           updated_at: string
         }
@@ -32,6 +33,7 @@ export type Database = {
           id?: string
           kind?: string
           name: string
+          pos_location_id?: string | null
           sort_order?: number
           updated_at?: string
         }
@@ -42,10 +44,19 @@ export type Database = {
           id?: string
           kind?: string
           name?: string
+          pos_location_id?: string | null
           sort_order?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "accounting_accounts_pos_location_id_fkey"
+            columns: ["pos_location_id"]
+            isOneToOne: false
+            referencedRelation: "pos_locations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       accounting_monthly_amounts: {
         Row: {

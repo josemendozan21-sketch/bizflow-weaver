@@ -23,13 +23,15 @@ export function AccountingUploadDialog({
   onOpenChange,
   year,
   month,
+  scope,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   year: number;
   month: number;
+  scope?: string | null;
 }) {
-  const { data: accounts = [] } = useAccountingAccounts(true);
+  const { data: accounts = [] } = useAccountingAccounts(true, scope ?? null);
   const bulk = useBulkSaveAmounts();
   const fileRef = useRef<HTMLInputElement>(null);
   const [rows, setRows] = useState<ParsedAccountRow[] | null>(null);

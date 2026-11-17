@@ -19,8 +19,8 @@ import {
 
 const GROUPS = Object.keys(GROUP_LABELS);
 
-export function AccountsCatalogPanel({ canManage }: { canManage: boolean }) {
-  const { data: accounts = [] } = useAccountingAccounts(true);
+export function AccountsCatalogPanel({ canManage, scope = null }: { canManage: boolean; scope?: string | null }) {
+  const { data: accounts = [] } = useAccountingAccounts(true, scope);
   const save = useSaveAccount();
   const del = useDeleteAccount();
   const [open, setOpen] = useState(false);
@@ -41,7 +41,7 @@ export function AccountsCatalogPanel({ canManage }: { canManage: boolean }) {
   const submit = async () => {
     if (!form.name.trim()) return toast.error("Escribe el nombre de la cuenta");
     try {
-      await save.mutateAsync({ id: editing?.id, ...form, name: form.name.trim() });
+      await save.mutateAsync({ id: editing?.id, ...form, name: form.name.trim(), pos_location_id: scope });
       toast.success(editing ? "Cuenta actualizada" : "Cuenta creada");
       setOpen(false);
     } catch (e: any) {

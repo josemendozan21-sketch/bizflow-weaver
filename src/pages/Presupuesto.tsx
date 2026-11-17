@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -21,6 +22,8 @@ import {
   useAccountingAccounts,
   useAccountingAmounts,
   useSaveAmount,
+  usePosMonthlySales,
+  POS92_LOCATION_ID,
   type AccountingAccount,
 } from "@/hooks/useAccountingBudget";
 import { exportAccountingMonthXlsx, exportAccountingYearXlsx } from "@/lib/accountingExcel";
@@ -42,7 +45,10 @@ export default function Presupuesto() {
   const [month, setMonth] = useState(today.getMonth() + 1);
   const [uploadOpen, setUploadOpen] = useState(false);
 
-  const { data: accounts = [] } = useAccountingAccounts(true);
+  const [scope, setScope] = useState<string | null>(null);
+  const isPos = scope !== null;
+  const { data: accounts = [] } = useAccountingAccounts(true, scope);
+  const { data: posSales } = usePosMonthlySales(scope, year);
   const { data: amounts = [] } = useAccountingAmounts(year);
   const saveAmount = useSaveAmount();
 
@@ -89,10 +95,17 @@ export default function Presupuesto() {
     <div className="p-6 space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Presupuesto por cuenta contable</h1>
+          <h1 className="text-2xl font-bold">Presupuesto por cuenta contable{isPos ? " — Punto 92" : ""}</h1>
           <p className="text-sm text-muted-foreground">Alineado con el plan de cuentas de W.O.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Select value={scope ?? "general"} onValueChange={(v) => setScope(v === "general" ? null : v)}>
+            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="general">General (empresa)</SelectItem>
+              <SelectItem value={POS92_LOCATION_ID}>Punto 92</SelectItem>
+            </SelectContent>
+          </Select>
           <Button variant="outline" size="icon" onClick={() => navigate(-1)}><ChevronLeft className="h-4 w-4" /></Button>
           <Badge variant="secondary" className="text-sm px-3 py-1">{MONTHS[month - 1]} {year}</Badge>
           <Button variant="outline" size="icon" onClick={() => navigate(1)}><ChevronRight className="h-4 w-4" /></Button>
@@ -131,6 +144,11 @@ export default function Presupuesto() {
             <KpiCard title="Costos y gastos reales" value={totals.expense.real} />
             <KpiCard title="Diferencia costos y gastos" value={totals.expense.projected - totals.expense.real} />
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <KpiCard title="Resultado presupuestado" value={totals.income.projected - totals.expense.projected} />
+            <KpiCard title="Resultado real" value={totals.income.real - totals.expense.real} />
+            {isPos && <KpiCard title="Ventas registradas en caja (referencia)" value={posSales?.[month - 1] ?? 0} />}
+          </div>
 
           {groups.map((g) => (
             <GroupTable
@@ -155,7 +173,7 @@ export default function Presupuesto() {
         </TabsContent>
 
         <TabsContent value="cuentas" className="mt-4">
-          <AccountsCatalogPanel canManage={canManage} />
+          <AccountsCatalogPanel canManage={canManage} scope={scope} />
         </TabsContent>
 
         <TabsContent value="bancos" className="mt-4">
@@ -171,7 +189,7 @@ export default function Presupuesto() {
         </TabsContent>
       </Tabs>
 
-      <AccountingUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} year={year} month={month} />
+      <AccountingUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} year={year} month={month} scope={scope} />
     </div>
   );
 }

@@ -232,6 +232,13 @@
       "when": 1794599755696,
       "tag": "0032_restrict_rls_to_staff",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1794929303632,
+      "tag": "0033_accounting_accounts_pos_scope",
+      "breakpoints": true
     }
   ]
 }
