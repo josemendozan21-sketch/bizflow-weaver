@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,7 +46,15 @@ export default function Presupuesto() {
   const [month, setMonth] = useState(today.getMonth() + 1);
   const [uploadOpen, setUploadOpen] = useState(false);
 
-  const [scope, setScope] = useState<string | null>(null);
+  // El ámbito (General / Punto 92) vive en la URL para poder compartir el enlace directo.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const scope = searchParams.get("ambito") === "pos92" ? POS92_LOCATION_ID : null;
+  const setScope = (next: string | null) => {
+    const p = new URLSearchParams(searchParams);
+    if (next) p.set("ambito", "pos92");
+    else p.delete("ambito");
+    setSearchParams(p, { replace: true });
+  };
   const isPos = scope !== null;
   const { data: accounts = [] } = useAccountingAccounts(true, scope);
   const { data: posSales } = usePosMonthlySales(scope, year);
