@@ -27,6 +27,16 @@ interface UnroutedOrder {
   silicone_color: string | null;
   observations: string | null;
   created_at: string;
+  submission_id: string | null;
+  /** Estado de la solicitud de Diseño que aún bloquea la entrada a Producción. */
+  logo_pending: string | null;
+}
+
+/** Quién debe actuar según el estado del logo (mismo bloqueo que aplica el sistema). */
+export function logoPendingLabel(status: string): string {
+  if (status === "pendiente_diseno") return "Logo pendiente en Diseño";
+  if (status === "ajustes_solicitados") return "Diseño está ajustando el logo";
+  return "Esperando que la asesora apruebe el logo";
 }
 
 const daysSince = (iso: string) =>
@@ -42,7 +52,7 @@ export default function UnroutedOrdersPanel({ readOnly = false }: { readOnly?: b
     queryFn: async (): Promise<UnroutedOrder[]> => {
       const { data: pending, error } = await supabase
         .from("orders")
-        .select("id, order_code, brand, client_name, product, quantity, advisor_name, advisor_id, delivery_date, logo_url, ink_color, gel_color, silicone_color, observations, created_at")
+        .select("id, order_code, brand, client_name, product, quantity, advisor_name, advisor_id, delivery_date, logo_url, ink_color, gel_color, silicone_color, observations, created_at, submission_id")
         .in("production_status", ["pendiente", "aprobado"])
         .is("inventory_archived_at", null)
         .order("created_at", { ascending: true });
@@ -57,6 +67,37 @@ export default function UnroutedOrdersPanel({ readOnly = false }: { readOnly?: b
       if (poErr) throw poErr;
       const routed = new Set((pos ?? []).map((p: { order_id: string }) => p.order_id));
       const unrouted = list.filter((o) => !routed.has(o.id));
+
+      // Logo sin aprobar (del pedido o de otra línea del mismo envío): el sistema
+      // no deja crear la orden de producción, así que se avisa antes de intentar.
+      const subs = Array.from(new Set(unrouted.map((o) => o.submission_id).filter(Boolean) as string[]));
+      const groupOf = new Map<string, string>(); // order_id -> clave de grupo
+      unrouted.forEach((o) => groupOf.set(o.id, o.submission_id || o.id));
+      for (let i = 0; i < subs.length; i += 100) {
+        const { data: sib } = await supabase
+          .from("orders")
+          .select("id, submission_id")
+          .in("submission_id", subs.slice(i, i + 100));
+        (sib ?? []).forEach((r: { id: string; submission_id: string | null }) => {
+          if (r.submission_id) groupOf.set(r.id, r.submission_id);
+        });
+      }
+      const pendingByGroup = new Map<string, string>();
+      const ids = Array.from(groupOf.keys());
+      for (let i = 0; i < ids.length; i += 150) {
+        const { data: lrs } = await supabase
+          .from("logo_requests")
+          .select("order_id, status")
+          .in("order_id", ids.slice(i, i + 150))
+          .not("status", "in", "(aprobado,finalizado)");
+        (lrs ?? []).forEach((lr: { order_id: string | null; status: string }) => {
+          const g = lr.order_id ? groupOf.get(lr.order_id) : undefined;
+          if (g) pendingByGroup.set(g, lr.status);
+        });
+      }
+      unrouted.forEach((o) => {
+        o.logo_pending = pendingByGroup.get(o.submission_id || o.id) ?? null;
+      });
 
       // Aviso a Inventarios por cada pedido con más de 2 días sin rutear (una sola vez por pedido)
       if (!readOnly) {
@@ -162,6 +203,7 @@ export default function UnroutedOrdersPanel({ readOnly = false }: { readOnly?: b
         )}
         {filtered.map((o) => {
           const age = daysSince(o.created_at);
+          const blocked = Boolean(o.logo_pending);
           const late = age > 5;
           const warn = age >= 2 && age <= 5;
           return (
@@ -184,14 +226,29 @@ export default function UnroutedOrdersPanel({ readOnly = false }: { readOnly?: b
                   >
                     Esperando a Inventarios · {age === 0 ? "hoy" : `${age} día(s)`}
                   </Badge>
+                  {blocked && (
+                    <Badge variant="outline" className="text-[11px] border-amber-500 text-amber-600">
+                      {logoPendingLabel(o.logo_pending!)}
+                    </Badge>
+                  )}
                 </div>
 
                 <p className="text-xs text-muted-foreground">
                   {o.quantity} uds · {o.product} · Asesor: {o.advisor_name || "—"}
                 </p>
+                {blocked && (
+                  <p className="text-xs text-amber-600">
+                    No se puede enviar a producción hasta que Diseño y la asesora aprueben el logo.
+                  </p>
+                )}
               </div>
               {!readOnly && (
-                <Button size="sm" disabled={busy === o.id} onClick={() => route(o)}>
+                <Button
+                  size="sm"
+                  disabled={busy === o.id || blocked}
+                  title={blocked ? "El logo aún no está aprobado" : undefined}
+                  onClick={() => route(o)}
+                >
                   <Send className="h-4 w-4 mr-1" />
                   {busy === o.id ? "Enviando…" : "Enviar a producción"}
                 </Button>
