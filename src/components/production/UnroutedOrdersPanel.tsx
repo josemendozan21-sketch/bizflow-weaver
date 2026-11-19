@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import OrderCodeBadge from "@/components/common/OrderCodeBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { requestProductionForOrder } from "@/lib/orderFlow";
+import { fetchLogoPendingByOrder, logoPendingLabel, LOGO_BLOCK_MESSAGE } from "@/lib/logoPending";
 import { matchesQuery } from "@/lib/search";
 
 interface UnroutedOrder {
@@ -32,12 +33,6 @@ interface UnroutedOrder {
   logo_pending: string | null;
 }
 
-/** Quién debe actuar según el estado del logo (mismo bloqueo que aplica el sistema). */
-export function logoPendingLabel(status: string): string {
-  if (status === "pendiente_diseno") return "Logo pendiente en Diseño";
-  if (status === "ajustes_solicitados") return "Diseño está ajustando el logo";
-  return "Esperando que la asesora apruebe el logo";
-}
 
 const daysSince = (iso: string) =>
   Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
@@ -68,40 +63,16 @@ export default function UnroutedOrdersPanel({ readOnly = false }: { readOnly?: b
       const routed = new Set((pos ?? []).map((p: { order_id: string }) => p.order_id));
       const unrouted = list.filter((o) => !routed.has(o.id));
 
-      // Logo sin aprobar (del pedido o de otra línea del mismo envío): el sistema
-      // no deja crear la orden de producción, así que se avisa antes de intentar.
-      const subs = Array.from(new Set(unrouted.map((o) => o.submission_id).filter(Boolean) as string[]));
-      const groupOf = new Map<string, string>(); // order_id -> clave de grupo
-      unrouted.forEach((o) => groupOf.set(o.id, o.submission_id || o.id));
-      for (let i = 0; i < subs.length; i += 100) {
-        const { data: sib } = await supabase
-          .from("orders")
-          .select("id, submission_id")
-          .in("submission_id", subs.slice(i, i + 100));
-        (sib ?? []).forEach((r: { id: string; submission_id: string | null }) => {
-          if (r.submission_id) groupOf.set(r.id, r.submission_id);
-        });
-      }
-      const pendingByGroup = new Map<string, string>();
-      const ids = Array.from(groupOf.keys());
-      for (let i = 0; i < ids.length; i += 150) {
-        const { data: lrs } = await supabase
-          .from("logo_requests")
-          .select("order_id, status")
-          .in("order_id", ids.slice(i, i + 150))
-          .not("status", "in", "(aprobado,finalizado)");
-        (lrs ?? []).forEach((lr: { order_id: string | null; status: string }) => {
-          const g = lr.order_id ? groupOf.get(lr.order_id) : undefined;
-          if (g) pendingByGroup.set(g, lr.status);
-        });
-      }
+      // Logo sin aprobar (del pedido o de otra línea del mismo envío): se avisa antes de intentar.
+      const pendingByOrder = await fetchLogoPendingByOrder(unrouted.map((o) => o.id));
       unrouted.forEach((o) => {
-        o.logo_pending = pendingByGroup.get(o.submission_id || o.id) ?? null;
+        o.logo_pending = pendingByOrder.get(o.id) ?? null;
       });
 
       // Aviso a Inventarios por cada pedido con más de 2 días sin rutear (una sola vez por pedido)
       if (!readOnly) {
-        const late = unrouted.filter((o) => daysSince(o.created_at) > 2);
+        // Los bloqueados por logo no dependen de Inventarios: no se les avisa.
+        const late = unrouted.filter((o) => daysSince(o.created_at) > 2 && !o.logo_pending);
         if (late.length > 0) {
           const { data: already } = await supabase
             .from("notifications")
@@ -238,7 +209,7 @@ export default function UnroutedOrdersPanel({ readOnly = false }: { readOnly?: b
                 </p>
                 {blocked && (
                   <p className="text-xs text-amber-600">
-                    No se puede enviar a producción hasta que Diseño y la asesora aprueben el logo.
+                    {LOGO_BLOCK_MESSAGE}
                   </p>
                 )}
               </div>

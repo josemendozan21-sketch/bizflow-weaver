@@ -23,6 +23,7 @@ import { Inbox, Package, Truck, Paintbrush, Factory, Calendar, User as UserIcon,
 import { useInventory } from "@/hooks/useInventory";
 import { useAuth } from "@/contexts/AuthContext";
 import { ensureProductionOrder, requestProductionForOrder, reserveStockForOrder, type FlowOrder } from "@/lib/orderFlow";
+import { assertLogoApproved, fetchLogoPendingByOrder, logoPendingLabel, LOGO_BLOCK_MESSAGE } from "@/lib/logoPending";
 import { toast } from "sonner";
 import { formatDistanceToNow, format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -367,6 +368,13 @@ const WholesaleOrdersInbox = () => {
     },
     refetchInterval: 15_000,
   });
+  // Pedidos mayoristas con logo sin aprobar: no pueden pasar a Producción todavía.
+  const { data: logoPending = new Map<string, string>() } = useQuery({
+    queryKey: ["mayor-orders-logo-pending", orders.map((o) => o.id).join(",")],
+    enabled: orders.length > 0,
+    queryFn: () => fetchLogoPendingByOrder(orders.map((o) => o.id)),
+    refetchInterval: 60_000,
+  });
   const deliveredIds = orderStates.deliveredIds;
   const producedIds = orderStates.producedIds;
   const inProductionIds = orderStates.inProductionIds;
@@ -533,6 +541,19 @@ const WholesaleOrdersInbox = () => {
   const confirmDeliver = async () => {
     if (!delivering || !user) return;
     const { order, target } = delivering;
+
+    // Todo lo que no sea entregar un pedido al detal a Logística crea la orden de
+    // producción: si el logo no está aprobado, se frena aquí antes de mover inventario.
+    if (target !== "logistica") {
+      try {
+        const { data: existingPo } = await supabase
+          .from("production_orders").select("id").eq("order_id", order.id).maybeSingle();
+        if (!existingPo) await assertLogoApproved(order.id);
+      } catch (e: any) {
+        toast.error(e.message);
+        return;
+      }
+    }
 
     if (order.brand === "sweatspot" && target === "estampacion") {
       const kit = buildSweatspotKit(order);
@@ -760,6 +781,10 @@ const WholesaleOrdersInbox = () => {
     // Sin logo no hay muestra de tamaño, pero sí de color de gel / escarcha.
     const sampleApproved = noLogo ? inkgelApproved : sizeApproved && inkgelApproved;
     const sampleBlocked = kind === "mayor" && !sampleApproved;
+    // Sin orden de producción y con logo sin aprobar: ninguna entrega puede crearla todavía.
+    const logoStatus = kind === "mayor" && !isInProduction ? logoPending.get(o.id) : undefined;
+    const logoBlocked = Boolean(logoStatus);
+    const logoTitle = logoBlocked ? LOGO_BLOCK_MESSAGE : undefined;
     const pendingApprovals = noLogo
       ? !inkgelApproved ? "color de gel/escarcha" : ""
       : [!sizeApproved ? "tamaño" : null, !inkgelApproved ? "tinta/gel" : null].filter(Boolean).join(" y ");
@@ -793,6 +818,11 @@ const WholesaleOrdersInbox = () => {
                     ? <Badge variant="destructive">Esperando ruteo · {age} días</Badge>
                     : <Badge variant="outline" className="border-amber-500 text-amber-600">Esperando ruteo · {age} días</Badge>;
                 })()}
+                {logoBlocked && (
+                  <Badge variant="outline" className="border-amber-500 text-amber-600">
+                    {logoPendingLabel(logoStatus!)}
+                  </Badge>
+                )}
                 {kind === "mayor" && !noLogo && o.sample_status && o.sample_status !== "muestra_aprobada" && (
                   <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800">
                     {SAMPLE_LABEL[o.sample_status] ?? o.sample_status}
@@ -854,6 +884,12 @@ const WholesaleOrdersInbox = () => {
             </div>
           )}
 
+          {!isDelivered && logoBlocked && (
+            <div className="text-xs rounded border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-2 text-amber-900 dark:text-amber-200">
+              <strong>{logoPendingLabel(logoStatus!)}.</strong> {LOGO_BLOCK_MESSAGE} No entregues cuerpos ni muestra todavía.
+            </div>
+          )}
+
           {!isDelivered && kind === "mayor" && !sampleApproved && (
             <div className="text-xs rounded border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-2 text-amber-900 dark:text-amber-200">
               Pendiente de aprobación del asesor: <strong>{pendingApprovals}</strong>. Solo puedes entregar hasta{" "}
@@ -881,21 +917,21 @@ const WholesaleOrdersInbox = () => {
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant={markableEnough ? "default" : "outline"} className="flex-1 min-w-[150px] gap-1.5"
                     onClick={() => openDeliver(o, "terminado")}
-                    disabled={!markable || sampleBlocked}
-                    title={sampleTitle ?? (markable ? `Termos SIN LOGO disponibles: ${markableStock}` : "Sin termos SIN LOGO que coincidan con color y tamaño")}>
+                    disabled={!markable || sampleBlocked || logoBlocked}
+                    title={logoTitle ?? sampleTitle ?? (markable ? `Termos SIN LOGO disponibles: ${markableStock}` : "Sin termos SIN LOGO que coincidan con color y tamaño")}>
                     <PackageCheck className="h-3.5 w-3.5" />
                     Entregar termos (marcar) {markable ? `(${markableStock})` : "(sin stock)"}
                   </Button>
                   <Button size="sm" variant={markableEnough ? "outline" : "default"} className="flex-1 min-w-[150px] gap-1.5"
-                    title={sampleTitle ?? "Enviar el kit a Estampación"}
-                    disabled={sampleBlocked}
+                    title={logoTitle ?? sampleTitle ?? "Enviar el kit a Estampación"}
+                    disabled={sampleBlocked || logoBlocked}
                     onClick={() => openDeliver(o, "estampacion")}>
                     <Paintbrush className="h-3.5 w-3.5" /> Salir kit
                   </Button>
                   {sampleBlocked && (
                     <Button size="sm" variant="secondary" className="flex-1 min-w-[150px] gap-1.5"
-                      disabled={!markable}
-                      title={`Entrega hasta ${SAMPLE_MAX_UNITS} uds solo para hacer la muestra`}
+                      disabled={!markable || logoBlocked}
+                      title={logoTitle ?? `Entrega hasta ${SAMPLE_MAX_UNITS} uds solo para hacer la muestra`}
                       onClick={() => openDeliver(o, "muestra")}>
                       <Paintbrush className="h-3.5 w-3.5" /> Entregar muestra
                     </Button>
@@ -919,14 +955,14 @@ const WholesaleOrdersInbox = () => {
               <div className="flex flex-wrap gap-2 pt-1">
                 <Button size="sm" variant={enough ? "default" : "outline"} className="flex-1 min-w-[150px] gap-1.5"
                   onClick={() => openDeliver(o, "estampacion")}
-                  disabled={!enough || sampleBlocked}
-                  title={sampleTitle ?? (enough ? "Enviar cuerpos a Estampación" : "No hay inventario suficiente: solicita producción")}>
+                  disabled={!enough || sampleBlocked || logoBlocked}
+                  title={logoTitle ?? sampleTitle ?? (enough ? "Enviar cuerpos a Estampación" : "No hay inventario suficiente: solicita producción")}>
                   <Paintbrush className="h-3.5 w-3.5" /> Enviar a Estampación
                 </Button>
                 {sampleBlocked && (
                   <Button size="sm" variant="secondary" className="flex-1 min-w-[150px] gap-1.5"
-                    disabled={(stock ?? 0) < 1 && !producedReady}
-                    title={`Entrega hasta ${SAMPLE_MAX_UNITS} uds solo para hacer la muestra de tamaño y tinta/gel`}
+                    disabled={((stock ?? 0) < 1 && !producedReady) || logoBlocked}
+                    title={logoTitle ?? `Entrega hasta ${SAMPLE_MAX_UNITS} uds solo para hacer la muestra de tamaño y tinta/gel`}
                     onClick={() => openDeliver(o, "muestra")}>
                     <Paintbrush className="h-3.5 w-3.5" /> Entregar muestra
                   </Button>
@@ -934,7 +970,8 @@ const WholesaleOrdersInbox = () => {
                 {!enough && !isInProduction && (
                   <Button size="sm" variant="default" className="flex-1 min-w-[150px] gap-1.5"
                     onClick={() => openDeliver(o, "produccion")}
-                    title="El sistema crea la orden de producción con la referencia y cantidad del pedido">
+                    disabled={logoBlocked}
+                    title={logoTitle ?? "El sistema crea la orden de producción con la referencia y cantidad del pedido"}>
                     <Factory className="h-3.5 w-3.5" /> Solicitar Producción
                   </Button>
                 )}
