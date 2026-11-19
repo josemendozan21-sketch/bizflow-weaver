@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProcessChangeLogPanel from "@/components/production/ProcessChangeLogPanel";
+import { fetchLogoPendingByOrder } from "@/lib/logoPending";
 import UnroutedOrdersPanel from "@/components/production/UnroutedOrdersPanel";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -274,6 +275,14 @@ export const EstampacionProductionView = () => {
   const orderIdsWithProductionOrder = new Set(
     allOrders.map((o) => o.order_id).filter((id): id is string => Boolean(id))
   );
+  // Bloqueo también por otra línea del mismo envío con logo sin aprobar (misma regla que el sistema).
+  const intakeIds = (pendingIntakeQuery.data ?? []).map((o) => o.id);
+  const groupLogoPendingQuery = useQuery({
+    queryKey: ["estampacion_group_logo_pending", intakeIds.join(",")],
+    enabled: intakeIds.length > 0,
+    queryFn: () => fetchLogoPendingByOrder(intakeIds),
+  });
+  const groupLogoPending = groupLogoPendingQuery.data ?? new Map<string, string>();
   const pendingIntake = (pendingIntakeQuery.data ?? []).filter(
     (o) =>
       // Logo aprobado por diseño (enlace por pedido, con respaldo por nombre),
@@ -282,6 +291,7 @@ export const EstampacionProductionView = () => {
         approvedLogoClients.has(o.client_name.trim().toLowerCase()) ||
         (Boolean(o.is_recompra) && Boolean(o.logo_url))) &&
       !openLogoOrderIds.has(o.id) &&
+      !groupLogoPending.has(o.id) &&
       !orderIdsWithProductionOrder.has(o.id)
   );
 
