@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useAuth } from "@/contexts/AuthContext";
 
 export const CONSUMIDOR_FINAL = {
@@ -250,12 +251,17 @@ export function usePosSaleItems(saleIds: string[]) {
     queryKey: ["pos_sale_items", saleIds.join(",")],
     enabled: saleIds.length > 0,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("pos_sale_items")
-        .select("*")
-        .in("sale_id", saleIds);
-      if (error) throw error;
-      return (data as PosSaleItem[]) ?? [];
+      // Varias tandas de ventas y páginas de 1000 para no perder líneas.
+      const out: PosSaleItem[] = [];
+      for (let i = 0; i < saleIds.length; i += 200) {
+        const chunk = saleIds.slice(i, i + 200);
+        out.push(
+          ...(await fetchAllRows<PosSaleItem>((f, t) =>
+            supabase.from("pos_sale_items").select("*").in("sale_id", chunk).order("id").range(f, t) as any,
+          )),
+        );
+      }
+      return out;
     },
   });
 }

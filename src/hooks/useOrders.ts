@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -176,20 +177,22 @@ export function useOrders() {
     refetchOnWindowFocus: false,
     placeholderData: (prev) => prev,
     queryFn: async () => {
-      let query = supabase
-        .from("orders")
-        .select("*")
-        .order("created_at", { ascending: false })
-        // Evita el tope por defecto de 1000 filas: los asesores deben ver todo su historial
-        .range(0, 9999);
-      // Para asesores, filtramos explícitamente por advisor_id (coincide con RLS)
-      // y evitamos depender solo de las RLS, que pueden devolver [] si el token está rotando.
-      if (role === "asesor_comercial" && user?.id) {
-        query = query.eq("advisor_id", user.id);
-      }
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as Order[];
+      // El servidor corta en 1000 filas por consulta: se trae página por página
+      // para que aparezca todo el historial (abril, mayo, junio...).
+      const data = await fetchAllRows<Order>((from, to) => {
+        let query = supabase
+          .from("orders")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: true });
+        // Para asesores, filtramos explícitamente por advisor_id (coincide con RLS)
+        // y evitamos depender solo de las RLS, que pueden devolver [] si el token está rotando.
+        if (role === "asesor_comercial" && user?.id) {
+          query = query.eq("advisor_id", user.id);
+        }
+        return query.range(from, to) as any;
+      });
+      return data;
     },
   });
 }

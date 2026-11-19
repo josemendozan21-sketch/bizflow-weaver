@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useAuth } from "@/contexts/AuthContext";
 
 export interface InventoryRequest {
@@ -32,11 +33,15 @@ export function useInventoryRequests() {
 
   const fetchAll = useCallback(async () => {
     setIsLoading(true);
-    const { data } = await supabase
-      .from("inventory_requests" as any)
-      .select("*")
-      .order("created_at", { ascending: false });
-    setRequests((data as unknown as InventoryRequest[]) || []);
+    const data = await fetchAllRows<InventoryRequest>((f, t) =>
+      supabase
+        .from("inventory_requests" as any)
+        .select("*")
+        .order("created_at", { ascending: false })
+        .order("id")
+        .range(f, t) as any,
+    ).catch(() => [] as InventoryRequest[]);
+    setRequests(data);
     setIsLoading(false);
   }, []);
 

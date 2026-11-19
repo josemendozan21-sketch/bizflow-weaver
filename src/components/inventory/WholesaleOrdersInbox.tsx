@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -283,14 +284,16 @@ const WholesaleOrdersInbox = () => {
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["mayor-orders-inbox"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("id,order_code,line_index,line_count,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color,is_recompra,delivered_quantity,sample_status,logo_url,logo_source")
-        .eq("sale_type", "mayor")
-        .gte("created_at", "2026-05-15")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data || []) as MayorOrder[];
+      return fetchAllRows<MayorOrder>((f, t) =>
+        supabase
+          .from("orders")
+          .select("id,order_code,line_index,line_count,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color,is_recompra,delivered_quantity,sample_status,logo_url,logo_source")
+          .eq("sale_type", "mayor")
+          .gte("created_at", "2026-05-15")
+          .order("created_at", { ascending: false })
+          .order("id")
+          .range(f, t) as any,
+      );
     },
     refetchInterval: 15_000,
   });
@@ -298,13 +301,15 @@ const WholesaleOrdersInbox = () => {
   const { data: retailOrders = [], isLoading: loadingRetail, error: retailError } = useQuery({
     queryKey: ["detal-orders-inbox-v2"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("id,order_code,line_index,line_count,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color,is_recompra,delivered_quantity,sample_status,logo_url,logo_source")
-        .in("sale_type", ["menor", "detal"])
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data || []) as MayorOrder[];
+      return fetchAllRows<MayorOrder>((f, t) =>
+        supabase
+          .from("orders")
+          .select("id,order_code,line_index,line_count,brand,client_name,product,quantity,advisor_name,delivery_date,production_status,created_at,observations,silicone_color,ink_color,is_recompra,delivered_quantity,sample_status,logo_url,logo_source")
+          .in("sale_type", ["menor", "detal"])
+          .order("created_at", { ascending: false })
+          .order("id")
+          .range(f, t) as any,
+      );
     },
     refetchInterval: 15_000,
     refetchOnMount: "always",
@@ -314,12 +319,12 @@ const WholesaleOrdersInbox = () => {
     queryKey: ["mayor-orders-delivered"],
     queryFn: async () => {
       const [mov, tasks, prodOrders] = await Promise.all([
-        supabase.from("inventory_movements").select("order_id,movement_kind")
-          .eq("direction", "entrega").not("order_id", "is", null),
+        fetchAllRows<any>((f, t) => supabase.from("inventory_movements").select("order_id,movement_kind")
+          .eq("direction", "entrega").not("order_id", "is", null).order("id").range(f, t)).then((data) => ({ data, error: null })),
         supabase.from("body_production_tasks").select("order_id,status" as any)
           .not("order_id", "is", null),
-        supabase.from("production_orders").select("order_id,current_stage,stages,completed_at,stamp_size_status,stamp_inkgel_status")
-          .not("order_id", "is", null),
+        fetchAllRows<any>((f, t) => supabase.from("production_orders").select("order_id,current_stage,stages,completed_at,stamp_size_status,stamp_inkgel_status")
+          .not("order_id", "is", null).order("id").range(f, t)).then((data) => ({ data, error: null })),
       ]);
       const deliveredIds = new Set<string>();
       const producedIds = new Set<string>();

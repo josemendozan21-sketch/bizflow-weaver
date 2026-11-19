@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { toast } from "sonner";
 
 export interface OrderCharge {
@@ -39,11 +40,9 @@ export function useAllOrderCharges() {
     queryKey: ["order_charges", "all"],
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("order_charges" as any)
-        .select("order_id, amount")
-        .range(0, 19999);
-      if (error) throw error;
+      const data = await fetchAllRows<any>((f, t) =>
+        supabase.from("order_charges" as any).select("order_id, amount").order("id").range(f, t),
+      );
       const map: Record<string, number> = {};
       for (const row of (data as unknown as { order_id: string; amount: number }[]) || []) {
         map[row.order_id] = (map[row.order_id] || 0) + (Number(row.amount) || 0);

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -28,14 +29,13 @@ export default function CommissionAdjustmentPanel({ advisorFilter }: { advisorFi
   const { data, isLoading } = useQuery({
     queryKey: ["commission-adjustment", FIX_NOTE, "v2"],
     queryFn: async () => {
-      const [{ data: pays, error }, { data: ords, error: ordErr }, { data: charges }] =
+      const [{ data: pays, error }, ords, charges] =
         await Promise.all([
           supabase.from("order_payments").select("order_id, amount").eq("notes", FIX_NOTE),
-          supabase.from("orders").select("*").range(0, 19999),
-          supabase.from("order_charges").select("order_id, amount").range(0, 19999),
+          fetchAllRows<any>((f, t) => supabase.from("orders").select("*").order("id").range(f, t)),
+          fetchAllRows<any>((f, t) => supabase.from("order_charges").select("order_id, amount").order("id").range(f, t)),
         ]);
       if (error) throw error;
-      if (ordErr) throw ordErr;
 
       const fixed: Record<string, number> = {};
       for (const p of pays || []) {

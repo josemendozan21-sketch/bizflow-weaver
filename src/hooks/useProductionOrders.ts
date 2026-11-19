@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useLogisticsStore } from "@/stores/logisticsStore";
 import { toast } from "sonner";
 import { baseRefName } from "@/lib/canonicalBodyRef";
@@ -129,11 +130,11 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
   const ordersQuery = useQuery({
     queryKey: ["production_orders", brand],
     queryFn: async () => {
-      let q = supabase.from("production_orders").select("*").order("created_at", { ascending: false });
-      if (brand) q = q.eq("brand", brand);
-      const { data, error } = await q;
-      if (error) throw error;
-      const rows = (data ?? []) as ProductionOrder[];
+      const rows = await fetchAllRows<ProductionOrder>((f, t) => {
+        let q = supabase.from("production_orders").select("*").order("created_at", { ascending: false }).order("id");
+        if (brand) q = q.eq("brand", brand);
+        return q.range(f, t) as any;
+      });
       // Enrich with advisor_name from profiles
       const advisorIds = Array.from(new Set(rows.map((r) => r.advisor_id).filter(Boolean) as string[]));
       if (advisorIds.length > 0) {
@@ -175,12 +176,14 @@ export function useProductionOrders(brand?: "magical" | "sweatspot") {
   const stageLogsQuery = useQuery({
     queryKey: ["production_stage_logs"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("production_stage_logs")
-        .select("*")
-        .order("started_at", { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as ProductionStageLog[];
+      return fetchAllRows<ProductionStageLog>((f, t) =>
+        (supabase as any)
+          .from("production_stage_logs")
+          .select("*")
+          .order("started_at", { ascending: true })
+          .order("id")
+          .range(f, t),
+      );
     },
   });
 

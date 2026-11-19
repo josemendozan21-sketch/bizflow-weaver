@@ -11,3 +11,4 @@
 - Wholesale (mayor) orders never reserve producto_terminado: create_order_requirement points them to cuerpos_referencias, because wholesale is always produced from bodies; reservations are consumed on dispatch by trg_consume_reservations_on_dispatch.
 - Wholesale order forms require an explicit logo mode (src/lib/logoMode.ts: nuevo / recompra tal cual / recompra con ajuste / sin logo); only nuevo and con ajuste create a Diseño request, so repeat orders aren't blocked by mistake.
 - Internal tables and shared work-file buckets gate access with public.is_staff(auth.uid()) (user has any row in user_roles) instead of USING (true), so self-registered accounts without an assigned role see nothing.
+- Full-table or growing list loads must page through src/lib/fetchAllRows.ts with a stable order (ending in id), because the server caps every response at 1000 rows even when a larger .range() is requested.

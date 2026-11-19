@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { isSettlementSnapshotLocked, requireCommissionProof, type LedgerAllocation, type SettlementDraft } from "@/lib/commissionSettlement";
 
 export interface Settlement {
@@ -44,10 +45,10 @@ export function useSettlementData() {
     queryFn: async () => {
       const [s, i, p, l, a, b, h] = await Promise.all([
         db.from("commission_settlements").select("*").order("pay_period", { ascending: false }),
-        db.from("commission_settlement_items").select("*").range(0, 19999),
+        fetchAllRows((f, t) => db.from("commission_settlement_items").select("*").order("id").range(f, t)).then((data) => ({ data, error: null })),
         db.from("commission_payouts").select("*").order("paid_at", { ascending: false }),
         db.from("commission_settlement_log").select("*").order("created_at", { ascending: false }),
-        db.from("commission_payment_allocations").select("*").range(0,19999),
+        fetchAllRows((f, t) => db.from("commission_payment_allocations").select("*").order("id").range(f, t)).then((data) => ({ data, error: null })),
         db.from("commission_opening_balances").select("*"),
         db.from("commission_payment_audit").select("*").order("created_at", {ascending:false}),
       ]);

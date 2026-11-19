@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -55,9 +56,9 @@ function useInventoryDashboardStats() {
           .select("order_id, quantity, status")
           .eq("status", "activa"),
 
-        supabase
-          .from("production_orders")
-          .select("id, stage_status, completed_at"),
+        fetchAllRows<any>((f, t) =>
+          supabase.from("production_orders").select("id, stage_status, completed_at").order("id").range(f, t),
+        ).then((data) => ({ data, error: null })),
       ]);
 
       const orders = (ordersRes.data || []) as Array<{

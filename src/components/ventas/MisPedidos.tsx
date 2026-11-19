@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { getOrderBalance, getOrderPaidAmount, isOrderFullyPaid, useOrders, PRODUCTION_STATUS_LABELS, PRODUCTION_STATUS_COLORS, type Order } from "@/hooks/useOrders";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Loader2, Package, Calendar, DollarSign, MapPin, Upload, CheckCircle2, AlertTriangle, FileText, Camera, User, Pencil, Search, Trash2 } from "lucide-react";
 import { format } from "date-fns";
@@ -224,13 +225,15 @@ export function MisPedidos() {
     queryKey: ["stamping_status_for_advisor", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("production_orders")
-        .select(
-          "order_id, stamp_size_photo_url, stamp_size_status, stamp_inkgel_photo_url, stamp_inkgel_status"
-        );
-      if (error) throw error;
-      return data ?? [];
+      return fetchAllRows<any>((f, t) =>
+        supabase
+          .from("production_orders")
+          .select(
+            "order_id, stamp_size_photo_url, stamp_size_status, stamp_inkgel_photo_url, stamp_inkgel_status"
+          )
+          .order("id")
+          .range(f, t),
+      );
     },
   });
 
