@@ -211,12 +211,14 @@ export function MisPedidos() {
     queryKey: ["production_orders_for_advisor", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("production_orders")
-        .select("order_id, finished_photo_url, packager_name, final_count")
-        .not("finished_photo_url", "is", null);
-      if (error) throw error;
-      return data ?? [];
+      return fetchAllRows<any>((f, t) =>
+        supabase
+          .from("production_orders")
+          .select("order_id, finished_photo_url, packager_name, final_count")
+          .not("finished_photo_url", "is", null)
+          .order("id")
+          .range(f, t),
+      );
     },
   });
 
