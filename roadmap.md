@@ -1,5 +1,10 @@
 # Tareas en curso
 
+## 13. Exportar a WO por «Pendientes por facturar»
+- [x] Lista de todo lo no facturado ni exportado, filtrable por mes; lo facturado a mano en WO ya no aparece (tampoco por día).
+- [x] Facturas con fecha del día de exportación; crédito vence en el despacho o ese día si ya pasó.
+- [x] Confirmar cargue marca la venta como facturada.
+
 ## 12. Restaurar inventario afectado por pruebas Bionovations
 - [x] Verificar reservas y devoluciones: 28 Lumbar fríos pendientes en MW-XX-01508; el termo de SW-XX-01509 ya devuelto.
 - [x] Devolver 28 unidades mediante movimiento trazable e idempotente e47a0b06-51d4-4797-8781-2898348d636c, sin tocar la reserva real de 10 unidades ni otros productos.

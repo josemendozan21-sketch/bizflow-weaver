@@ -119,13 +119,13 @@ export default function WorldOfficeExport() {
     const list: WoOrder[] = pendingOrders
       .filter((o: any) => mode === "dia" || month === "todos" || bogotaDate(o.created_at).startsWith(month))
       .map((o: any) => ({ ...o, paid_amount: getOrderPaidAmount(o), payment_methods: methods.get(o.id) ?? [] }));
-    return buildInvoices(list, cfg.settings, cfg.vendors, cfg.products).map((inv) => {
+    return buildInvoices(list, cfg.settings, cfg.vendors, cfg.products, today).map((inv) => {
       const blocked: any = inv.orders.find((o: any) => !canInvoiceOrder(o, isOrderFullyPaid(o)));
       if (!blocked) return inv;
       const reason = blocked.sale_type === "menor" ? "Venta detal sin pago completo" : "Falta el documento (RUT) del cliente";
       return { ...inv, missing: [...new Set([...inv.missing, reason])] };
     });
-  }, [dayData, cfg, pendingOrders, mode, month]);
+  }, [dayData, cfg, pendingOrders, mode, month, today]);
 
   const alreadyExported = dayData ? dayData.orders.filter((o: any) => dayData.exported.has(o.id)).length : 0;
   const invoicedOutside = dayData && mode === "dia"
@@ -254,7 +254,7 @@ export default function WorldOfficeExport() {
           </div>
           {mode === "pendientes" && (
             <p className="text-xs text-muted-foreground">
-              Ventas sin factura y sin exportar, de la más antigua a la más reciente. Las que ya se facturaron a mano en WO o ya se exportaron no aparecen.
+              Ventas sin factura y sin exportar, de la más antigua a la más reciente. Las que ya se facturaron a mano en WO o ya se exportaron no aparecen. Las facturas salen con la fecha de hoy ({today}).
             </p>
           )}
           {cfg?.settings && (
@@ -273,7 +273,7 @@ export default function WorldOfficeExport() {
             <Table>
               <TableHeader><TableRow>
                 <TableHead className="w-8"><Checkbox checked={ready.length > 0 && chosen.length === ready.length} onCheckedChange={(v) => setSelected(v ? new Set(ready.map((i) => i.key)) : new Set())} /></TableHead>
-                <TableHead>Pedido</TableHead><TableHead>Fecha</TableHead><TableHead>Cliente</TableHead><TableHead>Total factura</TableHead>
+                <TableHead>Pedido</TableHead><TableHead>Fecha venta</TableHead><TableHead>Cliente</TableHead><TableHead>Total factura</TableHead>
                 <TableHead>Pagado</TableHead><TableHead>Saldo (CxC)</TableHead><TableHead>Forma</TableHead><TableHead>Vence</TableHead><TableHead>Estado</TableHead>
               </TableRow></TableHeader>
               <TableBody>
@@ -283,7 +283,7 @@ export default function WorldOfficeExport() {
                   <TableRow key={i.key}>
                     <TableCell><Checkbox disabled={i.missing.length > 0} checked={selected.has(i.key)} onCheckedChange={(v) => { const n = new Set(selected); v ? n.add(i.key) : n.delete(i.key); setSelected(n); }} /></TableCell>
                     <TableCell className="whitespace-nowrap">{i.orders.map((o) => o.order_code).join(", ")}</TableCell>
-                    <TableCell className="whitespace-nowrap">{i.date}</TableCell>
+                    <TableCell className="whitespace-nowrap">{bogotaDate(i.orders[0].created_at)}</TableCell>
                     <TableCell>{i.orders[0].client_name}<div className="text-xs text-muted-foreground">{i.clientId}</div></TableCell>
                     <TableCell>{money(i.total)}</TableCell>
                     <TableCell>{money(i.paid)}</TableCell>

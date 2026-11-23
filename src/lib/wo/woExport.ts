@@ -111,6 +111,8 @@ export function buildInvoices(
   settings: WoSettings,
   vendorIds: Record<string, string>,
   productOverrides: Record<string, string> = {},
+  /** Fecha de la factura (yyyy-mm-dd): el día en que se exporta, aunque la venta sea anterior. */
+  invoiceDate?: string,
 ): WoInvoice[] {
   const groups = new Map<string, WoOrder[]>();
   for (const o of orders) {
@@ -144,8 +146,10 @@ export function buildInvoices(
     const total = round2(lines.reduce((s, l) => s + l.qty * l.unitValue * (1 + l.iva / 100), 0));
     const paid = Math.min(round2(os.reduce((s, o) => s + (Number(o.paid_amount) || 0), 0)), total);
     const isCredit = paid < total - 1;
-    const date = bogotaDate(first.created_at);
-    const dueDate = isCredit ? first.delivery_date : date;
+    const date = invoiceDate ?? bogotaDate(first.created_at);
+    // El crédito vence en la fecha de despacho, pero nunca antes de la fecha de la factura.
+    const delivery = first.delivery_date ? first.delivery_date.slice(0, 10) : null;
+    const dueDate = isCredit ? (delivery && delivery < date ? date : delivery) : date;
     if (isCredit && !dueDate) missing.push("Fecha programada de despacho (vencimiento del crédito)");
 
     const payments: WoInvoice["payments"] = [];

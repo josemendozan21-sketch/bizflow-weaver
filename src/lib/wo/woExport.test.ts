@@ -60,3 +60,20 @@ describe("ventas pendientes por facturar en WO", () => {
     expect(isPendingForWo({ ...o, total_amount: 0 }, new Set())).toBe(false);
   });
 });
+
+describe("fecha de las facturas WO", () => {
+  it("una venta atrasada se factura con la fecha del día de exportación", () => {
+    const [i] = buildInvoices([{ ...base, created_at: "2026-04-20T15:00:00Z", paid_amount: 119000 }], S, { a: "1" }, {}, "2026-11-23");
+    expect(i.date).toBe("2026-11-23");
+    expect(i.dueDate).toBe("2026-11-23");
+  });
+  it("un crédito con fecha de despacho ya pasada vence el día de la factura", () => {
+    const [i] = buildInvoices([{ ...base, created_at: "2026-04-20T15:00:00Z", delivery_date: "2026-05-02" }], S, { a: "1" }, {}, "2026-11-23");
+    expect(i.headerPayment).toBe("Crédito");
+    expect(i.dueDate).toBe("2026-11-23");
+  });
+  it("un crédito con despacho futuro vence en la fecha de despacho", () => {
+    const [i] = buildInvoices([base], S, { a: "1" }, {}, "2026-10-27");
+    expect(i.dueDate).toBe("2026-11-10");
+  });
+});
