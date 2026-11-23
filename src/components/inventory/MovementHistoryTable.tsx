@@ -13,26 +13,7 @@ import { toast } from "sonner";
 import { baseRefName } from "@/lib/canonicalBodyRef";
 import { matchesQuery } from "@/lib/search";
 import { RESERVATIONS_ENABLED } from "@/lib/featureFlags";
-
-const extractTipo = (ref: string): "Frío" | "Térmico" | null => {
-  const m = ref.match(/\((Frío|Frio|Térmico|Termico|Calor)\)/i);
-  if (!m) return null;
-  const t = m[1].toLowerCase();
-  if (t === "frío" || t === "frio") return "Frío";
-  return "Térmico";
-};
-
-const TIPO_SUFFIX = /\s*\((Frío|Frio|Térmico|Termico|Calor)\)\s*/i;
-
-/** Frío / Térmico of a movement: from the name suffix (entradas) or the linked stock item (salidas, reservas). */
-const movementTipo = (m: { item_name: string; stock_item?: { product_type: string | null } | null }) => {
-  const fromName = extractTipo(m.item_name);
-  if (fromName) return fromName;
-  const pt = (m.stock_item?.product_type || "").toLowerCase();
-  if (pt.startsWith("fr")) return "Frío";
-  if (pt.startsWith("t") || pt === "calor") return "Térmico";
-  return null;
-};
+import { movementTipo, stripTipoSuffix } from "@/lib/movementTipo";
 
 const KIND_LABEL: Record<string, { label: string; cls: string }> = {
   entrada: { label: "Entrada", cls: "border-emerald-500/60 text-emerald-700 dark:text-emerald-400" },
@@ -79,7 +60,7 @@ export default function MovementHistoryTable() {
       let targetId: string | null = m.stock_item_id;
       if (m.category === "cuerpos_referencias") {
         const base = baseRefName(m.item_name);
-        const tipo = extractTipo(m.item_name);
+        const tipo = movementTipo(m);
         const { data: rows } = await supabase
           .from("stock_items")
           .select("id, name, product_type, available, in_process")
@@ -255,7 +236,7 @@ export default function MovementHistoryTable() {
                     <TableCell className="text-xs">{CAT_LABEL[m.category] || m.category}</TableCell>
                     <TableCell className="font-medium text-sm">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span>{tipo ? m.item_name.replace(TIPO_SUFFIX, " ").trim() : m.item_name}</span>
+                        <span>{tipo ? stripTipoSuffix(m.item_name) : m.item_name}</span>
                         {tipo && (
                           <Badge variant="secondary" className="text-[10px] font-normal">
                             {tipo}

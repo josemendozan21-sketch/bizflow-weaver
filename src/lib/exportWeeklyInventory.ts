@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 import type { InventoryMovement } from "@/hooks/useInventoryMovements";
 import type { SupabaseStockItem, SupabaseBodyStock } from "@/hooks/useInventory";
+import { movementTipo, stripTipoSuffix } from "@/lib/movementTipo";
 
 const CATEGORY_LABEL: Record<string, string> = {
   materia_prima: "Materia prima",
@@ -76,7 +77,7 @@ export function exportWeeklyInventory(
 
   // 2. Movimientos detalle
   const movRows = [
-    ["Fecha", "Tipo", "Marca", "Categoría", "Ítem", "Cantidad", "Solicita", "Propósito / Motivo", "Proveedor", "Área", "Registrado por"],
+    ["Fecha", "Tipo", "Marca", "Categoría", "Ítem", "Frío/Térmico", "Cantidad", "Solicita", "Propósito / Motivo", "Proveedor", "Área", "Registrado por"],
     ...inRange
       .slice()
       .sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime())
@@ -85,7 +86,8 @@ export function exportWeeklyInventory(
         KIND_LABEL[m.movement_kind || (m.direction === "retorno" ? "entrada" : "salida")] || "—",
         m.brand,
         CATEGORY_LABEL[m.category] || m.category,
-        m.item_name,
+        movementTipo(m) ? stripTipoSuffix(m.item_name) : m.item_name,
+        movementTipo(m) || "—",
         Number(m.quantity),
         m.requested_by_name || "—",
         m.purpose || m.reason || "—",
@@ -174,7 +176,7 @@ export function exportWeeklyInventory(
   // 4. Entradas por compra
   const compras = inRange.filter((m) => (m.movement_kind || "") === "entrada" && (m.supplier || "").trim());
   const comprasRows = [
-    ["Fecha", "Proveedor", "Marca", "Categoría", "Ítem", "Cantidad", "Registrado por", "Notas"],
+    ["Fecha", "Proveedor", "Marca", "Categoría", "Ítem", "Frío/Térmico", "Cantidad", "Registrado por", "Notas"],
     ...compras
       .sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime())
       .map((m) => [
@@ -182,7 +184,8 @@ export function exportWeeklyInventory(
         m.supplier || "—",
         m.brand,
         CATEGORY_LABEL[m.category] || m.category,
-        m.item_name,
+        movementTipo(m) ? stripTipoSuffix(m.item_name) : m.item_name,
+        movementTipo(m) || "—",
         Number(m.quantity),
         m.recorded_by_name || "—",
         m.purpose || m.reason || "",

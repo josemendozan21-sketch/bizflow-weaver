@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ArrowLeftRight, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import RegisterMovementDialog from "./RegisterMovementDialog";
 import { useInventoryMovements, type MovementArea } from "@/hooks/useInventoryMovements";
+import { movementTipo, stripTipoSuffix } from "@/lib/movementTipo";
 
 const AREA_LABELS: Record<MovementArea, string> = {
   produccion: "Producción",
@@ -107,7 +108,12 @@ const InventoryMovementsPanel = () => {
                   </TableCell>
                   <TableCell><Badge variant="secondary">{AREA_LABELS[m.area]}</Badge></TableCell>
                   <TableCell>
-                    <div className="font-medium">{m.item_name}</div>
+                    <div className="flex flex-wrap items-center gap-1.5 font-medium">
+                      <span>{movementTipo(m) ? stripTipoSuffix(m.item_name) : m.item_name}</span>
+                      {movementTipo(m) && (
+                        <Badge variant="secondary" className="text-[10px] font-normal">{movementTipo(m)}</Badge>
+                      )}
+                    </div>
                     <div className="text-xs text-muted-foreground">{m.brand}</div>
                   </TableCell>
                   <TableCell className="text-right font-semibold">{m.quantity}</TableCell>
