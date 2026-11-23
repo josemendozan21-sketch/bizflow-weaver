@@ -97,9 +97,15 @@ export default function FeriaShipmentDialog({ feriaId, feriaName }: { feriaId: s
           ) : (
             items.map((i) => {
               const checked = selected[i.id] !== undefined;
+              const noStock = Number(i.available) <= 0;
               return (
-                <div key={i.id} className="flex items-center gap-3 px-3 py-2">
-                  <Checkbox checked={checked} onCheckedChange={(c) => toggle(i.id, Boolean(c))} id={`it-${i.id}`} />
+                <div key={i.id} className={`flex items-center gap-3 px-3 py-2 ${noStock ? "opacity-60" : ""}`}>
+                  <Checkbox
+                    checked={checked}
+                    disabled={noStock}
+                    onCheckedChange={(c) => toggle(i.id, Boolean(c))}
+                    id={`it-${i.id}`}
+                  />
                   <Label htmlFor={`it-${i.id}`} className="flex-1 text-xs cursor-pointer">
                     {label(i)}
                     <span className="ml-2 text-muted-foreground capitalize">{i.brand}</span>
@@ -112,14 +118,27 @@ export default function FeriaShipmentDialog({ feriaId, feriaName }: { feriaId: s
                   </span>
                   <Input
                     type="number"
+                    inputMode="numeric"
                     min={1}
                     max={i.available}
-                    disabled={!checked}
+                    disabled={noStock}
+                    placeholder={noStock ? "Sin stock" : "Cant."}
+                    aria-label={`Cantidad de ${label(i)}`}
                     className="w-24 h-8"
-                    value={checked ? selected[i.id] : ""}
+                    value={checked ? selected[i.id] || "" : ""}
+                    onFocus={(e) => e.currentTarget.select()}
                     onChange={(e) => {
-                      const v = Math.max(0, Math.min(Number(e.target.value) || 0, i.available));
-                      setSelected((prev) => ({ ...prev, [i.id]: v }));
+                      const raw = e.target.value;
+                      setSelected((prev) => {
+                        const next = { ...prev };
+                        if (raw === "") {
+                          // Deja la fila marcada para que pueda escribir la cantidad
+                          next[i.id] = 0;
+                          return next;
+                        }
+                        next[i.id] = Math.max(0, Math.min(Math.floor(Number(raw)) || 0, Number(i.available)));
+                        return next;
+                      });
                     }}
                   />
                 </div>
