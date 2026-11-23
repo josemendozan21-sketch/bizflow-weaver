@@ -3,8 +3,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import ExcelJS from "exceljs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { getOrderPaidAmount } from "@/hooks/useOrders";
-import { buildInvoices, invoiceRows, toTsv, bogotaDate, type WoOrder, type WoSettings, type WoInvoice } from "@/lib/wo/woExport";
+import { getOrderPaidAmount, isOrderFullyPaid } from "@/hooks/useOrders";
+import { buildInvoices, invoiceRows, toTsv, bogotaDate, isPendingForWo, type WoOrder, type WoSettings, type WoInvoice } from "@/lib/wo/woExport";
+import { canInvoiceOrder } from "@/lib/invoiceRules";
+import { fetchAllRows } from "@/lib/fetchAllRows";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +21,19 @@ import { toast } from "sonner";
 
 const money = (n: number) => `$${Math.round(n).toLocaleString("es-CO")}`;
 const db = supabase as any;
+const MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+const monthLabel = (ym: string) => `${MONTHS[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}`;
+
+/** Carga filas por id en tandas para no exceder el tamaño de la consulta. */
+async function byIds(ids: string[], load: (chunk: string[]) => PromiseLike<{ data: any[] | null; error: unknown }>) {
+  const out: any[] = [];
+  for (let i = 0; i < ids.length; i += 200) {
+    const { data, error } = await load(ids.slice(i, i + 200));
+    if (error) throw error;
+    out.push(...(data ?? []));
+  }
+  return out;
+}
 
 function downloadBlob(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
@@ -28,7 +45,10 @@ function downloadBlob(blob: Blob, name: string) {
 export default function WorldOfficeExport() {
   const qc = useQueryClient();
   const { user } = useAuth();
-  const [day, setDay] = useState(() => bogotaDate(new Date().toISOString()));
+  const today = bogotaDate(new Date().toISOString());
+  const [mode, setMode] = useState<"pendientes" | "dia">("pendientes");
+  const [day, setDay] = useState(today);
+  const [month, setMonth] = useState("todos");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [overrideDraft, setOverrideDraft] = useState<Record<string, string>>({});
 
@@ -49,19 +69,26 @@ export default function WorldOfficeExport() {
   });
 
   const { data: dayData, isLoading } = useQuery({
-    queryKey: ["wo-day", day],
+    queryKey: ["wo-day", mode, day],
     queryFn: async () => {
-      const start = new Date(`${day}T05:00:00Z`).toISOString();
-      const end = new Date(new Date(start).getTime() + 86400000).toISOString();
-      const { data: orders, error } = await db.from("orders").select("*")
-        .gte("created_at", start).lt("created_at", end).neq("production_status", "cancelado");
-      if (error) throw error;
-      const ids = (orders ?? []).map((o: any) => o.id);
+      let orders: any[];
+      if (mode === "dia") {
+        const start = new Date(`${day}T05:00:00Z`).toISOString();
+        const end = new Date(new Date(start).getTime() + 86400000).toISOString();
+        orders = await fetchAllRows<any>((f, t) => db.from("orders").select("*")
+          .gte("created_at", start).lt("created_at", end).neq("production_status", "cancelado")
+          .order("created_at").order("id").range(f, t));
+      } else {
+        orders = await fetchAllRows<any>((f, t) => db.from("orders").select("*")
+          .neq("production_status", "cancelado").or("invoice_status.is.null,invoice_status.neq.facturado")
+          .order("created_at").order("id").range(f, t));
+      }
+      const ids = orders.map((o: any) => o.id);
       const [pays, items] = await Promise.all([
-        ids.length ? db.from("order_payments").select("order_id, method").in("order_id", ids) : { data: [] },
-        ids.length ? db.from("wo_export_items").select("order_id, status").in("order_id", ids).neq("status", "devuelto") : { data: [] },
+        byIds(ids, (c) => db.from("order_payments").select("order_id, method").in("order_id", c)),
+        byIds(ids, (c) => db.from("wo_export_items").select("order_id, status").in("order_id", c).neq("status", "devuelto")),
       ]);
-      return { orders: orders ?? [], pays: pays.data ?? [], exported: new Map<string, string>((items.data ?? []).map((i: any) => [i.order_id, i.status])) };
+      return { orders, pays, exported: new Map<string, string>(items.map((i: any) => [i.order_id, i.status])) };
     },
   });
 
@@ -69,23 +96,40 @@ export default function WorldOfficeExport() {
     queryKey: ["wo-history"],
     queryFn: async () => {
       const { data } = await db.from("wo_export_items")
-        .select("id, order_id, link_number, status, wo_invoice_number, return_reason, created_at, export_id, wo_exports(created_by_name, sale_date), orders(order_code, client_name)")
+        .select("id, order_id, link_number, status, wo_invoice_number, return_reason, created_at, export_id, wo_exports(created_by_name, sale_date), orders(order_code, client_name, created_at)")
         .order("created_at", { ascending: false }).limit(150);
       return data ?? [];
     },
   });
 
+  const pendingOrders = useMemo(
+    () => (dayData ? dayData.orders.filter((o: any) => isPendingForWo(o, dayData.exported)) : []),
+    [dayData],
+  );
+  const monthCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    pendingOrders.forEach((o: any) => { const k = bogotaDate(o.created_at).slice(0, 7); m.set(k, (m.get(k) ?? 0) + 1); });
+    return [...m.entries()].sort(([a], [b]) => a.localeCompare(b));
+  }, [pendingOrders]);
+
   const invoices = useMemo<WoInvoice[]>(() => {
     if (!dayData || !cfg?.settings) return [];
     const methods = new Map<string, string[]>();
     dayData.pays.forEach((p: any) => methods.set(p.order_id, [...(methods.get(p.order_id) ?? []), p.method]));
-    const pending: WoOrder[] = dayData.orders
-      .filter((o: any) => !dayData.exported.has(o.id) && Number(o.total_amount) > 0 && o.payment_method !== "obsequio")
+    const list: WoOrder[] = pendingOrders
+      .filter((o: any) => mode === "dia" || month === "todos" || bogotaDate(o.created_at).startsWith(month))
       .map((o: any) => ({ ...o, paid_amount: getOrderPaidAmount(o), payment_methods: methods.get(o.id) ?? [] }));
-    return buildInvoices(pending, cfg.settings, cfg.vendors, cfg.products);
-  }, [dayData, cfg]);
+    return buildInvoices(list, cfg.settings, cfg.vendors, cfg.products).map((inv) => {
+      const blocked: any = inv.orders.find((o: any) => !canInvoiceOrder(o, isOrderFullyPaid(o)));
+      if (!blocked) return inv;
+      const reason = blocked.sale_type === "menor" ? "Venta detal sin pago completo" : "Falta el documento (RUT) del cliente";
+      return { ...inv, missing: [...new Set([...inv.missing, reason])] };
+    });
+  }, [dayData, cfg, pendingOrders, mode, month]);
 
   const alreadyExported = dayData ? dayData.orders.filter((o: any) => dayData.exported.has(o.id)).length : 0;
+  const invoicedOutside = dayData && mode === "dia"
+    ? dayData.orders.filter((o: any) => o.invoice_status === "facturado" && !dayData.exported.has(o.id)).length : 0;
   const ready = invoices.filter((i) => i.missing.length === 0);
   const chosen = ready.filter((i) => selected.has(i.key));
 
@@ -101,7 +145,7 @@ export default function WorldOfficeExport() {
 
   async function registerExport(invs: WoInvoice[]) {
     const { data: exp, error } = await db.from("wo_exports").insert({
-      sale_date: day, order_count: invs.reduce((s, i) => s + i.orders.length, 0),
+      sale_date: mode === "dia" ? day : today, order_count: invs.reduce((s, i) => s + i.orders.length, 0),
       created_by: user?.id, created_by_name: user?.email,
     }).select("id").single();
     if (error) throw error;
@@ -135,7 +179,7 @@ export default function WorldOfficeExport() {
       fill("Detalles del Pago", payments);
       const out = await wb.xlsx.writeBuffer();
       await registerExport(chosen);
-      downloadBlob(new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), `WO_FacturasVenta_${day}.xlsx`);
+      downloadBlob(new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), `WO_FacturasVenta_${mode === "dia" ? day : `pendientes_${today}`}.xlsx`);
       toast.success(`${chosen.length} facturas exportadas. Confírmalas cuando WO las acepte.`);
       setSelected(new Set()); refresh();
     } catch (e: any) { toast.error(e.message ?? "No se pudo exportar"); }
@@ -153,7 +197,7 @@ export default function WorldOfficeExport() {
     catch (e: any) { toast.error(e.message); }
   }
 
-  async function setStatus(id: string, status: "confirmado" | "devuelto") {
+  async function setStatus(id: string, orderId: string, status: "confirmado" | "devuelto") {
     const patch: any = { status, updated_by_name: user?.email, updated_at: new Date().toISOString() };
     if (status === "confirmado") patch.wo_invoice_number = window.prompt("Número de factura en WO (opcional)") || null;
     else {
@@ -163,6 +207,14 @@ export default function WorldOfficeExport() {
     }
     const { error } = await db.from("wo_export_items").update(patch).eq("id", id);
     if (error) return toast.error(error.message);
+    if (status === "confirmado") {
+      // Al cargar en WO la venta queda facturada y sale de «Pendientes por facturar».
+      const { error: e2 } = await db.from("orders").update({
+        invoice_status: "facturado", invoice_date: today,
+        ...(patch.wo_invoice_number ? { invoice_number: patch.wo_invoice_number } : {}),
+      }).eq("id", orderId);
+      if (e2) toast.error(`Cargue confirmado, pero no se pudo marcar la venta como facturada: ${e2.message}`);
+    }
     refresh();
   }
 
@@ -172,14 +224,39 @@ export default function WorldOfficeExport() {
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader><CardTitle className="text-base">Exportar ventas del día a World Office</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">Exportar ventas a World Office</CardTitle></CardHeader>
         <CardContent className="space-y-3">
+          <Tabs value={mode} onValueChange={(v) => { setMode(v as "pendientes" | "dia"); setSelected(new Set()); }}>
+            <TabsList>
+              <TabsTrigger value="pendientes">Pendientes por facturar</TabsTrigger>
+              <TabsTrigger value="dia">Por día de venta</TabsTrigger>
+            </TabsList>
+          </Tabs>
           <div className="flex flex-wrap items-end gap-3">
-            <div><Label>Día de venta</Label><Input type="date" value={day} onChange={(e) => { setDay(e.target.value); setSelected(new Set()); }} className="w-44" /></div>
+            {mode === "dia" ? (
+              <div><Label>Día de venta</Label><Input type="date" value={day} onChange={(e) => { setDay(e.target.value); setSelected(new Set()); }} className="w-44" /></div>
+            ) : (
+              <div>
+                <Label>Mes de la venta</Label>
+                <Select value={month} onValueChange={(v) => { setMonth(v); setSelected(new Set()); }}>
+                  <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos los meses ({pendingOrders.length})</SelectItem>
+                    {monthCounts.map(([m, n]) => <SelectItem key={m} value={m}>{monthLabel(m)} ({n})</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <Badge variant="secondary">{ready.length} listas</Badge>
             <Badge variant="destructive">{invoices.length - ready.length} incompletas</Badge>
-            <Badge variant="outline">{alreadyExported} ya exportadas</Badge>
+            {mode === "dia" && <Badge variant="outline">{alreadyExported} ya exportadas</Badge>}
+            {mode === "dia" && invoicedOutside > 0 && <Badge variant="outline">{invoicedOutside} ya facturadas en WO</Badge>}
           </div>
+          {mode === "pendientes" && (
+            <p className="text-xs text-muted-foreground">
+              Ventas sin factura y sin exportar, de la más antigua a la más reciente. Las que ya se facturaron a mano en WO o ya se exportaron no aparecen.
+            </p>
+          )}
           {cfg?.settings && (
             <p className="text-xs text-muted-foreground">
               Empresa {cfg.settings.empresa} · Prefijo {cfg.settings.prefijo} · Bodega {cfg.settings.bodega} · Saldo a "{cfg.settings.credito_name}" · Transferencias a {cfg.settings.transfer_payment_name} · Efectivo a {cfg.settings.cash_payment_name}
@@ -196,16 +273,17 @@ export default function WorldOfficeExport() {
             <Table>
               <TableHeader><TableRow>
                 <TableHead className="w-8"><Checkbox checked={ready.length > 0 && chosen.length === ready.length} onCheckedChange={(v) => setSelected(v ? new Set(ready.map((i) => i.key)) : new Set())} /></TableHead>
-                <TableHead>Pedido</TableHead><TableHead>Cliente</TableHead><TableHead>Total factura</TableHead>
+                <TableHead>Pedido</TableHead><TableHead>Fecha</TableHead><TableHead>Cliente</TableHead><TableHead>Total factura</TableHead>
                 <TableHead>Pagado</TableHead><TableHead>Saldo (CxC)</TableHead><TableHead>Forma</TableHead><TableHead>Vence</TableHead><TableHead>Estado</TableHead>
               </TableRow></TableHeader>
               <TableBody>
-                {isLoading && <TableRow><TableCell colSpan={9}>Cargando…</TableCell></TableRow>}
-                {!isLoading && invoices.length === 0 && <TableRow><TableCell colSpan={9} className="text-muted-foreground">No hay ventas pendientes para este día.</TableCell></TableRow>}
+                {isLoading && <TableRow><TableCell colSpan={10}>Cargando…</TableCell></TableRow>}
+                {!isLoading && invoices.length === 0 && <TableRow><TableCell colSpan={10} className="text-muted-foreground">{mode === "dia" ? "No hay ventas pendientes para este día." : "No hay ventas pendientes por facturar."}</TableCell></TableRow>}
                 {invoices.map((i) => (
                   <TableRow key={i.key}>
                     <TableCell><Checkbox disabled={i.missing.length > 0} checked={selected.has(i.key)} onCheckedChange={(v) => { const n = new Set(selected); v ? n.add(i.key) : n.delete(i.key); setSelected(n); }} /></TableCell>
                     <TableCell className="whitespace-nowrap">{i.orders.map((o) => o.order_code).join(", ")}</TableCell>
+                    <TableCell className="whitespace-nowrap">{i.date}</TableCell>
                     <TableCell>{i.orders[0].client_name}<div className="text-xs text-muted-foreground">{i.clientId}</div></TableCell>
                     <TableCell>{money(i.total)}</TableCell>
                     <TableCell>{money(i.paid)}</TableCell>
@@ -251,7 +329,7 @@ export default function WorldOfficeExport() {
                 <TableRow key={h.id}>
                   <TableCell className="whitespace-nowrap">{new Date(h.created_at).toLocaleString("es-CO")}</TableCell>
                   <TableCell>{h.orders?.order_code} <span className="text-xs text-muted-foreground">{h.orders?.client_name}</span></TableCell>
-                  <TableCell>{h.wo_exports?.sale_date}</TableCell>
+                  <TableCell>{h.orders?.created_at ? bogotaDate(h.orders.created_at) : h.wo_exports?.sale_date}</TableCell>
                   <TableCell className="text-xs">{h.wo_exports?.created_by_name}</TableCell>
                   <TableCell>
                     <Badge variant={h.status === "confirmado" ? "secondary" : h.status === "devuelto" ? "destructive" : "outline"}>
@@ -262,8 +340,8 @@ export default function WorldOfficeExport() {
                   <TableCell>{h.wo_invoice_number ?? "—"}</TableCell>
                   <TableCell className="whitespace-nowrap">
                     {h.status === "exportado" && (<>
-                      <Button size="sm" variant="ghost" onClick={() => setStatus(h.id, "confirmado")}><CheckCircle2 className="h-4 w-4 mr-1" />Confirmar cargue</Button>
-                      <Button size="sm" variant="ghost" onClick={() => setStatus(h.id, "devuelto")}><Undo2 className="h-4 w-4 mr-1" />Devolver</Button>
+                      <Button size="sm" variant="ghost" onClick={() => setStatus(h.id, h.order_id, "confirmado")}><CheckCircle2 className="h-4 w-4 mr-1" />Confirmar cargue</Button>
+                      <Button size="sm" variant="ghost" onClick={() => setStatus(h.id, h.order_id, "devuelto")}><Undo2 className="h-4 w-4 mr-1" />Devolver</Button>
                     </>)}
                   </TableCell>
                 </TableRow>

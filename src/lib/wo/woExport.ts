@@ -187,3 +187,24 @@ export function toTsv(rows: unknown[][]): string {
     return v == null ? "" : String(v);
   }).join("\t")).join("\n");
 }
+
+export interface WoCandidate {
+  id: string;
+  production_status?: string | null;
+  total_amount?: number | null;
+  payment_method?: string | null;
+  invoice_status?: string | null;
+}
+
+/**
+ * Una venta entra a la exportación WO solo si sigue pendiente por facturar:
+ * no cancelada, con valor, no obsequio, no facturada ya (a mano en WO) y sin
+ * exportación activa en wo_export_items. Evita facturar dos veces.
+ */
+export function isPendingForWo(o: WoCandidate, exported: { has(id: string): boolean }): boolean {
+  if (o.production_status === "cancelado") return false;
+  if (!(Number(o.total_amount) > 0)) return false;
+  if (o.payment_method === "obsequio") return false;
+  if (o.invoice_status === "facturado") return false;
+  return !exported.has(o.id);
+}

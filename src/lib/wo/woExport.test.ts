@@ -40,3 +40,23 @@ describe("exportación WO", () => {
     expect(matchWoProduct("Shoulder (Térmico)")?.code).toBe("MW-MW-Shoulder");
   });
 });
+
+import { isPendingForWo } from "./woExport";
+
+describe("ventas pendientes por facturar en WO", () => {
+  const o = { id: "o1", production_status: "en_produccion", total_amount: 119000, payment_method: null, invoice_status: "pendiente" };
+  it("incluye una venta pendiente por facturar sin exportar", () => {
+    expect(isPendingForWo(o, new Set())).toBe(true);
+  });
+  it("excluye ventas ya facturadas a mano en WO", () => {
+    expect(isPendingForWo({ ...o, invoice_status: "facturado" }, new Set())).toBe(false);
+  });
+  it("excluye ventas ya exportadas desde la app", () => {
+    expect(isPendingForWo(o, new Set(["o1"]))).toBe(false);
+  });
+  it("excluye canceladas, obsequios y ventas en cero", () => {
+    expect(isPendingForWo({ ...o, production_status: "cancelado" }, new Set())).toBe(false);
+    expect(isPendingForWo({ ...o, payment_method: "obsequio" }, new Set())).toBe(false);
+    expect(isPendingForWo({ ...o, total_amount: 0 }, new Set())).toBe(false);
+  });
+});
