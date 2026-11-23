@@ -30,6 +30,8 @@ export interface InventoryMovement {
   reception_confirmed_at?: string | null;
   reception_confirmed_by?: string | null;
   reception_confirmed_by_name?: string | null;
+  /** Frío / Térmico of the linked stock item (salidas/reservas store only the base name). */
+  stock_item?: { product_type: string | null } | null;
 }
 
 export interface CreateMovementInput {
@@ -64,7 +66,7 @@ export function useInventoryMovements() {
     if (mounted.current) setIsLoading(true);
     const { data } = await supabase
       .from("inventory_movements" as any)
-      .select("*")
+      .select("*, stock_item:stock_items(product_type)")
       .order("recorded_at", { ascending: false })
       .limit(200);
     cachedMovements = (data as unknown as InventoryMovement[]) || [];

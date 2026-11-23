@@ -22,6 +22,18 @@ const extractTipo = (ref: string): "Frío" | "Térmico" | null => {
   return "Térmico";
 };
 
+const TIPO_SUFFIX = /\s*\((Frío|Frio|Térmico|Termico|Calor)\)\s*/i;
+
+/** Frío / Térmico of a movement: from the name suffix (entradas) or the linked stock item (salidas, reservas). */
+const movementTipo = (m: { item_name: string; stock_item?: { product_type: string | null } | null }) => {
+  const fromName = extractTipo(m.item_name);
+  if (fromName) return fromName;
+  const pt = (m.stock_item?.product_type || "").toLowerCase();
+  if (pt.startsWith("fr")) return "Frío";
+  if (pt.startsWith("t") || pt === "calor") return "Térmico";
+  return null;
+};
+
 const KIND_LABEL: Record<string, { label: string; cls: string }> = {
   entrada: { label: "Entrada", cls: "border-emerald-500/60 text-emerald-700 dark:text-emerald-400" },
   salida: { label: "Salida", cls: "border-orange-500/60 text-orange-700 dark:text-orange-400" },
@@ -154,7 +166,7 @@ export default function MovementHistoryTable() {
       const kind = m.movement_kind || (m.direction === "retorno" ? "entrada" : "salida");
       if (kindFilter !== "todos" && kind !== kindFilter) return false;
       if (!matchesQuery(
-        [m.item_name, m.brand, m.requested_by_name, m.purpose, m.reason, m.supplier, m.recorded_by_name],
+        [m.item_name, movementTipo(m), m.brand, m.requested_by_name, m.purpose, m.reason, m.supplier, m.recorded_by_name],
         search,
       )) return false;
       return true;
@@ -223,6 +235,7 @@ export default function MovementHistoryTable() {
                 const k = m.movement_kind || (m.direction === "retorno" ? "entrada" : "salida");
                 const meta = KIND_LABEL[k] || KIND_LABEL.salida;
                 const pendingReception = m.reception_confirmed === false;
+                const tipo = movementTipo(m);
                 return (
                   <TableRow key={m.id} className={pendingReception ? "bg-amber-50/50 dark:bg-amber-950/20" : undefined}>
                     <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
@@ -240,7 +253,16 @@ export default function MovementHistoryTable() {
                     </TableCell>
                     <TableCell className="text-xs">{m.brand}</TableCell>
                     <TableCell className="text-xs">{CAT_LABEL[m.category] || m.category}</TableCell>
-                    <TableCell className="font-medium text-sm">{m.item_name}</TableCell>
+                    <TableCell className="font-medium text-sm">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span>{tipo ? m.item_name.replace(TIPO_SUFFIX, " ").trim() : m.item_name}</span>
+                        {tipo && (
+                          <Badge variant="secondary" className="text-[10px] font-normal">
+                            {tipo}
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-right font-semibold">{m.quantity}</TableCell>
                     <TableCell className="text-xs">{m.requested_by_name || "—"}</TableCell>
                     <TableCell className="text-xs max-w-[260px] truncate" title={m.purpose || m.reason || ""}>
