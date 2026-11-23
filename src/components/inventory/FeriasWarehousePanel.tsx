@@ -11,6 +11,7 @@ import FeriaShipmentDialog from "@/components/inventory/FeriaShipmentDialog";
 import FeriaReturnPanel from "@/components/inventory/FeriaReturnPanel";
 import DebouncedSearchInput from "@/components/inventory/DebouncedSearchInput";
 import { useAuth } from "@/contexts/AuthContext";
+import { feriaStockRow } from "@/lib/feriaStock";
 
 const fmt = (n: number) => `$${Math.round(n).toLocaleString("es-CO")}`;
 
@@ -41,30 +42,31 @@ export default function FeriasWarehousePanel() {
     }, {});
   }, [sales]);
 
+  // Solo cuenta lo que salió con una salida real; lo asignado/planeado no suma.
+  const allRows = useMemo(() => {
+    return inventory.map((p: any) => {
+      const sold = soldByProduct[String(p.product_name).trim().toLowerCase()] || 0;
+      return {
+        id: p.id,
+        name: p.product_name,
+        brand: p.brand,
+        ...feriaStockRow(p, sold),
+        unit_price: Number(p.unit_price || 0),
+      };
+    });
+  }, [inventory, soldByProduct]);
+
+  const plannedOnly = allRows.filter((r) => !r.hasMovement).length;
+
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return inventory
-      .filter((p: any) =>
-        !q ||
-        String(p.product_name).toLowerCase().includes(q) ||
-        String(p.brand ?? "").toLowerCase().includes(q),
-      )
-      .map((p: any) => {
-        const sent = Number(p.quantity_dispatched || 0) || Number(p.quantity_assigned || 0);
-        const sold = soldByProduct[String(p.product_name).trim().toLowerCase()] || 0;
-        const returned = Number(p.quantity_returned || 0);
-        return {
-          id: p.id,
-          name: p.product_name,
-          brand: p.brand,
-          sent,
-          sold,
-          returned,
-          available: Math.max(sent - sold - returned, 0),
-          unit_price: Number(p.unit_price || 0),
-        };
-      });
-  }, [inventory, soldByProduct, search]);
+    return allRows.filter((r) =>
+      r.hasMovement &&
+      (!q ||
+        String(r.name).toLowerCase().includes(q) ||
+        String(r.brand ?? "").toLowerCase().includes(q)),
+    );
+  }, [allRows, search]);
 
   const totals = useMemo(() => ({
     sent: rows.reduce((a, r) => a + r.sent, 0),
@@ -161,6 +163,11 @@ export default function FeriasWarehousePanel() {
           <h3 className="font-semibold">Inventario en feria</h3>
         </div>
 
+        <p className="text-xs text-muted-foreground">
+          Solo se muestra lo que salió con una salida confirmada.
+          {plannedOnly > 0 && ` ${plannedOnly} referencias asignadas sin salida no se cuentan.`}
+        </p>
+
         <DebouncedSearchInput value={search} onChange={setSearch} placeholder="Buscar producto…" />
 
         <div className="max-h-[560px] overflow-auto rounded-md border">
@@ -179,7 +186,7 @@ export default function FeriasWarehousePanel() {
               {rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-6">
-                    Sin inventario asignado
+                    Aún no hay mercancía enviada a esta feria
                   </TableCell>
                 </TableRow>
               ) : rows.map((r) => (
