@@ -210,9 +210,32 @@ export const EstampacionProductionView = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("logo_requests")
-        .select("id, order_id, status, adjusted_logo_url, original_logo_url, client_name");
+        .select("id, order_id, status, adjusted_logo_url, original_logo_url, client_name, orders(submission_id)");
       if (error) throw error;
-      return (data ?? []) as LogoRequestInfo[];
+      const rows = (data ?? []) as any[];
+      // Un pedido con varias referencias tiene una sola solicitud de logo (en la
+      // primera línea). La replicamos a las demás líneas del mismo envío para que
+      // todas las referencias del pedido lleguen a Estampación con su logo.
+      const subs = Array.from(new Set(rows.map((r) => r.orders?.submission_id).filter(Boolean))) as string[];
+      const siblings = new Map<string, string[]>();
+      for (let i = 0; i < subs.length; i += 200) {
+        const { data: sib } = await supabase
+          .from("orders")
+          .select("id, submission_id")
+          .in("submission_id", subs.slice(i, i + 200));
+        for (const o of (sib ?? []) as any[]) {
+          siblings.set(o.submission_id, [...(siblings.get(o.submission_id) ?? []), o.id]);
+        }
+      }
+      const linked = new Set(rows.map((r) => r.order_id).filter(Boolean));
+      const out: LogoRequestInfo[] = [];
+      for (const { orders: ord, ...r } of rows) {
+        out.push(r as LogoRequestInfo);
+        for (const sid of siblings.get(ord?.submission_id) ?? []) {
+          if (sid !== r.order_id && !linked.has(sid)) out.push({ ...(r as LogoRequestInfo), order_id: sid });
+        }
+      }
+      return out;
     },
   });
 
