@@ -1,5 +1,10 @@
 # Tareas en curso
 
+## 14. Salida de mercancía del Punto 92 con varios productos
+- [x] "Registrar salida de producto" admite varias filas (producto + cantidad) con un solo motivo, destino y nota.
+- [x] Bloquea cantidades mayores al stock, suma repeticiones del mismo producto y exige nota en dañado/muestra.
+- [x] Probado en pantalla con usuario de prueba: dos referencias, resumen correcto y rechazo de cantidad excesiva; sin registrar salidas reales.
+
 ## 13. Exportar a WO por «Pendientes por facturar»
 - [x] Lista de todo lo no facturado ni exportado, filtrable por mes; lo facturado a mano en WO ya no aparece (tampoco por día).
 - [x] Facturas con fecha del día de exportación; crédito vence en el despacho o ese día si ya pasó.
