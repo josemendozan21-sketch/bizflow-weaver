@@ -67,14 +67,39 @@ export function useLogoRequests() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("logo_requests")
-        .select("*, orders(order_code, production_status)")
+        .select("*, orders(order_code, production_status, submission_id)")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data || []).map((r: any) => ({
-        ...r,
-        order_code: r.orders?.order_code ?? null,
-        order_status: r.orders?.production_status ?? null,
-      })) as LogoRequest[];
+      const rows = (data || []) as any[];
+      // Un pedido con varias referencias se guarda como varias líneas con el mismo
+      // submission_id, pero la solicitud de logo queda en una sola. Mostramos todas
+      // las referencias del pedido para que Diseño vea el pedido completo.
+      const subs = Array.from(new Set(rows.map((r) => r.orders?.submission_id).filter(Boolean))) as string[];
+      const lines = new Map<string, { order_code: string | null; product: string; quantity: number }[]>();
+      for (let i = 0; i < subs.length; i += 200) {
+        const { data: sib } = await supabase
+          .from("orders")
+          .select("submission_id, order_code, product, quantity")
+          .in("submission_id", subs.slice(i, i + 200))
+          .order("order_code");
+        for (const o of (sib || []) as any[]) {
+          const arr = lines.get(o.submission_id) ?? [];
+          arr.push(o);
+          lines.set(o.submission_id, arr);
+        }
+      }
+      return rows.map((r: any) => {
+        const group = lines.get(r.orders?.submission_id) ?? [];
+        const multi = group.length > 1;
+        return {
+          ...r,
+          product: multi ? group.map((g) => `${g.product} ×${g.quantity}`).join(" + ") : r.product,
+          order_code: multi
+            ? group.map((g) => g.order_code).filter(Boolean).join(", ")
+            : r.orders?.order_code ?? null,
+          order_status: r.orders?.production_status ?? null,
+        };
+      }) as LogoRequest[];
     },
     refetchOnWindowFocus: true,
     refetchOnMount: "always",
