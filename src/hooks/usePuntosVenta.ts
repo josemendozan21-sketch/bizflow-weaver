@@ -1,3 +1,4 @@
+import { validatePosExit } from "@/lib/posExit";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllRows } from "@/lib/fetchAllRows";
@@ -447,6 +448,42 @@ export function useRegisterPosEntry(locationId: string) {
         quantity: input.quantity,
         unit_cost: input.unit_cost,
         supplier: input.supplier ?? null,
+        notes: input.notes ?? null,
+        recorded_by: user?.id,
+        recorded_by_name: user?.email,
+      });
+      if (mErr) throw mErr;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pos_products", locationId] });
+      qc.invalidateQueries({ queryKey: ["pos_movements", locationId] });
+    },
+  });
+}
+
+export function useRegisterPosExit(locationId: string) {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async (input: { product_id: string; quantity: number; reason: string; destination?: string; notes?: string }) => {
+      const { data: product, error: pErr } = await supabase
+        .from("pos_products").select("*").eq("id", input.product_id).single();
+      if (pErr) throw pErr;
+      const p = product as PosProduct;
+      const err = validatePosExit({ quantity: input.quantity, available: Number(p.available), reason: input.reason, notes: input.notes });
+      if (err) throw new Error(err);
+      const { error: uErr } = await supabase
+        .from("pos_products").update({ available: Number(p.available) - input.quantity }).eq("id", input.product_id);
+      if (uErr) throw uErr;
+      const { error: mErr } = await supabase.from("pos_inventory_movements").insert({
+        location_id: locationId,
+        pos_product_id: input.product_id,
+        product_name: p.name,
+        direction: "salida",
+        source: input.reason,
+        quantity: input.quantity,
+        unit_cost: Number(p.avg_cost) || 0,
+        supplier: input.destination ?? null,
         notes: input.notes ?? null,
         recorded_by: user?.id,
         recorded_by_name: user?.email,

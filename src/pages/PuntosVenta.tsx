@@ -14,6 +14,7 @@ import {
 } from "@/hooks/usePuntosVenta";
 import { PuntoInventario } from "@/components/puntos-venta/PuntoInventario";
 import { PuntoEntradaForm } from "@/components/puntos-venta/PuntoEntradaForm";
+import { PuntoSalidaForm } from "@/components/puntos-venta/PuntoSalidaForm";
 import { PuntoVentaPOS } from "@/components/puntos-venta/PuntoVentaPOS";
 import { PuntoReportes } from "@/components/puntos-venta/PuntoReportes";
 import { PuntoCalendario } from "@/components/puntos-venta/PuntoCalendario";
@@ -104,7 +105,7 @@ export default function PuntosVenta() {
           )}
           <TabsTrigger value="inventario"><Package className="h-4 w-4 mr-1" /> Inventario</TabsTrigger>
           {!readOnly && (
-            <TabsTrigger value="entradas"><ArrowDownToLine className="h-4 w-4 mr-1" /> Entradas</TabsTrigger>
+            <TabsTrigger value="entradas"><ArrowDownToLine className="h-4 w-4 mr-1" /> Entradas y salidas</TabsTrigger>
           )}
           <TabsTrigger value="reportes"><BarChart3 className="h-4 w-4 mr-1" /> Reportes</TabsTrigger>
           {showCalendar && (
@@ -137,7 +138,12 @@ export default function PuntosVenta() {
 
         {!readOnly && (
           <TabsContent value="entradas">
-            {locationId && <PuntoEntradaForm locationId={locationId} products={products} />}
+            {locationId && (
+              <div className="grid gap-4 lg:grid-cols-2">
+                <PuntoEntradaForm locationId={locationId} products={products} />
+                <PuntoSalidaForm locationId={locationId} products={products} />
+              </div>
+            )}
           </TabsContent>
         )}
 
