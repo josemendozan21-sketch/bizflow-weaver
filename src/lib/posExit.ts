@@ -3,6 +3,7 @@ export const POS_EXIT_REASONS = [
   { value: "producto_danado", label: "Producto dañado", notesRequired: true },
   { value: "muestra_regalo", label: "Muestra o regalo", notesRequired: true },
   { value: "devolucion_proveedor", label: "Devolución a proveedor", notesRequired: false },
+  { value: "entrega_jose_mendoza", label: "José Mendoza", notesRequired: false },
 ] as const;
 export type PosExitReason = (typeof POS_EXIT_REASONS)[number]["value"];
 

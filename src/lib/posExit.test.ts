@@ -13,6 +13,10 @@ describe("validatePosExit", () => {
     expect(validatePosExit({ quantity: 1, available: 5, reason: "producto_danado" })).not.toBeNull();
     expect(validatePosExit({ quantity: 1, available: 5, reason: "muestra_regalo", notes: "cliente X" })).toBeNull();
   });
+  it("acepta el motivo José Mendoza sin exigir nota", () => {
+    expect(validatePosExit({ quantity: 2, available: 5, reason: "entrega_jose_mendoza" })).toBeNull();
+    expect(validatePosExit({ quantity: 6, available: 5, reason: "entrega_jose_mendoza" })).not.toBeNull();
+  });
 });
 
 describe("validatePosExitBatch", () => {
