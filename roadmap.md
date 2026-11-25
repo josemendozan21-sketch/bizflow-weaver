@@ -59,3 +59,6 @@
 - [x] Excel de descuentos + cruce diario con arqueo de Eliana
 - [ ] Corregir totales de ventas con doble descuento y anular gasto duplicado del 25-sep — espera aprobación
 - [ ] Explicar $20.198 previos a agosto — espera cierres de junio–julio
+
+## 15. Pestaña de liquidaciones visible para Contabilidad (25-nov)
+- [x] La pestaña de Contabilidad que antes decía "Contabilidad y Asesores" ahora dice "Liquidaciones"; el título interno pasó a "Liquidaciones de comisiones".
