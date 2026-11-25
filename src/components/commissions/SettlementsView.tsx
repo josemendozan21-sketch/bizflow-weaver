@@ -83,7 +83,7 @@ export function SettlementsView({ orders, mode, advisorId: fixedAdvisor, readOnl
     <div className="space-y-4">
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">{mode === "contabilidad" ? "Contabilidad y Asesores — liquidación de comisiones" : "Mis liquidaciones de comisión"}</CardTitle>
+          <CardTitle className="text-base">{mode === "contabilidad" ? "Liquidaciones de comisiones" : "Mis liquidaciones de comisión"}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-muted-foreground [text-wrap:pretty]">
